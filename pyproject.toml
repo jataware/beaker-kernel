@@ -15,8 +15,8 @@ pandas = "^2.0.1"
 matplotlib = "^3.7.1"
 xarray = "^2023.4.2"
 numpy = "^1.24.3"
-archytas = {path = "chatty/archytas-0.2.4-py3-none-any.whl"}
-chatty = {path = "chatty/chatty-0.1.0-py3-none-any.whl"}
+archytas = {path = "/home/matt/development/archytas", develop = true}
+chatty = {path = "/home/matt/development/askem/chatty", develop = true}
 
 
 [build-system]

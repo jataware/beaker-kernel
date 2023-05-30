@@ -56,3 +56,4 @@ build
 create.sql
 .eslintcache
 **/.venv/
+.openai.toml
