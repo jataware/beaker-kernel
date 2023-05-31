@@ -23,22 +23,23 @@ RUN julia -e ' \
 
 # Install Python requirements
 USER root
-RUN pip install jupyterlab jupyterlab_server pandas matplotlib xarray numpy poetry
+RUN pip install jupyterlab jupyterlab_server pandas matplotlib xarray numpy poetry scipy
 
-COPY chatty/ /chatty
-RUN pip install /chatty/archytas*.whl
-RUN pip install /chatty/chatty*.whl
+# Install project requirements
+COPY --chown=1000:1000 pyproject.toml poetry.lock /jupyter
+RUN pip install poetry
+RUN poetry config virtualenvs.create false
+RUN poetry install --no-dev
 
+# Kernel hast to go in a specific spot
 COPY llmkernel /usr/local/share/jupyter/kernels/llmkernel
 
+# Copy src code over
 RUN chown 1000:1000 /jupyter
+COPY --chown=1000:1000 . /jupyter
 
 # Switch to non-root user
 USER 1000
-
-# Copy src code over
-COPY --chown=1000:1000 . /jupyter
-
 
 CMD ["python", "main.py", "--ip", "0.0.0.0"]
 

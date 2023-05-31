@@ -5,7 +5,7 @@ description = ""
 authors = ["Matthew Printz <matt@jataware.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "jupyter_llm"}]
+# packages = [{include = "jupyter_llm"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -15,8 +15,7 @@ pandas = "^2.0.1"
 matplotlib = "^3.7.1"
 xarray = "^2023.4.2"
 numpy = "^1.24.3"
-archytas = {path = "/home/matt/development/archytas", develop = true}
-chatty = {path = "/home/matt/development/askem/chatty", develop = true}
+archytas = "^1.0"
 
 
 [build-system]
