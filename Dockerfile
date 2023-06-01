@@ -3,23 +3,25 @@ RUN useradd -m jupyter
 EXPOSE 8888
 WORKDIR /jupyter
 
+# Disabled Julia for now as it is preventing building the image in the build environment
+
 # Install Julia
-RUN wget --no-verbose -O julia.tar.gz "https://julialang-s3.julialang.org/bin/linux/$(uname -m|sed 's/86_//')/1.9/julia-1.9.0-linux-$(uname -m).tar.gz"
-RUN tar -xzf "julia.tar.gz" && mv julia-1.9.0 /opt/julia && \
-    ln -s /opt/julia/bin/julia /usr/local/bin/julia && rm "julia.tar.gz"
+# RUN wget --no-verbose -O julia.tar.gz "https://julialang-s3.julialang.org/bin/linux/$(uname -m|sed 's/86_//')/1.9/julia-1.9.0-linux-$(uname -m).tar.gz"
+# RUN tar -xzf "julia.tar.gz" && mv julia-1.9.0 /opt/julia && \
+#     ln -s /opt/julia/bin/julia /usr/local/bin/julia && rm "julia.tar.gz"
 
 # Add Julia to Jupyter
-USER 1000
-RUN julia -e 'using Pkg; Pkg.add("IJulia");'
+# USER 1000
+# RUN julia -e 'using Pkg; Pkg.add("IJulia");'
 
 # Install Julia requirements
-RUN julia -e ' \
-    packages = [ \
-        "Catlab", "AlgebraicPetri", "DataSets", "EasyModelAnalysis", "XLSX", "Plots", "Downloads", \
-        "DataFrames", "ModelingToolkit", "Symbolics", \
-    ]; \
-    using Pkg; \
-    Pkg.add(packages);'
+# RUN julia -e ' \
+#     packages = [ \
+#         "Catlab", "AlgebraicPetri", "DataSets", "EasyModelAnalysis", "XLSX", "Plots", "Downloads", \
+#         "DataFrames", "ModelingToolkit", "Symbolics", \
+#     ]; \
+#     using Pkg; \
+#     Pkg.add(packages);'
 
 # Install Python requirements
 USER root
