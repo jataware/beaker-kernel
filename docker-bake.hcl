@@ -49,6 +49,6 @@ target "jupyter-llm-base" {
 
 
 target "jupyter-llm" {
-  inherits = ["_platforms"]
+  inherits = ["_platforms", "jupyter-llm-base"]
 }
 
