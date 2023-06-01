@@ -4,9 +4,9 @@ EXPOSE 8888
 WORKDIR /jupyter
 
 # Install Julia
-RUN wget https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.0-linux-x86_64.tar.gz
-RUN tar -xzf julia-1.9.0-linux-x86_64.tar.gz && mv julia-1.9.0 /opt/julia && \
-    ln -s /opt/julia/bin/julia /usr/local/bin/julia && rm julia-1.9.0-linux-x86_64.tar.gz
+RUN wget --no-verbose https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.0-linux-$(uname -m).tar.gz
+RUN tar -xzf julia-1.9.0-linux-$(uname -m).tar.gz && mv julia-1.9.0 /opt/julia && \
+    ln -s /opt/julia/bin/julia /usr/local/bin/julia && rm julia-1.9.0-linux-$(uname -m).tar.gz
 
 # Add Julia to Jupyter
 USER 1000
