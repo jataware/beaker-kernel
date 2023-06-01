@@ -89,7 +89,7 @@ class PythonLLMKernel(IPythonKernel):
 
         try:
             data = json.loads(result)
-            if data.get("action") == "code_cell":
+            if isinstance(data, dict) and data.get("action") == "code_cell":
                 stream_content = {"language": data.get("language"), "code": data.get("content")}
                 self.send_response(self.iopub_socket, "code_cell", stream_content)
         except json.JSONDecodeError:  # If response is not a json, it's just text so treat it like text
