@@ -28,7 +28,7 @@ USER root
 RUN pip install jupyterlab jupyterlab_server pandas matplotlib xarray numpy poetry scipy
 
 # Install project requirements
-COPY --chown=1000:1000 pyproject.toml poetry.lock /jupyter
+COPY --chown=1000:1000 pyproject.toml poetry.lock /jupyter/
 RUN pip install poetry
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-dev
