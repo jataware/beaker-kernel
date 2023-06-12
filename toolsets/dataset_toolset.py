@@ -28,11 +28,21 @@ class DatasetToolset:
         self.dataset_id = dataset_id
         meta_url = f"{os.environ['DATA_SERVICE_URL']}/datasets/{self.dataset_id}"
         self.dataset = requests.get(meta_url).json()
-        self.load_dataframe()
+        if self.dataset:
+            self.load_dataframe()
+        else:
+            raise Exception(f"Dataset '{dataset_id}' not found.")
 
-    def load_dataframe(self):
-        data_url = f"{os.environ['DATA_SERVICE_URL']}/datasets/{self.dataset_id}/download/rawfile?wide_format=true"
-        self.df = pd.read_csv(data_url)
+    def load_dataframe(self, filename=None):
+        if filename is None:
+            filename = self.dataset.get('file_names', [])[0]
+        meta_url = f"{os.environ['DATA_SERVICE_URL']}/datasets/{self.dataset_id}"
+        data_url_req = requests.get(f'{meta_url}/download-url?filename={filename}')
+        data_url = data_url_req.json().get('url', None)
+        if data_url is not None:
+            self.df = pd.read_csv(data_url)
+        else:
+            raise Exception('Unable to open dataset.')
 
     def reset(self):
         self.dataset_id = None
