@@ -22,7 +22,7 @@ class PythonLLMKernel(IPythonKernel):
     def setup_instance(self, *args, **kwargs):
         # Init LLM agent
         self.toolset = DatasetToolset()
-        self.agent = ReActAgent(tools=[self.toolset], allow_ask_user=False, verbose=True, spinner=None)
+        self.agent = ReActAgent(tools=[self.toolset], allow_ask_user=False, verbose=True, spinner=None, rich_print=False)
         self.toolset.agent = self.agent
         if getattr(self, 'context', None) is not None:
             self.agent.clear_all_context()
@@ -94,7 +94,7 @@ class PythonLLMKernel(IPythonKernel):
                 self.send_response(self.iopub_socket, "code_cell", stream_content)
         except json.JSONDecodeError:  # If response is not a json, it's just text so treat it like text
             stream_content = {"name": "response_text", "text": f"{result}"}
-            self.send_response(self.iopub_socket, "chatty_response", stream_content)
+            self.send_response(self.iopub_socket, "llm_response", stream_content)
 
         return {
             "status": "ok",
