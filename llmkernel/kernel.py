@@ -51,7 +51,7 @@ class PythonLLMKernel(IPythonKernel):
         import pandas as pd
         df = self.shell.ev("df")
         if isinstance(df, pd.DataFrame):
-            split_df = json.loads(df.head(10).to_json(orient="split"))
+            split_df = json.loads(df.head(30).to_json(orient="split"))
             payload = {
                 "name": "Temp dataset (not saved)",
                 "headers": split_df["columns"],
