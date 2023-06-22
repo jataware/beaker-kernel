@@ -143,7 +143,7 @@ function createApp(manager: ServiceManager.IManager): void {
       notebook.model.cells.nbmodel.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: msg.content.text});
     }
     else if (msg.msg_type === "dataset") {
-      dataPreviewWidget.node.textContent = formatDataPreview(msg.content);
+      dataPreview.textContent = formatDataPreview(msg.content);
     }
     else if (msg.msg_type === "code_cell") {
       const code = msg.content.code;
@@ -214,6 +214,9 @@ function createApp(manager: ServiceManager.IManager): void {
   const llmContainer = document.createElement('div');
   const llmNode = document.createElement('input');
   const llmButton = document.createElement('button');
+  const llmHeader = document.createElement('h1');
+  llmHeader.textContent = "LLM interaction";
+  llmContainer.appendChild(llmHeader);
   llmContainer.appendChild(llmNode);
   llmContainer.appendChild(llmButton);
   llmNode.id = "llmQueryInput";
@@ -232,11 +235,15 @@ function createApp(manager: ServiceManager.IManager): void {
   const contextWidget = new Widget();
   const contextNode = document.createElement('div');
   const contextNameInput = document.createElement('input');
-  const contextPayloadInput = document.createElement('input');
+  const contextPayloadInput = document.createElement('textarea');
   const contextButton = document.createElement('button');
+  const contextHeader = document.createElement('h2');
+  // contextNode.appendChild(document.createTextNode("Be sure to set the context before trying to run queries against assets."));
+  contextHeader.textContent = "Context setup";
   contextNode.id = 'context-node';
   contextNameInput.value = 'dataset';
-  contextPayloadInput.value = '{"id": "truth-incident-hospitalization"}';
+  contextPayloadInput.className = 'json-input';
+  contextPayloadInput.value = '{\n  "id": "truth-incident-hospitalization"\n}';
   contextButton.textContent = 'Submit';
   contextButton.addEventListener("click", (e) => {
     setKernelContext({
@@ -250,7 +257,12 @@ function createApp(manager: ServiceManager.IManager): void {
   contextWidget.node.appendChild(contextNode);
 
   const dataPreviewWidget = new Widget();
-  dataPreviewWidget.id = 'data-preview';
+  const dataPreviewHeader = document.createElement('h2');
+  const dataPreview = document.createElement('div');
+  dataPreview.id = 'preview';
+  dataPreviewHeader.textContent = "Preview:"
+  dataPreviewWidget.node.appendChild(dataPreviewHeader);
+  dataPreviewWidget.node.appendChild(dataPreview);
 
   const leftPanel = new Panel();
   leftPanel.id = 'left';

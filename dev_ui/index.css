@@ -28,15 +28,21 @@ body {
 }
 
 #context-node {
-  margin-top: 1em;
+  padding-top: 1em;
+  /* margin-top: 1em; */
 }
 
-#context-node > input {
+#context-node > * {
   margin-right: 0.5em;
 }
 
-#data-preview {
+#preview {
   white-space: pre;
+}
+
+.json-input {
+  min-width: 400px;
+  min-height: 5em;
 }
 
 .jp-NotebookPanel {
