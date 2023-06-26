@@ -80,14 +80,27 @@ If you are asked to manipulate or visualize the dataset, use the generate_python
         Returns:
             str: a textual representation of the dataset
         """
-        # Need to actually track things. Maybe a good idea to split this in to finer tools so certain things can be queried?
+        # Update the local dataframe to match what's in the shell.
+        # This will be factored out when we switch around to allow using multiple runtimes.
+        if self.kernel:
+            try:
+                self.df = self.kernel.ev("df")
+            except:
+                pass
+
         output = f"""
 Dataframe head:
 {self.df.head(15)}
+
+
 Columns:
 {self.df.columns}
+
+
 dtypes:
 {self.df.dtypes}
+
+
 Statistics:
 {self.df.describe()}
 """

@@ -38,8 +38,8 @@ class PythonLLMKernel(IPythonKernel):
                 dataset_id = context_info["id"]
                 print(f"Processing dataset w/id {dataset_id}")
                 self.toolset.set_dataset(dataset_id)
+                self.toolset.kernel = self.shell
                 self.context = self.agent.add_context(self.toolset.context())
-                # self.shell.ex("""import pandas as pd; import numpy as np;""")
                 self.shell.ex("""import pandas as pd; import numpy as np; import scipy;""")
                 self.shell.push({
                     "df": self.toolset.df
