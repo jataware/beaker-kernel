@@ -79,11 +79,10 @@ If you are asked to manipulate or visualize the dataset, use the generate_python
         """
         # Update the local dataframe to match what's in the shell.
         # This will be factored out when we switch around to allow using multiple runtimes.
-        if self.kernel:
-            try:
-                self.df = self.kernel.ev("df")
-            except:
-                pass
+        try:
+            self.df = self.kernel.ev("df")
+        except:
+            pass
 
         output = f"""
 Dataframe head:

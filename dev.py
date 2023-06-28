@@ -78,6 +78,7 @@ class DevAskemJupyterApp(LabServerApp):
     def initialize_settings(self):
         # Override to allow cross domain websockets
         self.settings['allow_origin'] = '*'
+        self.settings['disable_check_xsrf'] = True
 
 
 if __name__ == "__main__":

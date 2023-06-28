@@ -67,6 +67,31 @@ $ make dev
 
 This will start the Jupyter service and launch a specialized notebook interface in your browser similar to if you ran `$ jupyter notebook` normally.
 
+ 
+## Differences from vanilla Jupyter
 
-### LLM flow
+This setup uses stock Jupyter services as provided
+in the Jupyter Python packagesi.
 
+The entry point of the docker file runs the file main.py which 
+starts a JupyterLab Server App. The only differences here 
+are:
+1. This service does not run any front-end and only provides 
+  API and websocket access as Terarium is meant to be the
+  interface when deployed.
+2. Some settings are changed to allow access through the
+  Terarium interface and be accessed by the proxy kernel:
+    1. allow_orgin rule
+    2. disable_check_xsrf security issue to allow the proxy 
+    kernel to make API calls
+
+The main engineering on the back end goes in to the writing of
+the LLM/Proxy kernel.
+
+This custom kernel manages a "sub-kernel" that can be for any
+language, etc as long as it is a good kernel and installed. The 
+proxy passes messages from the client/jupyter server back and
+forth with the sub-kernel, but sometimes intercepts the
+messages or performs extra messages. This message interception
+allows for the client to request LLM queries and to generate
+code cells back to the client based on the LLM response.

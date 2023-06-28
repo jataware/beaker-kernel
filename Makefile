@@ -27,3 +27,7 @@ dev-install:.env
 	if [[ ! -e "./test.ipynb" ]]; then \
 		cp dev_ui/test.ipynb ./test.ipynb; \
 	fi
+
+.PHONY:changed-files
+changed-files:
+	find dev_ui/ -not -path build -cnewer dev_ui/build/index.js
