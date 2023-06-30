@@ -23,7 +23,6 @@ from archytas.react import ReActAgent
 
 logger = logging.getLogger(__name__)
 
-PROXIED_KERNEL_ID = None
 server_url = os.environ.get("JUPYTER_SERVER", None)
 server_token = os.environ.get("JUPYTER_TOKEN", None)
 
@@ -39,19 +38,26 @@ class PythonLLMKernel(KernelProxyManager):
     }
 
     def __init__(self, server):
+        self.subkernel_id = None
         super().__init__(server)
         self.new_kernel()
         self.setup_instance()
 
     def setup_instance(self):
+        self.setup_llm()
+        self.setup_intercepts()
+
+    def setup_llm(self):
         # Init LLM agent
         print("Initializing LLM")
         self.toolset = DatasetToolset()
-        self.agent = ReActAgent(tools=[self.toolset], allow_ask_user=False, verbose=True, spinner=None, rich_print=False)
+        self.agent = ReActAgent(tools=[self.toolset], allow_ask_user=False, verbose=True, spinner=None, rich_print=False, thought_handler=self.handle_thoughts)
         self.toolset.agent = self.agent
         if getattr(self, 'context', None) is not None:
             self.agent.clear_all_context()
         self.context = None
+
+    def setup_intercepts(self):
         self.server.intercept_message("shell", "context_setup_request", self.context_setup_request)
         self.server.intercept_message("shell", "llm_request", self.llm_request)
 
@@ -66,19 +72,38 @@ class PythonLLMKernel(KernelProxyManager):
         return
     
     def new_kernel(self):
-        if PROXIED_KERNEL_ID is not None:
-            # We should destroy any existing sub-kernel before creating a new one
-            del_res = requests.delete(f"{server_url}/api/kernels/{PROXIED_KERNEL_ID}", headers={"Authorization": f"token {server_token}"})
-            print(del_res.status_code)
-            print(del_res.json())
+        # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
+        self.shutdown_subkernel()
 
         # TODO: Replace hard coded python3
         res = requests.post(f"{server_url}/api/kernels", json={"name": "python3", "path": ""}, headers={"Authorization": f"token {server_token}"})
         kernel_info = res.json()
         self.update_running_kernels()
-        sub_kernel = kernel_info['id']
-        PROXIED_KERNEL_ID = sub_kernel
-        self.connect_to(sub_kernel)
+        self.subkernel_id = kernel_info['id']
+        self.connect_to(self.subkernel_id)
+
+    def shutdown_subkernel(self):
+        if self.subkernel_id is not None:
+            try:
+                print(f"Shutting down connected subkernel {self.subkernel_id}")
+                res = requests.delete(f"{server_url}/api/kernels/{self.subkernel_id}", headers={"Authorization": f"token {server_token}"})
+                if res.status_code == 204:
+                    self.subkernel_id = None
+            except requests.exceptions.HTTPError as err:
+                print(err)
+
+    def handle_thoughts(self, thought: str, tool_name: str, tool_input: str):
+        content = {
+            "thought": thought,
+            "tool_name": tool_name,
+            "tool_input": tool_input,
+        }
+        # print(f'I had a thought: {content}')
+        self.send_response(
+            stream="iopub",
+            msg_or_type="llm_thought",
+            content=content,
+        )
 
     async def execute(self, command, response_handler=None, collect_output=True):
         # print(f"self.response_data: '{getattr(self, 'response_data', None)}'")
@@ -258,6 +283,9 @@ class PythonLLMKernel(KernelProxyManager):
         # Parse response as needed
         stream = getattr(self.server.streams, stream)
         stream.send_multipart(self.server.make_multipart_message(msg_type=msg_or_type, content=content, parent_header={}))
+        # Flush to ensure messages are sent immediately
+        # TODO: Make flushing behind a flag?
+        stream.flush()
 
 
     # async def llm_request(self, queue, message_id, message, **kwargs):
@@ -293,9 +321,7 @@ class PythonLLMKernel(KernelProxyManager):
         except json.JSONDecodeError:  # If response is not a json, it's just text so treat it like text
             stream_content = {"name": "response_text", "text": f"{result}"}
             self.send_response("iopub", "llm_response", stream_content)
-        # return 
 
-    # async def context_setup_request(self, queue, message_id, message, **kwargs):
     async def context_setup_request(self, server, target_stream, data):
         # TODO: Set up environment for kernel
         # Basically, run any code/import any files needed for context
@@ -309,166 +335,14 @@ class PythonLLMKernel(KernelProxyManager):
         if content:
             await self.set_context(context, context_info)
 
+        # TODO: Add parent header info to response
         self.send_response(
             stream="iopub",
             msg_or_type="status",
             content={
                 "execution_state": "idle",
             },
-            channel="iopub",
-        )
-    
-    async def load_dataset(self, queue, message_id, message, **kwargs):
-        content = message.get('content', {})
-        dataset_id = content.get('dataset_id', None)
-        filename = content.get('filename', None)
-        var_name = content.get('var_name', 'df')
-        meta_url = f"{os.environ['DATA_SERVICE_URL']}/datasets/{dataset_id}"
-        if not filename:
-            dataset_meta = requests.get(meta_url).json()
-            filename = dataset_meta.get('file_names', [])[0]
-        data_url_req = requests.get(f'{meta_url}/download-url?filename={filename}')
-        data_url = data_url_req.json().get('url', None)
-        self.shell.ex(
-            """import pandas as pd; import numpy as np; import scipy;\n"""
-            """import sympy; import itertools; from mira.metamodel import *; from mira.modeling import Model;\n"""
-            """from mira.modeling.askenet.petrinet import AskeNetPetriNetModel; from mira.modeling.viz import GraphicalModel;\n"""
-            f"""{var_name} = pd.read_csv({data_url});"""
-            f"""{var_name};"""
-        )
-        
-    def _publish_execute_input(self, code, parent, execution_count):
-        """Publish the code request on the iopub stream."""
-        # Override the default action to pass along the parent metadata so we can track the container
-        self.session.send(
-            self.iopub_socket,
-            "execute_input",
-            {"code": code, "execution_count": execution_count},
-            parent=parent,
-            ident=self._topic("execute_input"),
-            metadata=parent.get("metadata", None),
-        )
-    
-    async def load_mira_model(self, queue, message_id, message, **kwargs):
-        content = message.get('content', {})
-        model_id = content.get('model_id', None)
-        var_name = content.get('var_name', 'model')
-
-        model_url = f"{os.environ['DATA_SERVICE_URL']}/models/{model_id}"
-
-        self.shell.ex(
-            """import requests; import pandas as pd; import numpy as np; import scipy;\n"""
-            """import json; from mira.sources.askenet.petrinet import template_model_from_askenet_json;\n"""
-            """import sympy; import itertools; from mira.metamodel import *; from mira.modeling import Model;\n"""
-            """from mira.modeling.askenet.petrinet import AskeNetPetriNetModel; from mira.modeling.viz import GraphicalModel;\n"""
-            f"""amr = requests.get({model_url}).json(); {var_name} = template_model_from_askenet_json(amr));"""
-            f"""${var_name};"""
-        )
-    
-    async def execute_request(self, stream, ident, parent):
-        # Rewrite parent so that this is properly tied to requests in terarium
-        # notebook_item = parent.get('metadata', {}).get('notebook_item', None)
-        # if notebook_item:
-        #     parent["msg_id"] = notebook_item
-        #     parent["header"]["msg_id"] = notebook_item
-        return await super().execute_request(stream, ident, parent)
-
-    async def download_dataset_request(self, queue, message_id, message, **kwargs):
-        content = message.get('content', {})
-        # TODO: Collect any options that might be needed, if they ever are
-
-        df = self.shell.ev("df")
-        if isinstance(df, pd.DataFrame):
-            output_buff = io.BytesIO()
-            df.to_csv(output_buff, index=False, header=True)
-            output_buff.seek(0)
-            self.send_response(
-                stream=self.iopub_socket,
-                msg_or_type="download_response",
-                content={"data": output_buff},
-            )
-        else:
-            self.send_response(
-                stream=self.iopub_socket,
-                msg_or_type="stream",
-                content={"name": "stderr", "text": "The dataframe is not able to be downloaded."},
-            )
-
-
-    async def save_dataset_request(self, queue, message_id, message, **kwargs):
-        self.send_response(
-            stream=self.iopub_socket,
-            msg_or_type="status",
-            content={
-                "execution_state": "busy",
-            },
-            channel="iopub",
-        )
-        df = self.shell.ev('df')
-        content = message.get('content', {})
-
-        parent_dataset_id = content.get("parent_dataset_id")
-        new_name = content.get("name")
-        filename = content.get("filename", None)
-
-
-        if filename is None:
-            filename = "dataset.csv"
-        parent_url = f"{os.environ['DATA_SERVICE_URL']}/datasets/{parent_dataset_id}"
-        parent_dataset = requests.get(parent_url).json()
-        if not parent_dataset:
-            raise Exception(f"Unable to locate parent dataset '{parent_dataset_id}'")
-        
-        new_dataset = copy.deepcopy(parent_dataset)
-        del new_dataset["id"]
-        new_dataset["name"] = new_name
-        new_dataset["description"] += f"\nTransformed from dataset '{parent_dataset['name']}' ({parent_dataset['id']}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
-        new_dataset["file_names"] = [filename]
-
-        create_req = requests.post(f"{os.environ['DATA_SERVICE_URL']}/datasets", json=new_dataset)
-        new_dataset_id = create_req.json()["id"]
-
-        new_dataset["id"] = new_dataset_id
-        new_dataset_url = f"{os.environ['DATA_SERVICE_URL']}/datasets/{new_dataset_id}"
-        data_url_req = requests.get(f'{new_dataset_url}/upload-url?filename={filename}')
-        data_url = data_url_req.json().get('url', None)
-
-        # Saving as a temporary file instead of a buffer to save memory
-        with tempfile.TemporaryFile() as temp_csv_file:
-            df.to_csv(temp_csv_file, index=False, header=True)
-            temp_csv_file.seek(0)
-            upload_response = requests.put(data_url, data=temp_csv_file)
-        if upload_response.status_code != 200:
-            raise Exception(f"Error uploading dataframe: {upload_response.content}")
-
-        self.send_response(
-            stream=self.iopub_socket,
-            msg_or_type="save_dataset_response",
-            content={
-                "dataset_id": new_dataset_id,
-                "filename": filename,
-                "parent_dataset_id": parent_dataset_id
-            },
-            channel="iopub",
-        )
-        self.send_response(
-            stream=self.iopub_socket,
-            msg_or_type="status",
-            content={
-                "execution_state": "idle",
-            },
-            channel="iopub",
-        )
-
-
-    async def save_amr_request(self, queue, message_id, message, **kwargs):
-        self.send_response(
-            stream=self.iopub_socket,
-            msg_or_type="status",
-            content={
-                "execution_state": "busy",
-            },
-            channel="iopub",
+            channel="iopub"
         )
 
         content = message.get('content', {})
@@ -519,9 +393,14 @@ class PythonLLMKernel(KernelProxyManager):
         return result
 
 
-def cleanup():
+def cleanup(kernel):
+    try:
+        kernel.shutdown_subkernel()
+    except requests.exceptions.ConnectionError:
+        print("Unable to connect to server. Possible server shutdown.")
+    except Exception as err:
+        print(f"Couldn't shutdown subkernel: {err}")
 
-    pass
 
 def start(connection_file):
     loop = ioloop.IOLoop.current()
@@ -529,13 +408,13 @@ def start(connection_file):
     with open(connection_file) as f:
         notebook_config = json.load(f)
 
-    proxy_manager = PythonLLMKernel(notebook_config)
+    kernel = PythonLLMKernel(notebook_config)
 
     try:
         loop.start()
     except KeyboardInterrupt:
         # Perform shutdown cleanup here
-        cleanup()
+        cleanup(kernel)
         sys.exit(0)
 
 
@@ -547,5 +426,4 @@ def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
 
