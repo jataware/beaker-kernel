@@ -50,7 +50,7 @@ class PythonLLMKernel(KernelProxyManager):
     def setup_llm(self):
         # Init LLM agent
         print("Initializing LLM")
-        self.toolset = DatasetToolset()
+        self.toolset = DatasetToolset(subkernel=self)
         self.agent = ReActAgent(tools=[self.toolset], allow_ask_user=False, verbose=True, spinner=None, rich_print=False, thought_handler=self.handle_thoughts)
         self.toolset.agent = self.agent
         if getattr(self, 'context', None) is not None:
@@ -206,6 +206,9 @@ class PythonLLMKernel(KernelProxyManager):
 
     async def evaluate(self, variable):
         result = await self.execute(variable, collect_output=True)
+        return_str = result.get("return")
+        if return_str:
+            result["return"] = ast.literal_eval(result["return"])
         return result
         
 
@@ -220,9 +223,8 @@ class PythonLLMKernel(KernelProxyManager):
                     self.agent.clear_all_context()
                 dataset_id = context_info["id"]
                 print(f"Processing dataset w/id {dataset_id}")
-                self.toolset.set_dataset(dataset_id)
-                self.context = self.agent.add_context(self.toolset.context())
-                await self.execute('''import pandas as pd; import numpy as np; import scipy; import pickle; df = pickle.loads({}); print("done");'''.format(pickle.dumps(self.toolset.df)))
+                await self.toolset.set_dataset(dataset_id)
+                self.context = self.agent.add_context(await self.toolset.context())
                 await self.send_df_preview_message()
             # case "mira_model":
             #     self.toolset = MiraModelToolset()
@@ -264,19 +266,9 @@ class PythonLLMKernel(KernelProxyManager):
 
     async def send_df_preview_message(self):
         print("Sending preview")
-        import pandas as pd
-        result = await self.evaluate("pickle.dumps(df)")
-        result_literal = ast.literal_eval(result["return"])
-        # df = pd.read_json(result["return"])
-        df = pickle.loads(result_literal)
-        if isinstance(df, pd.DataFrame):
-            split_df = json.loads(df.head(30).to_json(orient="split"))
-            payload = {
-                "name": "Temp dataset (not saved)",
-                "headers": split_df["columns"],
-                "csv": [split_df["columns"]] + split_df["data"],
-            }
-            self.send_response("iopub", "dataset", payload)
+        preview = await self.toolset.df_preview()
+        if preview:
+            self.send_response("iopub", "dataset", preview)
 
 
     def send_response(self, stream, msg_or_type, content=None, channel=None):
@@ -308,7 +300,7 @@ class PythonLLMKernel(KernelProxyManager):
             self.send_response("iopub", "stream", stream_content)
             return {
                 "status": "error",
-                "execution_count": self.execution_count,
+                "execution_count": 0,
                 "payload": [],
                 'user_expressions': {},
             }
