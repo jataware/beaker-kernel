@@ -23,6 +23,9 @@ import zmq
 from tornado import ioloop
 from zmq.eventloop import zmqstream
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 SocketInfo = namedtuple("SocketInfo", (
     "name",
@@ -220,7 +223,7 @@ class ProxyKernelServer(AbstractProxyKernel):
                         else:
                             data = new_data
                 if resign_using:
-                    data = msg.sign_using(resign_using).parts
+                    data = JupyterMessage.parse(data).sign_using(resign_using).parts
             other_stream.send_multipart(data)
             other_stream.flush()
         return handler

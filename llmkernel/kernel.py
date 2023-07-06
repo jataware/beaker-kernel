@@ -2,6 +2,7 @@ import ast
 import asyncio
 import copy
 import datetime
+import functools
 import io
 import json
 import logging
@@ -13,6 +14,7 @@ import time
 import traceback
 import uuid
 
+from IPython.core.interactiveshell import InteractiveShell
 from tornado import ioloop
 from jupyter_kernel_proxy import KernelProxyManager, JupyterMessage, InterceptionFilter, KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES
 from jupyter_core.paths import jupyter_runtime_dir, jupyter_data_dir
@@ -21,10 +23,32 @@ from toolsets.dataset_toolset import DatasetToolset
 from toolsets.mira_model_toolset import MiraModelToolset
 from archytas.react import ReActAgent
 
+
 logger = logging.getLogger(__name__)
 
 server_url = os.environ.get("JUPYTER_SERVER", None)
 server_token = os.environ.get("JUPYTER_TOKEN", None)
+
+
+MESSAGE_STREAMS = {
+    "execute_input": "iopub",
+    "execute_request": "shell",
+    "execute_result": "iopub",
+    "execute_reply": "shell",
+    "stream": "iopub",
+}
+
+
+AVAILABLE_TOOLSETS = {
+    "dataset": DatasetToolset,
+    "mira_model": MiraModelToolset,
+}
+
+def get_socket(stream_name: str):
+    socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_name)]
+    return socket
+    
+
 
 class PythonLLMKernel(KernelProxyManager):
     implementation = "askem-chatty-py"
@@ -37,7 +61,12 @@ class PythonLLMKernel(KernelProxyManager):
         "file_extension": ".txt",
     }
 
+    internal_executions: set[str]
+    subkernel_execution_tracking: dict[str, str]
+
     def __init__(self, server):
+        self.internal_executions = set()
+        self.subkernel_execution_tracking = {}
         self.subkernel_id = None
         super().__init__(server)
         self.new_kernel()
@@ -49,10 +78,6 @@ class PythonLLMKernel(KernelProxyManager):
 
     def setup_llm(self):
         # Init LLM agent
-        print("Initializing LLM")
-        self.toolset = DatasetToolset(subkernel=self)
-        self.agent = ReActAgent(tools=[self.toolset], allow_ask_user=False, verbose=True, spinner=None, rich_print=False, thought_handler=self.handle_thoughts)
-        self.toolset.agent = self.agent
         if getattr(self, 'context', None) is not None:
             self.agent.clear_all_context()
         self.context = None
@@ -60,12 +85,15 @@ class PythonLLMKernel(KernelProxyManager):
     def setup_intercepts(self):
         self.server.intercept_message("shell", "context_setup_request", self.context_setup_request)
         self.server.intercept_message("shell", "llm_request", self.llm_request)
+        self.server.intercept_message("shell", "execute_request", self.track_execute_request)
+        self.server.intercept_message("iopub", "execute_input", self.update_execute_input_response)
+        self.server.intercept_message("shell", "execute_reply", self.post_execute)
 
-        # self.msg_types.append("download_dataset_request")
-        # self.msg_types.append("save_dataset_request")
-        # self.msg_types.append("save_amr_request")
-        # self.msg_types.append("load_dataset")
-        # self.msg_types.append("load_mira_model")
+        # self.server.intercept_message("shell", "download_dataset_request")
+        # self.server.intercept_message("shell", "save_dataset_request")
+        # self.server.intercept_message("shell", "save_amr_request", self.save_amr_request)
+        # self.server.intercept_message("shell", "load_dataset")
+        # self.server.intercept_message("shell", "load_mira_model")
 
     def connect_to_last(self):
         # We don't want to automatically connect to the last kernel
@@ -92,7 +120,7 @@ class PythonLLMKernel(KernelProxyManager):
             except requests.exceptions.HTTPError as err:
                 print(err)
 
-    def handle_thoughts(self, thought: str, tool_name: str, tool_input: str):
+    def handle_thoughts(self, thought: str, tool_name: str, tool_input: str, parent_header: dict):
         content = {
             "thought": thought,
             "tool_name": tool_name,
@@ -103,10 +131,26 @@ class PythonLLMKernel(KernelProxyManager):
             stream="iopub",
             msg_or_type="llm_thought",
             content=content,
+            parent_header=parent_header,
         )
 
-    async def execute(self, command, response_handler=None, collect_output=True):
-        # print(f"self.response_data: '{getattr(self, 'response_data', None)}'")
+    def add_intercept(self, msg_type, func, stream=None):
+        if stream is None:
+            stream = MESSAGE_STREAMS.get(msg_type, None)
+        if stream is None:
+            logger.error("No stream found for msg_type=%s.\nNot adding intercept.", msg_type)
+            return
+        self.server.intercept_message(stream, msg_type, func)
+
+    def remove_intercept(self, msg_type, func):
+        stream = MESSAGE_STREAMS.get(msg_type, None)
+        if stream is None:
+            logger.warning("No stream found for msg_type=%s.\nNot able to remove intercept.", msg_type)
+            return
+        socket = get_socket(stream)
+        self.server.filters.remove(InterceptionFilter(socket, msg_type, func))
+
+    async def execute(self, command, response_handler=None, parent_header={}):
         stream = self.connected_kernel.streams.shell
         execution_message = self.connected_kernel.make_multipart_message(
             msg_type="execute_request", 
@@ -118,14 +162,15 @@ class PythonLLMKernel(KernelProxyManager):
                 "stop_on_error": False,
                 "code": command,
             }, 
-            parent_header={},
+            parent_header=parent_header,
             metadata={
                 "trusted": True,
             }
         )
         stream.send_multipart(execution_message)
-        message_id = JupyterMessage.parse(execution_message).header.get("msg_id")
-
+        original_message = JupyterMessage.parse(execution_message)
+        message_id = original_message.header.get("msg_id")
+        self.internal_executions.add(message_id)
 
         message_context = {
             "id": message_id,
@@ -135,25 +180,22 @@ class PythonLLMKernel(KernelProxyManager):
             "error": None,
             "done": False,
             "result": None,
+            "parent": original_message,
         }
+        message_metadata = {}
 
         filter_list = self.server.filters
 
-        shell_socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index("shell")]
-        iopub_socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index("iopub")]
-
+        shell_socket = get_socket("shell")
+        iopub_socket = get_socket("iopub")
 
         # Generate a handler to catch and silence the output
         async def silence_message(server, target_stream, data):
             message = JupyterMessage.parse(data)
 
-            filter_list.remove(InterceptionFilter(iopub_socket, "execute_input", silence_message))
-            filter_list.remove(InterceptionFilter(iopub_socket, "execute_request", silence_message))
-
             if message.parent_header.get("msg_id", None) != message_id:
                 return data
             return None
-
 
         async def collect_result(server, target_stream, data):
             message = JupyterMessage.parse(data)
@@ -164,7 +206,6 @@ class PythonLLMKernel(KernelProxyManager):
             data = message.content["data"].get("text/plain", None)
             message_context["return"] = data
 
-
         async def collect_stream(server, target_stream, data):
             message = JupyterMessage.parse(data)
             # Ensure we are only working on handlers for this message response
@@ -173,6 +214,12 @@ class PythonLLMKernel(KernelProxyManager):
             stream = message.content["name"]
             message_context[f"{stream}_list"].append(message.content["text"])
 
+        async def handle_error(server, target_stream, data):
+            message = JupyterMessage.parse(data)
+            content = message.content
+            message_context["error"] = content
+            logger.error("Error: %s %s\nTraceback:\n%s", content['ename'], content['evalue'], "\n".join(content["traceback"]))
+
         async def cleanup(server, target_stream, data):
             message = JupyterMessage.parse(data)
             # Ensure we are only working on handlers for this message response
@@ -180,9 +227,11 @@ class PythonLLMKernel(KernelProxyManager):
                 return data
             if response_handler:
                 filter_list.remove(InterceptionFilter(iopub_socket, "stream", response_handler))
-            if collect_stream:
-                filter_list.remove(InterceptionFilter(iopub_socket, "stream", collect_stream))
+            filter_list.remove(InterceptionFilter(iopub_socket, "stream", collect_stream))
             filter_list.remove(InterceptionFilter(iopub_socket, "execute_result", collect_result))
+            filter_list.remove(InterceptionFilter(iopub_socket, "execute_input", silence_message))
+            filter_list.remove(InterceptionFilter(iopub_socket, "execute_request", silence_message))
+            filter_list.remove(InterceptionFilter(iopub_socket, "error", handle_error))
             filter_list.remove(InterceptionFilter(shell_socket, "execute_reply", cleanup))
             message_context["result"] = message
             message_context["done"] = True
@@ -192,40 +241,53 @@ class PythonLLMKernel(KernelProxyManager):
         filter_list.append(InterceptionFilter(iopub_socket, "execute_request", silence_message))
         filter_list.append(InterceptionFilter(iopub_socket, "execute_result", collect_result))
         filter_list.append(InterceptionFilter(shell_socket, "execute_reply", cleanup))
-        if collect_stream:
-            filter_list.append(InterceptionFilter(iopub_socket, "stream", collect_stream))
+        filter_list.append(InterceptionFilter(iopub_socket, "stream", collect_stream))
+        filter_list.append(InterceptionFilter(iopub_socket, "error", handle_error))
 
         if response_handler:
             filter_list.append(InterceptionFilter(iopub_socket, "stream", response_handler))
         
         await asyncio.sleep(0.1)
         while not message_context["done"]:
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.2)
+        self.internal_executions.remove(message_id)
         return message_context
 
 
-    async def evaluate(self, variable):
-        result = await self.execute(variable, collect_output=True)
+    async def evaluate(self, expression, parent_header={}):
+        result = await self.execute(expression, parent_header=parent_header)
         return_str = result.get("return")
         if return_str:
             result["return"] = ast.literal_eval(result["return"])
         return result
         
 
-    async def set_context(self, context, context_info):
-        print("set context")
+    async def set_context(self, context, context_info, parent_header={}):
+        toolset = AVAILABLE_TOOLSETS.get(context, None)
+        if not toolset:
+            return False
+        self.toolset = toolset(subkernel=self)
+        self.agent = ReActAgent(
+            tools=[self.toolset],
+            allow_ask_user=False,
+            verbose=True,
+            spinner=None,
+            rich_print=False,
+            thought_handler=functools.partial(self.handle_thoughts, parent_header=parent_header)
+        )
+        self.toolset.agent = self.agent
+
+        for message, (handler, stream) in self.toolset.intercepts.items():
+            self.add_intercept(message, handler, stream=stream)
+
         match context:
             case "dataset":
-                self.toolset = DatasetToolset()
-                self.agent = ReActAgent(tools=[self.toolset], allow_ask_user=False, verbose=True, spinner=None, rich_print=False)
-                self.toolset.agent = self.agent
                 if getattr(self, 'context', None) is not None:
                     self.agent.clear_all_context()
                 dataset_id = context_info["id"]
                 print(f"Processing dataset w/id {dataset_id}")
-                await self.toolset.set_dataset(dataset_id)
+                await self.toolset.set_dataset(dataset_id, parent_header=parent_header)
                 self.context = self.agent.add_context(await self.toolset.context())
-                await self.send_df_preview_message()
             # case "mira_model":
             #     self.toolset = MiraModelToolset()
             #     self.agent = ReActAgent(tools=[self.toolset], allow_ask_user=False, verbose=True, spinner=None, rich_print=False)
@@ -264,26 +326,50 @@ class PythonLLMKernel(KernelProxyManager):
         except Exception as e:
             raise
 
-    async def send_df_preview_message(self):
-        print("Sending preview")
-        preview = await self.toolset.df_preview()
-        if preview:
-            self.send_response("iopub", "dataset", preview)
+    async def post_execute(self, queue, message_id, data):
+        message = JupyterMessage.parse(data)
 
+        # Don't run for internal executions
+        if(message.parent_header.get("msg_id") in self.internal_executions):
+            return data
 
-    def send_response(self, stream, msg_or_type, content=None, channel=None):
+        # Fetch event loop and ensure it's valid
+        loop = asyncio.get_event_loop()
+        callback = getattr(self.toolset, 'post_execute', None)
+        if loop and callback and (callable(callback) or asyncio.iscoroutine(callback)):
+            # If we have a callback function, then add it as a task to the execution loop so it runs
+            loop.create_task(callback(message))
+        return data
+
+    def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}):
         # Parse response as needed
         stream = getattr(self.server.streams, stream)
-        stream.send_multipart(self.server.make_multipart_message(msg_type=msg_or_type, content=content, parent_header={}))
+        message = self.server.make_multipart_message(msg_type=msg_or_type, content=content, parent_header=parent_header)
+        stream.send_multipart(message)
         # Flush to ensure messages are sent immediately
         # TODO: Make flushing behind a flag?
         stream.flush()
 
+    async def track_execute_request(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        if "notebook_item" in message.metadata:
+            message_id = message.header["msg_id"]
+            notebook_item = message.metadata["notebook_item"]
+            self.subkernel_execution_tracking[message_id] = notebook_item
+        return data
+    
+    async def update_execute_input_response(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        parent_id = message.parent_header.get("msg_id")
+        notebook_item = self.subkernel_execution_tracking.get(parent_id)
+        if notebook_item:
+            message.metadata["notebook_item"] = notebook_item
+            data = message.parts
+        return data
 
-    # async def llm_request(self, queue, message_id, message, **kwargs):
-    async def llm_request(self, queue, message_id, message, **kwargs):
+    async def llm_request(self, queue, message_id, data):
         # Send "code" to LLM Agent. The "code" is actually the LLM query
-        message = JupyterMessage.parse(message)
+        message = JupyterMessage.parse(data)
         content = message.content
         request = content.get('request', None)
         if not request:
@@ -297,7 +383,7 @@ class PythonLLMKernel(KernelProxyManager):
 {traceback.format_exc()}
 """
             stream_content = {"name": "stderr", "text": error_text}
-            self.send_response("iopub", "stream", stream_content)
+            self.send_response("iopub", "stream", stream_content, parent_header=message.header)
             return {
                 "status": "error",
                 "execution_count": 0,
@@ -309,10 +395,10 @@ class PythonLLMKernel(KernelProxyManager):
             data = json.loads(result)
             if isinstance(data, dict) and data.get("action") == "code_cell":
                 stream_content = {"language": data.get("language"), "code": data.get("content")}
-                self.send_response("iopub", "code_cell", stream_content)
+                self.send_response("iopub", "code_cell", stream_content, parent_header=message.header)
         except json.JSONDecodeError:  # If response is not a json, it's just text so treat it like text
             stream_content = {"name": "response_text", "text": f"{result}"}
-            self.send_response("iopub", "llm_response", stream_content)
+            self.send_response("iopub", "llm_response", stream_content, parent_header=message.header)
 
     async def context_setup_request(self, server, target_stream, data):
         # TODO: Set up environment for kernel
@@ -324,8 +410,9 @@ class PythonLLMKernel(KernelProxyManager):
         context = content.get('context')
         context_info = content.get('context_info', {})
 
+        parent_header = copy.deepcopy(message.header)
         if content:
-            await self.set_context(context, context_info)
+            await self.set_context(context, context_info, parent_header=parent_header)
 
         # TODO: Add parent header info to response
         self.send_response(
@@ -334,10 +421,16 @@ class PythonLLMKernel(KernelProxyManager):
             content={
                 "execution_state": "idle",
             },
-            channel="iopub"
+            channel="iopub",
+            parent_header=parent_header,
         )
 
-        content = message.get('content', {})
+    async def save_amr_request(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        content = message.content
+
+        logger.error("content: %s", content)
+        # content = message.get('content', {})
         # parent_model_id = content.get("parent_model_id")
         new_name = content.get("name")
         var_name = 'model'
@@ -368,6 +461,7 @@ class PythonLLMKernel(KernelProxyManager):
                 "model_id": new_model_id,
             },
             channel="iopub",
+            parent_header=message.header,
         )
         self.send_response(
             stream=self.iopub_socket,
@@ -376,15 +470,10 @@ class PythonLLMKernel(KernelProxyManager):
                 "execution_state": "idle",
             },
             channel="iopub",
+            parent_header=message.header,
         )
+
          
-    async def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False, *, cell_id=None):
-        result = await super().do_execute(code, silent, store_history, user_expressions, allow_stdin, cell_id=cell_id)
-        self.send_df_preview_message()
-        self.send_mira_preview_message()
-        return result
-
-
 def cleanup(kernel):
     try:
         kernel.shutdown_subkernel()

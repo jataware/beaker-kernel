@@ -1,13 +1,15 @@
-import ast
+import codecs
+import copy
+import datetime
 import json
 import logging
 import os
 import re
 import requests
-from typing import Optional
+import tempfile
+from typing import Optional, Callable, List, Tuple
 
-import pandas as pd
-
+from jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 logging.disable(logging.WARNING)  # Disable warnings
@@ -19,7 +21,7 @@ class DatasetToolset:
     """ """
 
     dataset_id: Optional[int]
-    df: Optional[pd.DataFrame]
+    intercepts: dict[str, callable]
 
     #TODO: Find a better way to organize and store these items. Maybe store as files and load into codeset dict at init?
     CODE = {
@@ -44,6 +46,53 @@ split_df = json.loads(df.head(30).to_json(orient="split"))
     "csv": [split_df["columns"]] + split_df["data"],
 }
 """.strip(),
+            "df_download": """
+import pandas as pd; import io
+import time
+output_buff = io.BytesIO()
+df.to_csv(output_buff, index=False, header=True)
+output_buff.seek(0)
+
+for line in output_buff.getvalue().splitlines():
+    print(line.decode())
+""".strip(),
+            "df_save_as": """
+import copy
+import datetime
+import requests
+import tempfile
+
+parent_url = f"{dataservice_url}/datasets/{parent_dataset_id}"
+parent_dataset = requests.get(parent_url).json()
+if not parent_dataset:
+    raise Exception(f"Unable to locate parent dataset '{parent_dataset_id}'")
+
+new_dataset = copy.deepcopy(parent_dataset)
+del new_dataset["id"]
+new_dataset["name"] = "{new_name}"
+new_dataset["description"] += f"\\nTransformed from dataset '{{parent_dataset['name']}}' ({{parent_dataset['id']}}) at {{datetime.datetime.utcnow().strftime('%c %Z')}}"
+new_dataset["file_names"] = ["{filename}"]
+
+create_req = requests.post(f"{dataservice_url}/datasets", json=new_dataset)
+new_dataset_id = create_req.json()["id"]
+
+new_dataset["id"] = new_dataset_id
+new_dataset_url = f"{dataservice_url}/datasets/{{new_dataset_id}}"
+data_url_req = requests.get(f'{{new_dataset_url}}/upload-url?filename={filename}')
+data_url = data_url_req.json().get('url', None)
+
+# Saving as a temporary file instead of a buffer to save memory
+with tempfile.TemporaryFile() as temp_csv_file:
+    df.to_csv(temp_csv_file, index=False, header=True)
+    temp_csv_file.seek(0)
+    upload_response = requests.put(data_url, data=temp_csv_file)
+if upload_response.status_code != 200:
+    raise Exception(f"Error uploading dataframe: {{upload_response.content}}")
+
+{{
+    "dataset_id": new_dataset_id,
+}}
+""".strip(),
         }
     }
 
@@ -52,9 +101,16 @@ split_df = json.loads(df.head(30).to_json(orient="split"))
         self.subkernel = subkernel
         # TODO: add checks and protections around loading codeset
         self.codeset = self.CODE[language]
+        self.intercepts = {
+            "download_dataset_request": (self.download_dataset_request, "shell"),
+            "save_dataset_request": (self.save_dataset_request, "shell"),
+        }
         self.reset()
 
-    async def set_dataset(self, dataset_id, agent=None):
+    async def post_execute(self, message):
+        await self.send_df_preview_message(parent_header=message.parent_header)
+
+    async def set_dataset(self, dataset_id, agent=None, parent_header={}):
         self.dataset_id = dataset_id
         meta_url = f"{os.environ['DATA_SERVICE_URL']}/datasets/{self.dataset_id}"
         self.dataset_info = requests.get(meta_url).json()
@@ -62,6 +118,7 @@ split_df = json.loads(df.head(30).to_json(orient="split"))
             await self.load_dataframe()
         else:
             raise Exception(f"Dataset '{dataset_id}' not found.")
+        await self.send_df_preview_message(parent_header=parent_header)
 
     async def load_dataframe(self, filename=None):
         if filename is None:
@@ -73,13 +130,23 @@ split_df = json.loads(df.head(30).to_json(orient="split"))
             command = "\n".join([self.codeset['setup'], self.codeset['load_df'].format(data_url=data_url)])
             print(f"Running command:\n-------\n{command}\n---------")
             await self.subkernel.execute(command)
-            # await self.subkernel.execute(f"""df = pd.read_csv('{data_url}')""")
         else:
             raise Exception('Unable to open dataset.')
 
     def reset(self):
         self.dataset_id = None
-        # self.df = None
+
+    async def send_df_preview_message(self, server=None, target_stream=None, data=None, parent_header={}):
+        if target_stream is None:
+            preview_result = await self.subkernel.evaluate(self.codeset["df_preview"], parent_header=parent_header)
+            if isinstance(preview_result, dict):
+                preview = preview_result.get('return', None)
+                if preview:
+                    parent = preview_result.get("parent", None)
+                    if parent and not parent_header:
+                        parent_header = parent.header
+                    self.subkernel.send_response("iopub", "dataset", preview, parent_header=parent_header)
+        return data
 
     def send_dataset(self):
         pass
@@ -101,12 +168,6 @@ Please answer any user queries to the best of your ability, but do not guess if 
 If you are asked to manipulate or visualize the dataset, use the generate_python_code tool.
 """
 
-
-    async def df_preview(self, line_count=30):
-        preview = await self.subkernel.evaluate(self.codeset["df_preview"])
-        return preview["return"]
-
-
     async def describe_dataset(self) -> str:
         """
         Inspect the dataset and return information and metadata about it.
@@ -123,6 +184,8 @@ If you are asked to manipulate or visualize the dataset, use the generate_python
 
         df_info_result = await self.subkernel.evaluate(self.codeset["df_info"])
         df_info = df_info_result["return"]
+        if not df_info:
+            return None
         output = f"""
 Dataframe head:
 {df_info["head"]}
@@ -189,3 +252,41 @@ No addtional text is needed in the response, just the code block.
             }
         )
         return result
+
+    async def download_dataset_request(self, queue, message_id, data):
+        logger.error("download_dataset_request")
+        message = JupyterMessage.parse(data)
+        content = message.content
+        # TODO: Collect any options that might be needed, if they ever are
+
+        # TODO: This doesn't work very well. Is very slow to encode, and transfer all of the required messages multiple times proxies through the proxy kernel.
+        # We should find a better way to accomplish this if it's needed.
+        code = self.codeset["df_download"]
+        df_response = await self.subkernel.evaluate(code)
+        df_contents = df_response.get("stdout_list")
+        self.subkernel.send_response("iopub", "download_response", {"data": [codecs.encode(line.encode(), 'base64').decode() for line in df_contents]}) # , parent_header=parent_header)
+
+
+    async def save_dataset_request(self, queue, message_id, data):
+        logger.error("save_dataset_request")
+        message = JupyterMessage.parse(data)
+        content = message.content
+
+        code = self.codeset["df_save_as"]
+
+        parent_dataset_id = content.get("parent_dataset_id")
+        new_name = content.get("name")
+        filename = content.get("filename", None)
+        dataservice_url = os.environ["DATA_SERVICE_URL"]
+
+        if filename is None:
+            filename = "dataset.csv"
+
+        code = code.format(parent_dataset_id=parent_dataset_id, new_name=new_name, filename=filename, dataservice_url=dataservice_url)
+
+        df_response = await self.subkernel.evaluate(code)
+
+        if df_response:
+            new_dataset_id = df_response.get("return", {}).get("dataset_id", None)
+            if new_dataset_id:
+                self.subkernel.send_response( "iopub", "save_dataset_response", {"dataset_id": new_dataset_id, "filename": filename, "parent_dataset_id": parent_dataset_id})
