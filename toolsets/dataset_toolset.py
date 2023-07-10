@@ -48,9 +48,6 @@ class DatasetToolset:
         self.dataset_id = None
         self.df = None
 
-    def send_dataset(self):
-        pass
-
     def context(self):
         return f"""You are an analyst whose goal is to help with scientific data analysis and manipulation in Python.
 
