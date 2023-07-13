@@ -33,6 +33,16 @@ RUN pip install poetry
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-dev
 
+# Install Mira from `hackathon` branch
+RUN git clone https://github.com/indralab/mira.git /mira
+WORKDIR /mira
+RUN git checkout hackathon
+RUN python -m pip install -e .
+RUN apt-get update && \
+    apt-get install -y graphviz libgraphviz-dev
+RUN python -m pip install -e ."[ode,tests,dkg-client,sbml]"
+WORKDIR /jupyter
+
 # Kernel hast to go in a specific spot
 COPY llmkernel /usr/local/share/jupyter/kernels/llmkernel
 
