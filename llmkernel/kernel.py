@@ -68,7 +68,11 @@ class PythonLLMKernel(IPythonKernel):
                 "headers": split_df["columns"],
                 "csv": [split_df["columns"]] + split_df["data"],
             }
-            self.send_response(self.iopub_socket, "dataset", payload)
+            self.send_response(
+                stream=self.iopub_socket,
+                msg_or_type="dataset",
+                content=payload,
+            )
 
 
     # def send_response(self, stream, msg_or_type, content=None, ident=None, buffers=None, track=False, header=None, metadata=None, channel="shell"):
@@ -132,9 +136,16 @@ class PythonLLMKernel(IPythonKernel):
             content={
                 "execution_state": "idle",
             },
-            channel="iopub"
+            channel="iopub",
         )
     
+    async def execute_request(self, stream, ident, parent):
+        # Rewrite parent so that this is properly tied to requests in terarium
+        notebook_item = parent.get('metadata', {}).get('notebook_item', None)
+        if notebook_item:
+            parent["msg_id"] = notebook_item
+            parent["header"]["msg_id"] = notebook_item
+        return await super().execute_request(stream, ident, parent)
 
     async def download_dataset_request(self, queue, message_id, message, **kwargs):
         content = message.get('content', {})
@@ -145,9 +156,17 @@ class PythonLLMKernel(IPythonKernel):
             output_buff = io.BytesIO()
             df.to_csv(output_buff, index=False, header=True)
             output_buff.seek(0)
-            self.send_response(self.iopub_socket, "download_response", {"data": output_buff})
+            self.send_response(
+                stream=self.iopub_socket,
+                msg_or_type="download_response",
+                content={"data": output_buff},
+            )
         else:
-            self.send_response(self.iopub_socket, "stream", {"name": "stderr", "text": "The dataframe is not able to be downloaded."})
+            self.send_response(
+                stream=self.iopub_socket,
+                msg_or_type="stream",
+                content={"name": "stderr", "text": "The dataframe is not able to be downloaded."},
+            )
 
 
     async def save_dataset_request(self, queue, message_id, message, **kwargs):
@@ -157,7 +176,7 @@ class PythonLLMKernel(IPythonKernel):
             content={
                 "execution_state": "busy",
             },
-            channel="iopub"
+            channel="iopub",
         )
         df = self.shell.ev('df')
         content = message.get('content', {})
@@ -212,7 +231,7 @@ class PythonLLMKernel(IPythonKernel):
             content={
                 "execution_state": "idle",
             },
-            channel="iopub"
+            channel="iopub",
         )
          
     async def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False, *, cell_id=None):
