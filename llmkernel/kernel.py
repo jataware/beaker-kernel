@@ -315,21 +315,21 @@ class PythonLLMKernel(IPythonKernel):
         )
 
         content = message.get('content', {})
-        parent_model_id = content.get("parent_model_id")
+        # parent_model_id = content.get("parent_model_id")
         new_name = content.get("name")
         var_name = 'model'
 
-        amr = self.shell.ev(f"AskeNetPetriNetModel(Model({var_name})).to_json()")
+        new_model: dict = self.shell.ev(f"AskeNetPetriNetModel(Model({var_name})).to_json()")
 
-        parent_url = f"{os.environ['DATA_SERVICE_URL']}/models/{parent_model_id}"
-        parent_model = requests.get(parent_url).json()
-        if not parent_model:
-            raise Exception(f"Unable to locate parent model '{parent_model_id}'")
+        # parent_url = f"{os.environ['DATA_SERVICE_URL']}/models/{parent_model_id}"
+        # parent_model = requests.get(parent_url).json()
+        # if not parent_model:
+        #     raise Exception(f"Unable to locate parent model '{parent_model_id}'")
         
-        new_model = copy.deepcopy(parent_model)
-        del new_model["id"]
+        # new_model = copy.deepcopy(parent_model)
+        original_name = new_model.get("name", "None")
         new_model["name"] = new_name
-        new_model["description"] += f"\nTransformed from model '{parent_model['name']}' ({parent_model['id']}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
+        new_model["description"] += f"\nTransformed from model '{original_name}' at {datetime.datetime.utcnow().strftime('%c %Z')}"
 
         create_req = requests.post(f"{os.environ['DATA_SERVICE_URL']}/models", json=new_model)
         new_model_id = create_req.json()["id"]
@@ -339,7 +339,6 @@ class PythonLLMKernel(IPythonKernel):
             msg_or_type="save_model_response",
             content={
                 "model_id": new_model_id,
-                "parent_model_id": parent_model_id
             },
             channel="iopub",
         )
