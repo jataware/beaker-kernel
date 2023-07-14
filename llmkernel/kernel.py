@@ -180,6 +180,17 @@ class PythonLLMKernel(IPythonKernel):
             f"""{var_name};"""
         )
         
+    def _publish_execute_input(self, code, parent, execution_count):
+        """Publish the code request on the iopub stream."""
+        # Override the default action to pass along the parent metadata so we can track the container
+        self.session.send(
+            self.iopub_socket,
+            "execute_input",
+            {"code": code, "execution_count": execution_count},
+            parent=parent,
+            ident=self._topic("execute_input"),
+            metadata=parent.get("metadata", None),
+        )
     
     async def load_mira_model(self, queue, message_id, message, **kwargs):
         content = message.get('content', {})
