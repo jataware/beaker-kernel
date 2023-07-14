@@ -33,7 +33,7 @@ class DatasetToolset:
         else:
             raise Exception(f"Dataset '{dataset_id}' not found.")
 
-    def load_dataframe(self, filename=None):
+    def load_dataframe(self, filename=None, var_name="df"):
         if filename is None:
             filename = self.dataset.get('file_names', [])[0]
         meta_url = f"{os.environ['DATA_SERVICE_URL']}/datasets/{self.dataset_id}"
