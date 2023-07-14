@@ -77,6 +77,7 @@ class PythonLLMKernel(IPythonKernel):
 
     # def send_response(self, stream, msg_or_type, content=None, ident=None, buffers=None, track=False, header=None, metadata=None, channel="shell"):
     #     # Parse response as needed
+    #     logger.error("processing response %s, %s", msg_or_type, content)
     #     return super().send_response(stream, msg_or_type, content, ident, buffers, track, header, metadata, channel)
 
 
@@ -141,10 +142,10 @@ class PythonLLMKernel(IPythonKernel):
     
     async def execute_request(self, stream, ident, parent):
         # Rewrite parent so that this is properly tied to requests in terarium
-        notebook_item = parent.get('metadata', {}).get('notebook_item', None)
-        if notebook_item:
-            parent["msg_id"] = notebook_item
-            parent["header"]["msg_id"] = notebook_item
+        # notebook_item = parent.get('metadata', {}).get('notebook_item', None)
+        # if notebook_item:
+        #     parent["msg_id"] = notebook_item
+        #     parent["header"]["msg_id"] = notebook_item
         return await super().execute_request(stream, ident, parent)
 
     async def download_dataset_request(self, queue, message_id, message, **kwargs):
