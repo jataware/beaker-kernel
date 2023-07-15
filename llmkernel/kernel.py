@@ -10,6 +10,8 @@ import time
 import traceback
 import pandas as pd
 
+from IPython.core import display_functions
+from IPython.core.interactiveshell import InteractiveShell
 from ipykernel.kernelbase import Kernel
 from ipykernel.ipkernel import IPythonKernel
 from toolsets.dataset_toolset import DatasetToolset
@@ -75,7 +77,22 @@ class PythonLLMKernel(IPythonKernel):
                 self.toolset.kernel = self.shell
                 self.toolset.set_model(model_id)
                 self.context = self.agent.add_context(self.toolset.context())
+                self.send_mira_preview_message()
 
+    def send_mira_preview_message(self):
+        try:
+            preview = self.shell.ev(f'GraphicalModel.for_jupyter(model)')
+            formatter = InteractiveShell.instance().display_formatter.format
+            format_dict, md_dict = formatter(preview) #, include=include, exclude=exclude)
+            self.send_response(
+                stream=self.iopub_socket,
+                msg_or_type="model_preview",
+                content={
+                    "data": format_dict
+                },
+            )
+        except Exception as e:
+            raise
 
     def send_df_preview_message(self):
         try:
@@ -354,6 +371,7 @@ class PythonLLMKernel(IPythonKernel):
     async def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False, *, cell_id=None):
         result = await super().do_execute(code, silent, store_history, user_expressions, allow_stdin, cell_id=cell_id)
         self.send_df_preview_message()
+        self.send_mira_preview_message()
         return result
 
 if __name__ == '__main__':
