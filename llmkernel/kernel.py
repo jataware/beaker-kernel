@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import requests
+import sys
 import tempfile
 import time
 import traceback
@@ -81,16 +82,25 @@ class PythonLLMKernel(IPythonKernel):
 
     def send_mira_preview_message(self):
         try:
-            preview = self.shell.ev(f'GraphicalModel.for_jupyter(model)')
-            formatter = InteractiveShell.instance().display_formatter.format
-            format_dict, md_dict = formatter(preview) #, include=include, exclude=exclude)
-            self.send_response(
-                stream=self.iopub_socket,
-                msg_or_type="model_preview",
-                content={
-                    "data": format_dict
-                },
+            self.shell.ex(
+                '_mira_model = Model(model);\n'
+                '_model_size = len(_mira_model.variables) + len(_mira_model.transitions);\n'
+                'del _mira_model;\n'
             )
+            model_size = self.shell.ev('_model_size')
+            if model_size < 800:
+                preview = self.shell.ev('GraphicalModel.for_jupyter(model)')
+                formatter = InteractiveShell.instance().display_formatter.format
+                format_dict, md_dict = formatter(preview) #, include=include, exclude=exclude)
+                self.send_response(
+                    stream=self.iopub_socket,
+                    msg_or_type="model_preview",
+                    content={
+                        "data": format_dict
+                    },
+                )
+            else:
+                print(f"Note: Model is too large ({model_size} nodes) for auto-preview.", file=sys.stderr, flush=True)
         except Exception as e:
             raise
 
