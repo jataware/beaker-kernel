@@ -73,10 +73,11 @@ class PythonLLMKernel(IPythonKernel):
                 self.toolset.agent = self.agent
                 if getattr(self, 'context', None) is not None:
                     self.agent.clear_all_context()
-                model_id = context_info["id"]
-                print(f"Processing AMR {model_id} as a MIRA model")
+                item_id = context_info["id"]
+                item_type = context_info.get("type", "model")
+                print(f"Processing {item_type} AMR {item_id} as a MIRA model")
                 self.toolset.kernel = self.shell
-                self.toolset.set_model(model_id)
+                self.toolset.set_model(item_id, item_type)
                 self.context = self.agent.add_context(self.toolset.context())
                 self.send_mira_preview_message()
 
@@ -355,8 +356,12 @@ class PythonLLMKernel(IPythonKernel):
         
         # new_model = copy.deepcopy(parent_model)
         original_name = new_model.get("name", "None")
+        original_model_id = self.toolset.model_id
         new_model["name"] = new_name
-        new_model["description"] += f"\nTransformed from model '{original_name}' at {datetime.datetime.utcnow().strftime('%c %Z')}"
+        new_model["description"] += f"\nTransformed from model '{original_name}' ({original_model_id}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
+        if getattr(self.toolset, 'configuration', None) is not None:
+            new_model["description"] += f"\nfrom base configuration '{self.toolset.configuration.get('name')}' ({self.toolset.configuration.get('id')})"
+        
 
         create_req = requests.post(f"{os.environ['DATA_SERVICE_URL']}/models", json=new_model)
         new_model_id = create_req.json()["id"]

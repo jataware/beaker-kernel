@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -26,10 +27,19 @@ class MiraModelToolset:
         super().__init__(*args, **kwargs)
         self.reset()
 
-    def set_model(self, model_id, agent=None):
-        self.model_id = model_id
-        meta_url = f"{os.environ['DATA_SERVICE_URL']}/models/{self.model_id}"
-        self.amr = requests.get(meta_url).json()
+    def set_model(self, item_id, item_type="model", agent=None):
+        if item_type == "model":
+            self.model_id = item_id
+            self.config_id = 'default'
+            meta_url = f"{os.environ['DATA_SERVICE_URL']}/models/{self.model_id}"
+            self.amr = requests.get(meta_url).json()
+        elif item_type == "model_config":
+            self.config_id = item_id
+            meta_url = f"{os.environ['DATA_SERVICE_URL']}/model_configurations/{self.config_id}"
+            self.configuration = requests.get(meta_url).json()
+            self.model_id = self.configuration.get("model_id")
+            self.amr = self.configuration.get("configuration")
+        self.original_amr = copy.deepcopy(self.amr)
         if self.amr:
             self.load_mira()
         else:
