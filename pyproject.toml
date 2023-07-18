@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jupyter-llm"
-version = "1.1.2"
+version = "1.1.3"
 description = ""
 authors = ["Matthew Printz <matt@jataware.com>"]
 license = "MIT"
