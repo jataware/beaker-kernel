@@ -89,12 +89,6 @@ class PythonLLMKernel(KernelProxyManager):
         self.server.intercept_message("iopub", "execute_input", self.update_execute_input_response)
         self.server.intercept_message("shell", "execute_reply", self.post_execute)
 
-        # self.server.intercept_message("shell", "download_dataset_request")
-        # self.server.intercept_message("shell", "save_dataset_request")
-        # self.server.intercept_message("shell", "save_amr_request", self.save_amr_request)
-        # self.server.intercept_message("shell", "load_dataset")
-        # self.server.intercept_message("shell", "load_mira_model")
-
     def connect_to_last(self):
         # We don't want to automatically connect to the last kernel
         return
@@ -126,7 +120,6 @@ class PythonLLMKernel(KernelProxyManager):
             "tool_name": tool_name,
             "tool_input": tool_input,
         }
-        # print(f'I had a thought: {content}')
         self.send_response(
             stream="iopub",
             msg_or_type="llm_thought",
@@ -288,43 +281,14 @@ class PythonLLMKernel(KernelProxyManager):
                 print(f"Processing dataset w/id {dataset_id}")
                 await self.toolset.set_dataset(dataset_id, parent_header=parent_header)
                 self.context = self.agent.add_context(await self.toolset.context())
-            # case "mira_model":
-            #     self.toolset = MiraModelToolset()
-            #     self.agent = ReActAgent(tools=[self.toolset], allow_ask_user=False, verbose=True, spinner=None, rich_print=False)
-            #     self.toolset.agent = self.agent
-            #     if getattr(self, 'context', None) is not None:
-            #         self.agent.clear_all_context()
-            #     item_id = context_info["id"]
-            #     item_type = context_info.get("type", "model")
-            #     print(f"Processing {item_type} AMR {item_id} as a MIRA model")
-            #     self.toolset.kernel = self.shell
-            #     self.toolset.set_model(item_id, item_type)
-            #     self.context = self.agent.add_context(self.toolset.context())
-            #     self.send_mira_preview_message()
-
-    def send_mira_preview_message(self):
-        try:
-            self.shell.ex(
-                '_mira_model = Model(model);\n'
-                '_model_size = len(_mira_model.variables) + len(_mira_model.transitions);\n'
-                'del _mira_model;\n'
-            )
-            model_size = self.shell.ev('_model_size')
-            if model_size < 800:
-                preview = self.shell.ev('GraphicalModel.for_jupyter(model)')
-                formatter = InteractiveShell.instance().display_formatter.format
-                format_dict, md_dict = formatter(preview) #, include=include, exclude=exclude)
-                self.send_response(
-                    stream=self.iopub_socket,
-                    msg_or_type="model_preview",
-                    content={
-                        "data": format_dict
-                    },
-                )
-            else:
-                print(f"Note: Model is too large ({model_size} nodes) for auto-preview.", file=sys.stderr, flush=True)
-        except Exception as e:
-            raise
+            case "mira_model":
+                if getattr(self, 'context', None) is not None:
+                    self.agent.clear_all_context()
+                item_id = context_info["id"]
+                item_type = context_info.get("type", "model")
+                print(f"Processing {item_type} AMR {item_id} as a MIRA model")
+                await self.toolset.set_model(item_id, item_type, parent_header=parent_header)
+                self.context = self.agent.add_context(await self.toolset.context())
 
     async def post_execute(self, queue, message_id, data):
         message = JupyterMessage.parse(data)
@@ -423,54 +387,6 @@ class PythonLLMKernel(KernelProxyManager):
             },
             channel="iopub",
             parent_header=parent_header,
-        )
-
-    async def save_amr_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
-        content = message.content
-
-        logger.error("content: %s", content)
-        # content = message.get('content', {})
-        # parent_model_id = content.get("parent_model_id")
-        new_name = content.get("name")
-        var_name = 'model'
-
-        new_model: dict = self.shell.ev(f"AskeNetPetriNetModel(Model({var_name})).to_json()")
-
-        # parent_url = f"{os.environ['DATA_SERVICE_URL']}/models/{parent_model_id}"
-        # parent_model = requests.get(parent_url).json()
-        # if not parent_model:
-        #     raise Exception(f"Unable to locate parent model '{parent_model_id}'")
-        
-        # new_model = copy.deepcopy(parent_model)
-        original_name = new_model.get("name", "None")
-        original_model_id = self.toolset.model_id
-        new_model["name"] = new_name
-        new_model["description"] += f"\nTransformed from model '{original_name}' ({original_model_id}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
-        if getattr(self.toolset, 'configuration', None) is not None:
-            new_model["description"] += f"\nfrom base configuration '{self.toolset.configuration.get('name')}' ({self.toolset.configuration.get('id')})"
-        
-
-        create_req = requests.post(f"{os.environ['DATA_SERVICE_URL']}/models", json=new_model)
-        new_model_id = create_req.json()["id"]
-
-        self.send_response(
-            stream=self.iopub_socket,
-            msg_or_type="save_model_response",
-            content={
-                "model_id": new_model_id,
-            },
-            channel="iopub",
-            parent_header=message.header,
-        )
-        self.send_response(
-            stream=self.iopub_socket,
-            msg_or_type="status",
-            content={
-                "execution_state": "idle",
-            },
-            channel="iopub",
-            parent_header=message.header,
         )
 
          

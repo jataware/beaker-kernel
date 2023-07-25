@@ -137,15 +137,14 @@ if upload_response.status_code != 200:
         self.dataset_id = None
 
     async def send_df_preview_message(self, server=None, target_stream=None, data=None, parent_header={}):
-        if target_stream is None:
-            preview_result = await self.subkernel.evaluate(self.codeset["df_preview"], parent_header=parent_header)
-            if isinstance(preview_result, dict):
-                preview = preview_result.get('return', None)
-                if preview:
-                    parent = preview_result.get("parent", None)
-                    if parent and not parent_header:
-                        parent_header = parent.header
-                    self.subkernel.send_response("iopub", "dataset", preview, parent_header=parent_header)
+        preview_result = await self.subkernel.evaluate(self.codeset["df_preview"], parent_header=parent_header)
+        if isinstance(preview_result, dict):
+            preview = preview_result.get('return', None)
+            if preview:
+                parent = preview_result.get("parent", None)
+                if parent and not parent_header:
+                    parent_header = parent.header
+                self.subkernel.send_response("iopub", "dataset", preview, parent_header=parent_header)
         return data
 
     def send_dataset(self):
