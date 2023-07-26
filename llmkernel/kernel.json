@@ -1,7 +1,7 @@
 {
     "argv": [
         "python3", "-m", "llmkernel.kernel",
-        "-f", "{connection_file}"
+        "start", "{connection_file}"
     ],
     "display_name": "Chatty LLM Agent",
     "language": "chatty"

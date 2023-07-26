@@ -1,13 +1,18 @@
 import copy
+import datetime
 import json
 import logging
 import os
 import re
 import requests
+import sys
 from typing import Optional, Any
 
+from IPython.core import display_functions
+from IPython.core.interactiveshell import InteractiveShell
 import pandas as pd
 
+from jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 logging.disable(logging.WARNING)  # Disable warnings
@@ -18,16 +23,45 @@ logger = logging.Logger(__name__)
 class MiraModelToolset:
     """ """
 
+    CODE = {
+        "python": {
+            "setup": """
+import requests; import pandas as pd; import numpy as np; import scipy;
+import json; import mira; from mira.modeling.askenet.petrinet import AskeNetPetriNetModel; from mira.sources.askenet.petrinet import template_model_from_askenet_json;
+import sympy; import itertools; from mira.metamodel import *; from mira.modeling import Model;
+from mira.modeling.askenet.petrinet import AskeNetPetriNetModel; from mira.modeling.viz import GraphicalModel;
+""".strip(),
+            "load_model": """
+amr = requests.get("{model_url}").json()
+{var_name} = template_model_from_askenet_json(amr)""".strip(),
+            "model_info": """
+""".strip(),
+            "model_preview": """
+from IPython.core.interactiveshell import InteractiveShell; 
+from IPython.core import display_functions;
+InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(model))"""
+        }
+    }
+
     model_id: Optional[str]
     model_json: Optional[str]
     model_dict: Optional[dict[str, Any]]
     var_name: Optional[str] = 'model'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, kernel=None, language="python", *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.kernel = kernel
+        # TODO: add checks and protections around loading codeset
+        self.codeset = self.CODE[language]
+        self.intercepts = {
+            "save_amr_request": (self.save_amr_request, "shell"),
+        }
         self.reset()
 
-    def set_model(self, item_id, item_type="model", agent=None):
+    async def post_execute(self, message):
+        await self.send_mira_preview_message(parent_header=message.parent_header)
+
+    async def set_model(self, item_id, item_type="model", agent=None, parent_header={}):
         if item_type == "model":
             self.model_id = item_id
             self.config_id = 'default'
@@ -41,25 +75,22 @@ class MiraModelToolset:
             self.amr = self.configuration.get("configuration")
         self.original_amr = copy.deepcopy(self.amr)
         if self.amr:
-            self.load_mira()
+            await self.load_mira()
         else:
             raise Exception(f"Model '{model_id}' not found.")
+        await self.send_mira_preview_message(parent_header=parent_header)
 
-    def load_mira(self):
-        command = (
-                    """import requests; import pandas as pd; import numpy as np; import scipy;\n"""
-                    """import json; import mira; from mira.modeling.askenet.petrinet import AskeNetPetriNetModel; from mira.sources.askenet.petrinet import template_model_from_askenet_json;\n"""
-                    """import sympy; import itertools; from mira.metamodel import *; from mira.modeling import Model;\n"""
-                    """from mira.modeling.askenet.petrinet import AskeNetPetriNetModel; from mira.modeling.viz import GraphicalModel;\n"""
-                    f"""{self.var_name} = template_model_from_askenet_json({self.amr});\n"""
-                )
-        self.kernel.ex(command)
+    async def load_mira(self):
+        model_url = f"{os.environ['DATA_SERVICE_URL']}/models/{self.model_id}"
+        command = "\n".join([self.codeset['setup'], self.codeset['load_model'].format(var_name=self.var_name, model_url=model_url)])
+        print(f"Running command:\n-------\n{command}\n---------")
+        await self.kernel.execute(command)
 
     def reset(self):
         self.model_id = None
         self.df = None
 
-    def context(self):
+    async def context(self):
         return f"""You are an scientific modeler whose goal is to use the MIRA modeling library to manipulate and stratify Petrinet models in Python.
 
 You are working on a Petrinet model named: {self.amr.get('name')}
@@ -69,15 +100,14 @@ The description of the model is:
 
 The model has the following structure:
 --- START ---
-{self.model_structure()}
+{await self.model_structure()}
 --- END ---
 
 Please answer any user queries to the best of your ability, but do not guess if you are not sure of an answer.
 If you are asked to manipulate, stratify, or visualize the model, use the generate_python_code tool.
 """
 
-    @tool()
-    def model_structure(self) -> str:
+    async def model_structure(self) -> str:
         """
         Inspect the model and return information and metadata about it.
 
@@ -89,14 +119,12 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
         """
         # Update the local dataframe to match what's in the shell.
         # This will be factored out when we switch around to allow using multiple runtimes.
-        if self.kernel:
-            amr = self.kernel.ev(f"AskeNetPetriNetModel(Model({self.var_name})).to_json()")
-            return json.dumps(amr, indent=2)
-        return "UNDEFINED"
+        amr = (await self.kernel.evaluate(f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"))["return"]
+        return json.dumps(amr, indent=2)
 
 
     @tool()
-    def generate_python_code(
+    async def generate_python_code(
         self, query: str, agent: AgentRef, loop: LoopControllerRef
     ) -> str:
         """
@@ -121,7 +149,7 @@ You are a programmer writing code to help with scientific data analysis and mani
 Please write code that satisfies the user's request below.
 
 You have access to a variable name `model` that is a Petrinet model with the following structure:
-{self.model_structure()}
+{await self.model_structure()}
 
 
 If you are asked to modify or update the model, modify the model in place, keeping the updated variable to still be named `model`.
@@ -222,3 +250,42 @@ No addtional text is needed in the response, just the code block.
             }
         )
         return result
+
+    async def send_mira_preview_message(self, server=None, target_stream=None, data=None, parent_header={}):
+        try:
+            await self.kernel.execute(
+                "_mira_model = Model(model);\n"
+                "_model_size = len(_mira_model.variables) + len(_mira_model.transitions);\n"
+                "del _mira_model;\n"
+            )
+            model_size = (await self.kernel.evaluate("_model_size"))["return"]
+            if model_size < 800:
+                preview = await self.kernel.evaluate(self.codeset["model_preview"])
+                format_dict, md_dict = preview["return"]
+                content = {"data": format_dict}
+                self.kernel.send_response("iopub", "model_preview", content, parent_header=parent_header)
+            else:
+                print(f"Note: Model is too large ({model_size} nodes) for auto-preview.", file=sys.stderr, flush=True)
+        except Exception as e:
+            raise
+
+    async def save_amr_request(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        content = message.content
+
+        new_name = content.get("name")
+
+        new_model: dict = (await self.kernel.evaluate(f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"))["return"]
+
+        original_name = new_model.get("name", "None")
+        original_model_id = self.model_id
+        new_model["name"] = new_name
+        new_model["description"] += f"\nTransformed from model '{original_name}' ({original_model_id}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
+        if getattr(self, 'configuration', None) is not None:
+            new_model["description"] += f"\nfrom base configuration '{self.configuration.get('name')}' ({self.configuration.get('id')})"
+
+        create_req = requests.post(f"{os.environ['DATA_SERVICE_URL']}/models", json=new_model)
+        new_model_id = create_req.json()["id"]
+
+        content = {"model_id": new_model_id}
+        self.kernel.send_response("iopub", "save_model_response", content, parent_header=message.header)

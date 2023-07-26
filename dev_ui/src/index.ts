@@ -140,7 +140,8 @@ function createApp(manager: ServiceManager.IManager): void {
     }
     else if (msg.msg_type === "llm_response") {
       const text = msg.content.text;
-      notebook.model.cells.nbmodel.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: msg.content.text});
+      const colored_text = `Response:<br/><span style="color: blue">${text}</span>`
+      notebook.model.cells.nbmodel.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: colored_text});
     }
     else if (msg.msg_type === "dataset") {
       dataPreview.textContent = formatDataPreview(msg.content);
@@ -148,6 +149,11 @@ function createApp(manager: ServiceManager.IManager): void {
     else if (msg.msg_type === "code_cell") {
       const code = msg.content.code;
       notebook.model.cells.nbmodel.addCell({id: `${msg.id}-code`, cell_type: 'code', source: code});
+    }
+    else if (msg.msg_type === "llm_thought") {
+      const text = msg.content.thought;
+      const colored_text = `Thought: <span style="color: orange">${text}</span>`
+      notebook.model.cells.nbmodel.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: colored_text});
     }
     else {
       console.log(msg);
@@ -205,6 +211,8 @@ function createApp(manager: ServiceManager.IManager): void {
         msgType: 'llm_request',
         msgId: `${kernel.id}-query`
       });
+      const colored_text = `LLM Query: <span style="color: green; font-weight: bold">${query}</span>`
+      notebook.model.cells.nbmodel.addCell({id: `${message.header.msg_id}-text-${Date.now()}`, cell_type: 'markdown', source: colored_text});
       kernel.sendShellMessage(message);
     }
 
