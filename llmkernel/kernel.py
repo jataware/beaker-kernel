@@ -68,21 +68,12 @@ class PythonLLMKernel(KernelProxyManager):
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.subkernel_id = None
-        super().__init__(server)
-        self.new_kernel()
-        self.setup_instance()
-
-    def setup_instance(self):
-        self.setup_llm()
-        self.setup_intercepts()
-
-    def setup_llm(self):
-        # Init LLM agent
-        if getattr(self, 'context', None) is not None:
-            self.agent.clear_all_context()
         self.context = None
+        super().__init__(server)
+        self.new_kernel(language="python3")
+        self.add_intercepts()
 
-    def setup_intercepts(self):
+    def add_intercepts(self):
         self.server.intercept_message("shell", "context_setup_request", self.context_setup_request)
         self.server.intercept_message("shell", "llm_request", self.llm_request)
         self.server.intercept_message("shell", "execute_request", self.track_execute_request)
@@ -93,12 +84,12 @@ class PythonLLMKernel(KernelProxyManager):
         # We don't want to automatically connect to the last kernel
         return
     
-    def new_kernel(self):
+    def new_kernel(self, language: str):
         # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
         self.shutdown_subkernel()
 
         # TODO: Replace hard coded python3
-        res = requests.post(f"{server_url}/api/kernels", json={"name": "python3", "path": ""}, headers={"Authorization": f"token {server_token}"})
+        res = requests.post(f"{server_url}/api/kernels", json={"name": language, "path": ""}, headers={"Authorization": f"token {server_token}"})
         kernel_info = res.json()
         self.update_running_kernels()
         self.subkernel_id = kernel_info['id']
