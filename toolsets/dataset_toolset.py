@@ -23,7 +23,7 @@ class DatasetToolset:
     dataset_id: Optional[int]
     intercepts: dict[str, callable]
 
-    #TODO: Find a better way to organize and store these items. Maybe store as files and load into codeset dict at init?
+    # TODO: Find a better way to organize and store these items. Maybe store as files and load into codeset dict at init?
     CODE = {
         "python": {
             "setup": """import pandas as pd; import numpy as np; import scipy; import pickle;""",
@@ -122,29 +122,40 @@ if upload_response.status_code != 200:
 
     async def load_dataframe(self, filename=None):
         if filename is None:
-            filename = self.dataset_info.get('file_names', [])[0]
+            filename = self.dataset_info.get("file_names", [])[0]
         meta_url = f"{os.environ['DATA_SERVICE_URL']}/datasets/{self.dataset_id}"
-        data_url_req = requests.get(f'{meta_url}/download-url?filename={filename}')
-        data_url = data_url_req.json().get('url', None)
+        data_url_req = requests.get(f"{meta_url}/download-url?filename={filename}")
+        data_url = data_url_req.json().get("url", None)
         if data_url is not None:
-            command = "\n".join([self.codeset['setup'], self.codeset['load_df'].format(data_url=data_url)])
+            command = "\n".join(
+                [
+                    self.codeset["setup"],
+                    self.codeset["load_df"].format(data_url=data_url),
+                ]
+            )
             print(f"Running command:\n-------\n{command}\n---------")
             await self.kernel.execute(command)
         else:
-            raise Exception('Unable to open dataset.')
+            raise Exception("Unable to open dataset.")
 
     def reset(self):
         self.dataset_id = None
 
-    async def send_df_preview_message(self, server=None, target_stream=None, data=None, parent_header={}):
-        preview_result = await self.kernel.evaluate(self.codeset["df_preview"], parent_header=parent_header)
+    async def send_df_preview_message(
+        self, server=None, target_stream=None, data=None, parent_header={}
+    ):
+        preview_result = await self.kernel.evaluate(
+            self.codeset["df_preview"], parent_header=parent_header
+        )
         if isinstance(preview_result, dict):
-            preview = preview_result.get('return', None)
+            preview = preview_result.get("return", None)
             if preview:
                 parent = preview_result.get("parent", None)
                 if parent and not parent_header:
                     parent_header = parent.header
-                self.kernel.send_response("iopub", "dataset", preview, parent_header=parent_header)
+                self.kernel.send_response(
+                    "iopub", "dataset", preview, parent_header=parent_header
+                )
         return data
 
     def send_dataset(self):
@@ -263,8 +274,16 @@ No addtional text is needed in the response, just the code block.
         code = self.codeset["df_download"]
         df_response = await self.kernel.evaluate(code)
         df_contents = df_response.get("stdout_list")
-        self.kernel.send_response("iopub", "download_response", {"data": [codecs.encode(line.encode(), 'base64').decode() for line in df_contents]}) # , parent_header=parent_header)
-
+        self.kernel.send_response(
+            "iopub",
+            "download_response",
+            {
+                "data": [
+                    codecs.encode(line.encode(), "base64").decode()
+                    for line in df_contents
+                ]
+            },
+        )  # , parent_header=parent_header)
 
     async def save_dataset_request(self, queue, message_id, data):
         logger.error("save_dataset_request")
@@ -281,11 +300,24 @@ No addtional text is needed in the response, just the code block.
         if filename is None:
             filename = "dataset.csv"
 
-        code = code.format(parent_dataset_id=parent_dataset_id, new_name=new_name, filename=filename, dataservice_url=dataservice_url)
+        code = code.format(
+            parent_dataset_id=parent_dataset_id,
+            new_name=new_name,
+            filename=filename,
+            dataservice_url=dataservice_url,
+        )
 
         df_response = await self.kernel.evaluate(code)
 
         if df_response:
             new_dataset_id = df_response.get("return", {}).get("dataset_id", None)
             if new_dataset_id:
-                self.kernel.send_response( "iopub", "save_dataset_response", {"dataset_id": new_dataset_id, "filename": filename, "parent_dataset_id": parent_dataset_id})
+                self.kernel.send_response(
+                    "iopub",
+                    "save_dataset_response",
+                    {
+                        "dataset_id": new_dataset_id,
+                        "filename": filename,
+                        "parent_dataset_id": parent_dataset_id,
+                    },
+                )

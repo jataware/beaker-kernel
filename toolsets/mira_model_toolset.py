@@ -39,14 +39,14 @@ amr = requests.get("{model_url}").json()
             "model_preview": """
 from IPython.core.interactiveshell import InteractiveShell; 
 from IPython.core import display_functions;
-InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(model))"""
+InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(model))""",
         }
     }
 
     model_id: Optional[str]
     model_json: Optional[str]
     model_dict: Optional[dict[str, Any]]
-    var_name: Optional[str] = 'model'
+    var_name: Optional[str] = "model"
 
     def __init__(self, kernel=None, language="python", *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -64,7 +64,7 @@ InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(
     async def set_model(self, item_id, item_type="model", agent=None, parent_header={}):
         if item_type == "model":
             self.model_id = item_id
-            self.config_id = 'default'
+            self.config_id = "default"
             meta_url = f"{os.environ['DATA_SERVICE_URL']}/models/{self.model_id}"
             self.amr = requests.get(meta_url).json()
         elif item_type == "model_config":
@@ -82,7 +82,14 @@ InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(
 
     async def load_mira(self):
         model_url = f"{os.environ['DATA_SERVICE_URL']}/models/{self.model_id}"
-        command = "\n".join([self.codeset['setup'], self.codeset['load_model'].format(var_name=self.var_name, model_url=model_url)])
+        command = "\n".join(
+            [
+                self.codeset["setup"],
+                self.codeset["load_model"].format(
+                    var_name=self.var_name, model_url=model_url
+                ),
+            ]
+        )
         print(f"Running command:\n-------\n{command}\n---------")
         await self.kernel.execute(command)
 
@@ -119,9 +126,12 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
         """
         # Update the local dataframe to match what's in the shell.
         # This will be factored out when we switch around to allow using multiple runtimes.
-        amr = (await self.kernel.evaluate(f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"))["return"]
+        amr = (
+            await self.kernel.evaluate(
+                f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"
+            )
+        )["return"]
         return json.dumps(amr, indent=2)
-
 
     @tool()
     async def generate_python_code(
@@ -251,7 +261,9 @@ No addtional text is needed in the response, just the code block.
         )
         return result
 
-    async def send_mira_preview_message(self, server=None, target_stream=None, data=None, parent_header={}):
+    async def send_mira_preview_message(
+        self, server=None, target_stream=None, data=None, parent_header={}
+    ):
         try:
             await self.kernel.execute(
                 "_mira_model = Model(model);\n"
@@ -263,9 +275,15 @@ No addtional text is needed in the response, just the code block.
                 preview = await self.kernel.evaluate(self.codeset["model_preview"])
                 format_dict, md_dict = preview["return"]
                 content = {"data": format_dict}
-                self.kernel.send_response("iopub", "model_preview", content, parent_header=parent_header)
+                self.kernel.send_response(
+                    "iopub", "model_preview", content, parent_header=parent_header
+                )
             else:
-                print(f"Note: Model is too large ({model_size} nodes) for auto-preview.", file=sys.stderr, flush=True)
+                print(
+                    f"Note: Model is too large ({model_size} nodes) for auto-preview.",
+                    file=sys.stderr,
+                    flush=True,
+                )
         except Exception as e:
             raise
 
@@ -275,17 +293,29 @@ No addtional text is needed in the response, just the code block.
 
         new_name = content.get("name")
 
-        new_model: dict = (await self.kernel.evaluate(f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"))["return"]
+        new_model: dict = (
+            await self.kernel.evaluate(
+                f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"
+            )
+        )["return"]
 
         original_name = new_model.get("name", "None")
         original_model_id = self.model_id
         new_model["name"] = new_name
-        new_model["description"] += f"\nTransformed from model '{original_name}' ({original_model_id}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
-        if getattr(self, 'configuration', None) is not None:
-            new_model["description"] += f"\nfrom base configuration '{self.configuration.get('name')}' ({self.configuration.get('id')})"
+        new_model[
+            "description"
+        ] += f"\nTransformed from model '{original_name}' ({original_model_id}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
+        if getattr(self, "configuration", None) is not None:
+            new_model[
+                "description"
+            ] += f"\nfrom base configuration '{self.configuration.get('name')}' ({self.configuration.get('id')})"
 
-        create_req = requests.post(f"{os.environ['DATA_SERVICE_URL']}/models", json=new_model)
+        create_req = requests.post(
+            f"{os.environ['DATA_SERVICE_URL']}/models", json=new_model
+        )
         new_model_id = create_req.json()["id"]
 
         content = {"model_id": new_model_id}
-        self.kernel.send_response("iopub", "save_model_response", content, parent_header=message.header)
+        self.kernel.send_response(
+            "iopub", "save_model_response", content, parent_header=message.header
+        )

@@ -42,7 +42,8 @@ class ExampleHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterH
         # Options set here can be read with PageConfig.getOption
         mathjax_config = self.settings.get("mathjax_config", "TeX-AMS_HTML-full,Safe")
         mathjax_url = self.settings.get(
-            "mathjax_url", "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js"
+            "mathjax_url",
+            "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js",
         )
 
         config_data = {
@@ -67,7 +68,6 @@ class ExampleHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterH
 
 
 class ExampleApp(LabServerApp):
-
     extension_url = "/example"
     default_url = "/example"
     app_url = "/example"

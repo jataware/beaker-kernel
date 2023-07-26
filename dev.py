@@ -1,16 +1,19 @@
 import os
 
 from jupyter_server.base.handlers import JupyterHandler
-from jupyter_server.extension.handler import ExtensionHandlerJinjaMixin, ExtensionHandlerMixin
+from jupyter_server.extension.handler import (
+    ExtensionHandlerJinjaMixin,
+    ExtensionHandlerMixin,
+)
 from jupyter_server.utils import url_path_join as ujoin
 from jupyterlab_server import LabServerApp
-
 
 
 HERE = os.path.join(os.path.dirname(__file__), "dev_ui")
 
 
 version = "0.0.1"
+
 
 def _jupyter_server_extension_points():
     return [{"module": __name__, "app": DevAskemJupyterApp}]
@@ -26,7 +29,8 @@ class DevHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandl
         # Options set here can be read with PageConfig.getOption
         mathjax_config = self.settings.get("mathjax_config", "TeX-AMS_HTML-full,Safe")
         mathjax_url = self.settings.get(
-            "mathjax_url", "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js"
+            "mathjax_url",
+            "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js",
         )
 
         config_data = {
@@ -50,7 +54,6 @@ class DevHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandl
         )
 
 
-
 class DevAskemJupyterApp(LabServerApp):
     name = __name__
     # load_other_extensions = False
@@ -69,19 +72,15 @@ class DevAskemJupyterApp(LabServerApp):
     user_settings_dir = os.path.join(HERE, "build", "user_settings")
     workspaces_dir = os.path.join(HERE, "build", "workspaces")
 
-
     def initialize_handlers(self):
         """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""
         self.handlers.append(("/dev_ui", DevHandler))
 
-
     def initialize_settings(self):
         # Override to allow cross domain websockets
-        self.settings['allow_origin'] = '*'
-        self.settings['disable_check_xsrf'] = True
+        self.settings["allow_origin"] = "*"
+        self.settings["disable_check_xsrf"] = True
 
 
 if __name__ == "__main__":
     DevAskemJupyterApp.launch_instance()
-
-
