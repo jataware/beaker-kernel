@@ -48,9 +48,9 @@ InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(
     model_dict: Optional[dict[str, Any]]
     var_name: Optional[str] = 'model'
 
-    def __init__(self, subkernel=None, language="python", *args, **kwargs):
+    def __init__(self, kernel=None, language="python", *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.subkernel = subkernel
+        self.kernel = kernel
         # TODO: add checks and protections around loading codeset
         self.codeset = self.CODE[language]
         self.intercepts = {
@@ -84,7 +84,7 @@ InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(
         model_url = f"{os.environ['DATA_SERVICE_URL']}/models/{self.model_id}"
         command = "\n".join([self.codeset['setup'], self.codeset['load_model'].format(var_name=self.var_name, model_url=model_url)])
         print(f"Running command:\n-------\n{command}\n---------")
-        await self.subkernel.execute(command)
+        await self.kernel.execute(command)
 
     def reset(self):
         self.model_id = None
@@ -119,7 +119,7 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
         """
         # Update the local dataframe to match what's in the shell.
         # This will be factored out when we switch around to allow using multiple runtimes.
-        amr = (await self.subkernel.evaluate(f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"))["return"]
+        amr = (await self.kernel.evaluate(f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"))["return"]
         return json.dumps(amr, indent=2)
 
 
@@ -253,17 +253,17 @@ No addtional text is needed in the response, just the code block.
 
     async def send_mira_preview_message(self, server=None, target_stream=None, data=None, parent_header={}):
         try:
-            await self.subkernel.execute(
+            await self.kernel.execute(
                 "_mira_model = Model(model);\n"
                 "_model_size = len(_mira_model.variables) + len(_mira_model.transitions);\n"
                 "del _mira_model;\n"
             )
-            model_size = (await self.subkernel.evaluate("_model_size"))["return"]
+            model_size = (await self.kernel.evaluate("_model_size"))["return"]
             if model_size < 800:
-                preview = await self.subkernel.evaluate(self.codeset["model_preview"])
+                preview = await self.kernel.evaluate(self.codeset["model_preview"])
                 format_dict, md_dict = preview["return"]
                 content = {"data": format_dict}
-                self.subkernel.send_response("iopub", "model_preview", content, parent_header=parent_header)
+                self.kernel.send_response("iopub", "model_preview", content, parent_header=parent_header)
             else:
                 print(f"Note: Model is too large ({model_size} nodes) for auto-preview.", file=sys.stderr, flush=True)
         except Exception as e:
@@ -275,7 +275,7 @@ No addtional text is needed in the response, just the code block.
 
         new_name = content.get("name")
 
-        new_model: dict = (await self.subkernel.evaluate(f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"))["return"]
+        new_model: dict = (await self.kernel.evaluate(f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"))["return"]
 
         original_name = new_model.get("name", "None")
         original_model_id = self.model_id
@@ -288,4 +288,4 @@ No addtional text is needed in the response, just the code block.
         new_model_id = create_req.json()["id"]
 
         content = {"model_id": new_model_id}
-        self.subkernel.send_response("iopub", "save_model_response", content, parent_header=message.header)
+        self.kernel.send_response("iopub", "save_model_response", content, parent_header=message.header)

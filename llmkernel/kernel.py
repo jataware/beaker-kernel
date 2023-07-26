@@ -259,7 +259,7 @@ class PythonLLMKernel(KernelProxyManager):
         toolset = AVAILABLE_TOOLSETS.get(context, None)
         if not toolset:
             return False
-        self.toolset = toolset(subkernel=self)
+        self.toolset = toolset(kernel=self)
         self.agent = ReActAgent(
             tools=[self.toolset],
             allow_ask_user=False,
