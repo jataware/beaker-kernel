@@ -71,7 +71,7 @@ This will start the Jupyter service and launch a specialized notebook interface 
 ## Differences from vanilla Jupyter
 
 This setup uses stock Jupyter services as provided
-in the Jupyter Python packagesi.
+in the Jupyter Python packages.
 
 The entry point of the docker file runs the file main.py which 
 starts a JupyterLab Server App. The only differences here 
