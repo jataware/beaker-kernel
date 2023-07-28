@@ -52,6 +52,8 @@ import {
 } from '@jupyterlab/rendermime';
 import { SetupCommands } from './commands';
 
+const baseUrl = PageConfig.getBaseUrl();
+
 function main(): void {
   const manager = new ServiceManager();
   void manager.ready.then(() => {
@@ -59,7 +61,7 @@ function main(): void {
   });
 }
 
-function createApp(manager: ServiceManager.IManager): void {
+async function createApp(manager: ServiceManager.IManager): void {
   // Initialize the command registry with the bindings.
   const commands = new CommandRegistry();
   const useCapture = true;
@@ -72,6 +74,11 @@ function createApp(manager: ServiceManager.IManager): void {
     },
     useCapture
   );
+
+  // Fetch available contexts
+  const url = URLExt.join(baseUrl, "/contexts");
+  const response = await fetch(url);
+  const contexts = await response.json();
 
   const rendermime = new RenderMimeRegistry({
     initialFactories: initialFactories,
@@ -240,26 +247,46 @@ function createApp(manager: ServiceManager.IManager): void {
   llmButton.textContent = "Submit";
   llmWidget.node.appendChild(llmContainer);
 
+  const languageSet = new Set();
+
   const contextWidget = new Widget();
   const contextNode = document.createElement('div');
-  const contextNameInput = document.createElement('input');
+  const contextSelect = document.createElement('select');
+  const languageSelect = document.createElement('select');
   const contextPayloadInput = document.createElement('textarea');
   const contextButton = document.createElement('button');
   const contextHeader = document.createElement('h2');
-  // contextNode.appendChild(document.createTextNode("Be sure to set the context before trying to run queries against assets."));
   contextHeader.textContent = "Context setup";
   contextNode.id = 'context-node';
-  contextNameInput.value = 'dataset';
+  for (const context of Object.keys(contexts)){
+    const languages = contexts[context]['languages'];
+    const option = document.createElement('option');
+    option.setAttribute("value", context);
+    option.setAttribute("label", context);
+    contextSelect.appendChild(option);
+    console.log(languages, typeof languages);
+    languages.forEach((lang) => {languageSet.add(lang)});
+  }
+  // for (const lang of ["python3", "julia"]) {
+  languageSet.forEach((lang) => {
+    const option = document.createElement('option');
+    option.setAttribute("value", lang);
+    option.setAttribute("label", lang);
+    languageSelect.appendChild(option);
+  });
   contextPayloadInput.className = 'json-input';
   contextPayloadInput.value = '{\n  "id": "truth-incident-hospitalization"\n}';
   contextButton.textContent = 'Submit';
   contextButton.addEventListener("click", (e) => {
     setKernelContext({
-      context: contextNameInput.value,
+      context: contextSelect.value,
+      language: languageSelect.value,
       context_info: JSON.parse(contextPayloadInput.value),
     })
   }, false);
-  contextNode.appendChild(contextNameInput);
+  contextNode.appendChild(contextHeader);
+  contextNode.appendChild(contextSelect);
+  contextNode.appendChild(languageSelect);
   contextNode.appendChild(contextPayloadInput);
   contextNode.appendChild(contextButton);
   contextWidget.node.appendChild(contextNode);

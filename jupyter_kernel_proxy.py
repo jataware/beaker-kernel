@@ -254,6 +254,7 @@ class ProxyKernelServer(AbstractProxyKernel):
         return handler
 
     def set_proxy_target(self, proxy_client):
+
         if self.proxy_target is not None:
             for stream in self.proxy_target.streams:
                 stream.stop_on_recv()

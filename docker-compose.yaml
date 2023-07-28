@@ -1,0 +1,147 @@
+---
+# Jupyter LLM docker compose by Matthew Printz
+
+version: '3'
+services:
+
+  jupyter:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    ports:
+      - "8888:8888"
+    environment:
+      - DATA_SERVICE_URL=http://data-service:8000
+      - DEBUG=1
+      - JUPYTER_SERVER=http://jupyter:8888
+      - JUPYTER_TOKEN=89f73481102c46c0bc13b2998f9a4fce
+    env_file:
+      - .env
+    volumes:
+      - ./llmkernel:/usr/local/share/jupyter/kernels/llmkernel
+      - .:/jupyter
+    command:  ["python", "dev.py", "--ip", "0.0.0.0"]
+
+  data-service:
+    image: ghcr.io/darpa-askem/data-service:latest
+    environment:
+      DATASET_STORAGE_BASE_URL: s3://datasets/
+      STORAGE_HOST: http://minio:9000
+      S3_BUCKET: askem
+      S3_DATASET_PATH: datasets
+      S3_RESULT_PATH: simulations
+      OPENAI_KEY: sk
+      SQL_URL: data-service-dev-db
+      SQL_PORT: 5432
+      SQL_USER: dev
+      SQL_PASSWORD: dev
+      NEO4J_ENABLED:
+      NEO4J_driver: neo4j://neo4j:7687
+      AWS_ACCESS_KEY_ID: miniouser
+      AWS_SECRET_ACCESS_KEY: miniopass
+      ES_URL: http://elasticsearch:9200
+      ELASTIC_PASSWORD: tdsElasticPass
+      KIBANA_PASSWORD: tdsKibanaPass
+    depends_on:
+      data-service-migrations:
+        condition: service_completed_successfully
+      neo4j:
+        condition: service_started
+      minio:
+        condition: service_started
+    ports:
+      - "8000:8000"
+  minio:
+    image: ghcr.io/darpa-askem/data-service-storage:latest
+    environment:
+      S3_BUCKET: askem
+      S3_DATASET_PATH: "datasets"
+      S3_RESULTS_PATH: "simulations"
+      MINIO_ROOT_USER: miniouser
+      MINIO_ROOT_PASSWORD: miniopass
+    expose:
+      - 9000
+      - 9001
+    entrypoint: ""
+    command: ["minio", "server", "/data"]
+    ports:
+      - "9000:9000"
+    depends_on:
+      - neo4j
+      - data-service-dev-db
+  neo4j:
+    image: ghcr.io/darpa-askem/data-service-graphdb:5.3.0.3
+    expose:
+      - 7474
+      - 7687
+    environment:
+      - NEO4J_PLUGINS=["apoc"]
+      - apoc.import.file.enabled=true
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_dbms_memory_pagecache_size=512M
+      - PG_HOST=data-service-dev-db
+      - PG_PORT=5432
+    depends_on:
+      - data-service-dev-db
+  data-service-dev-db:
+    image: ghcr.io/darpa-askem/data-service-dev-db:latest
+    expose:
+      - 5432
+    environment:
+      - POSTGRES_PASSWORD=dev
+      - POSTGRES_USER=dev
+      - POSTGRES_DB=askem
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d askem"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  elasticsearch:
+    image: elasticsearch:8.5.3
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=false
+      - action.auto_create_index=false
+    ports:
+      - target: 9200
+        published: 9200
+    healthcheck:
+      test: curl http://localhost:9200/_cluster/health?wait_for_status=yellow || exit 1
+      interval: 10s
+      timeout: 20s
+      retries: 5
+  data-service-migrations:
+    container_name: data-service-migrations
+    image: ghcr.io/darpa-askem/data-service-migrations:latest
+    entrypoint: /run_migrations.sh
+    environment:
+      - DATASET_STORAGE_BASE_URL=s3://datasets/
+      - STORAGE_HOST=http://minio:9000
+      - S3_BUCKET=askem
+      - S3_DATASET_PATH=datasets
+      - S3_RESULT_PATH=simulations
+      - OPENAI_KEY=sk
+      - SQL_URL=data-service-dev-db
+      - SQL_PORT=5432
+      - SQL_USER=dev
+      - SQL_PASSWORD=dev
+      - SQL_DB=askem
+      - NEO4J_ENABLED=
+      - NEO4J_driver=neo4j://neo4j:7687
+      - AWS_ACCESS_KEY_ID=miniouser
+      - AWS_SECRET_ACCESS_KEY=miniopass
+      - ES_INDEX_PREFIX=tds_
+      - ES_URL=http://elasticsearch:9200
+      - ES_USERNAME=tds
+      - ES_PASSWORD=tdsElasticPass
+      - ELASTIC_PASSWORD=tdsElasticPass
+      - KIBANA_PASSWORD=tdsKibanaPass
+      - SEED_DATA=true
+    depends_on:
+      data-service-dev-db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      minio:
+        condition: service_started

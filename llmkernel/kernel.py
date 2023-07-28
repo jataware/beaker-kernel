@@ -74,8 +74,10 @@ class PythonLLMKernel(KernelProxyManager):
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.subkernel_id = None
+        self.subkernel_language = None
         self.context = None
         super().__init__(server)
+        # We need to have a kernel when we start up, even though we can/will change the kernel/language when we set context
         self.new_kernel(language="python3")
         self.add_intercepts()
 
@@ -100,7 +102,6 @@ class PythonLLMKernel(KernelProxyManager):
         # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
         self.shutdown_subkernel()
 
-        # TODO: Replace hard coded python3
         res = requests.post(
             f"{server_url}/api/kernels",
             json={"name": language, "path": ""},
@@ -109,6 +110,7 @@ class PythonLLMKernel(KernelProxyManager):
         kernel_info = res.json()
         self.update_running_kernels()
         self.subkernel_id = kernel_info["id"]
+        self.subkernel_language = language
         self.connect_to(self.subkernel_id)
 
     def shutdown_subkernel(self):
@@ -294,7 +296,11 @@ class PythonLLMKernel(KernelProxyManager):
             result["return"] = ast.literal_eval(result["return"])
         return result
 
-    async def set_context(self, context, context_info, parent_header={}):
+    async def set_context(self, context, context_info, language="python3", parent_header={}):
+        # Spin up a new kernel if we are changing languages.
+        if self.subkernel_language != language:
+            self.new_kernel(language=language)
+
         toolset = AVAILABLE_TOOLSETS.get(context, None)
         if not toolset:
             return False
@@ -431,21 +437,22 @@ class PythonLLMKernel(KernelProxyManager):
         content = message.content
         context = content.get("context")
         context_info = content.get("context_info", {})
+        language = content.get("language", "python3")
 
         parent_header = copy.deepcopy(message.header)
         if content:
-            await self.set_context(context, context_info, parent_header=parent_header)
+            await self.set_context(context, context_info, language=language, parent_header=parent_header)
 
         # TODO: Add parent header info to response
-        self.send_response(
-            stream="iopub",
-            msg_or_type="status",
-            content={
-                "execution_state": "idle",
-            },
-            channel="iopub",
-            parent_header=parent_header,
-        )
+        # self.send_response(
+        #     stream="iopub",
+        #     msg_or_type="status",
+        #     content={
+        #         "execution_state": "idle",
+        #     },
+        #     channel="iopub",
+        #     parent_header=parent_header,
+        # )
 
 
 def cleanup(kernel):

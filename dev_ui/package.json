@@ -22,7 +22,8 @@
     "@jupyterlab/theme-light-extension": "^3.6.3",
     "@lumino/commands": "^1.19.0",
     "@lumino/widgets": "^1.37.2",
-    "es6-promise": "~4.2.8"
+    "es6-promise": "~4.2.8",
+    "node-fetch": "^2.6.11"
   },
   "devDependencies": {
     "@types/codemirror": "^0.0.109",

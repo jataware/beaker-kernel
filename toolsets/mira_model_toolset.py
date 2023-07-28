@@ -15,16 +15,18 @@ import pandas as pd
 from jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
+from .base import BaseToolset
+
 logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)
 
 
 @toolset()
-class MiraModelToolset:
+class MiraModelToolset(BaseToolset):
     """ """
 
     CODE = {
-        "python": {
+        "python3": {
             "setup": """
 import requests; import pandas as pd; import numpy as np; import scipy;
 import json; import mira; from mira.modeling.askenet.petrinet import AskeNetPetriNetModel; from mira.sources.askenet.petrinet import template_model_from_askenet_json;
@@ -48,9 +50,8 @@ InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(
     model_dict: Optional[dict[str, Any]]
     var_name: Optional[str] = "model"
 
-    def __init__(self, kernel=None, language="python", *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.kernel = kernel
+    def __init__(self, kernel=None, language="python3", *args, **kwargs):
+        super().__init__(kernel=kernel, language=language, *args, **kwargs)
         # TODO: add checks and protections around loading codeset
         self.codeset = self.CODE[language]
         self.intercepts = {
@@ -77,7 +78,7 @@ InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(
         if self.amr:
             await self.load_mira()
         else:
-            raise Exception(f"Model '{model_id}' not found.")
+            raise Exception(f"Model '{item_id}' not found.")
         await self.send_mira_preview_message(parent_header=parent_header)
 
     async def load_mira(self):
@@ -111,7 +112,7 @@ The model has the following structure:
 --- END ---
 
 Please answer any user queries to the best of your ability, but do not guess if you are not sure of an answer.
-If you are asked to manipulate, stratify, or visualize the model, use the generate_python_code tool.
+If you are asked to manipulate, stratify, or visualize the model, use the generate_code tool.
 """
 
     async def model_structure(self) -> str:
@@ -134,9 +135,9 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
         return json.dumps(amr, indent=2)
 
     @tool()
-    async def generate_python_code(
+    async def generate_code(
         self, query: str, agent: AgentRef, loop: LoopControllerRef
-    ) -> str:
+    ) -> None:
         """
         Generated Python code to be run in an interactive Jupyter notebook for the purpose of exploring, modifying and visualizing a Pandas Dataframe.
 
@@ -147,9 +148,6 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
 
         Args:
             query (str): A fully grammatically correct queistion about the current model.
-
-        Returns:
-            str: A LLM prompt that should be passed evaluated.
         """
         # set up the agent
         # str: Valid and correct python code that fulfills the user's request.
@@ -255,7 +253,7 @@ No addtional text is needed in the response, just the code block.
         result = json.dumps(
             {
                 "action": "code_cell",
-                "language": "python",
+                "language": "python3",
                 "content": code.strip(),
             }
         )

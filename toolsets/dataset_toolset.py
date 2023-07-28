@@ -12,20 +12,24 @@ from typing import Optional, Callable, List, Tuple
 from jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
+from .base import BaseToolset
+
 logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)
 
 
 @toolset()
-class DatasetToolset:
+class DatasetToolset(BaseToolset):
     """ """
 
     dataset_id: Optional[int]
-    intercepts: dict[str, callable]
 
     # TODO: Find a better way to organize and store these items. Maybe store as files and load into codeset dict at init?
     CODE = {
-        "python": {
+        "python3": {
+            "name": "Python",
+            # TODO: Maybe generate libraries and setup imports from a single source of truth?
+            "libraries": """pandas as pd, numpy as np, scipy, pickle""",
             "setup": """import pandas as pd; import numpy as np; import scipy; import pickle;""",
             "load_df": """df = pd.read_csv('{data_url}');""",
             "df_info": """
@@ -96,9 +100,8 @@ if upload_response.status_code != 200:
         }
     }
 
-    def __init__(self, kernel=None, language="python", *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.kernel = kernel
+    def __init__(self, kernel=None, language="python3", *args, **kwargs):
+        super().__init__(kernel=kernel, language=language, *args, **kwargs)
         # TODO: add checks and protections around loading codeset
         self.codeset = self.CODE[language]
         self.intercepts = {
@@ -162,7 +165,7 @@ if upload_response.status_code != 200:
         pass
 
     async def context(self):
-        return f"""You are an analyst whose goal is to help with scientific data analysis and manipulation in Python.
+        return f"""You are an analyst whose goal is to help with scientific data analysis and manipulation in {self.codeset.get("name", "a Jupyter notebook")}.
 
 You are working on a dataset named: {self.dataset_info.get('name')}
 
@@ -175,7 +178,7 @@ The dataset has the following structure:
 --- END ---
 
 Please answer any user queries to the best of your ability, but do not guess if you are not sure of an answer.
-If you are asked to manipulate or visualize the dataset, use the generate_python_code tool.
+If you are asked to manipulate or visualize the dataset, use the generate_code tool.
 """
 
     async def describe_dataset(self) -> str:
@@ -215,27 +218,23 @@ Statistics:
         return output
 
     @tool()
-    async def generate_python_code(
+    async def generate_code(
         self, query: str, agent: AgentRef, loop: LoopControllerRef
-    ) -> str:
+    ) -> None:
         """
-        Generated Python code to be run in an interactive Jupyter notebook for the purpose of exploring, modifying and visualizing a Pandas Dataframe.
+        Generated  code to be run in an interactive Jupyter notebook for the purpose of exploring, modifying and visualizing a Dataframe.
 
         Input is a full grammatically correct question about or request for an action to be performed on the loaded dataframe.
 
-        Assume that the dataframe is already loaded and has the variable name `df`.
-
         Args:
-            query (str): A fully grammatically correct queistion about the current dataset.
+            query (str): A fully grammatically correct question about the current dataset.
 
-        Returns:
-            str: A LLM prompt that should be passed evaluated.
         """
         # set up the agent
         # str: Valid and correct python code that fulfills the user's request.
         df_info = await self.describe_dataset()
         prompt = f"""
-You are a programmer writing code to help with scientific data analysis and manipulation in Python.
+You are a programmer writing code to help with scientific data analysis and manipulation in {self.codeset.get("name", "a Jupyter notebook")}.
 
 Please write code that satisfies the user's request below.
 
@@ -244,7 +243,7 @@ You have access to a variable name `df` that is a Pandas Dataframe with the foll
 
 If you are asked to modify or update the dataframe, modify the dataframe in place, keeping the updated variable to still be named `df`.
 
-You also have access to the libraries pandas, numpy, scipy, matplotlib.
+You also have access to the libraries {self.codeset.get("libraries", "that are common for these tasks")}.
 
 Please generate the code as if you were programming inside a Jupyter Notebook and the code is to be executed inside a cell.
 You MUST wrap the code with a line containing three backticks (```) before and after the generated code.
@@ -257,7 +256,7 @@ No addtional text is needed in the response, just the code block.
         result = json.dumps(
             {
                 "action": "code_cell",
-                "language": "python",
+                "language": self.language,
                 "content": code.strip(),
             }
         )

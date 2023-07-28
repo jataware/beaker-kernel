@@ -8,16 +8,13 @@ from jupyter_server.extension.handler import (
 from jupyter_server.utils import url_path_join as ujoin
 from jupyterlab_server import LabServerApp
 
+from main import AskemJupyterApp
+
 
 HERE = os.path.join(os.path.dirname(__file__), "dev_ui")
 
-
-version = "0.0.1"
-
-
 def _jupyter_server_extension_points():
     return [{"module": __name__, "app": DevAskemJupyterApp}]
-
 
 class DevHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandler):
     """
@@ -54,12 +51,9 @@ class DevHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandl
         )
 
 
-class DevAskemJupyterApp(LabServerApp):
+class DevAskemJupyterApp(AskemJupyterApp):
     name = __name__
-    # load_other_extensions = False
-    app_name = "Askem Jupyter App"
-    app_version = version
-    allow_origin = "*"
+    load_other_extensions = True
 
     extension_url = "/dev_ui"
     default_url = "/dev_ui"
@@ -73,13 +67,9 @@ class DevAskemJupyterApp(LabServerApp):
     workspaces_dir = os.path.join(HERE, "build", "workspaces")
 
     def initialize_handlers(self):
-        """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""
+        super().initialize_handlers()
+        """Add dev handler"""
         self.handlers.append(("/dev_ui", DevHandler))
-
-    def initialize_settings(self):
-        # Override to allow cross domain websockets
-        self.settings["allow_origin"] = "*"
-        self.settings["disable_check_xsrf"] = True
 
 
 if __name__ == "__main__":
