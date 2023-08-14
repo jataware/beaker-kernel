@@ -8,13 +8,14 @@ import os
 import re
 import requests
 import tempfile
-from typing import Optional, Callable, List, Tuple, TYPE_CHECKING
+from typing import Optional, Callable, List, Tuple, Dict, Any, TYPE_CHECKING
 
+from .code_templates import get_metadata, get_template
 from jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 if TYPE_CHECKING:
-    from llmkernel.kernel import PythonLLMKernel
+    from llmkernel.kernel import LLMKernel
 
 logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)
@@ -24,22 +25,25 @@ class BaseToolset:
     """ """
 
     # Typing
-    code: dict[str, str]
+    toolset_name: str
+    metadata: Dict[str, Any]
     intercepts: dict[str, tuple[Callable, str]]
     language: str
-    kernel: PythonLLMKernel
+    kernel: LLMKernel
 
-    # TODO: Find a better way to organize and store these items. Maybe store as files and load into codeset dict at init?
-    CODE = {
-        "python": {},
-    }
-
-    def __init__(self, kernel=None, language="python", *args, **kwargs):
+    def __init__(self, kernel=None, language="python3", *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.kernel = kernel
         self.language = language
-        # TODO: add checks and protections around loading codeset
-        self.codeset = self.CODE[language]
+        if not getattr(self, 'toolset_name', None):
+            self.toolset_name = self.__class__.__name__.lower().removesuffix("toolset")
+
+    @property
+    def metadata(self):
+        return get_metadata(self.toolset_name, self.language)
+
+    def get_code(self, name, render_dict: Dict[str, Any]={}) -> str:
+        return get_template(self.toolset_name, self.language, name, render_dict)
 
     async def post_execute(self, message: JupyterMessage) -> None:
         ...

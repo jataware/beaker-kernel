@@ -1,0 +1,5 @@
+{
+    "name": "Julia",
+    "libraries": "DataFrames, CSV, HTTP, JSON",
+    "df_lib_name": "DataFrames.jl"
+}

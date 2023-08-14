@@ -7,15 +7,25 @@ import os
 import re
 import requests
 import tempfile
+from functools import partial
 from typing import Optional, Callable, List, Tuple
 
 from jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 from .base import BaseToolset
+from .code_templates import get_metadata, get_template
+# from .dataset.pythoncode import CODE as python_code
+# from .dataset.juliacode import CODE as julia_code
 
 logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)
+
+
+# tool_implementations = {
+#     "python3": python_code,
+#     "julia-1.9": julia_code
+# }
 
 
 @toolset()
@@ -24,86 +34,12 @@ class DatasetToolset(BaseToolset):
 
     dataset_id: Optional[int]
 
-    # TODO: Find a better way to organize and store these items. Maybe store as files and load into codeset dict at init?
-    CODE = {
-        "python3": {
-            "name": "Python",
-            # TODO: Maybe generate libraries and setup imports from a single source of truth?
-            "libraries": """pandas as pd, numpy as np, scipy, pickle""",
-            "setup": """import pandas as pd; import numpy as np; import scipy; import pickle;""",
-            "load_df": """df = pd.read_csv('{data_url}');""",
-            "df_info": """
-{
-    "head": str(df.head(15)),
-    "columns": str(df.columns),
-    "dtypes": str(df.dtypes),
-    "statistics": str(df.describe()),
-}
-""".strip(),
-            "df_preview": """
-import json
-split_df = json.loads(df.head(30).to_json(orient="split"))
-
-{
-    "name": "Temp dataset (not saved)",
-    "headers": split_df["columns"],
-    "csv": [split_df["columns"]] + split_df["data"],
-}
-""".strip(),
-            "df_download": """
-import pandas as pd; import io
-import time
-output_buff = io.BytesIO()
-df.to_csv(output_buff, index=False, header=True)
-output_buff.seek(0)
-
-for line in output_buff.getvalue().splitlines():
-    print(line.decode())
-""".strip(),
-            "df_save_as": """
-import copy
-import datetime
-import requests
-import tempfile
-
-parent_url = f"{dataservice_url}/datasets/{parent_dataset_id}"
-parent_dataset = requests.get(parent_url).json()
-if not parent_dataset:
-    raise Exception(f"Unable to locate parent dataset '{parent_dataset_id}'")
-
-new_dataset = copy.deepcopy(parent_dataset)
-del new_dataset["id"]
-new_dataset["name"] = "{new_name}"
-new_dataset["description"] += f"\\nTransformed from dataset '{{parent_dataset['name']}}' ({{parent_dataset['id']}}) at {{datetime.datetime.utcnow().strftime('%c %Z')}}"
-new_dataset["file_names"] = ["{filename}"]
-
-create_req = requests.post(f"{dataservice_url}/datasets", json=new_dataset)
-new_dataset_id = create_req.json()["id"]
-
-new_dataset["id"] = new_dataset_id
-new_dataset_url = f"{dataservice_url}/datasets/{{new_dataset_id}}"
-data_url_req = requests.get(f'{{new_dataset_url}}/upload-url?filename={filename}')
-data_url = data_url_req.json().get('url', None)
-
-# Saving as a temporary file instead of a buffer to save memory
-with tempfile.TemporaryFile() as temp_csv_file:
-    df.to_csv(temp_csv_file, index=False, header=True)
-    temp_csv_file.seek(0)
-    upload_response = requests.put(data_url, data=temp_csv_file)
-if upload_response.status_code != 200:
-    raise Exception(f"Error uploading dataframe: {{upload_response.content}}")
-
-{{
-    "dataset_id": new_dataset_id,
-}}
-""".strip(),
-        }
-    }
+    # name = "dataset"
 
     def __init__(self, kernel=None, language="python3", *args, **kwargs):
         super().__init__(kernel=kernel, language=language, *args, **kwargs)
         # TODO: add checks and protections around loading codeset
-        self.codeset = self.CODE[language]
+        # self.codeset = tool_implementations[language]
         self.intercepts = {
             "download_dataset_request": (self.download_dataset_request, "shell"),
             "save_dataset_request": (self.save_dataset_request, "shell"),
@@ -132,8 +68,8 @@ if upload_response.status_code != 200:
         if data_url is not None:
             command = "\n".join(
                 [
-                    self.codeset["setup"],
-                    self.codeset["load_df"].format(data_url=data_url),
+                    self.get_code("setup"),
+                    self.get_code("load_df", {"data_url": data_url}),
                 ]
             )
             print(f"Running command:\n-------\n{command}\n---------")
@@ -148,7 +84,7 @@ if upload_response.status_code != 200:
         self, server=None, target_stream=None, data=None, parent_header={}
     ):
         preview_result = await self.kernel.evaluate(
-            self.codeset["df_preview"], parent_header=parent_header
+            self.get_code("df_preview"), parent_header=parent_header
         )
         if isinstance(preview_result, dict):
             preview = preview_result.get("return", None)
@@ -165,7 +101,7 @@ if upload_response.status_code != 200:
         pass
 
     async def context(self):
-        return f"""You are an analyst whose goal is to help with scientific data analysis and manipulation in {self.codeset.get("name", "a Jupyter notebook")}.
+        return f"""You are an analyst whose goal is to help with scientific data analysis and manipulation in {self.metadata.get("name", "a Jupyter notebook")}.
 
 You are working on a dataset named: {self.dataset_info.get('name')}
 
@@ -195,8 +131,13 @@ If you are asked to manipulate or visualize the dataset, use the generate_code t
         # Update the local dataframe to match what's in the shell.
         # This will be factored out when we switch around to allow using multiple runtimes.
 
-        df_info_result = await self.kernel.evaluate(self.codeset["df_info"])
+        df_info_result = await self.kernel.evaluate(self.get_code("df_info"))
         df_info = df_info_result["return"]
+        if isinstance(df_info, str):
+            try:
+                df_info = json.loads(df_info)
+            except json.JSONDecodeError:
+                pass
         if not df_info:
             return None
         output = f"""
@@ -234,16 +175,16 @@ Statistics:
         # str: Valid and correct python code that fulfills the user's request.
         df_info = await self.describe_dataset()
         prompt = f"""
-You are a programmer writing code to help with scientific data analysis and manipulation in {self.codeset.get("name", "a Jupyter notebook")}.
+You are a programmer writing code to help with scientific data analysis and manipulation in {self.metadata.get("name", "a Jupyter notebook")}.
 
 Please write code that satisfies the user's request below.
 
-You have access to a variable name `df` that is a Pandas Dataframe with the following structure:
+You have access to a variable name `df` that is a {self.metadata.get("df_lib_name", "Pandas")} Dataframe with the following structure:
 {df_info}
 
 If you are asked to modify or update the dataframe, modify the dataframe in place, keeping the updated variable to still be named `df`.
 
-You also have access to the libraries {self.codeset.get("libraries", "that are common for these tasks")}.
+You also have access to the libraries {self.metadata.get("libraries", "that are common for these tasks")}.
 
 Please generate the code as if you were programming inside a Jupyter Notebook and the code is to be executed inside a cell.
 You MUST wrap the code with a line containing three backticks (```) before and after the generated code.
@@ -263,14 +204,13 @@ No addtional text is needed in the response, just the code block.
         return result
 
     async def download_dataset_request(self, queue, message_id, data):
-        logger.error("download_dataset_request")
         message = JupyterMessage.parse(data)
         content = message.content
         # TODO: Collect any options that might be needed, if they ever are
 
         # TODO: This doesn't work very well. Is very slow to encode, and transfer all of the required messages multiple times proxies through the proxy kernel.
         # We should find a better way to accomplish this if it's needed.
-        code = self.codeset["df_download"]
+        code = self.get_code("df_download")
         df_response = await self.kernel.evaluate(code)
         df_contents = df_response.get("stdout_list")
         self.kernel.send_response(
@@ -285,7 +225,6 @@ No addtional text is needed in the response, just the code block.
         )  # , parent_header=parent_header)
 
     async def save_dataset_request(self, queue, message_id, data):
-        logger.error("save_dataset_request")
         message = JupyterMessage.parse(data)
         content = message.content
 

@@ -25,8 +25,7 @@ from jupyter_kernel_proxy import (
 )
 from jupyter_core.paths import jupyter_runtime_dir, jupyter_data_dir
 
-from toolsets.dataset_toolset import DatasetToolset
-from toolsets.mira_model_toolset import MiraModelToolset
+from toolsets import DatasetToolset, MiraModelToolset
 from archytas.react import ReActAgent
 
 
@@ -56,7 +55,7 @@ def get_socket(stream_name: str):
     return socket
 
 
-class PythonLLMKernel(KernelProxyManager):
+class LLMKernel(KernelProxyManager):
     implementation = "askem-chatty-py"
     implementation_version = "0.1"
     banner = "Chatty ASKEM"
@@ -293,7 +292,15 @@ class PythonLLMKernel(KernelProxyManager):
         result = await self.execute(expression, parent_header=parent_header)
         return_str = result.get("return")
         if return_str:
-            result["return"] = ast.literal_eval(result["return"])
+            # TODO: This auto-conversion to json is probably not actually what we want. Better if it's
+            # explicit rather than implicit.
+            return_obj = ast.literal_eval(result["return"])
+            if isinstance(return_obj, str):
+                try:
+                    return_obj = json.loads(return_obj)
+                except json.JSONDecodeError:
+                    pass
+            result["return"] = return_obj
         return result
 
     async def set_context(self, context, context_info, language="python3", parent_header={}):
@@ -304,7 +311,7 @@ class PythonLLMKernel(KernelProxyManager):
         toolset = AVAILABLE_TOOLSETS.get(context, None)
         if not toolset:
             return False
-        self.toolset = toolset(kernel=self)
+        self.toolset = toolset(kernel=self, language=self.subkernel_language)
         self.agent = ReActAgent(
             tools=[self.toolset],
             allow_ask_user=False,
@@ -470,7 +477,7 @@ def start(connection_file):
     with open(connection_file) as f:
         notebook_config = json.load(f)
 
-    kernel = PythonLLMKernel(notebook_config)
+    kernel = LLMKernel(notebook_config)
 
     try:
         loop.start()

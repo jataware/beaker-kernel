@@ -25,25 +25,7 @@ logger = logging.Logger(__name__)
 class MiraModelToolset(BaseToolset):
     """ """
 
-    CODE = {
-        "python3": {
-            "setup": """
-import requests; import pandas as pd; import numpy as np; import scipy;
-import json; import mira; from mira.modeling.askenet.petrinet import AskeNetPetriNetModel; from mira.sources.askenet.petrinet import template_model_from_askenet_json;
-import sympy; import itertools; from mira.metamodel import *; from mira.modeling import Model;
-from mira.modeling.askenet.petrinet import AskeNetPetriNetModel; from mira.modeling.viz import GraphicalModel;
-""".strip(),
-            "load_model": """
-amr = requests.get("{model_url}").json()
-{var_name} = template_model_from_askenet_json(amr)""".strip(),
-            "model_info": """
-""".strip(),
-            "model_preview": """
-from IPython.core.interactiveshell import InteractiveShell; 
-from IPython.core import display_functions;
-InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(model))""",
-        }
-    }
+    toolset_name = "mira_model"
 
     model_id: Optional[str]
     model_json: Optional[str]
@@ -52,8 +34,6 @@ InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(
 
     def __init__(self, kernel=None, language="python3", *args, **kwargs):
         super().__init__(kernel=kernel, language=language, *args, **kwargs)
-        # TODO: add checks and protections around loading codeset
-        self.codeset = self.CODE[language]
         self.intercepts = {
             "save_amr_request": (self.save_amr_request, "shell"),
         }
@@ -85,10 +65,11 @@ InteractiveShell.instance().display_formatter.format(GraphicalModel.for_jupyter(
         model_url = f"{os.environ['DATA_SERVICE_URL']}/models/{self.model_id}"
         command = "\n".join(
             [
-                self.codeset["setup"],
-                self.codeset["load_model"].format(
-                    var_name=self.var_name, model_url=model_url
-                ),
+                self.get_code("setup"),
+                self.get_code("load_model", {
+                    "var_name": self.var_name,
+                    "model_url": model_url,
+                }),
             ]
         )
         print(f"Running command:\n-------\n{command}\n---------")
@@ -270,7 +251,7 @@ No addtional text is needed in the response, just the code block.
             )
             model_size = (await self.kernel.evaluate("_model_size"))["return"]
             if model_size < 800:
-                preview = await self.kernel.evaluate(self.codeset["model_preview"])
+                preview = await self.kernel.evaluate(self.get_code("model_preview"))
                 format_dict, md_dict = preview["return"]
                 content = {"data": format_dict}
                 self.kernel.send_response(

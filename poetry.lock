@@ -1739,7 +1739,7 @@ test = ["mypy", "pre-commit", "pytest", "pytest-asyncio", "websockets (>=10.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10,<3.13"
-content-hash = "fb64c3c39603f1b4b74934bc28e5698d7c5556969b1b7f6bb3f7a17037e1498a"
+content-hash = "50d37b54e9c00307dee39aabba283866b085a377ccbc51fc98fcbc8fb1308715"
 
 [metadata.files]
 aiofiles = [

@@ -32,7 +32,7 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         # TODO: Generate this from a single source of truth at startup time
         context_data = {
             "dataset": {
-                "languages": ["python3", "julia"],
+                "languages": ["python3", "julia-1.9"],
             },
             "mira_model": {
                 "languages": ["python3"],
