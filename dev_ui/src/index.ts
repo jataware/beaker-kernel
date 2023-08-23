@@ -186,8 +186,12 @@ async function createApp(manager: ServiceManager.IManager): void {
 
   const formatDataPreview = (preview) => {
     const output = [];
-    for (const line of preview.csv) {
-      output.push(line.join(","));
+    for (const dataset of Object.keys(preview)){
+      output.push(`Dataset "${dataset}":\n`)
+      for (const line of preview[dataset].csv) {
+        output.push(line.join(","));
+      }
+      output.push("\n");
     }
     return output.join("\n");
   };
@@ -275,7 +279,7 @@ async function createApp(manager: ServiceManager.IManager): void {
     languageSelect.appendChild(option);
   });
   contextPayloadInput.className = 'json-input';
-  contextPayloadInput.value = '{\n  "id": "truth-incident-hospitalization"\n}';
+  contextPayloadInput.value = '{\n  "df_hosp": "truth-incident-hospitalization",\n  "df_cases": "truth-incident-case"\n}';
   contextButton.textContent = 'Submit';
   contextButton.addEventListener("click", (e) => {
     setKernelContext({
@@ -295,7 +299,7 @@ async function createApp(manager: ServiceManager.IManager): void {
   const dataPreviewHeader = document.createElement('h2');
   const dataPreview = document.createElement('div');
   dataPreview.id = 'preview';
-  dataPreviewHeader.textContent = "Preview:"
+  dataPreviewHeader.textContent = "Preview:";
   dataPreviewWidget.node.appendChild(dataPreviewHeader);
   dataPreviewWidget.node.appendChild(dataPreview);
 
@@ -303,6 +307,7 @@ async function createApp(manager: ServiceManager.IManager): void {
   leftPanel.id = 'left';
   leftPanel.orientation = 'vertical';
   leftPanel.spacing = 0;
+  leftPanel.node.style.overflowY = "auto";
   leftPanel.addWidget(llmWidget);
   leftPanel.addWidget(contextWidget);
   leftPanel.addWidget(dataPreviewWidget);

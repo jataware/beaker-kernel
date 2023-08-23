@@ -1,34 +1,38 @@
-parent_url = "$(dataservice_url)/datasets/$(parent_dataset_id)"
-response = HTTP.get(parent_url)
-parent_dataset = JSON.parse(String(response.body))
+using Dates
 
-if isempty(parent_dataset)
-    error("Unable to locate parent dataset '$(parent_dataset_id)'")
+_parent_url = "{{dataservice_url}}/datasets/{{parent_dataset_id}}"
+_response = HTTP.get(_parent_url)
+_parent_dataset = JSON.parse(String(_response.body))
+
+if isempty(_parent_dataset)
+    error("Unable to locate parent dataset '{{ parent_dataset_id }}'")
 end
 
-new_dataset = deepcopy(parent_dataset)
-delete!(new_dataset, "id")
-new_dataset["name"] = new_name
-new_dataset["description"] *= "\nTransformed from dataset '$(parent_dataset["name"])' ($(parent_dataset["id"])) at $(Dates.format(Dates.now(), "c U"))"
-new_dataset["file_names"] = [filename]
+_new_dataset = deepcopy(_parent_dataset)
+delete!(_new_dataset, "id")
+_new_dataset["name"] = "{{ new_name }}"
+_new_dataset["description"] *= "\nTransformed from dataset '$(_parent_dataset["name"])' ($(_parent_dataset["id"])) at $(Dates.format(Dates.now(), "c U"))"
+_new_dataset["file_names"] = ["{{ filename }}"]
 
-create_req = HTTP.post("$(dataservice_url)/datasets", body=JSON.json(new_dataset))
-new_dataset_id = JSON.parse(String(create_req.body))["id"]
+_create_req = HTTP.post("{{ dataservice_url }}/datasets", body=JSON.json(_new_dataset))
+_new_dataset_id = JSON.parse(String(_create_req.body))["id"]
 
-new_dataset["id"] = new_dataset_id
-new_dataset_url = "$(dataservice_url)/datasets/$(new_dataset_id)"
-data_url_req = HTTP.get("$(new_dataset_url)/upload-url?filename=$(filename)")
-data_url = JSON.parse(String(data_url_req.body)).get("url", nothing)
+_new_dataset["id"] = _new_dataset_id
+_new_dataset_url = "{{ dataservice_url }}/datasets/$(_new_dataset_id)"
+_data_url_req = HTTP.get("$(_new_dataset_url)/upload-url?filename={{ filename }}")
+_data_url = get!(JSON.parse(String(_data_url_req.body)), "url", nothing)
 
-temp_csv_file = tempname()
-CSV.write(temp_csv_file, df, writeheader=true)
-upload_response = HTTP.put(data_url, open(temp_csv_file, "r"))
+_temp_csv_file = tempname()
+CSV.write(_temp_csv_file, {{ var_name|default("df") }}, writeheader=true)
+_filesize = stat(_temp_csv_file).size
+_upload_response = HTTP.put(_data_url, ["content-length" => _filesize], open(_temp_csv_file, "r"))
 
-if upload_response.status != 200
-    error("Error uploading dataframe: $(String(upload_response.body))")
+if _upload_response.status != 200
+    error("Error uploading dataframe: $(String(_upload_response.body))")
 end
 
 # Cleanup
-rm(temp_csv_file)
+rm(_temp_csv_file)
 
-Dict("dataset_id" => new_dataset_id)
+_result = Dict("dataset_id" => _new_dataset_id)
+JSON.json(_result) |> DisplayAs.unlimited

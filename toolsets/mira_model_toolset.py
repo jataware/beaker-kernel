@@ -8,10 +8,6 @@ import requests
 import sys
 from typing import Optional, Any
 
-from IPython.core import display_functions
-from IPython.core.interactiveshell import InteractiveShell
-import pandas as pd
-
 from jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
@@ -77,7 +73,6 @@ class MiraModelToolset(BaseToolset):
 
     def reset(self):
         self.model_id = None
-        self.df = None
 
     async def context(self):
         return f"""You are an scientific modeler whose goal is to use the MIRA modeling library to manipulate and stratify Petrinet models in Python.
@@ -228,7 +223,7 @@ You MUST wrap the code with a line containing three backticks (```) before and a
 No addtional text is needed in the response, just the code block.
 """
 
-        llm_response = agent.oneshot(prompt=prompt, query=query)
+        llm_response = await agent.oneshot(prompt=prompt, query=query)
         loop.set_state(loop.STOP_SUCCESS)
         preamble, code, coda = re.split("```\w*", llm_response)
         result = json.dumps(

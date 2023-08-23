@@ -1,8 +1,8 @@
-output_buff = IOBuffer()
-CSV.write(output_buff, df, writeheader=true)
+_output_buff = IOBuffer()
+CSV.write(_output_buff, {{ var_name|default("df") }}, writeheader=true)
 
-seekstart(output_buff)
+seekstart(_output_buff)
 
-for line in readlines(output_buff)
-    println(line)
+for _line in readlines(_output_buff)
+    println(_line)
 end
