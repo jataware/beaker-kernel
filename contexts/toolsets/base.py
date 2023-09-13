@@ -10,12 +10,13 @@ import requests
 import tempfile
 from typing import Optional, Callable, List, Tuple, Dict, Any, TYPE_CHECKING
 
-from .code_templates import get_metadata, get_template
-from jupyter_kernel_proxy import JupyterMessage
+from ..codesets import get_metadata, get_template
+from lib.jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 if TYPE_CHECKING:
     from llmkernel.kernel import LLMKernel
+    from contexts.contexts import Context
 
 logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)
@@ -26,29 +27,26 @@ class BaseToolset:
 
     # Typing
     toolset_name: str
-    metadata: Dict[str, Any]
     intercepts: dict[str, tuple[Callable, str]]
-    language: str
-    kernel: LLMKernel
+    context: Context
 
-    def __init__(self, kernel=None, language="python3", *args, **kwargs):
+    def __init__(self, context: Context, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.kernel = kernel
-        self.language = language
+        self.context = context
         if not getattr(self, 'toolset_name', None):
             self.toolset_name = self.__class__.__name__.lower().removesuffix("toolset")
 
-    @property
-    def metadata(self):
-        return get_metadata(self.toolset_name, self.language)
-
-    def get_code(self, name, render_dict: Dict[str, Any]={}) -> str:
-        return get_template(self.toolset_name, self.language, name, render_dict)
-
-    async def post_execute(self, message: JupyterMessage) -> None:
+    async def setup(self, *args, **kwargs):
         ...
 
-    async def context(self) -> str:
+    @property
+    def metadata(self):
+        return self.context.metadata()
+
+    def get_code(self, name, render_dict: Dict[str, Any]={}) -> str:
+        return self.context.get_code(name, render_dict)
+
+    async def post_execute(self, message: JupyterMessage) -> None:
         ...
 
 

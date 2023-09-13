@@ -32,7 +32,7 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         # TODO: Generate this from a single source of truth at startup time
         context_data = {
             "dataset": {
-                "languages": ["python3", "julia-1.9"],
+                "languages": ["python3", "julia-1.9", "ir"],
             },
             "mira_model": {
                 "languages": ["python3"],
@@ -48,6 +48,7 @@ class AskemJupyterApp(LabServerApp):
     app_name = "Askem Jupyter App"
     app_version = version
     allow_origin = "*"
+    open_browser = False
 
     def initialize_handlers(self):
         """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""

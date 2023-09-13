@@ -8,7 +8,7 @@ templates: Dict[str, Dict[str, Dict[str, Template]]] = {}
 
 # Locate templates and load in to the templates registry dictionary
 jinja_env = Environment(
-    loader=FileSystemLoader("toolsets/code_templates"),
+    loader=FileSystemLoader("contexts/codesets"),
     autoescape=select_autoescape()
 )
 for template_path in jinja_env.list_templates():

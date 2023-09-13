@@ -65,6 +65,7 @@ class DevAskemJupyterApp(AskemJupyterApp):
     themes_dir = os.path.join(HERE, "build", "themes")
     user_settings_dir = os.path.join(HERE, "build", "user_settings")
     workspaces_dir = os.path.join(HERE, "build", "workspaces")
+    log_level = 10
 
     def initialize_handlers(self):
         super().initialize_handlers()

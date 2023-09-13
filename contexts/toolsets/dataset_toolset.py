@@ -10,11 +10,10 @@ import tempfile
 from functools import partial
 from typing import Optional, Callable, List, Tuple, Any
 
-from jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 from .base import BaseToolset
-from .code_templates import get_metadata, get_template
+from lib.jupyter_kernel_proxy import JupyterMessage
 
 
 logging.disable(logging.WARNING)  # Disable warnings
@@ -33,14 +32,24 @@ class DatasetToolset(BaseToolset):
     #   "df_map": {"id": 12345, "filename": "mappings.csv"},
     # }
 
-    def __init__(self, kernel=None, language="python3", *args, **kwargs):
-        super().__init__(kernel=kernel, language=language, *args, **kwargs)
+    def __init__(self, context, *args, **kwargs):
+        super().__init__(context=context, *args, **kwargs)
         self.dataset_map = {}
         self.intercepts = {
             "download_dataset_request": (self.download_dataset_request, "shell"),
             "save_dataset_request": (self.save_dataset_request, "shell"),
         }
         self.reset()
+
+    async def setup(self, config, parent_header):
+        # DEPRECATED: Backwards compatible handling of "old style" single id contexts
+        if len(config) == 1 and "id" in config:
+            dataset_id = config["id"]
+            print(f"Processing dataset w/id {dataset_id}")
+            await self.set_dataset(dataset_id, parent_header=parent_header)
+        else:
+            print(f"Processing datasets w/ids {', '.join(config.values())}")
+            await self.set_datasets(config, parent_header=parent_header)
 
     async def post_execute(self, message):
         await self.update_dataset_map(parent_header=message.parent_header)
@@ -90,7 +99,7 @@ class DatasetToolset(BaseToolset):
                 self.get_code("load_df", {"var_map": var_map}),
             ]
         )
-        await self.kernel.execute(command)
+        await self.context.execute(command)
         await self.update_dataset_map()
 
     def reset(self):
@@ -107,15 +116,16 @@ class DatasetToolset(BaseToolset):
             }
             for var_name, df in self.dataset_map.items()
         }
-        self.kernel.send_response(
+        self.context.kernel.send_response(
             "iopub", "dataset", preview, parent_header=parent_header
         )
         return data
 
     async def update_dataset_map(self, parent_header={}):
         code = self.get_code("df_info")
-        df_info_response = await self.kernel.evaluate(
-            self.get_code("df_info"), parent_header=parent_header
+        df_info_response = await self.context.kernel.evaluate(
+            code,
+            parent_header=parent_header,
         )
         df_info = df_info_response.get('return')
         for var_name, info in df_info.items():
@@ -128,12 +138,7 @@ class DatasetToolset(BaseToolset):
                     **info,
                 }
 
-
-
-    def send_dataset(self):
-        pass
-
-    async def context(self):
+    async def auto_context(self):
         intro = f"""
 You are an analyst whose goal is to help with scientific data analysis and manipulation in {self.metadata.get("name", "a Jupyter notebook")}.
 
@@ -240,7 +245,7 @@ No addtional text is needed in the response, just the code block.
         result = json.dumps(
             {
                 "action": "code_cell",
-                "language": self.language,
+                "language": self.context.lang,
                 "content": code.strip(),
             }
         )
@@ -255,9 +260,9 @@ No addtional text is needed in the response, just the code block.
         # TODO: This doesn't work very well. Is very slow to encode, and transfer all of the required messages multiple times proxies through the proxy kernel.
         # We should find a better way to accomplish this if it's needed.
         code = self.get_code("df_download", {"var_name": var_name})
-        df_response = await self.kernel.evaluate(code)
+        df_response = await self.context.evaluate(code)
         df_contents = df_response.get("stdout_list")
-        self.kernel.send_response(
+        self.context.kernel.send_response(
             "iopub",
             "download_response",
             {
@@ -292,12 +297,12 @@ No addtional text is needed in the response, just the code block.
             }
         )
 
-        df_response = await self.kernel.evaluate(code)
+        df_response = await self.context.evaluate(code)
 
         if df_response:
             new_dataset_id = df_response.get("return", {}).get("dataset_id", None)
             if new_dataset_id:
-                self.kernel.send_response(
+                self.context.kernel.send_response(
                     "iopub",
                     "save_dataset_response",
                     {

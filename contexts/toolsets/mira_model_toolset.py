@@ -8,10 +8,10 @@ import requests
 import sys
 from typing import Optional, Any
 
-from jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 from .base import BaseToolset
+from lib.jupyter_kernel_proxy import JupyterMessage
 
 logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)
@@ -28,12 +28,21 @@ class MiraModelToolset(BaseToolset):
     model_dict: Optional[dict[str, Any]]
     var_name: Optional[str] = "model"
 
-    def __init__(self, kernel=None, language="python3", *args, **kwargs):
-        super().__init__(kernel=kernel, language=language, *args, **kwargs)
+    def __init__(self, context, *args, **kwargs):
+        super().__init__(context=context, *args, **kwargs)
         self.intercepts = {
             "save_amr_request": (self.save_amr_request, "shell"),
         }
         self.reset()
+    
+    async def setup(self, config, parent_header):
+        item_id = config["id"]
+        item_type = config.get("type", "model")
+        print(f"Processing {item_type} AMR {item_id} as a MIRA model")
+        await self.set_model(
+            item_id, item_type, parent_header=parent_header
+        )
+
 
     async def post_execute(self, message):
         await self.send_mira_preview_message(parent_header=message.parent_header)
@@ -69,12 +78,12 @@ class MiraModelToolset(BaseToolset):
             ]
         )
         print(f"Running command:\n-------\n{command}\n---------")
-        await self.kernel.execute(command)
+        await self.context.execute(command)
 
     def reset(self):
         self.model_id = None
 
-    async def context(self):
+    async def auto_context(self):
         return f"""You are an scientific modeler whose goal is to use the MIRA modeling library to manipulate and stratify Petrinet models in Python.
 
 You are working on a Petrinet model named: {self.amr.get('name')}
@@ -104,7 +113,7 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
         # Update the local dataframe to match what's in the shell.
         # This will be factored out when we switch around to allow using multiple runtimes.
         amr = (
-            await self.kernel.evaluate(
+            await self.context.evaluate(
                 f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"
             )
         )["return"]
@@ -239,17 +248,17 @@ No addtional text is needed in the response, just the code block.
         self, server=None, target_stream=None, data=None, parent_header={}
     ):
         try:
-            await self.kernel.execute(
+            await self.context.execute(
                 "_mira_model = Model(model);\n"
                 "_model_size = len(_mira_model.variables) + len(_mira_model.transitions);\n"
                 "del _mira_model;\n"
             )
-            model_size = (await self.kernel.evaluate("_model_size"))["return"]
+            model_size = (await self.context.evaluate("_model_size"))["return"]
             if model_size < 800:
-                preview = await self.kernel.evaluate(self.get_code("model_preview"))
+                preview = await self.context.evaluate(self.get_code("model_preview"))
                 format_dict, md_dict = preview["return"]
                 content = {"data": format_dict}
-                self.kernel.send_response(
+                self.context.kernel.send_response(
                     "iopub", "model_preview", content, parent_header=parent_header
                 )
             else:
@@ -268,21 +277,33 @@ No addtional text is needed in the response, just the code block.
         new_name = content.get("name")
 
         new_model: dict = (
-            await self.kernel.evaluate(
+            await self.context.evaluate(
                 f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"
             )
         )["return"]
 
         original_name = new_model.get("name", "None")
         original_model_id = self.model_id
-        new_model["name"] = new_name
-        new_model[
-            "description"
-        ] += f"\nTransformed from model '{original_name}' ({original_model_id}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
-        if getattr(self, "configuration", None) is not None:
+
+        # Deprecated: Handling both new and old model formats
+
+        if "header" in new_model:
+            new_model["header"]["name"] = new_name
+            new_description = new_model.get("header", {}).get("description", "") + f"\nTransformed from model '{original_name}' ({original_model_id}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
+            new_model["header"]["description"] = new_description
+            if getattr(self, "configuration", None) is not None:
+                new_model["header"][
+                    "description"
+                ] += f"\nfrom base configuration '{self.configuration.get('name')}' ({self.configuration.get('id')})"
+        else:
+            new_model["name"] = new_name
             new_model[
                 "description"
-            ] += f"\nfrom base configuration '{self.configuration.get('name')}' ({self.configuration.get('id')})"
+            ] += f"\nTransformed from model '{original_name}' ({original_model_id}) at {datetime.datetime.utcnow().strftime('%c %Z')}"
+            if getattr(self, "configuration", None) is not None:
+                new_model[
+                    "description"
+                ] += f"\nfrom base configuration '{self.configuration.get('name')}' ({self.configuration.get('id')})"
 
         create_req = requests.post(
             f"{os.environ['DATA_SERVICE_URL']}/models", json=new_model
@@ -290,6 +311,6 @@ No addtional text is needed in the response, just the code block.
         new_model_id = create_req.json()["id"]
 
         content = {"model_id": new_model_id}
-        self.kernel.send_response(
+        self.context.kernel.send_response(
             "iopub", "save_model_response", content, parent_header=message.header
         )

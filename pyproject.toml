@@ -5,7 +5,6 @@ description = ""
 authors = ["Matthew Printz <matt@jataware.com>"]
 license = "MIT"
 readme = "README.md"
-# packages = [{include = "jupyter_llm"}]
 
 [tool.poetry.dependencies]
 python = "^3.10,<3.13"

@@ -5,7 +5,6 @@
 # Author: Marc-Etienne M.Léveillé <leveille@eset.com>
 # See LICENSE file for redistribution.
 
-import sys
 import json
 import hmac
 import uuid
@@ -17,7 +16,7 @@ import six
 from collections import namedtuple, OrderedDict
 from operator import attrgetter
 
-from jupyter_core.paths import jupyter_runtime_dir, jupyter_data_dir
+from jupyter_core.paths import jupyter_runtime_dir
 
 import zmq
 from tornado import ioloop
@@ -287,10 +286,6 @@ class KernelProxyManager(object):
             self.server = server
         else:
             self.server = ProxyKernelServer(server)
-        self.server.intercept_message(
-            "shell", "execute_request", self._catch_proxy_magic_command
-        )
-        self.magic_command = "%proxy"
 
         self._kernel_info_requests = []
         self.server.intercept_message(
@@ -298,80 +293,6 @@ class KernelProxyManager(object):
         )
         self.server.intercept_message(
             "shell", "kernel_info_reply", self._on_kernel_info_reply
-        )
-
-        self.connect_to_last()
-
-    async def _catch_proxy_magic_command(self, server, target_stream, data):
-        msg = JupyterMessage.parse(data)
-
-        def send(text, stream="stdout"):
-            server.streams.iopub.send_multipart(
-                server.make_multipart_message(
-                    "stream", {"name": stream, "text": text}, parent_header=msg.header
-                )
-            )
-
-        if msg.content.get("code").startswith(self.magic_command):
-            server.streams.iopub.send_multipart(
-                server.make_multipart_message(
-                    "status", {"execution_state": "busy"}, parent_header=msg.header
-                )
-            )
-
-            argv = list(
-                filter(
-                    lambda x: len(x) > 0, msg.content.get("code").rstrip().split(" ")
-                )
-            )
-
-            def send_usage():
-                send("Usage: {:s} [ list | connect <file>]".format(self.magic_command))
-
-            if len(argv) < 2:
-                send_usage()
-            elif argv[1] == "list":
-                self.update_running_kernels()
-                send(self._formatted_kernel_list())
-            elif argv[1] == "connect":
-                if len(argv) > 2:
-                    try:
-                        self.connect_to(argv[2], request_kernel_info=True)
-                        send("Connecting to " + self.connected_kernel_name)
-                    except ValueError:
-                        send("Unknown kernel " + argv[2], "stderr")
-                else:
-                    send_usage()
-            else:
-                send("Unknown subcommand " + argv[1], "stderr")
-                send_usage()
-
-            server.streams.iopub.send_multipart(
-                server.make_multipart_message(
-                    "status", {"execution_state": "idle"}, parent_header=msg.header
-                )
-            )
-
-            server.streams.shell.send_multipart(
-                msg.identities
-                + server.make_multipart_message(
-                    "execute_reply",
-                    {"status": "ok", "execution_count": 0},
-                    parent_header=msg.header,
-                )
-            )
-            return None
-        else:
-            return data
-
-    def _formatted_kernel_list(self):
-        return "\n".join(
-            " {:s} {:s} ({:s})".format(
-                (filename == self.connected_kernel_name) and "*" or " ",
-                filename,
-                config.get("kernel_name") or "no name",
-            )
-            for filename, config in self.kernels.items()
         )
 
     def update_running_kernels(self):
@@ -441,11 +362,7 @@ class KernelProxyManager(object):
         )
         self._kernel_info_requests.remove(parent.header.get("msg_id"))
 
-    def connect_to_last(self):
-        self.update_running_kernels()
-        self.connect_to(next(iter(self.kernels.keys()), "<no kernel running>"))
-
-    def connect_to(self, kernel_file_name, request_kernel_info=False):
+    def connect_to(self, kernel_file_name):
         matching = next((n for n in self.kernels if kernel_file_name in n), None)
         if matching is None:
             raise ValueError("Unknown kernel " + kernel_file_name)
@@ -454,56 +371,3 @@ class KernelProxyManager(object):
         self.connected_kernel_name = matching
         self.connected_kernel = ProxyKernelClient(self.kernels[matching])
         self.server.set_proxy_target(self.connected_kernel)
-        if request_kernel_info:
-            req = self.connected_kernel.make_multipart_message("kernel_info_request")
-            self._on_kernel_info_request(
-                self.server, self.connected_kernel.streams.shell, req
-            )
-            self.connected_kernel.streams.shell.send_multipart(req)
-
-
-def install():
-    user_kernels_dir = os.path.join(jupyter_data_dir(), "kernels")
-    if not os.path.exists(user_kernels_dir):
-        os.mkdir(user_kernels_dir, 0o700)
-    proxy_kernel_dir = os.path.join(user_kernels_dir, "proxy")
-    if not os.path.exists(proxy_kernel_dir):
-        os.mkdir(proxy_kernel_dir, 0o700)
-    with open(os.path.join(proxy_kernel_dir, "kernel.json"), "w") as f:
-        json.dump(
-            {
-                "argv": [
-                    sys.executable,
-                    "-m",
-                    "jupyter_kernel_proxy",
-                    "start",
-                    "{connection_file}",
-                ],
-                "display_name": "Existing session",
-            },
-            f,
-        )
-
-
-def start(connection_file):
-    loop = ioloop.IOLoop.current()
-
-    with open(connection_file) as f:
-        notebook_config = json.load(f)
-
-    proxy_manager = KernelProxyManager(notebook_config)
-
-    loop.start()
-
-
-def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "install":
-        install()
-    elif len(sys.argv) > 2 and sys.argv[1] == "start":
-        start(sys.argv[2])
-    else:
-        print("Usage: {:s} [install | start <connection_file>]".format(sys.argv[0]))
-
-
-if __name__ == "__main__":
-    main()

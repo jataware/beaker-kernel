@@ -20,7 +20,7 @@ services:
     volumes:
       - ./llmkernel:/usr/local/share/jupyter/kernels/llmkernel
       - .:/jupyter
-    command:  ["python", "dev.py", "--ip", "0.0.0.0"]
+    command:  ["python", "service/dev.py", "--ip", "0.0.0.0", "-y"]
 
   data-service:
     image: ghcr.io/darpa-askem/data-service:latest

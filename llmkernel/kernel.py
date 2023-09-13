@@ -1,32 +1,29 @@
-import ast
 import asyncio
 import copy
-import datetime
-import functools
-import io
+import inspect
 import json
 import logging
 import os
-import pickle
 import requests
 import sys
-import time
 import traceback
-import uuid
+from typing import Optional
 
-from IPython.core.interactiveshell import InteractiveShell
 from tornado import ioloop
-from jupyter_kernel_proxy import (
+
+from lib.jupyter_kernel_proxy import (
     KernelProxyManager,
     JupyterMessage,
     InterceptionFilter,
     KERNEL_SOCKETS,
     KERNEL_SOCKETS_NAMES,
 )
-from jupyter_core.paths import jupyter_runtime_dir, jupyter_data_dir
-
-from toolsets import DatasetToolset, MiraModelToolset
-from archytas.react import ReActAgent
+from contexts.contexts import Context
+from contexts.subkernels.base import BaseSubkernel
+from contexts.subkernels.python import PythonSubkernel
+from contexts.subkernels.julia import JuliaSubkernel
+from contexts.subkernels.rlang import RSubkernel
+from contexts.toolsets import DatasetToolset, MiraModelToolset
 
 
 logger = logging.getLogger(__name__)
@@ -66,14 +63,15 @@ class LLMKernel(KernelProxyManager):
         "file_extension": ".txt",
     }
 
+    context: Optional[Context]
     internal_executions: set[str]
+    subkernel: BaseSubkernel
     subkernel_execution_tracking: dict[str, str]
 
     def __init__(self, server):
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.subkernel_id = None
-        self.subkernel_language = None
         self.context = None
         super().__init__(server)
         # We need to have a kernel when we start up, even though we can/will change the kernel/language when we set context
@@ -93,12 +91,14 @@ class LLMKernel(KernelProxyManager):
         )
         self.server.intercept_message("shell", "execute_reply", self.post_execute)
 
-    def connect_to_last(self):
-        # We don't want to automatically connect to the last kernel
-        return
-
     def new_kernel(self, language: str):
         # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
+        kernel_opts = {
+            "python3": PythonSubkernel,
+            "julia-1.9": JuliaSubkernel,
+            "ir": RSubkernel,
+        }
+
         self.shutdown_subkernel()
 
         res = requests.post(
@@ -109,8 +109,8 @@ class LLMKernel(KernelProxyManager):
         kernel_info = res.json()
         self.update_running_kernels()
         self.subkernel_id = kernel_info["id"]
-        self.subkernel_language = language
         self.connect_to(self.subkernel_id)
+        self.subkernel = kernel_opts[language]()
 
     def shutdown_subkernel(self):
         if self.subkernel_id is not None:
@@ -126,7 +126,7 @@ class LLMKernel(KernelProxyManager):
                 print(err)
 
     def handle_thoughts(
-        self, thought: str, tool_name: str, tool_input: str, parent_header: dict
+        self, thought: str, tool_name: str, tool_input: str, parent_header: dict = {}
     ):
         content = {
             "thought": thought,
@@ -290,79 +290,41 @@ class LLMKernel(KernelProxyManager):
 
     async def evaluate(self, expression, parent_header={}):
         result = await self.execute(expression, parent_header=parent_header)
-        return_str = result.get("return")
-        if return_str:
-            # TODO: This auto-conversion to json is probably not actually what we want. Better if it's
-            # explicit rather than implicit.
-            return_obj = ast.literal_eval(result["return"])
-            if isinstance(return_obj, str):
-                try:
-                    return_obj = json.loads(return_obj)
-                except json.JSONDecodeError:
-                    pass
-            result["return"] = return_obj
+        try:
+            parsed_result = self.subkernel.parse_subkernel_return(result)
+            result["return"] = parsed_result
+        except Exception:
+            logger.error("Unable to parse result.")
+            logger.debug("Subkernel: %s\nResult:\n%s", self.subkernel, result)
         return result
 
-    async def set_context(self, context, context_info, language="python3", parent_header={}):
+    async def set_context(self, context_name, context_info, language="python3", parent_header={}):
         # Spin up a new kernel if we are changing languages.
-        if self.subkernel_language != language:
+        if (not self.subkernel) or self.subkernel.KERNEL_NAME != language:
+            logger.info("Subkernel changed: %s != %s", getattr(self.subkernel, "KERNEL_NAME", "unknown"), language)
             self.new_kernel(language=language)
 
-        toolset = AVAILABLE_TOOLSETS.get(context, None)
-        if not toolset:
+        toolset_class = AVAILABLE_TOOLSETS.get(context_name, None)
+        if not toolset_class:
+            # TODO: Should we return an error if the requested toolset isn't available?
             return False
-        self.toolset = toolset(kernel=self, language=self.subkernel_language)
-        self.agent = ReActAgent(
-            tools=[self.toolset],
-            allow_ask_user=False,
-            verbose=True,
-            spinner=None,
-            rich_print=False,
-            thought_handler=functools.partial(
-                self.handle_thoughts, parent_header=parent_header
-            ),
-        )
-        self.toolset.agent = self.agent
 
-        for message, (handler, stream) in self.toolset.intercepts.items():
-            self.add_intercept(message, handler, stream=stream)
-
-        match context:
-            case "dataset":
-                if getattr(self, "context", None) is not None:
-                    self.agent.clear_all_context()
-                # DEPRECATED: Backwards compatible handling of "old style" single id contexts
-                if len(context_info) == 1 and "id" in context_info:
-                    dataset_id = context_info["id"]
-                    print(f"Processing dataset w/id {dataset_id}")
-                    await self.toolset.set_dataset(dataset_id, parent_header=parent_header)
-                else:
-                    print(f"Processing datasets w/ids {', '.join(context_info.values())}")
-                    await self.toolset.set_datasets(context_info, parent_header=parent_header)
-
-                self.agent.set_auto_context("Default context", self.toolset.context)
-            case "mira_model":
-                if getattr(self, "context", None) is not None:
-                    self.agent.clear_all_context()
-                item_id = context_info["id"]
-                item_type = context_info.get("type", "model")
-                print(f"Processing {item_type} AMR {item_id} as a MIRA model")
-                await self.toolset.set_model(
-                    item_id, item_type, parent_header=parent_header
-                )
-                self.context = self.agent.add_context(await self.toolset.context())
+        # Create and setup context
+        self.context = Context(kernel=self, subkernel=self.subkernel, toolset_cls=toolset_class, config=context_info)
+        await self.context.setup(parent_header=parent_header)
 
     async def post_execute(self, queue, message_id, data):
         message = JupyterMessage.parse(data)
 
+        assert self.context is not None
         # Don't run for internal executions
         if message.parent_header.get("msg_id") in self.internal_executions:
             return data
 
         # Fetch event loop and ensure it's valid
         loop = asyncio.get_event_loop()
-        callback = getattr(self.toolset, "post_execute", None)
-        if loop and callback and (callable(callback) or asyncio.iscoroutine(callback)):
+        callback = getattr(self.context.toolset, "post_execute", None)
+        if loop and callback and (callable(callback) or inspect.iscoroutinefunction(callback)):
             # If we have a callback function, then add it as a task to the execution loop so it runs
             loop.create_task(callback(message))
         return data
@@ -404,8 +366,10 @@ class LLMKernel(KernelProxyManager):
         request = content.get("request", None)
         if not request:
             return
+        if not self.context:
+            raise Exception("Context has not been set")
         try:
-            result = await self.agent.react_async(request)
+            result = await self.context.agent.react_async(request)
         except Exception as err:
             error_text = f"""LLM Error:
 {err}
@@ -416,13 +380,7 @@ class LLMKernel(KernelProxyManager):
             self.send_response(
                 "iopub", "stream", stream_content, parent_header=message.header
             )
-            return {
-                "status": "error",
-                "execution_count": 0,
-                "payload": [],
-                "user_expressions": {},
-            }
-
+            raise
         try:
             data = json.loads(result)
             if isinstance(data, dict) and data.get("action") == "code_cell":
@@ -442,30 +400,15 @@ class LLMKernel(KernelProxyManager):
             )
 
     async def context_setup_request(self, server, target_stream, data):
-        # TODO: Set up environment for kernel
-        # Basically, run any code/import any files needed for context
-
-        print("set context")
         message = JupyterMessage.parse(data)
         content = message.content
-        context = content.get("context")
+        context_name = content.get("context")
         context_info = content.get("context_info", {})
         language = content.get("language", "python3")
 
         parent_header = copy.deepcopy(message.header)
         if content:
-            await self.set_context(context, context_info, language=language, parent_header=parent_header)
-
-        # TODO: Add parent header info to response
-        # self.send_response(
-        #     stream="iopub",
-        #     msg_or_type="status",
-        #     content={
-        #         "execution_state": "idle",
-        #     },
-        #     channel="iopub",
-        #     parent_header=parent_header,
-        # )
+            await self.set_context(context_name, context_info, language=language, parent_header=parent_header)
 
 
 def cleanup(kernel):
@@ -501,4 +444,4 @@ def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
