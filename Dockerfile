@@ -1,7 +1,7 @@
 FROM python:3.10
 RUN useradd -m jupyter
 EXPOSE 8888
-run mkdir -p /usr/local/share/jupyter/kernels && chmod -R 777 /usr/local/share/jupyter/kernels
+RUN mkdir -p /usr/local/share/jupyter/kernels && chmod -R 777 /usr/local/share/jupyter/kernels
 
 
 # Install Julia
@@ -19,27 +19,29 @@ RUN julia -e 'ENV["JUPYTER_DATA_DIR"] = "/usr/local/share/jupyter"; using Pkg; P
 USER root
 
 # Install r-lang and kernel
-RUN apt-get update && \
-    apt install -y r-base r-cran-irkernel
+RUN apt update && \
+    apt install -y r-base r-cran-irkernel && \
+    apt clean -y
 
 WORKDIR /jupyter
 
 # Install Python requirements
-RUN pip install jupyterlab jupyterlab_server pandas matplotlib xarray numpy poetry scipy
+RUN pip install --no-cache-dir jupyterlab jupyterlab_server pandas matplotlib xarray numpy poetry scipy
 
 # Install project requirements
 COPY --chown=1000:1000 pyproject.toml poetry.lock /jupyter/
-RUN pip install poetry
+RUN pip install --no-cache-dir poetry
 RUN poetry config virtualenvs.create false
-RUN poetry install --no-dev
+RUN poetry install --no-dev --no-cache
 
 # Install Mira from `hackathon` branch
 RUN git clone https://github.com/indralab/mira.git /mira
 WORKDIR /mira
 
 RUN python -m pip install -e .
-RUN apt-get update && \
-    apt-get install -y graphviz libgraphviz-dev
+RUN apt update && \
+    apt install -y graphviz libgraphviz-dev && \
+    apt clean -y
 RUN python -m pip install -e ."[ode,tests,dkg-client,sbml]"
 WORKDIR /jupyter
 
