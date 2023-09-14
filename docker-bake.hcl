@@ -28,11 +28,11 @@ function "check_suffix" {
 # ----------------------------------------------------------------------------------------------------------------------
 
 group "prod" {
-  targets = ["jupyter-llm"]
+  targets = ["jupyter-llm", "beaker-kernel"]
 }
 
 group "default" {
-  targets = ["jupyter-llm-base"]
+  targets = ["jupyter-llm-base", "beaker-kernel-base"]
 }
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -47,8 +47,16 @@ target "jupyter-llm-base" {
 	dockerfile = "Dockerfile"
 }
 
+target "beaker-kernel-base" {
+	context = "."
+	tags = tag("beaker-kernel", "", "")
+	dockerfile = "Dockerfile"
+}
 
 target "jupyter-llm" {
   inherits = ["_platforms", "jupyter-llm-base"]
 }
 
+target "beaker-kernel" {
+  inherits = ["_platforms", "beaker-kernel-base"]
+}

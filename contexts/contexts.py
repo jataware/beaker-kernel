@@ -10,7 +10,7 @@ from .toolsets.base import BaseToolset
 from .codesets import get_metadata, get_template
 
 if TYPE_CHECKING:
-    from llmkernel.kernel import LLMKernel
+    from beaker.kernel import LLMKernel
 
 logger = logging.getLogger(__name__)
 

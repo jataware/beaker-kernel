@@ -46,7 +46,7 @@ RUN python -m pip install -e ."[ode,tests,dkg-client,sbml]"
 WORKDIR /jupyter
 
 # Kernel hast to go in a specific spot
-COPY llmkernel /usr/local/share/jupyter/kernels/llmkernel
+COPY beaker /usr/local/share/jupyter/kernels/beaker
 
 # Copy src code over
 RUN chown 1000:1000 /jupyter

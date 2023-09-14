@@ -1,6 +1,6 @@
 {
     "argv": [
-        "python3", "-m", "llmkernel.kernel",
+        "python3", "-m", "beaker.kernel",
         "start", "{connection_file}"
     ],
     "display_name": "Chatty LLM Agent",

@@ -15,7 +15,7 @@ from lib.jupyter_kernel_proxy import JupyterMessage
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 if TYPE_CHECKING:
-    from llmkernel.kernel import LLMKernel
+    from beaker.kernel import LLMKernel
     from contexts.contexts import Context
 
 logging.disable(logging.WARNING)  # Disable warnings

@@ -3,7 +3,7 @@ BASEDIR = $(shell pwd)
 
 .PHONY:build
 build:
-	docker build . -t jupyter-llm:latest
+	docker build . -t beaker-kernel:latest
 
 .PHONY:dev
 dev:service/dev_ui/build/index.js
@@ -41,9 +41,9 @@ dev-install:.env
 	@poetry install; \
 	make service/dev_ui/build/index.js; \
 	ENVDIR=$$(poetry -q run python -c 'import os; print(os.environ.get("VIRTUAL_ENV", ""))'); \
-	KERNEL_INSTALL_PATH=$${ENVDIR}/share/jupyter/kernels/llmkernel; \
+	KERNEL_INSTALL_PATH=$${ENVDIR}/share/jupyter/kernels/beaker; \
 	if [[ ! -e "$${KERNEL_INSTALL_PATH}" && -n "$${ENVDIR}" ]]; then \
-		ln -s "${BASEDIR}/llmkernel" "$${KERNEL_INSTALL_PATH}"; \
+		ln -s "${BASEDIR}/beaker" "$${KERNEL_INSTALL_PATH}"; \
 	fi; \
 	if [[ ! -e "service/test.ipynb" ]]; then \
 		cp service/dev_ui/test.ipynb service/test.ipynb; \

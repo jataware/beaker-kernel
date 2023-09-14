@@ -18,7 +18,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./llmkernel:/usr/local/share/jupyter/kernels/llmkernel
+      - ./beaker:/usr/local/share/jupyter/kernels/beaker
       - .:/jupyter
     command:  ["python", "service/dev.py", "--ip", "0.0.0.0", "-y"]
 

@@ -7,14 +7,14 @@ The kernel connects to the Terarium Data Service to allow contextual queries abo
 
 This package contains 4 different products:
 
-* A Python module named `jupyter_llm` (`pyproject.toml`)
-* A Jupyter kernel (`llmkernel`)
+* A Python module named `beaker_kernel` (`pyproject.toml`)
+* A Jupyter kernel (`beaker`)
 * A Jupyter service (`main.py`)
 * A standalone development interface (`dev_ui`)
 
 ## Install / setup
 
-### jupyter_llm Python module
+### beaker_kernel Python module
 
 Normal installation:
 ```bash
@@ -30,14 +30,14 @@ $ poetry install --no-dev
 
 ### Jupyter kernel
 
-To install the kernel, simply copy or symlink the `llmkernel` directory in to one of the directories defined in the following document:
+To install the kernel, simply copy or symlink the `beaker` directory in to one of the directories defined in the following document:
 
 https://jupyter-client.readthedocs.io/en/stable/kernels.html#kernel-specs
 
 
 For example:
 ```bash
-$ cp -r llmkernel /usr/share/jupyter/kernels/llmkernel
+$ cp -r beaker /usr/share/jupyter/kernels/beaker
 ```
 
 Once the directory exists and the jupyter service is restarted the kernel should be available for selection.
