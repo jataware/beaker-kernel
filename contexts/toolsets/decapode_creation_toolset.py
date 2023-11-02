@@ -32,6 +32,7 @@ class DecapodesCreationToolset(BaseToolset):
         super().__init__(context=context, *args, **kwargs)
         self.intercepts = {
             "save_amr_request": (self.save_amr_request, "shell"),
+            "construct_amr_request": (self.construct_amr, "shell"),
             "compile_expr_request": (self.compile_expr, "shell"),
         }
         self.reset()
@@ -213,6 +214,37 @@ No addtional text is needed in the response, just the code block.
             "iopub", "compile_expr_response", {"successs": True}, parent_header=message.header
         )
         await self.send_decapodes_preview_message(parent_header=message.header)
+
+        
+    async def construct_amr(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        content = message.content
+
+        header =  {
+            "description": content.get("description", None),
+            "name": content.get("name", None),
+            "_type": "Header",
+            "model_version": "v1.0",
+            "schema": "https://raw.githubusercontent.com/DARPA-ASKEM/Model-Representations/decapodes-intertypes/decapodes/decapodes_schema.json",
+            "schema_name": "decapode"
+        }        
+        id_value = content.get("id", None)
+        if id_value:
+            header['id'] = id_value
+
+        preview = await self.context.evaluate(self.get_code("expr_to_info", {"var_name": self.var_name}))
+        model = preview["return"]["application/json"]
+
+        amr = {
+            "header": header,
+            "model": model,
+            "_type": "ASKEMDecaExpr",
+            "annotations": [],
+        }
+
+        self.context.kernel.send_response(
+            "iopub", "save_model_response", amr, parent_header=message.header
+        )
 
     async def save_amr_request(self, server, target_stream, data):
         message = JupyterMessage.parse(data)
