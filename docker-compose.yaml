@@ -103,9 +103,6 @@ services:
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
       - xpack.security.enabled=false
       - action.auto_create_index=false
-    ports:
-      - target: 9200
-        published: 9200
     healthcheck:
       test: curl http://localhost:9200/_cluster/health?wait_for_status=yellow || exit 1
       interval: 10s
