@@ -215,7 +215,7 @@ No addtional text is needed in the response, just the code block.
         )
         await self.send_decapodes_preview_message(parent_header=message.header)
 
-        
+
     async def construct_amr(self, server, target_stream, data):
         message = JupyterMessage.parse(data)
         content = message.content
@@ -227,7 +227,7 @@ No addtional text is needed in the response, just the code block.
             "model_version": "v1.0",
             "schema": "https://raw.githubusercontent.com/DARPA-ASKEM/Model-Representations/decapodes-intertypes/decapodes/decapodes_schema.json",
             "schema_name": "decapode"
-        }        
+        }
         id_value = content.get("id", None)
         if id_value:
             header['id'] = id_value
@@ -243,7 +243,7 @@ No addtional text is needed in the response, just the code block.
         }
 
         self.context.kernel.send_response(
-            "iopub", "save_model_response", amr, parent_header=message.header
+            "iopub", "construct_amr_response", amr, parent_header=message.header
         )
 
     async def save_amr_request(self, server, target_stream, data):
