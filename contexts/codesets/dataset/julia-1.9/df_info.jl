@@ -14,4 +14,4 @@ for _var_sym in _var_syms
     end
 end
 
-JSON.json(_result) |> DisplayAs.unlimited
+JSON3.write(_result) |> DisplayAs.unlimited

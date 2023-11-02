@@ -37,6 +37,13 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
             "mira_model": {
                 "languages": ["python3"],
             },
+            "decapodes": {
+                "languages": ["julia-1.9"],
+            },
+            "decapodes_creation": {
+                "languages": ["julia-1.9"],
+            },
+
         }
         return self.write(context_data)
 

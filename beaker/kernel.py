@@ -24,6 +24,8 @@ from contexts.subkernels.python import PythonSubkernel
 from contexts.subkernels.julia import JuliaSubkernel
 from contexts.subkernels.rlang import RSubkernel
 from contexts.toolsets import DatasetToolset, MiraModelToolset
+from contexts.toolsets.decapodes_toolset import DecapodesToolset
+from contexts.toolsets.decapode_creation_toolset import DecapodesCreationToolset
 
 
 logger = logging.getLogger(__name__)
@@ -44,6 +46,8 @@ MESSAGE_STREAMS = {
 AVAILABLE_TOOLSETS = {
     "dataset": DatasetToolset,
     "mira_model": MiraModelToolset,
+    "decapodes": DecapodesToolset,
+    "decapodes_creation": DecapodesCreationToolset,
 }
 
 
@@ -216,6 +220,9 @@ class LLMKernel(KernelProxyManager):
 
             data = message.content["data"].get("text/plain", None)
             message_context["return"] = data
+            filter_list.remove(
+                InterceptionFilter(iopub_socket, "execute_result", collect_result)
+            )
 
         async def collect_stream(server, target_stream, data):
             message = JupyterMessage.parse(data)
@@ -247,9 +254,6 @@ class LLMKernel(KernelProxyManager):
                 )
             filter_list.remove(
                 InterceptionFilter(iopub_socket, "stream", collect_stream)
-            )
-            filter_list.remove(
-                InterceptionFilter(iopub_socket, "execute_result", collect_result)
             )
             filter_list.remove(
                 InterceptionFilter(iopub_socket, "execute_input", silence_message)
@@ -285,6 +289,8 @@ class LLMKernel(KernelProxyManager):
         await asyncio.sleep(0.1)
         while not message_context["done"]:
             await asyncio.sleep(0.2)
+        # Wait for any straggling messages
+        await asyncio.sleep(0.2)
         self.internal_executions.remove(message_id)
         return message_context
 

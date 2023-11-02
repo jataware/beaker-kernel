@@ -27,6 +27,7 @@ class BaseToolset:
 
     # Typing
     toolset_name: str
+    codeset_name: str
     intercepts: dict[str, tuple[Callable, str]]
     context: Context
 
@@ -35,6 +36,8 @@ class BaseToolset:
         self.context = context
         if not getattr(self, 'toolset_name', None):
             self.toolset_name = self.__class__.__name__.lower().removesuffix("toolset")
+        if not getattr(self, 'codeset_name', None):
+            self.codeset_name = self.toolset_name
 
     async def setup(self, *args, **kwargs):
         ...

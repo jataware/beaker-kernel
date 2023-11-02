@@ -51,10 +51,10 @@ class Context:
         return self.subkernel.KERNEL_NAME
 
     def metadata(self):
-        return get_metadata(self.toolset.toolset_name, self.lang)
+        return get_metadata(self.toolset.codeset_name, self.lang)
 
     def get_code(self, name, render_dict: Dict[str, Any]={}) -> str:
-        return get_template(self.toolset.toolset_name, self.lang, name, render_dict)
+        return get_template(self.toolset.codeset_name, self.lang, name, render_dict)
 
     async def execute(self, command, response_handler=None, parent_header={}):
         return await self.kernel.execute(command, response_handler, parent_header)

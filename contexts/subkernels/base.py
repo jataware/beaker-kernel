@@ -9,8 +9,8 @@ class BaseSubkernel(abc.ABC):
     DATAFRAME_TYPE_NAME: str
 
 
-    def get_code(self, toolset_name: str, name: str, render_dict: Dict[str, Any]={}) -> str:
-        return get_template(toolset_name, self.KERNEL_NAME, name, render_dict)
+    def get_code(self, codeset_name: str, name: str, render_dict: Dict[str, Any]={}) -> str:
+        return get_template(codeset_name, self.KERNEL_NAME, name, render_dict)
 
     @classmethod
     @abc.abstractmethod

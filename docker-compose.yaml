@@ -113,8 +113,8 @@ services:
       retries: 5
   data-service-migrations:
     container_name: data-service-migrations
-    image: ghcr.io/darpa-askem/data-service-migrations:latest
-    entrypoint: /run_migrations.sh
+    image: ghcr.io/darpa-askem/data-service:latest
+    entrypoint: /api/migrations/run_migrations.sh
     environment:
       - DATASET_STORAGE_BASE_URL=s3://datasets/
       - STORAGE_HOST=http://minio:9000
@@ -127,7 +127,7 @@ services:
       - SQL_USER=dev
       - SQL_PASSWORD=dev
       - SQL_DB=askem
-      - NEO4J_ENABLED=
+      - NEO4J_ENABLED=false
       - NEO4J_driver=neo4j://neo4j:7687
       - AWS_ACCESS_KEY_ID=miniouser
       - AWS_SECRET_ACCESS_KEY=miniopass
