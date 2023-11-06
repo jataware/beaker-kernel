@@ -32,9 +32,11 @@ class MiraModelToolset(BaseToolset):
         super().__init__(context=context, *args, **kwargs)
         self.intercepts = {
             "save_amr_request": (self.save_amr_request, "shell"),
+            "reset_request": (self.reset_request, "shell"),
+            "stratify_request": (self.stratify_request, "shell"),
         }
         self.reset()
-    
+
     async def setup(self, config, parent_header):
         item_id = config["id"]
         item_type = config.get("type", "model")
@@ -314,3 +316,47 @@ No addtional text is needed in the response, just the code block.
         self.context.kernel.send_response(
             "iopub", "save_model_response", content, parent_header=message.header
         )
+
+
+    async def stratify_request(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        content = message.content
+
+        model_name = content.get("model_name", "model")
+        stratify_args = content.get("stratify_args", {})
+        stratify_code = self.get_code("stratify", {
+            "var_name": model_name,
+            "stratify_kwargs": stratify_args,
+        })
+        stratify_result = await self.context.execute(stratify_code)
+
+        logger.error(stratify_result)
+        content = {
+            "success": True,
+        }
+
+        self.context.kernel.send_response(
+            "iopub", "stratify_response", content, parent_header=message.header
+        )
+        await self.send_mira_preview_message(parent_header=message.parent_header)
+
+
+    async def reset_request(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        content = message.content
+
+        model_name = content.get("model_name", "model")
+        reset_code = self.get_code("reset", {
+            "var_name": model_name,
+        })
+        stratify_result = await self.context.execute(reset_code)
+
+        logger.error(stratify_result)
+        content = {
+            "success": True,
+        }
+
+        self.context.kernel.send_response(
+            "iopub", "reset_response", content, parent_header=message.header
+        )
+        await self.send_mira_preview_message(parent_header=message.parent_header)
