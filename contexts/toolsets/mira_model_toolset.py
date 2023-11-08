@@ -250,25 +250,12 @@ No addtional text is needed in the response, just the code block.
         self, server=None, target_stream=None, data=None, parent_header={}
     ):
         try:
-            await self.context.execute(
-                "_mira_model = Model(model);\n"
-                "_model_size = len(_mira_model.variables) + len(_mira_model.transitions);\n"
-                "del _mira_model;\n"
+
+            preview = await self.context.evaluate(self.get_code("model_preview"))
+            content = preview["return"]
+            self.context.kernel.send_response(
+                "iopub", "model_preview", content, parent_header=parent_header
             )
-            model_size = (await self.context.evaluate("_model_size"))["return"]
-            if model_size < 800:
-                preview = await self.context.evaluate(self.get_code("model_preview"))
-                format_dict, md_dict = preview["return"]
-                content = {"data": format_dict}
-                self.context.kernel.send_response(
-                    "iopub", "model_preview", content, parent_header=parent_header
-                )
-            else:
-                print(
-                    f"Note: Model is too large ({model_size} nodes) for auto-preview.",
-                    file=sys.stderr,
-                    flush=True,
-                )
         except Exception as e:
             raise
 
@@ -323,16 +310,27 @@ No addtional text is needed in the response, just the code block.
         content = message.content
 
         model_name = content.get("model_name", "model")
-        stratify_args = content.get("stratify_args", {})
+        stratify_args = content.get("stratify_args", None)
+        if stratify_args is None:
+            # Error
+            logger.error("stratify_args must be set on stratify requests.")
+            self.context.kernel.send_response(
+                "iopub", "error", {
+                    "ename": "ValueError",
+                    "evalue": "stratify_args must be set on stratify requests",
+                    "traceback": [""]
+                }, parent_header=message.header
+            )
+            return
         stratify_code = self.get_code("stratify", {
             "var_name": model_name,
-            "stratify_kwargs": stratify_args,
+            "stratify_kwargs": repr(stratify_args),
         })
         stratify_result = await self.context.execute(stratify_code)
 
-        logger.error(stratify_result)
         content = {
             "success": True,
+            "executed_code": stratify_result["parent"].content["code"],
         }
 
         self.context.kernel.send_response(
@@ -349,11 +347,11 @@ No addtional text is needed in the response, just the code block.
         reset_code = self.get_code("reset", {
             "var_name": model_name,
         })
-        stratify_result = await self.context.execute(reset_code)
+        reset_result = await self.context.execute(reset_code)
 
-        logger.error(stratify_result)
         content = {
             "success": True,
+            "executed_code": reset_result["parent"].content["code"],
         }
 
         self.context.kernel.send_response(
