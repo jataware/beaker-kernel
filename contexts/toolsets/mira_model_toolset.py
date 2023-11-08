@@ -267,7 +267,7 @@ No addtional text is needed in the response, just the code block.
 
         new_model: dict = (
             await self.context.evaluate(
-                f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"
+                f"template_model_to_petrinet_json({self.var_name})"
             )
         )["return"]
 
