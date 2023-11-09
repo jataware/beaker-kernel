@@ -32,9 +32,11 @@ class MiraModelToolset(BaseToolset):
         super().__init__(context=context, *args, **kwargs)
         self.intercepts = {
             "save_amr_request": (self.save_amr_request, "shell"),
+            "reset_request": (self.reset_request, "shell"),
+            "stratify_request": (self.stratify_request, "shell"),
         }
         self.reset()
-    
+
     async def setup(self, config, parent_header):
         item_id = config["id"]
         item_type = config.get("type", "model")
@@ -248,25 +250,12 @@ No addtional text is needed in the response, just the code block.
         self, server=None, target_stream=None, data=None, parent_header={}
     ):
         try:
-            await self.context.execute(
-                "_mira_model = Model(model);\n"
-                "_model_size = len(_mira_model.variables) + len(_mira_model.transitions);\n"
-                "del _mira_model;\n"
+
+            preview = await self.context.evaluate(self.get_code("model_preview"))
+            content = preview["return"]
+            self.context.kernel.send_response(
+                "iopub", "model_preview", content, parent_header=parent_header
             )
-            model_size = (await self.context.evaluate("_model_size"))["return"]
-            if model_size < 800:
-                preview = await self.context.evaluate(self.get_code("model_preview"))
-                format_dict, md_dict = preview["return"]
-                content = {"data": format_dict}
-                self.context.kernel.send_response(
-                    "iopub", "model_preview", content, parent_header=parent_header
-                )
-            else:
-                print(
-                    f"Note: Model is too large ({model_size} nodes) for auto-preview.",
-                    file=sys.stderr,
-                    flush=True,
-                )
         except Exception as e:
             raise
 
@@ -278,7 +267,7 @@ No addtional text is needed in the response, just the code block.
 
         new_model: dict = (
             await self.context.evaluate(
-                f"AskeNetPetriNetModel(Model({self.var_name})).to_json()"
+                f"template_model_to_petrinet_json({self.var_name})"
             )
         )["return"]
 
@@ -314,3 +303,58 @@ No addtional text is needed in the response, just the code block.
         self.context.kernel.send_response(
             "iopub", "save_model_response", content, parent_header=message.header
         )
+
+
+    async def stratify_request(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        content = message.content
+
+        model_name = content.get("model_name", "model")
+        stratify_args = content.get("stratify_args", None)
+        if stratify_args is None:
+            # Error
+            logger.error("stratify_args must be set on stratify requests.")
+            self.context.kernel.send_response(
+                "iopub", "error", {
+                    "ename": "ValueError",
+                    "evalue": "stratify_args must be set on stratify requests",
+                    "traceback": [""]
+                }, parent_header=message.header
+            )
+            return
+        stratify_code = self.get_code("stratify", {
+            "var_name": model_name,
+            "stratify_kwargs": repr(stratify_args),
+        })
+        stratify_result = await self.context.execute(stratify_code)
+
+        content = {
+            "success": True,
+            "executed_code": stratify_result["parent"].content["code"],
+        }
+
+        self.context.kernel.send_response(
+            "iopub", "stratify_response", content, parent_header=message.header
+        )
+        await self.send_mira_preview_message(parent_header=message.parent_header)
+
+
+    async def reset_request(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        content = message.content
+
+        model_name = content.get("model_name", "model")
+        reset_code = self.get_code("reset", {
+            "var_name": model_name,
+        })
+        reset_result = await self.context.execute(reset_code)
+
+        content = {
+            "success": True,
+            "executed_code": reset_result["parent"].content["code"],
+        }
+
+        self.context.kernel.send_response(
+            "iopub", "reset_response", content, parent_header=message.header
+        )
+        await self.send_mira_preview_message(parent_header=message.parent_header)
