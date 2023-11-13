@@ -49,7 +49,7 @@ RUN apt update && \
 RUN python -m pip install -e ."[ode,tests,dkg-client,sbml]"
 WORKDIR /jupyter
 
-# Kernel hast to go in a specific spot
+# Kernel must be placed in a specific spot in the filesystem
 COPY beaker /usr/local/share/jupyter/kernels/beaker
 
 # Copy src code over
@@ -57,7 +57,7 @@ RUN chown 1000:1000 /jupyter
 COPY --chown=1000:1000 . /jupyter
 
 
-# Switch to non-root user
+# Switch to non-root user. It is crucial for security reasons to not run jupyter as root user!
 USER jupyter
 
 CMD ["python", "service/main.py", "--ip", "0.0.0.0"]
