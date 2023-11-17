@@ -1,26 +1,24 @@
+ARG JULIA_IMAGE=askem-julia-base
+FROM ${JULIA_IMAGE} AS JULIA_BASE_IMAGE
+
+
 FROM python:3.10
 RUN useradd -m jupyter
 EXPOSE 8888
 RUN mkdir -p /usr/local/share/jupyter/kernels && chmod -R 777 /usr/local/share/jupyter/kernels
 
+ENV JULIA_PATH=/usr/local/julia
+ENV JULIA_DEPOT_PATH=/usr/local/julia
+ENV JULIA_PROJECT=/home/jupyter/.julia/environments/v1.9
 
-# Install Julia
-RUN wget --no-verbose -O julia.tar.gz "https://julialang-s3.julialang.org/bin/linux/$(uname -m|sed 's/86_//')/1.9/julia-1.9.0-linux-$(uname -m).tar.gz"
-RUN tar -xzf "julia.tar.gz" && mv julia-1.9.0 /opt/julia && \
-    ln -s /opt/julia/bin/julia /usr/local/bin/julia && rm "julia.tar.gz"
+COPY --from=JULIA_BASE_IMAGE /usr/local/julia /usr/local/julia
+COPY --from=JULIA_BASE_IMAGE /ASKEM-Sysimage.so /usr/local/julia/lib/ASKEM-Sysimage.so
+RUN chmod -R 777 /usr/local/julia/logs
+RUN ln -sf /usr/local/julia/bin/julia /usr/local/bin/julia
 
 COPY --chown=1000:1000 environments/julia /home/jupyter/.julia/environments/v1.9
 
-USER jupyter
 WORKDIR /home/jupyter
-
-RUN julia -e 'ENV["JUPYTER_DATA_DIR"] = "/usr/local/share/jupyter"; using Pkg; Pkg.add("IJulia")'
-# TODO: Remove these lines and add them back into the Project.toml when branch is merged
-RUN julia -e 'using Pkg; Pkg.add(url="https://github.com/fivegrant/Decapodes.jl", rev="jpf/DecaExpr")'
-RUN julia -e 'using Pkg; Pkg.add("SyntacticModels")'
-RUN julia -e 'using Pkg; Pkg.add("Graphviz_jll")'
-
-USER root
 
 # Install r-lang and kernel
 RUN apt update && \
@@ -56,9 +54,11 @@ COPY beaker /usr/local/share/jupyter/kernels/beaker
 RUN chown 1000:1000 /jupyter
 COPY --chown=1000:1000 . /jupyter
 
-
 # Switch to non-root user. It is crucial for security reasons to not run jupyter as root user!
 USER jupyter
 
-CMD ["python", "service/main.py", "--ip", "0.0.0.0"]
+# Install Julia kernel
+RUN /usr/local/julia/bin/julia -J /usr/local/julia/lib/ASKEM-Sysimage.so -e 'using IJulia; IJulia.installkernel("julia"; julia=`/usr/local/julia/bin/julia -J /usr/local/julia/lib/ASKEM-Sysimage.so --threads=4`)'
 
+# Service
+CMD ["python", "service/main.py", "--ip", "0.0.0.0"]

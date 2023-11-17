@@ -3,11 +3,18 @@
 
 version: '3'
 services:
+  julia-base-image:
+    image: askem-julia-base:build
+    build:
+      context: environments/julia
+    command: ["/bin/true"]
 
   jupyter:
     build:
       dockerfile: Dockerfile
       context: .
+      args:
+        JULIA_IMAGE: askem-julia-base:build
     ports:
       - "8888:8888"
     environment:
@@ -20,6 +27,8 @@ services:
     volumes:
       - ./beaker:/usr/local/share/jupyter/kernels/beaker
       - .:/jupyter
+    depends_on:
+      - julia-base-image
     command:  ["python", "service/dev.py", "--ip", "0.0.0.0", "-y"]
 
   data-service:
