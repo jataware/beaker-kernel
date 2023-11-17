@@ -7,6 +7,7 @@ import os
 import requests
 import sys
 import traceback
+import uuid
 from typing import Optional
 
 from tornado import ioloop
@@ -166,6 +167,7 @@ class LLMKernel(KernelProxyManager):
         self.server.filters.remove(InterceptionFilter(socket, msg_type, func))
 
     async def execute(self, command, response_handler=None, parent_header={}):
+        message_id = str(uuid.uuid4())
         stream = self.connected_kernel.streams.shell
         execution_message = self.connected_kernel.make_multipart_message(
             msg_type="execute_request",
@@ -181,11 +183,9 @@ class LLMKernel(KernelProxyManager):
             metadata={
                 "trusted": True,
             },
+            msg_id=message_id
         )
-        stream.send_multipart(execution_message)
         original_message = JupyterMessage.parse(execution_message)
-        message_id = original_message.header.get("msg_id")
-        self.internal_executions.add(message_id)
 
         message_context = {
             "id": message_id,
@@ -193,6 +193,7 @@ class LLMKernel(KernelProxyManager):
             "stderr_list": [],
             "return": None,
             "error": None,
+            "started": False,
             "done": False,
             "result": None,
             "parent": original_message,
@@ -211,6 +212,19 @@ class LLMKernel(KernelProxyManager):
             if message.parent_header.get("msg_id", None) != message_id:
                 return data
             return None
+
+        async def handle_status(server, target_stream, data):
+            message = JupyterMessage.parse(data)
+            # Ensure we are only working on handlers for this message response
+            if message.parent_header.get("msg_id", None) != message_id:
+                return data
+
+            new_status = message.content.get("execution_state", None)
+            if new_status == "busy":
+                message_context["started"] = True
+            elif new_status == "idle":
+                message_context["done"] = True
+
 
         async def collect_result(server, target_stream, data):
             message = JupyterMessage.parse(data)
@@ -243,15 +257,19 @@ class LLMKernel(KernelProxyManager):
                 "\n".join(content["traceback"]),
             )
 
-        async def cleanup(server, target_stream, data):
+        async def handle_execute_reply(server, target_stream, data):
             message = JupyterMessage.parse(data)
+            message_context["result"] = message
+
+        async def cleanup():
             # Ensure we are only working on handlers for this message response
-            if message.parent_header.get("msg_id", None) != message_id:
-                return data
             if response_handler:
                 filter_list.remove(
                     InterceptionFilter(iopub_socket, "stream", response_handler)
                 )
+            filter_list.remove(
+                InterceptionFilter(iopub_socket, "status", handle_status)
+            )
             filter_list.remove(
                 InterceptionFilter(iopub_socket, "stream", collect_stream)
             )
@@ -263,11 +281,12 @@ class LLMKernel(KernelProxyManager):
             )
             filter_list.remove(InterceptionFilter(iopub_socket, "error", handle_error))
             filter_list.remove(
-                InterceptionFilter(shell_socket, "execute_reply", cleanup)
+                InterceptionFilter(shell_socket, "execute_reply", handle_execute_reply)
             )
-            message_context["result"] = message
-            message_context["done"] = True
 
+        filter_list.append(
+            InterceptionFilter(iopub_socket, "status", handle_status)
+        )
         filter_list.append(
             InterceptionFilter(iopub_socket, "execute_input", silence_message)
         )
@@ -277,7 +296,7 @@ class LLMKernel(KernelProxyManager):
         filter_list.append(
             InterceptionFilter(iopub_socket, "execute_result", collect_result)
         )
-        filter_list.append(InterceptionFilter(shell_socket, "execute_reply", cleanup))
+        filter_list.append(InterceptionFilter(shell_socket, "execute_reply", handle_execute_reply))
         filter_list.append(InterceptionFilter(iopub_socket, "stream", collect_stream))
         filter_list.append(InterceptionFilter(iopub_socket, "error", handle_error))
 
@@ -286,12 +305,16 @@ class LLMKernel(KernelProxyManager):
                 InterceptionFilter(iopub_socket, "stream", response_handler)
             )
 
+        stream.send_multipart(execution_message)
+        self.internal_executions.add(message_id)
+
         await asyncio.sleep(0.1)
-        while not message_context["done"]:
+        while not (message_context["done"] and message_context is not None):
             await asyncio.sleep(0.2)
         # Wait for any straggling messages
         await asyncio.sleep(0.2)
         self.internal_executions.remove(message_id)
+        await cleanup()
         return message_context
 
     async def evaluate(self, expression, parent_header={}):

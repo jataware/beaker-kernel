@@ -182,11 +182,13 @@ class AbstractProxyKernel(object):
         return six.ensure_binary(h.hexdigest())
 
     def make_multipart_message(
-        self, msg_type, content={}, parent_header={}, metadata={}
+        self, msg_type, content={}, parent_header={}, metadata={}, msg_id=None
     ):
+        if msg_id is None:
+            msg_id = str(uuid.uuid4())
         header = {
             "date": datetime.datetime.now().isoformat(),
-            "msg_id": str(uuid.uuid4()),
+            "msg_id": msg_id,
             "username": "kernel",
             "session": getattr(self, "session_id", str(uuid.uuid4())),
             "msg_type": msg_type,
