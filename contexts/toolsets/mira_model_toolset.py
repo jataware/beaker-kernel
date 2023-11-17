@@ -336,7 +336,7 @@ No addtional text is needed in the response, just the code block.
         self.context.kernel.send_response(
             "iopub", "stratify_response", content, parent_header=message.header
         )
-        await self.send_mira_preview_message(parent_header=message.parent_header)
+        await self.send_mira_preview_message(parent_header=message.header)
 
 
     async def reset_request(self, server, target_stream, data):
@@ -357,4 +357,4 @@ No addtional text is needed in the response, just the code block.
         self.context.kernel.send_response(
             "iopub", "reset_response", content, parent_header=message.header
         )
-        await self.send_mira_preview_message(parent_header=message.parent_header)
+        await self.send_mira_preview_message(parent_header=message.header)
