@@ -8,7 +8,7 @@ build:
 .PHONY:dev
 dev:service/dev_ui/build/index.js
 	if [[ "$$(docker compose ps | grep 'jupyter')" == "" ]]; then \
-		docker compose pull && \
+		docker compose pull; \
 		docker compose up -d --build && \
 		(sleep 1; python -m webbrowser "http://localhost:8888/dev_ui"); \
 		docker compose logs -f jupyter || true; \
