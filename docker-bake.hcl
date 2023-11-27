@@ -33,7 +33,7 @@ function "check_suffix" {
 # ----------------------------------------------------------------------------------------------------------------------
 
 group "prod" {
-  targets = ["beaker-kernel"]
+  targets = ["beaker-kernel", "askem-julia-base"]
 }
 
 group "default" {
