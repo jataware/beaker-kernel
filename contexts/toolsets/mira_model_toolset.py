@@ -11,6 +11,7 @@ from typing import Optional, Any
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 from .base import BaseToolset
+from lib.utils import message_handler
 from lib.jupyter_kernel_proxy import JupyterMessage
 
 logging.disable(logging.WARNING)  # Disable warnings
@@ -259,8 +260,8 @@ No addtional text is needed in the response, just the code block.
         except Exception as e:
             raise
 
-    async def save_amr_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def save_amr_request(self, message):
         content = message.content
 
         new_name = content.get("name")
@@ -305,8 +306,8 @@ No addtional text is needed in the response, just the code block.
         )
 
 
-    async def stratify_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def stratify_request(self, message):
         content = message.content
 
         model_name = content.get("model_name", "model")
@@ -339,8 +340,8 @@ No addtional text is needed in the response, just the code block.
         await self.send_mira_preview_message(parent_header=message.header)
 
 
-    async def reset_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def reset_request(self, message):
         content = message.content
 
         model_name = content.get("model_name", "model")

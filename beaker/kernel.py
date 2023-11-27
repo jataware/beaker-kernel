@@ -8,10 +8,12 @@ import requests
 import sys
 import traceback
 import uuid
+from functools import wraps
 from typing import Optional
 
 from tornado import ioloop
 
+from lib.utils import message_handler
 from lib.jupyter_kernel_proxy import (
     KernelProxyManager,
     JupyterMessage,
@@ -57,6 +59,7 @@ def get_socket(stream_name: str):
     return socket
 
 
+
 class LLMKernel(KernelProxyManager):
     implementation = "askem-chatty-py"
     implementation_version = "0.1"
@@ -87,13 +90,19 @@ class LLMKernel(KernelProxyManager):
         self.server.intercept_message(
             "shell", "context_setup_request", self.context_setup_request
         )
-        self.server.intercept_message("shell", "llm_request", self.llm_request)
+        self.server.intercept_message(
+            "shell", "llm_request", self.llm_request
+        )
+
+        # Track metadata across asynchronous messages
         self.server.intercept_message(
             "shell", "execute_request", self.track_execute_request
         )
         self.server.intercept_message(
             "iopub", "execute_input", self.update_execute_input_response
         )
+
+        # Post execution trigger
         self.server.intercept_message("shell", "execute_reply", self.post_execute)
 
     def new_kernel(self, language: str):
@@ -359,14 +368,17 @@ class LLMKernel(KernelProxyManager):
         return data
 
     def send_response(
-        self, stream, msg_or_type, content=None, channel=None, parent_header={}
+        self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None
     ):
         # Parse response as needed
         stream = getattr(self.server.streams, stream)
         message = self.server.make_multipart_message(
             msg_type=msg_or_type, content=content, parent_header=parent_header
         )
-        stream.send_multipart(message)
+        if parent_identities:
+            stream.send_multipart(parent_identities + message)
+        else:
+            stream.send_multipart(message)
         # Flush to ensure messages are sent immediately
         # TODO: Make flushing behind a flag?
         stream.flush()
@@ -388,16 +400,17 @@ class LLMKernel(KernelProxyManager):
             data = message.parts
         return data
 
-    async def llm_request(self, queue, message_id, data):
-        # Send "code" to LLM Agent. The "code" is actually the LLM query
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def llm_request(self, message):
         content = message.content
+        logger.error(f'{content}')
         request = content.get("request", None)
         if not request:
             return
         if not self.context:
             raise Exception("Context has not been set")
         try:
+            logger.error(f'{request}')
             result = await self.context.agent.react_async(request)
         except Exception as err:
             error_text = f"""LLM Error:
@@ -428,8 +441,8 @@ class LLMKernel(KernelProxyManager):
                 "iopub", "llm_response", stream_content, parent_header=message.header
             )
 
-    async def context_setup_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def context_setup_request(self, message):
         content = message.content
         context_name = content.get("context")
         context_info = content.get("context_info", {})

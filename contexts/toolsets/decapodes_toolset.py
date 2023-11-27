@@ -11,6 +11,7 @@ from typing import Optional, Any
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 from .base import BaseToolset
+from lib.utils import message_handler
 from lib.jupyter_kernel_proxy import JupyterMessage
 
 logging.disable(logging.WARNING)  # Disable warnings
@@ -182,9 +183,8 @@ No addtional text is needed in the response, just the code block.
         self.context.kernel.send_response(
             "iopub", "decapodes_preview", content, parent_header=parent_header
         )
-
-    async def save_amr_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def save_amr_request(self, message):
         content = message.content
 
         new_name = content.get("name")

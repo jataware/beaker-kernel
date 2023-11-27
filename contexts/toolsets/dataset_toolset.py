@@ -13,6 +13,7 @@ from typing import Optional, Callable, List, Tuple, Any
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 from .base import BaseToolset
+from lib.utils import message_handler
 from lib.jupyter_kernel_proxy import JupyterMessage
 
 
@@ -251,8 +252,8 @@ No addtional text is needed in the response, just the code block.
         )
         return result
 
-    async def download_dataset_request(self, queue, message_id, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def download_dataset_request(self, message):
         content = message.content
         var_name = content.get("var_name", "df")
         # TODO: Collect any options that might be needed, if they ever are
@@ -273,8 +274,8 @@ No addtional text is needed in the response, just the code block.
             },
         )  # , parent_header=parent_header)
 
-    async def save_dataset_request(self, queue, message_id, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def save_dataset_request(self, message):
         content = message.content
 
         parent_dataset_id = content.get("parent_dataset_id")

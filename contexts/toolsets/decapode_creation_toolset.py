@@ -12,6 +12,7 @@ from typing import Optional, Any
 from archytas.tool_utils import tool, toolset, AgentRef, LoopControllerRef
 
 from .base import BaseToolset
+from lib.utils import message_handler
 from lib.jupyter_kernel_proxy import JupyterMessage
 
 logging.disable(logging.WARNING)  # Disable warnings
@@ -195,8 +196,8 @@ No addtional text is needed in the response, just the code block.
             "iopub", "decapodes_preview", content, parent_header=parent_header
         )
 
-    async def compile_expr(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def compile_expr(self, message):
         content = message.content
 
         declaration = content.get("declaration")
@@ -216,8 +217,8 @@ No addtional text is needed in the response, just the code block.
         await self.send_decapodes_preview_message(parent_header=message.header)
 
 
-    async def construct_amr(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def construct_amr(self, message):
         content = message.content
 
         header =  {
@@ -246,7 +247,8 @@ No addtional text is needed in the response, just the code block.
             "iopub", "construct_amr_response", amr, parent_header=message.header
         )
 
-    async def save_amr_request(self, server, target_stream, data):
+    @message_handler
+    async def save_amr_request(self, message):
         message = JupyterMessage.parse(data)
         content = message.content
 
