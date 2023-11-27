@@ -71,6 +71,7 @@ class DevAskemJupyterApp(AskemJupyterApp):
         super().initialize_handlers()
         """Add dev handler"""
         self.handlers.append(("/dev_ui", DevHandler))
+        # self.handlers.append(("/dev_ui_vue", DevVueHandler))
 
 
 if __name__ == "__main__":

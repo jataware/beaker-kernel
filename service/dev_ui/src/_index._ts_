@@ -60,50 +60,13 @@ import { CommandPalette, SplitPanel, Widget, Panel } from '@lumino/widgets';
 import { COMMAND_IDS, setupCommands } from './commands';
 
 
+
 import { createMessage } from '@jupyterlab/services/lib/kernel/messages';
-import { BeakerSession } from 'beaker-kernel';
 
 
 const baseUrl = PageConfig.getBaseUrl();
-var beakerSession: BeakerSession = new BeakerSession(
-  {
-    settings: {},
-    name: "MyKernel",
-    kernelName: "beaker"
-  }
-);
 
-console.log("beakerSession", beakerSession);
 function main(): void {
-  // session = new BeakerSession(
-  //   {
-  //     settings: {},
-  //     name: "MyKernel",
-  //     kernelName: "beaker"
-  //   }
-  // );
-  // console.log(session);
-  // session.session.ready.then(() => {
-  //   console.log(session.session);
-  //   console.log(session.kernel);
-  //   setTimeout(() => {
-  //     console.log("Sending message")
-  //     const f = session.sendBeakerMessage(
-  //       "context_setup_request",
-  //       {
-  //         context: "dataset",
-  //         context_info: {},
-  //         language: "python3"
-  //       }
-  //     );
-  //     f.done.then((e) => {
-  //       console.log("I'm back!");
-  //       console.log(e);
-  //     });
-  // }, 6000);
-  // });
-
-
   const manager = new ServiceManager();
   void manager.ready.then(() => {
     createApp(manager);
@@ -270,7 +233,7 @@ async function createApp(manager: ServiceManager.IManager): void {
   docRegistry.addWidgetFactory(wFactory);
 
   const notebookPath = PageConfig.getOption('notebookPath');
-  const nbWidget = docManager.open(notebookPath, "default", null, {session: beakerSession}) as NotebookPanel;
+  const nbWidget = docManager.open(notebookPath) as NotebookPanel;
   const notebook = nbWidget.content;
   const palette = new CommandPalette({ commands });
   palette.addClass('notebookCommandPalette');
@@ -279,11 +242,7 @@ async function createApp(manager: ServiceManager.IManager): void {
     nbWidget.content.activeCell && nbWidget.content.activeCell.editor;
   const model = new CompleterModel();
   const completer = new Completer({ editor, model });
-  // const sessionContext = nbWidget.context.sessionContext;
-  console.log("nbWidget.context.sessionContext == beakerSession", nbWidget.context.sessionContext === beakerSession);
-  const sessionContext = beakerSession.session;
-  console.log("sessionContext", sessionContext);
-  console.log("nbWidget.context", nbWidget.context);
+  const sessionContext = nbWidget.context.sessionContext;
   const timeout = 1000;
   const provider = new KernelCompleterProvider();
   const reconciliator = new ProviderReconciliator({
@@ -386,13 +345,8 @@ async function createApp(manager: ServiceManager.IManager): void {
 
 
   const sendLLMQuery = (query: string) => {
-    // const session = sessionContext.session;
-    const session = beakerSession;
-    console.log(1);
+    const session = sessionContext.session;
     const kernel = session?.kernel;
-    console.log(kernel);
-    console.log(session.notebook);
-    console.log(session.notebook.addCell);
     if (kernel) {
       const message: JupyterMessage = createMessage({
         session: session?.name || '',
@@ -402,9 +356,7 @@ async function createApp(manager: ServiceManager.IManager): void {
         msgId: `${kernel.id}-query`
       });
       const colored_text = `LLM Query: <span style="color: green; font-weight: bold">${query}</span>`
-      session.notebook.addCell({id: `${message.header.msg_id}-text-${Date.now()}`, cell_type: 'markdown', source: colored_text});
-
-      // notebook.model.cells.nbmodel.addCell({id: `${message.header.msg_id}-text-${Date.now()}`, cell_type: 'markdown', source: colored_text});
+      notebook.model.cells.nbmodel.addCell({id: `${message.header.msg_id}-text-${Date.now()}`, cell_type: 'markdown', source: colored_text});
       kernel.sendShellMessage(message);
     }
 

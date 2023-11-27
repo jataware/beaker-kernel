@@ -7,7 +7,7 @@ crypto.createHash = algorithm =>
   cryptoOrigCreateHash(algorithm == 'md4' ? 'sha256' : algorithm);
 
 module.exports = {
-  entry: ['whatwg-fetch', './build/index.js'],
+  entry: ['whatwg-fetch', './build/vue.js'],
   output: {
     path: __dirname + '/build',
     filename: 'bundle.js',
