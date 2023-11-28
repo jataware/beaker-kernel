@@ -8,10 +8,14 @@ function decapode_to_svg(d)
     String(take!(io))
 end
 
+_response = []
+for model in [{{ var_names }}] 
+    _item = Dict(
+        "application/json" => model |> Decapodes.Term,
+        "image/svg" => decapode_to_svg(model) 
+        # {{ var_name|default("model") }} ∘ bytes ∘ gen_image
+    )
+    push!(_response, _item)
 
-_response = Dict(
-    "json" => {{ var_name|default("model") }} |> Decapodes.Term,
-    "image" => decapode_to_svg({{ var_name|default("model") }}) 
-    # {{ var_name|default("model") }} ∘ bytes ∘ gen_image
-)
+end
 _response |> DisplayAs.unlimited ∘ JSON3.write

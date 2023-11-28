@@ -164,8 +164,11 @@ async function createApp(manager: ServiceManager.IManager): void {
     }
     else if (msg.msg_type === "decapodes_preview") {
       const content = msg.content;
+      // dataPreview.innerHTML = `
+      //   <div>${content["image/svg"]}</div>
+      //   <div>${JSON.stringify(content["application/json"], null, 2)}</div>
+      // `;
       dataPreview.innerHTML = `
-        <div>${content["image/svg"]}</div>
         <div>${JSON.stringify(content["application/json"], null, 2)}</div>
       `;
     }

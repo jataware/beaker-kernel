@@ -26,7 +26,7 @@ class DecapodesCreationToolset(BaseToolset):
     codeset_name = "decapodes"
 
     decapodes_expression_dsl: Optional[str] = None
-    var_name: Optional[str] = "_expr"
+    target: str = "decapode"
 
     def __init__(self, context, *args, **kwargs):
         super().__init__(context=context, *args, **kwargs)
@@ -38,10 +38,26 @@ class DecapodesCreationToolset(BaseToolset):
         self.reset()
 
     async def setup(self, config, parent_header):
+        var_names = list(config.keys())
+
+        def fetch_model(model_id):
+            meta_url = f"{os.environ['DATA_SERVICE_URL']}/models/{model_id}"
+            response = requests.get(meta_url)            
+            if response.status_code >= 300:
+                raise Exception(f"Failed to retrieve model {model_id} from server returning {response.status_code}")
+            model = json.dumps(response.json()["model"])
+            return model
+            
+        load_commands = [
+            '%s = parse_json_acset(SummationDecapode{Symbol, Symbol, Symbol},"""%s""")' % (var_name, fetch_model(decapode_id))
+            for var_name, decapode_id in config.items()
+        ]
+            
         command = "\n".join(
             [
                 self.get_code("setup"),
-                f"{self.var_name} = parse_decapode(quote end)",
+                "decapode = @decapode begin end",
+                *load_commands
             ]
         )
         print(f"Running command:\n-------\n{command}\n---------")
@@ -186,8 +202,8 @@ No addtional text is needed in the response, just the code block.
     ):
         if parent_header is None:
             parent_header = {}
-        result = await self.context.evaluate(self.get_code("expr_to_info"))
-        content = result["return"]
+        preview = await self.context.evaluate(self.get_code("expr_to_info", {"target": self.target}))
+        content = preview["return"]
         if content is None:
             raise RuntimeError("Info not returned for preview")
 
@@ -204,7 +220,7 @@ No addtional text is needed in the response, just the code block.
 
         command = "\n".join(
             [
-                self.get_code("construct_expr", {"declaration": declaration, "var_name": self.var_name}),
+                self.get_code("construct_expr", {"declaration": declaration, "target": self.target}),
                 "nothing"
             ]
         )
@@ -232,7 +248,7 @@ No addtional text is needed in the response, just the code block.
         if id_value:
             header['id'] = id_value
 
-        preview = await self.context.evaluate(self.get_code("expr_to_info", {"var_name": self.var_name}))
+        preview = await self.context.evaluate(self.get_code("expr_to_info", {"target": self.target}))
         model = preview["return"]["application/json"]
 
         amr = {
@@ -253,7 +269,7 @@ No addtional text is needed in the response, just the code block.
         header = content["header"]
         header["_type"] = "Header"
 
-        preview = await self.context.evaluate(self.get_code("expr_to_info", {"var_name": self.var_name}))
+        preview = await self.context.evaluate(self.get_code("expr_to_info", {"target": self.target}))
         model = preview["return"]["application/json"]
 
         amr = {
