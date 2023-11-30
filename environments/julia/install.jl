@@ -36,7 +36,7 @@ end
 
 import Pkg
 Pkg.activate(".")
-
+Pkg.instantiate()
 import PackageCompiler 
 
 target = if !(length(ARGS) == 0) lowercase(ARGS[1]) else "local" end
