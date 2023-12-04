@@ -32,18 +32,41 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         # TODO: Generate this from a single source of truth at startup time
         context_data = {
             "dataset": {
-                "languages": ["python3", "julia-1.9", "ir"],
+                "languages": [
+                    ["python3", "python3"],
+                    ["julia", "julia-1.9"],
+                    ["rlang", "ir"]
+                ],
+                "defaultPayload": '''
+{
+  "df_hosp": "truth-incident-hospitalization",
+  "df_cases": "truth-incident-case"
+}
+'''.strip(),
             },
             "mira_model": {
-                "languages": ["python3"],
+                "languages": [
+                    ["python3", "python3"]
+                ],
+                "defaultPayload": '''
+{
+  "id": "sir-model-id"
+}
+'''.strip(),
             },
-            "decapodes_creation": {
-                "languages": ["julia-1.9"],
+            "decapodes": {
+                "languages": [
+                    ["julia", "julia-1.9"]
+                ],
+                "defaultPayload": '''
+{
+  "halfar": "ice_dynamics-id"
+}
+'''.strip(),
             },
 
         }
         return self.write(context_data)
-
 
 
 class AskemJupyterApp(LabServerApp):

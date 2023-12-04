@@ -25,7 +25,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./beaker:/usr/local/share/jupyter/kernels/beaker
+      - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
     depends_on:
       - julia-base-image

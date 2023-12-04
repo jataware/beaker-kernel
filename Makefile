@@ -8,7 +8,7 @@ build:
 .PHONY:dev
 dev:service/dev_ui/build/index.js
 	if [[ "$$(docker compose ps | grep 'jupyter')" == "" ]]; then \
-		docker compose pull && \
+		docker compose pull; \
 		docker compose up -d --build && \
 		(sleep 1; python -m webbrowser "http://localhost:8888/dev_ui"); \
 		docker compose logs -f jupyter || true; \
@@ -43,7 +43,7 @@ dev-install:.env
 	ENVDIR=$$(poetry -q run python -c 'import os; print(os.environ.get("VIRTUAL_ENV", ""))'); \
 	KERNEL_INSTALL_PATH=$${ENVDIR}/share/jupyter/kernels/beaker; \
 	if [[ ! -e "$${KERNEL_INSTALL_PATH}" && -n "$${ENVDIR}" ]]; then \
-		ln -s "${BASEDIR}/beaker" "$${KERNEL_INSTALL_PATH}"; \
+		ln -s "${BASEDIR}/beaker_kernel" "$${KERNEL_INSTALL_PATH}"; \
 	fi; \
 	if [[ ! -e "service/test.ipynb" ]]; then \
 		cp service/dev_ui/test.ipynb service/test.ipynb; \

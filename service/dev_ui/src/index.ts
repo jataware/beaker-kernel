@@ -288,7 +288,20 @@ async function createApp(manager: ServiceManager.IManager): void {
   llmButton.textContent = "Submit";
   llmWidget.node.appendChild(llmContainer);
 
-  const languageSet = new Set();
+  const languageMap = {};
+  const setContext = () => {
+    languageSelect.innerHTML = '';
+    const contextInfo = contexts[contextSelect.value];
+    console.log(contextInfo);
+    // const languageSet = con[contextSelect.value];
+    contextInfo.languages.forEach((lang) => {
+      const option = document.createElement('option');
+      option.setAttribute("label", lang[0]);
+      option.setAttribute("value", lang[1]);
+      languageSelect.appendChild(option);
+    });
+    contextPayloadInput.value = contextInfo.defaultPayload;
+  };
 
   const contextWidget = new Widget();
   const contextNode = document.createElement('div');
@@ -305,17 +318,12 @@ async function createApp(manager: ServiceManager.IManager): void {
     option.setAttribute("value", context);
     option.setAttribute("label", context);
     contextSelect.appendChild(option);
-    languages.forEach((lang) => {languageSet.add(lang)});
+    languageMap[context] = languages;
   }
-  // for (const lang of ["python3", "julia"]) {
-  languageSet.forEach((lang) => {
-    const option = document.createElement('option');
-    option.setAttribute("value", lang);
-    option.setAttribute("label", lang);
-    languageSelect.appendChild(option);
-  });
+  contextSelect.onchange = setContext;
+
   contextPayloadInput.className = 'json-input';
-  contextPayloadInput.value = '{\n  "df_hosp": "truth-incident-hospitalization",\n  "df_cases": "truth-incident-case"\n}';
+  contextPayloadInput.value = '';
   contextButton.textContent = 'Submit';
   contextButton.addEventListener("click", (e) => {
     setKernelContext({
@@ -348,7 +356,6 @@ async function createApp(manager: ServiceManager.IManager): void {
 
   messageButton.textContent = "Submit";
   messageButton.onclick = (evt) => {
-    console.log(evt);
     let channel = messageChannelSelect.value;
     let msgType = messageTypeInput.value;
     let contentString = messagePayloadInput.value;
@@ -401,6 +408,9 @@ async function createApp(manager: ServiceManager.IManager): void {
   SplitPanel.setStretch(nbWidget, 2);
   mainPanel.addWidget(leftPanel);
   mainPanel.addWidget(nbWidget);
+
+  // Set up the context after the UI has been defined.
+  setContext();
 
   // Attach the panel to the DOM.
   Widget.attach(mainPanel, document.body);
