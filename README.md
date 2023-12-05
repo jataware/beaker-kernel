@@ -67,6 +67,11 @@ $ make dev
 
 This will start the Jupyter service and launch a specialized notebook interface in your browser similar to if you ran `$ jupyter notebook` normally.
 
+## Julia Subkernel Packages
+
+The Julia subkernel is managed by [`askem-julia`](https://github.com/DARPA-ASKEM/askem-julia). To make a new package
+available to Beaker, it must be added to `askem-julia`'s `Project.toml`.
+
  
 ## Differences from vanilla Jupyter
 

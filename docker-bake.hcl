@@ -33,7 +33,7 @@ function "check_suffix" {
 # ----------------------------------------------------------------------------------------------------------------------
 
 group "prod" {
-  targets = ["beaker-kernel", "askem-julia-base"]
+  targets = ["beaker-kernel"]
 }
 
 group "default" {
@@ -46,23 +46,10 @@ target "_platforms" {
   platforms = ["linux/amd64"]
 }
 
-target "askem-julia-base" {
-    inherits = ["_platforms"]
-	context = "environments/julia/"
-	tags = tag("askem-julia-base", "", "")
-	dockerfile = "Dockerfile"
-}
-
 target "beaker-kernel-base" {
-    contexts = {
-        askem-julia-base = "target:askem-julia-base"
-    }
 	context = "."
 	tags = tag("beaker-kernel", "", "")
 	dockerfile = "Dockerfile"
-    args = {
-        JULIA_IMAGE = "askem-julia-base"
-    }
 }
 
 target "beaker-kernel" {
