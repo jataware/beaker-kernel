@@ -19,36 +19,32 @@ WORKDIR /home/jupyter
 
 # Install r-lang and kernel
 RUN apt update && \
-    apt install -y r-base r-cran-irkernel && \
-    apt clean -y
+    apt install -y r-base r-cran-irkernel \
+        graphviz libgraphviz-dev && \
+    apt clean -y && \
+    apt autoclean -y
 
 WORKDIR /jupyter
 
 # Install Python requirements
-RUN pip install --upgrade --no-cache-dir jupyterlab jupyterlab_server pandas matplotlib xarray numpy hatch scipy pip
+RUN pip install --upgrade --no-cache-dir hatch pip
 
 # Install project requirements
 COPY --chown=1000:1000 pyproject.toml README.md hatch_build.py /jupyter/
+# Hack to install requirements without requiring the rest of the files
 RUN pip install -e .
 
 # Install Mira from `hackathon` branch
-RUN git clone https://github.com/indralab/mira.git /mira
-WORKDIR /mira
-
-RUN python -m pip install -e .
-RUN apt update && \
-    apt install -y graphviz libgraphviz-dev && \
-    apt clean -y
-RUN python -m pip install -e ."[ode,tests,dkg-client,sbml]"
-WORKDIR /jupyter
+RUN git clone https://github.com/indralab/mira.git /mira && \
+    pip install /mira/"[ode,tests,dkg-client,sbml]" && \
+    rm -r /mira
 
 # Kernel must be placed in a specific spot in the filesystem
-COPY beaker_kernel /usr/local/share/jupyter/kernels/beaker_kernel
+# TODO: Replace this with helper that just copies the required file(s) via a python script?
+COPY beaker_kernel/kernel.json /usr/local/share/jupyter/kernels/beaker_kernel/kernel.json
 
 # Copy src code over
-RUN chown 1000:1000 /jupyter
 COPY --chown=1000:1000 . /jupyter
-
 RUN pip install .
 
 # Switch to non-root user. It is crucial for security reasons to not run jupyter as root user!
