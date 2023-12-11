@@ -59,7 +59,8 @@ class BaseAgent(ReActAgent):
         self.context = context
 
         # TODO: In the future, have a single generate_code function with the details
-        # of how the code is generated defined on the superclass agent if changes needed
+        # of how the code is generated defined on the superclass agent if changes needed ?
+        #
         # if not isinstance(tools, list):
         #     tools = [generate_code]
         # else:

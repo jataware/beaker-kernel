@@ -9,7 +9,6 @@ from archytas.tool_utils import AgentRef, LoopControllerRef, tool, toolset
 from beaker_kernel.lib.agent import BaseAgent
 from beaker_kernel.lib.context import BaseContext
 from beaker_kernel.lib.jupyter_kernel_proxy import JupyterMessage
-from beaker_kernel.lib.toolset import BaseToolset
 
 logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Dict
 import requests
 
 from beaker_kernel.lib.context import BaseContext
-from beaker_kernel.lib.jupyter_kernel_proxy import JupyterMessage
+from beaker_kernel.lib.utils import intercept
 
 from .agent import DecapodesAgent
 
@@ -20,16 +20,10 @@ logger = logging.getLogger(__name__)
 
 class DecapodesContext(BaseContext):
 
-    slug = "decapodes"
     agent_cls = DecapodesAgent
 
     def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", config: Dict[str, Any]) -> None:
         self.target = "decapode"
-        self.intercepts = {
-            "save_amr_request": (self.save_amr_request, "shell"),
-            "construct_amr_request": (self.construct_amr, "shell"),
-            "compile_expr_request": (self.compile_expr, "shell"),
-        }
         self.reset()
         super().__init__(beaker_kernel, subkernel, self.agent_cls, config)
 
@@ -150,8 +144,8 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
             "iopub", "decapodes_preview", content, parent_header=parent_header
         )
 
-    async def compile_expr(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @intercept(msg_type="compile_expr_request")
+    async def compile_expr(self, message):
         content = message.content
 
         declaration = content.get("declaration")
@@ -171,8 +165,8 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
         await self.send_decapodes_preview_message(parent_header=message.header)
 
 
-    async def construct_amr(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @intercept(msg_type="construct_amr_request")
+    async def construct_amr(self, message):
         content = message.content
 
         header =  {
@@ -201,8 +195,8 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
             "iopub", "construct_amr_response", amr, parent_header=message.header
         )
 
-    async def save_amr_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @intercept()
+    async def save_amr_request(self, message):
         content = message.content
 
         header = content["header"]

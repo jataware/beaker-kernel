@@ -25,13 +25,11 @@ RUN apt update && \
 WORKDIR /jupyter
 
 # Install Python requirements
-RUN pip install --no-cache-dir jupyterlab jupyterlab_server pandas matplotlib xarray numpy poetry scipy
+RUN pip install --no-cache-dir jupyterlab jupyterlab_server pandas matplotlib xarray numpy hatch scipy
 
 # Install project requirements
-COPY --chown=1000:1000 pyproject.toml poetry.lock /jupyter/
-RUN pip install --no-cache-dir poetry
-RUN poetry config virtualenvs.create false
-RUN poetry install --no-dev --no-cache
+COPY --chown=1000:1000 pyproject.toml README.md hatch_build.py /jupyter/
+RUN pip install --no-cache-dir -e .
 
 # Install Mira from `hackathon` branch
 RUN git clone https://github.com/indralab/mira.git /mira
@@ -51,10 +49,12 @@ COPY beaker_kernel /usr/local/share/jupyter/kernels/beaker_kernel
 RUN chown 1000:1000 /jupyter
 COPY --chown=1000:1000 . /jupyter
 
+RUN pip install .
+
 # Switch to non-root user. It is crucial for security reasons to not run jupyter as root user!
 USER jupyter
 
-# Install Julia kernel
+# Install Julia kernel (as user jupyter)
 RUN /usr/local/julia/bin/julia -J /home/jupyter/.julia/environments/askem/ASKEM-Sysimage.so -e 'using IJulia; IJulia.installkernel("julia"; julia=`/usr/local/julia/bin/julia -J /home/jupyter/.julia/environments/askem/ASKEM-Sysimage.so --threads=4`)'
 
 # Service

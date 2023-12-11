@@ -11,19 +11,13 @@ from typing import TYPE_CHECKING, Optional
 import requests
 from tornado import ioloop
 
-# TODO: Move context import to autodiscovery
-from .contexts.dataset.context import DatasetContext
-from .contexts.decapodes.context import DecapodesContext
-from .contexts.mira_model.context import MiraModelContext
 from .contexts.pypackage.context import PyPackageContext
-from .lib.context import BaseContext, collect_contexts
+from .lib.context import BaseContext, autodiscover_contexts
 from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
-# TODO: Move subkernel import to autodiscovery
-from .lib.subkernels.julia import JuliaSubkernel
-from .lib.subkernels.python import PythonSubkernel
-from .lib.subkernels.rlang import RSubkernel
+from .lib.subkernels import autodiscover_subkernels
+from .lib.utils import message_handler
 
 if TYPE_CHECKING:
     from .lib.agent import BaseAgent
@@ -43,14 +37,8 @@ MESSAGE_STREAMS = {
     "stream": "iopub",
 }
 
-
-AVAILABLE_CONTEXTS = {
-    DatasetContext.slug: DatasetContext,
-    DecapodesContext.slug: DecapodesContext,
-    MiraModelContext.slug: MiraModelContext,
-    PyPackageContext.slug: PyPackageContext,
-}
-
+AVAILABLE_CONTEXTS = autodiscover_contexts()
+AVAILABLE_SUBKERNELS = autodiscover_subkernels()
 
 def get_socket(stream_name: str):
     socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_name)]
@@ -77,14 +65,15 @@ class LLMKernel(KernelProxyManager):
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.subkernel_id = None
-        # self.context = None
         super().__init__(server)
-        # We need to have a kernel when we start up, even though we can/will change the kernel/language when we set context
         self.new_kernel(language="python3")
         self.context = PyPackageContext(beaker_kernel=self, subkernel=self.subkernel, config={})
-        self.add_intercepts()
+        self.add_base_intercepts()
 
-    def add_intercepts(self):
+    def add_base_intercepts(self):
+        """
+        Adds intercepts used by the Beaker kernel
+        """
         self.server.intercept_message(
             "shell", "context_setup_request", self.context_setup_request
         )
@@ -100,9 +89,8 @@ class LLMKernel(KernelProxyManager):
     def new_kernel(self, language: str):
         # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
         kernel_opts = {
-            "python3": PythonSubkernel,
-            "julia-1.9": JuliaSubkernel,
-            "ir": RSubkernel,
+            subkernel.KERNEL_NAME: subkernel
+            for subkernel in AVAILABLE_SUBKERNELS.values()
         }
 
         self.shutdown_subkernel()
@@ -314,11 +302,10 @@ class LLMKernel(KernelProxyManager):
 
         context_cls = AVAILABLE_CONTEXTS.get(context_name, None)
         if not context_cls:
-            # TODO: Should we return an error if the requested toolset isn't available?
+            # TODO: Should we return an error if the requested context isn't available?
             return False
 
         # Create and setup context
-        # self.context = BaseContext(beaker_kernel=self, subkernel=self.subkernel, agent_cls=toolset_class, config=context_info)
         self.context = context_cls(beaker_kernel=self, subkernel=self.subkernel, config=context_info)
         await self.context.setup(config=context_info, parent_header=parent_header)
 
@@ -339,14 +326,17 @@ class LLMKernel(KernelProxyManager):
         return data
 
     def send_response(
-        self, stream, msg_or_type, content=None, channel=None, parent_header={}
+        self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None
     ):
         # Parse response as needed
         stream = getattr(self.server.streams, stream)
         message = self.server.make_multipart_message(
             msg_type=msg_or_type, content=content, parent_header=parent_header
         )
-        stream.send_multipart(message)
+        if parent_identities:
+            stream.send_multipart(parent_identities + message)
+        else:
+            stream.send_multipart(message)
         # Flush to ensure messages are sent immediately
         # TODO: Make flushing behind a flag?
         stream.flush()
@@ -368,9 +358,9 @@ class LLMKernel(KernelProxyManager):
             data = message.parts
         return data
 
-    async def llm_request(self, queue, message_id, data):
+    @message_handler
+    async def llm_request(self, message):
         # Send "code" to LLM Agent. The "code" is actually the LLM query
-        message = JupyterMessage.parse(data)
         content = message.content
         request = content.get("request", None)
         if not request:
@@ -408,8 +398,8 @@ class LLMKernel(KernelProxyManager):
                 "iopub", "llm_response", stream_content, parent_header=message.header
             )
 
-    async def context_setup_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @message_handler
+    async def context_setup_request(self, message):
         content = message.content
         context_name = content.get("context")
         context_info = content.get("context_info", {})

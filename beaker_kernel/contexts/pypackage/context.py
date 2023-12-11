@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 class PyPackageContext(BaseContext):
 
-    slug = "pypackage"
     agent_cls: "BaseAgent" = PyPackageAgent
 
     def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", config: Dict[str, Any]) -> None:

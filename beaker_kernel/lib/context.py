@@ -2,11 +2,11 @@ import inspect
 import json
 import logging
 import os.path
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
+from beaker_kernel.lib.autodiscovery import autodiscover
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
-
-from .codeset import get_metadata, get_template
 
 if TYPE_CHECKING:
     from archytas.react import ReActAgent
@@ -15,43 +15,40 @@ if TYPE_CHECKING:
 
     from .agent import BaseAgent
     from .subkernels.base import BaseSubkernel
-    from .toolset import BaseToolset
 
 logger = logging.getLogger(__name__)
 
+
 class BaseContext:
-    slug: str
     beaker_kernel: "LLMKernel"
     subkernel: "BaseSubkernel"
-    toolset: "BaseToolset"
     config: Dict[str, Any]
     agent: "ReActAgent"
 
-    intercepts: Dict[str, Tuple[Callable, str]] = {}
+    # intercepts: Dict[str, Tuple[Callable, str]] = {}
     jinja_env: Optional[Environment] = None
     templates: Dict[str, Template] = {}
 
-
-    def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", agent_cls: "BaseAgent", config: Dict[str, Any]) -> None:  # toolset_cls: Type["BaseToolset"],
+    def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", agent_cls: "BaseAgent", config: Dict[str, Any]) -> None:
         self.beaker_kernel = beaker_kernel
         self.subkernel = subkernel
-        # self.toolset = toolset_cls(context=self)
         self.agent = agent_cls(
             context=self,
             tools=[],
         )
         self.config = config
 
-        # Add intercepts
-        for message, (handler, stream) in self.intercepts.items():
-            self.beaker_kernel.add_intercept(message, handler, stream=stream)
+        # Add intercepts, by inspecting the instance and extracting matching methods
+        for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_intercept")):
+            msg_type, stream = getattr(method, "_intercept")
+            self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
 
-        # Set auto-context from toolset
+        # Set auto-context from agent
         if getattr(self, "auto_context", None) is not None:
             self.agent.set_auto_context("Default context", self.auto_context)
 
         class_dir = inspect.getfile(self.__class__)
-        code_dir = os.path.join(os.path.dirname(class_dir), "code", self.subkernel.SLUG)
+        code_dir = os.path.join(os.path.dirname(class_dir), "procedures", self.subkernel.SLUG)
         if os.path.exists(code_dir):
             self.jinja_env = Environment(
                 loader=FileSystemLoader(code_dir),
@@ -64,7 +61,23 @@ class BaseContext:
                 self.templates[template_name] = template
 
     async def setup(self, parent_header=None):
-        await self.toolset.setup(self.config, parent_header=parent_header)
+        if callable(getattr(self.agent, 'setup', None)):
+            await self.agent.setup(self.config, parent_header=parent_header)
+
+    def send_response(self, *args, **kwargs):
+        return self.beaker_kernel.send_response(*args, **kwargs)
+
+    @property
+    def slug(self) -> Optional[str]:
+        """
+        The slug should always be the same as the package that contains the class.
+        I.e. For "beaker_kernel.contexts.pypackage" the slug should be "pypackage"
+        """
+        package_str = inspect.getmodule(self).__package__
+        if package_str:
+            return package_str.split(".")[-1]
+        else:
+            return None
 
     @property
     def lang(self):
@@ -72,7 +85,10 @@ class BaseContext:
 
     @property
     def metadata(self):
-        return json.loads(self.get_code('metadata'))
+        try:
+            return json.loads(self.get_code('metadata'))
+        except ValueError:
+            return {}
 
     def get_code(self, name, render_dict: Dict[str, Any]=None) -> str:
         if render_dict is None:
@@ -80,7 +96,7 @@ class BaseContext:
         template = self.templates.get(name, None)
         if template is None:
             raise ValueError(
-                f"'{name}' is not a defined codeset for context '{self.__class__.__name__}' and "
+                f"'{name}' is not a defined procedure for context '{self.__class__.__name__}' and "
                 f"subkernel '{self.subkernel.DISPLAY_NAME} ({self.subkernel.KERNEL_NAME})'"
             )
         return template.render(**render_dict)
@@ -91,6 +107,5 @@ class BaseContext:
     async def evaluate(self, expression, parent_header={}):
         return await self.beaker_kernel.evaluate(expression, parent_header)
 
-
-def collect_contexts(path):
-    return []
+def autodiscover_contexts():
+    return autodiscover("contexts")

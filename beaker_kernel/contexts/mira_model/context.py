@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 import requests
 
 from beaker_kernel.lib.context import BaseContext
-from beaker_kernel.lib.jupyter_kernel_proxy import JupyterMessage
+from beaker_kernel.lib.utils import intercept
 
 from .agent import MiraModelAgent
 
@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 class MiraModelContext(BaseContext):
 
-    slug = "mira_model"
     agent_cls = MiraModelAgent
 
     model_id: Optional[str]
@@ -30,11 +29,6 @@ class MiraModelContext(BaseContext):
     var_name: Optional[str] = "model"
 
     def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", config: Dict[str, Any]) -> None:
-        self.intercepts = {
-            "save_amr_request": (self.save_amr_request, "shell"),
-            "reset_request": (self.reset_request, "shell"),
-            "stratify_request": (self.stratify_request, "shell"),
-        }
         self.reset()
         super().__init__(beaker_kernel, subkernel, self.agent_cls, config)
 
@@ -133,8 +127,8 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
         except Exception as e:
             raise
 
-    async def save_amr_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @intercept()
+    async def save_amr_request(self, message):
         content = message.content
 
         new_name = content.get("name")
@@ -179,8 +173,8 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
         )
 
 
-    async def stratify_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @intercept()
+    async def stratify_request(self, message):
         content = message.content
 
         model_name = content.get("model_name", "model")
@@ -213,8 +207,8 @@ If you are asked to manipulate, stratify, or visualize the model, use the genera
         await self.send_mira_preview_message(parent_header=message.header)
 
 
-    async def reset_request(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
+    @intercept()
+    async def reset_request(self, message):
         content = message.content
 
         model_name = content.get("model_name", "model")

@@ -1,8 +1,10 @@
+import codecs
 import os
 import requests
 from typing import TYPE_CHECKING, Any, Dict
 
 from beaker_kernel.lib.context import BaseContext
+from beaker_kernel.lib.utils import intercept
 
 from .agent import DatasetAgent
 
@@ -14,17 +16,10 @@ if TYPE_CHECKING:
 
 class DatasetContext(BaseContext):
 
-    slug: str = "dataset"
     agent_cls: "BaseAgent" = DatasetAgent
 
     def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", config: Dict[str, Any]) -> None:
-
         self.dataset_map = {}
-        self.intercepts = {
-            "download_dataset_request": (self.download_dataset_request, "shell"),
-            "save_dataset_request": (self.save_dataset_request, "shell"),
-        }
-
         super().__init__(beaker_kernel, subkernel, self.agent_cls, config)
 
     async def setup(self, config, parent_header):
@@ -181,8 +176,8 @@ Statistics:
 """
         return output
 
-    async def download_dataset_request(self, queue, message_id, data):
-        message = JupyterMessage.parse(data)
+    @intercept()
+    async def download_dataset_request(self, message):
         content = message.content
         var_name = content.get("var_name", "df")
         # TODO: Collect any options that might be needed, if they ever are
@@ -203,8 +198,8 @@ Statistics:
             },
         )  # , parent_header=parent_header)
 
-    async def save_dataset_request(self, queue, message_id, data):
-        message = JupyterMessage.parse(data)
+    @intercept()
+    async def save_dataset_request(self, message):
         content = message.content
 
         parent_dataset_id = content.get("parent_dataset_id")
