@@ -37,6 +37,15 @@ dependencies = [
   "jinja2~=3.1.2",
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build]
+include = [
+  "/beaker_kernel",
+  "/tests",
+]
+
 # Used to call hatch_build.py
 [tool.hatch.build.hooks.custom]
 

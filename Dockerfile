@@ -25,11 +25,11 @@ RUN apt update && \
 WORKDIR /jupyter
 
 # Install Python requirements
-RUN pip install --no-cache-dir jupyterlab jupyterlab_server pandas matplotlib xarray numpy hatch scipy
+RUN pip install --upgrade --no-cache-dir jupyterlab jupyterlab_server pandas matplotlib xarray numpy hatch scipy pip
 
 # Install project requirements
 COPY --chown=1000:1000 pyproject.toml README.md hatch_build.py /jupyter/
-RUN pip install --no-cache-dir -e .
+RUN pip install -e .
 
 # Install Mira from `hackathon` branch
 RUN git clone https://github.com/indralab/mira.git /mira
