@@ -6,7 +6,7 @@ build:
 	docker build . -t beaker-kernel:latest
 
 .PHONY:dev
-dev:service/dev_ui/build/index.js
+dev:service/dev_ui/build/index.js test.ipynb
 	if [[ "$$(docker compose ps | grep 'jupyter')" == "" ]]; then \
 		docker compose pull; \
 		docker compose up -d --build && \
@@ -36,8 +36,14 @@ service/dev_ui/build/index.js:service/dev_ui/node_modules service/dev_ui/src/** 
 	(cd service/dev_ui && npm run build) && \
 	touch service/dev_ui/build/*
 
+test.ipynb:
+	if [[ ! -e "test.ipynb" ]]; then \
+		cp service/dev_ui/test.ipynb test.ipynb; \
+	fi
+
+
 .PHONY:dev-install
-dev-install:.env
+dev-install:.env test.ipynb
 	@poetry install; \
 	make service/dev_ui/build/index.js; \
 	ENVDIR=$$(poetry -q run python -c 'import os; print(os.environ.get("VIRTUAL_ENV", ""))'); \
@@ -45,9 +51,6 @@ dev-install:.env
 	if [[ ! -e "$${KERNEL_INSTALL_PATH}" && -n "$${ENVDIR}" ]]; then \
 		ln -s "${BASEDIR}/beaker_kernel" "$${KERNEL_INSTALL_PATH}"; \
 	fi; \
-	if [[ ! -e "service/test.ipynb" ]]; then \
-		cp service/dev_ui/test.ipynb service/test.ipynb; \
-	fi
 
 .PHONY:changed-files
 changed-files:
