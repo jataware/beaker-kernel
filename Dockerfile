@@ -45,6 +45,7 @@ COPY beaker_kernel/kernel.json /usr/local/share/jupyter/kernels/beaker_kernel/ke
 
 # Copy src code over
 COPY --chown=1000:1000 . /jupyter
+RUN chown -R 1000:1000 /jupyter
 RUN pip install .
 
 # Switch to non-root user. It is crucial for security reasons to not run jupyter as root user!
