@@ -63,3 +63,4 @@ create.sql
 .eslintcache
 **/.venv/
 .openai.toml
+shell.nix

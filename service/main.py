@@ -64,7 +64,14 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
 }
 '''.strip(),
             },
-
+            "oceananigans": {
+                "languages": [
+                    ["julia", "julia-1.9"]
+                ],
+                "defaultPayload": '''
+{}
+'''.strip(),
+            },
         }
         return self.write(context_data)
 
