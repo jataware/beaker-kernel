@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Dict
 
 from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import (
@@ -10,6 +10,10 @@ from jupyter_server.utils import url_path_join as ujoin
 from jupyterlab_server import LabServerApp
 from tornado import httputil
 from tornado.web import Application
+
+from beaker_kernel.lib.autodiscovery import autodiscover
+from beaker_kernel.lib.context import BaseContext
+from beaker_kernel.lib.subkernels.base import BaseSubkernel
 
 
 HERE = os.path.dirname(__file__)
@@ -29,50 +33,22 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
     def get(self):
         """Get the main page for the application's interface."""
 
-        # TODO: Generate this from a single source of truth at startup time
+        contexts: Dict[str, BaseContext] = autodiscover("contexts")
+        subkernels: Dict[str, BaseSubkernel] = autodiscover("subkernels")
+
+        # Extract data from auto-discovered contexts and subkernels to provide options
         context_data = {
-            "dataset": {
+            context_slug: {
                 "languages": [
-                    ["python3", "python3"],
-                    ["julia", "julia-1.9"],
-                    ["rlang", "ir"]
+                    [subkernel_slug, getattr(subkernels.get(subkernel_slug), "KERNEL_NAME")]
+                    for subkernel_slug in context.available_subkernels()
+                    if subkernel_slug in subkernels
                 ],
-                "defaultPayload": '''
-{
-  "df_hosp": "truth-incident-hospitalization",
-  "df_cases": "truth-incident-case"
-}
-'''.strip(),
-            },
-            "mira_model": {
-                "languages": [
-                    ["python3", "python3"]
-                ],
-                "defaultPayload": '''
-{
-  "id": "sir-model-id"
-}
-'''.strip(),
-            },
-            "decapodes": {
-                "languages": [
-                    ["julia", "julia-1.9"]
-                ],
-                "defaultPayload": '''
-{
-  "halfar": "ice_dynamics-id"
-}
-'''.strip(),
-            },
-            "oceananigans": {
-                "languages": [
-                    ["julia", "julia-1.9"]
-                ],
-                "defaultPayload": '''
-{}
-'''.strip(),
-            },
+                "defaultPayload": context.default_payload()
+            }
+            for context_slug, context in contexts.items()
         }
+
         return self.write(context_data)
 
 

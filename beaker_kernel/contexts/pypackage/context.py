@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from beaker_kernel.lib.context import BaseContext
 from beaker_kernel.lib.subkernels.python import PythonSubkernel
@@ -18,3 +18,7 @@ class PyPackageContext(BaseContext):
         if not isinstance(subkernel, PythonSubkernel):
             raise ValueError("This context is only valid for Python.")
         super().__init__(beaker_kernel, subkernel, self.agent_cls, config)
+
+    @classmethod
+    def available_subkernels(cls) -> List["BaseSubkernel"]:
+        return ["python3"]

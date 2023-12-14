@@ -2,7 +2,7 @@ import inspect
 import json
 import logging
 import os.path
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 
@@ -60,9 +60,31 @@ class BaseContext:
                 template = self.jinja_env.get_template(template_file)
                 self.templates[template_name] = template
 
-    async def setup(self, parent_header=None):
+    async def setup(self, config=None, parent_header=None):
+        if config:
+            self.config = config
         if callable(getattr(self.agent, 'setup', None)):
             await self.agent.setup(self.config, parent_header=parent_header)
+
+    @classmethod
+    def available_subkernels(cls) -> List["BaseSubkernel"]:
+        class_dir = inspect.getfile(cls)
+        proc_dir = os.path.join(os.path.dirname(class_dir), "procedures")
+        if os.path.exists(proc_dir):
+            subkernel_slugs = list(os.listdir(proc_dir))
+            return subkernel_slugs
+        else:
+            return []
+
+    @classmethod
+    def default_payload(cls) -> str:
+        class_dir = inspect.getfile(cls)
+        payload_file_path = os.path.join(os.path.dirname(class_dir), "default_payload.json")
+        if os.path.exists(payload_file_path):
+            with open(payload_file_path) as payload_file:
+                return payload_file.read().strip()
+        else:
+            return "{}"
 
     def send_response(self, *args, **kwargs):
         return self.beaker_kernel.send_response(*args, **kwargs)
