@@ -369,6 +369,7 @@ class LLMKernel(KernelProxyManager):
             raise Exception("Context has not been set")
         try:
             result = await self.context.agent.react_async(request)
+            logger.error(f"Got this result from the agent: ({type(result)})\n{result}")
         except Exception as err:
             error_text = f"""LLM Error:
 {err}
@@ -381,7 +382,8 @@ class LLMKernel(KernelProxyManager):
             )
             raise
         try:
-            data = json.loads(result)
+            if isinstance(result, (str, bytes, bytearray)):
+                data = json.loads(result)
             if isinstance(data, dict) and data.get("action") == "code_cell":
                 stream_content = {
                     "language": data.get("language"),

@@ -2,7 +2,7 @@ import json
 import logging
 import re
 
-from archytas.tool_utils import AgentRef, LoopControllerRef, tool, toolset
+from archytas.tool_utils import AgentRef, LoopControllerRef, tool
 
 from beaker_kernel.lib.agent import BaseAgent
 from beaker_kernel.lib.context import BaseContext
@@ -11,11 +11,13 @@ logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)
 
 
-@toolset()
-class DecapodesToolset:
+class DecapodesAgent(BaseAgent):
     """
-    Toolset used for working with the Julia package Decacpodes, a framework for doing descrete exterior calculus based modeling.
+    LLM Agent used for working with the Julia package "Decapodes.jl", a framework for doing descrete exterior calculus based modeling.
     """
+
+    def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
+        super().__init__(context, tools, **kwargs)
 
     @tool()
     async def generate_code(
@@ -58,10 +60,3 @@ No addtional text is needed in the response, just the code block.
             }
         )
         return result
-
-
-class DecapodesAgent(BaseAgent):
-
-    def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
-        tools = [DecapodesToolset]
-        super().__init__(context, tools, **kwargs)

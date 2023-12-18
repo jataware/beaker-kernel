@@ -4,7 +4,7 @@ import re
 
 import requests
 from archytas.react import Undefined
-from archytas.tool_utils import AgentRef, LoopControllerRef, tool, toolset
+from archytas.tool_utils import AgentRef, LoopControllerRef, tool
 
 from beaker_kernel.lib.agent import BaseAgent
 from beaker_kernel.lib.context import BaseContext
@@ -13,8 +13,15 @@ from beaker_kernel.lib.jupyter_kernel_proxy import JupyterMessage
 logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)
 
-@toolset()
-class MiraModelToolset:
+
+class MiraModelAgent(BaseAgent):
+    """
+    LLM agent used for working with the Mira Modeling framework ("mira_model" package) in Python 3.
+    """
+
+    def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
+        super().__init__(context, tools, **kwargs)
+
     @tool()
     async def generate_code(
         self, query: str, agent: AgentRef, loop: LoopControllerRef
@@ -150,9 +157,15 @@ No addtional text is needed in the response, just the code block.
         )
         return result
 
+    @tool()
+    async def remove_node(self, model_variable: str, state_id: str) -> None:
+        """
+        Modifies the specified model by removing a state from it.
 
-class MiraModelAgent(BaseAgent):
+        Assume that the model is already loaded.
 
-    def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
-        tools = [MiraModelToolset]
-        super().__init__(context, tools, **kwargs)
+        Args:
+            model_variable (str): Name of the variable that represents the model
+            state_id (str): Id that uniquely identifies the state to be removed
+        """
+        pass

@@ -1,8 +1,6 @@
 import logging
 
-from archytas.react import Undefined
-from archytas.tool_utils import (AgentRef, LoopControllerRef, is_tool, tool,
-                                 toolset)
+from archytas.tool_utils import AgentRef, LoopControllerRef, is_tool, tool
 
 from beaker_kernel.lib.agent import BaseAgent
 from beaker_kernel.lib.context import BaseContext
@@ -10,10 +8,12 @@ from beaker_kernel.lib.context import BaseContext
 
 logger = logging.getLogger(__name__)
 
-@toolset()
-class Toolset:
-    """My toolset"""
 
+class PyPackageAgent(BaseAgent):
+    def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
+        libraries = {
+        }
+        super().__init__(context, tools, **kwargs)
 
     @tool()
     async def retrieve_documentation(
@@ -38,13 +38,3 @@ help({target})
 '''
         r = await agent.context.evaluate(code)
         return str(r)
-
-    retrieve_documentation.__doc__
-
-class PyPackageAgent(BaseAgent):
-    def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
-        tools = [Toolset]
-        libraries = {
-
-        }
-        super().__init__(context, tools, **kwargs)

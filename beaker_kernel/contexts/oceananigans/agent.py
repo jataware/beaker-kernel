@@ -2,7 +2,7 @@ import json
 import logging
 import re
 
-from archytas.tool_utils import AgentRef, LoopControllerRef, tool, toolset
+from archytas.tool_utils import AgentRef, LoopControllerRef, tool
 
 from beaker_kernel.lib.agent import BaseAgent
 from beaker_kernel.lib.context import BaseContext
@@ -11,11 +11,14 @@ logging.disable(logging.WARNING)  # Disable warnings
 logger = logging.Logger(__name__)
 
 
-@toolset()
-class OceananigansToolset:
+
+class OceananigansAgent(BaseAgent):
     """
-    Toolset used for working with the Julia language and the package Oceananigans
+    LLM Agent useful for working with the Julia language and the Oceananigans modeling Julia package.
     """
+
+    def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
+        super().__init__(context, tools, **kwargs)
 
     @tool()
     async def generate_code(
@@ -48,7 +51,7 @@ If you have other knowledge of Oceananigans.jl, please use that as well.
 When doing visualization tasks, please use `WGLMakie`.
 
 Note that `using Oceananigans, WGLMakie` has already been run so do not include it in your output.
-        
+
 Here are the currently active Oceananigans-related variables in state, please don't redefine these since they are in state:
 ```
 {await agent.context.get_available_vars()}
@@ -72,10 +75,3 @@ No addtional text is needed in the response, just the code block.
             }
         )
         return result
-
-
-class OceananigansAgent(BaseAgent):
-
-    def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
-        tools = [OceananigansToolset]
-        super().__init__(context, tools, **kwargs)
