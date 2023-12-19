@@ -408,15 +408,27 @@ class LLMKernel(KernelProxyManager):
             )
             raise
         try:
+            logger.error(f'1: {result} {type(result)}')
             if isinstance(result, (str, bytes, bytearray)):
                 data = json.loads(result)
+                logger.error(f'2: {data}')
+            else:
+                data = result
+                logger.error(f'3: {data}')
+
             if isinstance(data, dict) and data.get("action") == "code_cell":
+                logger.error('4')
                 stream_content = {
                     "language": data.get("language"),
                     "code": data.get("content"),
                 }
                 self.send_response(
                     "iopub", "code_cell", stream_content, parent_header=message.header
+                )
+            else:
+                stream_content = {"name": "response_text", "text": f"{data}"}
+                self.send_response(
+                    "iopub", "llm_response", stream_content, parent_header=message.header
                 )
         except (
             json.JSONDecodeError
