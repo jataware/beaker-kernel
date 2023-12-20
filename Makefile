@@ -41,17 +41,6 @@ test.ipynb:
 		cp service/dev_ui/test.ipynb test.ipynb; \
 	fi
 
-
-.PHONY:dev-install
-dev-install:.env test.ipynb
-	@poetry install; \
-	make service/dev_ui/build/index.js; \
-	ENVDIR=$$(poetry -q run python -c 'import os; print(os.environ.get("VIRTUAL_ENV", ""))'); \
-	KERNEL_INSTALL_PATH=$${ENVDIR}/share/jupyter/kernels/beaker; \
-	if [[ ! -e "$${KERNEL_INSTALL_PATH}" && -n "$${ENVDIR}" ]]; then \
-		ln -s "${BASEDIR}/beaker_kernel" "$${KERNEL_INSTALL_PATH}"; \
-	fi; \
-
 .PHONY:changed-files
 changed-files:
 	find dev_ui/ \( -name "build" -prune \) -o -cnewer dev_ui/build/index.js \( -name '*.js' -or -name '*.ts' \) -ls
