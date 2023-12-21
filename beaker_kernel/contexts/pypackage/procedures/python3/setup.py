@@ -32,7 +32,7 @@ def _walk_package(package_name: str):
 
 def _get_map(package_name):
     """
-    Gets the full map
+    Gets the full map of modules, classes, functions and data objects in a library/package.
     """
 
     output = []
@@ -41,6 +41,8 @@ def _get_map(package_name):
             mod = importlib.import_module(module_str)
         except ImportError as err:
             continue
+        except Exception as err:
+            print(f"Couldn't import {module_str}, {module_file} due to error {err}")
         synopsis, _ = pydoc.splitdoc(pydoc.getdoc(mod))
         all = getattr(mod, '__all__', None)
         if all:
@@ -53,7 +55,7 @@ def _get_map(package_name):
         data = []
         for member_name, member in members:
             # Skip private members and members that don't belong to this module (i.e. is imported from elsewhere)
-            if member_name.startswith("_") or inspect.getmodule(member) is not mod:
+            if member_name.startswith("_") or inspect.getmodule(member) is not mod or member_name in ('tests', 'test', 'testing'):
                 continue
             member_synopsis, _ = pydoc.splitdoc(pydoc.getdoc(member))
             if inspect.isclass(member):

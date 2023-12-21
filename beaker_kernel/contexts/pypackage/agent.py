@@ -2,7 +2,7 @@ import json
 import logging
 import re
 
-from archytas.tool_utils import AgentRef, LoopControllerRef, is_tool, tool
+from archytas.tool_utils import AgentRef, LoopControllerRef, tool
 
 from beaker_kernel.lib.agent import BaseAgent
 from beaker_kernel.lib.context import BaseContext
@@ -108,7 +108,7 @@ class PyPackageAgent(BaseAgent):
 
 
         Args:
-            code_request (str): A fully grammatically correct queistion about the current model.
+            code_request (str): A fully grammatically correct question about the current model.
         """
 
         code_generation_prompt = f"""

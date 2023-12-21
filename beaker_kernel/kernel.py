@@ -72,6 +72,8 @@ class LLMKernel(KernelProxyManager):
         self.new_kernel(language="python3")
         self.context = PyPackageContext(beaker_kernel=self, subkernel=self.subkernel, config={})
         self.user_responses = dict()
+        event_loop = asyncio.get_event_loop()
+        event_loop.run_until_complete(self.context.setup())
         self.add_base_intercepts()
 
     def add_base_intercepts(self):
@@ -395,7 +397,6 @@ class LLMKernel(KernelProxyManager):
             raise Exception("Context has not been set")
         try:
             result = await self.context.agent.react_async(request)
-            logger.error(f"Got this result from the agent: ({type(result)})\n{result}")
         except Exception as err:
             error_text = f"""LLM Error:
 {err}
@@ -408,13 +409,11 @@ class LLMKernel(KernelProxyManager):
             )
             raise
         try:
-            logger.error(f'1: {result} {type(result)}')
+            # Normalize result
             if isinstance(result, (str, bytes, bytearray)):
                 data = json.loads(result)
-                logger.error(f'2: {data}')
             else:
                 data = result
-                logger.error(f'3: {data}')
 
             if isinstance(data, dict) and data.get("action") == "code_cell":
                 logger.error('4')
