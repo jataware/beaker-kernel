@@ -1,6 +1,9 @@
+import os
 import logging
 import traceback
 from functools import wraps, update_wrapper
+
+from archytas.tool_utils import tool
 
 from .jupyter_kernel_proxy import JupyterMessage
 
@@ -57,3 +60,16 @@ def intercept(msg_type=None, stream="shell"):
         return fn
 
     return register_intercept
+
+def togglable_tool(env_var, *, name: str | None = None):
+    """
+    Register tool if it is enabled in environment
+    """
+    ENABLE = os.environ.get(env_var, "false").lower() == "true"
+    if not ENABLE:
+        def disable(_fn):
+            return
+        return disable
+    else:
+        return tool(name=name)
+    

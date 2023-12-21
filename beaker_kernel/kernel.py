@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from .lib.agent import BaseAgent
     from .lib.subkernels.base import BaseSubkernel
 
+USER_RESPONSE_WAIT_TIME = 100
+
 logger = logging.getLogger(__name__)
 
 server_url = os.environ.get("JUPYTER_SERVER", None)
@@ -60,6 +62,7 @@ class LLMKernel(KernelProxyManager):
     internal_executions: set[str]
     subkernel: "BaseSubkernel"
     subkernel_execution_tracking: dict[str, str]
+    user_responses: dict[str, str]
 
     def __init__(self, server):
         self.internal_executions = set()
@@ -68,6 +71,7 @@ class LLMKernel(KernelProxyManager):
         super().__init__(server)
         self.new_kernel(language="python3")
         self.context = PyPackageContext(beaker_kernel=self, subkernel=self.subkernel, config={})
+        self.user_responses = dict()
         self.add_base_intercepts()
 
     def add_base_intercepts(self):
@@ -85,6 +89,7 @@ class LLMKernel(KernelProxyManager):
             "iopub", "execute_input", self.update_execute_input_response
         )
         self.server.intercept_message("shell", "execute_reply", self.post_execute)
+        self.server.intercept_message("stdin", "input_reply", self.input_reply)
 
     def new_kernel(self, language: str):
         # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
@@ -358,6 +363,20 @@ class LLMKernel(KernelProxyManager):
             data = message.parts
         return data
 
+    async def prompt_user(self, query):
+        if query in self.user_responses:
+                del self.user_responses[query]
+        self.send_response(
+            "iopub", "input_request", {"prompt": query}
+        )
+        for _ in range(USER_RESPONSE_WAIT_TIME):
+            if query in self.user_responses:
+                return self.user_responses[query]
+            await asyncio.sleep(1)
+
+        raise Exception("Query timed out. User took too long to respond.")
+        
+
     @message_handler
     async def llm_request(self, message):
         # Send "code" to LLM Agent. The "code" is actually the LLM query
@@ -410,6 +429,11 @@ class LLMKernel(KernelProxyManager):
         parent_header = copy.deepcopy(message.header)
         if content:
             await self.set_context(context_name, context_info, language=language, parent_header=parent_header)
+
+    @message_handler
+    async def input_reply(self, message):
+        content = message.content
+        self.user_responses[content["prompt"]] = content["reply"]
 
 
 def cleanup(kernel):

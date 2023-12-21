@@ -6,9 +6,10 @@ import typing
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, tool
 
+from beaker_kernel.lib.utils import togglable_tool
+
 if typing.TYPE_CHECKING:
     from .context import BaseContext
-
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,21 @@ class BaseAgent(ReActAgent):
             thought_handler=context.beaker_kernel.handle_thoughts,
             **kwargs
         )
+
+    @togglable_tool("ENABLE_USER_PROMPT")
+    async def ask_user(
+        self, query: str, agent: AgentRef, loop: LoopControllerRef
+    ) -> str:
+        """
+        Sends a query to the user and returns their response
+
+        Args:
+            query (str): A fully grammatically correct question for the user.
+
+        Returns:
+            str: The user's response to the query.
+        """
+        return await self.context.beaker_kernel.prompt_user(query)
 
     @tool()
     async def generate_code(

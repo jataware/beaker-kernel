@@ -138,12 +138,17 @@ async function createApp(manager: ServiceManager.IManager): void {
     });
   });
 
-  const handleMessage = (context, msg) => {
+  const handleMessage = (_context, msg) => {
     if (msg.msg_type === "status") {
       return;
     }
     if (msg.msg_type === "stream" && msg.parent_header?.msg_type == "llm_request") {
       notebook.model.cells.nbmodel.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: msg.content.text});
+    }
+    else if (msg.msg_type === "input_request") {
+      const prompt = msg.content.prompt;
+      const response = window.prompt(prompt); 
+      sendCustomMessage("stdin", "input_reply", {"prompt": prompt, "reply": response})
     }
     else if (msg.msg_type === "llm_response") {
       const text = msg.content.text;

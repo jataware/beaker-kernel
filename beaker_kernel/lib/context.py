@@ -5,6 +5,7 @@ import os.path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from beaker_kernel.lib.autodiscovery import autodiscover
+from beaker_kernel.lib.utils import intercept
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
