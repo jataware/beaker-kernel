@@ -30,7 +30,7 @@ class PyPackageAgent(BaseAgent):
         }
         super().__init__(context, tools, **kwargs)
 
-    @tool()
+    @tool(autosummarize=True)
     async def get_package_structure(self, target: str, agent:AgentRef, loop: LoopControllerRef) -> str:
         """
         This tool enumerates all of the sub-packages, modules, and importable objects within a python package.
@@ -49,7 +49,7 @@ class PyPackageAgent(BaseAgent):
         structure = await agent.context.evaluate(code)
         return structure["return"]
 
-    @tool()
+    @tool(autosummarize=True)
     async def get_documentation(self, target: str, agent: AgentRef, loop: LoopControllerRef) -> str:
         """
         This tool retrieves documentation about a Python package/module/class/etc. If you don't know where to locate the item, use the get_package_structure tool
@@ -68,7 +68,7 @@ class PyPackageAgent(BaseAgent):
         response = await agent.context.evaluate(code)
         return response["return"]
 
-    @tool()
+    @tool(autosummarize=True)
     async def get_variables_in_scope(self, agent: AgentRef) -> str:
         """
         This tool returns a list of all variables that exist in the current scope, along with any type/class information of what the variable represents.
@@ -79,7 +79,6 @@ class PyPackageAgent(BaseAgent):
         code = agent.context.get_code("get_variables", {})
         response = await agent.context.evaluate(code)
         return response["return"]
-
 
     @tool()
     async def get_info_on_variable(self, variable_name: str, agent: AgentRef) -> str:

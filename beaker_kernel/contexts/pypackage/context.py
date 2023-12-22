@@ -22,7 +22,3 @@ class PyPackageContext(BaseContext):
     async def setup(self, config=None, parent_header=None):
         await self.execute(self.get_code("setup", {}))
         return await super().setup(config, parent_header)
-
-    @classmethod
-    def available_subkernels(cls) -> List["BaseSubkernel"]:
-        return ["python3"]
