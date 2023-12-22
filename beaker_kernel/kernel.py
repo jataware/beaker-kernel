@@ -149,10 +149,11 @@ class LLMKernel(KernelProxyManager):
             return
         self.server.intercept_message(stream, msg_type, func)
 
-    def remove_intercept(self, msg_type, func):
-        stream = MESSAGE_STREAMS.get(msg_type, None)
+    def remove_intercept(self, msg_type, func, stream=None):
         if stream is None:
-            logger.warning(
+            stream = MESSAGE_STREAMS.get(msg_type, None)
+        if stream is None:
+            logger.error(
                 "No stream found for msg_type=%s.\nNot able to remove intercept.",
                 msg_type,
             )
@@ -300,24 +301,30 @@ class LLMKernel(KernelProxyManager):
         return result
 
     async def set_context(self, context_name, context_info, language="python3", parent_header={}):
-        # Spin up a new kernel if we are changing languages.
-        if (not self.subkernel) or self.subkernel.KERNEL_NAME != language:
-            logger.info("Subkernel changed: %s != %s", getattr(self.subkernel, "KERNEL_NAME", "unknown"), language)
-            self.new_kernel(language=language)
 
         context_cls = AVAILABLE_CONTEXTS.get(context_name, None)
-        if not context_cls:
+        if not context_cls or context_cls is self.context.__class__:
             # TODO: Should we return an error if the requested context isn't available?
             return False
 
-        # Create and setup context
+        if (not self.subkernel) or self.subkernel.KERNEL_NAME != language:
+            logger.info("Subkernel changed: %s != %s", getattr(self.subkernel, "KERNEL_NAME", "unknown"), language)
+
+        # Always create a new subkernel so changing context results in a clean runtime
+        self.new_kernel(language=language)
+
+        # Cleanup the old context, then create and setup the new context
+        await self.context.cleanup()
         self.context = context_cls(beaker_kernel=self, subkernel=self.subkernel, config=context_info)
         await self.context.setup(config=context_info, parent_header=parent_header)
 
     async def post_execute(self, queue, message_id, data):
         message = JupyterMessage.parse(data)
 
-        assert self.context is not None
+        # Only run if there is an active context
+        if self.context is None:
+            return
+
         # Don't run for internal executions
         if message.parent_header.get("msg_id") in self.internal_executions:
             return data

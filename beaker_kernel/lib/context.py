@@ -2,7 +2,7 @@ import inspect
 import json
 import logging
 import os.path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import intercept
@@ -26,11 +26,14 @@ class BaseContext:
     config: Dict[str, Any]
     agent: "ReActAgent"
 
-    # intercepts: Dict[str, Tuple[Callable, str]] = {}
-    jinja_env: Optional[Environment] = None
-    templates: Dict[str, Template] = {}
+    intercepts: List[Tuple[str, Callable, str]]
+    jinja_env: Optional[Environment]
+    templates: Dict[str, Template]
 
     def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", agent_cls: "BaseAgent", config: Dict[str, Any]) -> None:
+        self.intercepts = []
+        self.jinja_env = None
+        self.templates = {}
         self.beaker_kernel = beaker_kernel
         self.subkernel = subkernel
         self.agent = agent_cls(
@@ -42,6 +45,7 @@ class BaseContext:
         # Add intercepts, by inspecting the instance and extracting matching methods
         for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_intercept")):
             msg_type, stream = getattr(method, "_intercept")
+            self.intercepts.append((msg_type, method, stream))
             self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
 
         # Set auto-context from agent
@@ -67,6 +71,11 @@ class BaseContext:
         if callable(getattr(self.agent, 'setup', None)):
             await self.agent.setup(self.config, parent_header=parent_header)
 
+    async def cleanup(self):
+        for msg_type, intercept_func, stream in self.intercepts:
+            self.beaker_kernel.remove_intercept(msg_type=msg_type, func=intercept_func, stream=stream)
+        del self.agent
+
     @classmethod
     def available_subkernels(cls) -> List["BaseSubkernel"]:
         class_dir = inspect.getfile(cls)
@@ -87,8 +96,19 @@ class BaseContext:
         else:
             return "{}"
 
-    def send_response(self, *args, **kwargs):
-        return self.beaker_kernel.send_response(*args, **kwargs)
+
+    @intercept(msg_type="debug_message_history_request")
+    async def debug_messages(self, message):
+        agent_messages = await self.agent.all_messages()
+        self.send_response(
+            stream="iopub",
+            msg_or_type="debug_message_history_reply",
+            content= agent_messages,
+            parent_header=message.header,
+        )
+
+    def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
+        return self.beaker_kernel.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)
 
     @property
     def slug(self) -> Optional[str]:

@@ -37,6 +37,23 @@ class BaseAgent(ReActAgent):
             **kwargs
         )
 
+    def debug(self, msg: str, debug_metadata: dict = None) -> None:
+        logger.error(f"Archytas debug: {msg}")
+        return super().debug(msg, debug_metadata=debug_metadata)
+
+    def display_observation(self, observation):
+        content = {
+            "observation": observation
+        }
+        parent_header = {}
+        self.context.send_response(
+            stream="iopub",
+            msg_or_type="llm_observation",
+            content=content,
+            parent_header=parent_header,
+        )
+        return super().display_observation(observation)
+
     @togglable_tool("ENABLE_USER_PROMPT")
     async def ask_user(
         self, query: str, agent: AgentRef, loop: LoopControllerRef
