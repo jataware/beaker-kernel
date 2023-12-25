@@ -51,7 +51,6 @@ include = [
 
 # Copies the files created in the custom action
 [tool.hatch.build.targets.wheel.shared-data]
-"build/data_share_beaker" = "share/beaker"
 
 [project.urls]
 Documentation = "https://github.com/unknown/beaker-kernel#readme"

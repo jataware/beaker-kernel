@@ -22,7 +22,7 @@ version = "0.0.1"
 
 
 def _jupyter_server_extension_points():
-    return [{"module": __name__, "app": AskemJupyterApp}]
+    return [{"module": __name__, "app": BeakerJupyterApp}]
 
 
 class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
@@ -52,10 +52,10 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         return self.write(context_data)
 
 
-class AskemJupyterApp(LabServerApp):
+class BeakerJupyterApp(LabServerApp):
     name = __name__
     load_other_extensions = False
-    app_name = "Askem Jupyter App"
+    app_name = "Beaker Jupyter App"
     app_version = version
     allow_origin = "*"
     open_browser = False
@@ -71,4 +71,4 @@ class AskemJupyterApp(LabServerApp):
 
 
 if __name__ == "__main__":
-    AskemJupyterApp.launch_instance()
+    BeakerJupyterApp.launch_instance()

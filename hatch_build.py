@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from typing import Any
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
@@ -27,7 +28,6 @@ class CustomHook(BuildHookInterface):
         if os.path.exists(dest):
            shutil.rmtree(dest)
         os.makedirs(dest)
-
 
         # Inspect context files to build a dynamic mapping of context slugs to context classes
         context_classes = {}
@@ -67,9 +67,13 @@ class CustomHook(BuildHookInterface):
                     subkernel_classes[slug] = (package_name, class_name)
 
         # Write out mappings for each context and subkernel to an individual json file
+        build_config = self.build_config.build_config
         for typename, src in [("contexts", context_classes), ("subkernels", subkernel_classes)]:
             dest_dir = os.path.join(dest, typename)
             os.makedirs(dest_dir, exist_ok=True)
             for slug, (package_name, class_name) in src.items():
-                with open(os.path.join(dest_dir, f"{slug}.json"), "w") as f:
+                dest_file = os.path.join(dest_dir, f"{slug}.json")
+                with open(dest_file, "w") as f:
                     json.dump({"slug": slug, "package": package_name, "class_name": class_name}, f, indent=2)
+                # Add wheel.shared-data mappings for each file so it is installed to the correct location
+                build_config["targets"]["wheel"]["shared-data"][dest_file] = f"share/beaker/{typename}/{slug}.json"

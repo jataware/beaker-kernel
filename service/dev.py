@@ -8,13 +8,13 @@ from jupyter_server.extension.handler import (
 from jupyter_server.utils import url_path_join as ujoin
 from jupyterlab_server import LabServerApp
 
-from main import AskemJupyterApp
+from main import BeakerJupyterApp
 
 
 HERE = os.path.join(os.path.dirname(__file__), "dev_ui")
 
 def _jupyter_server_extension_points():
-    return [{"module": __name__, "app": DevAskemJupyterApp}]
+    return [{"module": __name__, "app": DevBeakerJupyterApp}]
 
 class DevHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandler):
     """
@@ -51,7 +51,7 @@ class DevHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandl
         )
 
 
-class DevAskemJupyterApp(AskemJupyterApp):
+class DevBeakerJupyterApp(BeakerJupyterApp):
     name = __name__
     load_other_extensions = True
 
@@ -74,4 +74,4 @@ class DevAskemJupyterApp(AskemJupyterApp):
 
 
 if __name__ == "__main__":
-    DevAskemJupyterApp.launch_instance()
+    DevBeakerJupyterApp.launch_instance()

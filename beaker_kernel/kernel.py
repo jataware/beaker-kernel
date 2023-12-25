@@ -48,7 +48,7 @@ def get_socket(stream_name: str):
 
 
 class LLMKernel(KernelProxyManager):
-    implementation = "askem-beaker"
+    implementation = "beaker-kernel"
     implementation_version = "0.1"
     banner = "Beaker Kernel"
 
@@ -382,7 +382,7 @@ class LLMKernel(KernelProxyManager):
             await asyncio.sleep(1)
 
         raise Exception("Query timed out. User took too long to respond.")
-        
+
 
     @message_handler
     async def llm_request(self, message):
