@@ -25,4 +25,4 @@ USER jupyter
 WORKDIR /jupyter
 
 # Service
-CMD ["python", "/jupyter/service/main.py", "--ip", "0.0.0.0"]
+CMD ["python", "-m", "beaker_kernel.server.main", "--ip", "0.0.0.0"]

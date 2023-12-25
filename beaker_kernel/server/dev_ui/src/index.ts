@@ -147,7 +147,7 @@ async function createApp(manager: ServiceManager.IManager): void {
     }
     else if (msg.msg_type === "input_request") {
       const prompt = msg.content.prompt;
-      const response = window.prompt(prompt); 
+      const response = window.prompt(prompt);
       sendCustomMessage("stdin", "input_reply", {"prompt": prompt, "reply": response})
     }
     else if (msg.msg_type === "llm_response") {

@@ -8,7 +8,7 @@ from jupyter_server.extension.handler import (
 from jupyter_server.utils import url_path_join as ujoin
 from jupyterlab_server import LabServerApp
 
-from main import BeakerJupyterApp
+from .main import BeakerJupyterApp
 
 
 HERE = os.path.join(os.path.dirname(__file__), "dev_ui")

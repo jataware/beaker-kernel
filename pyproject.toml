@@ -42,9 +42,13 @@ allow-direct-references = true
 
 [tool.hatch.build]
 include = [
-  "/beaker_kernel",
-  "/tests",
+  "beaker_kernel",
+  "beaker_kernel/server/dev_ui/build/*",
 ]
+artifacts = [
+  "beaker_kernel/server/dev_ui/build/*",
+]
+
 
 # Used to call hatch_build.py
 [tool.hatch.build.hooks.custom]
