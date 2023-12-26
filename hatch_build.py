@@ -66,8 +66,15 @@ class CustomHook(BuildHookInterface):
                         raise SyntaxError("Only one context is allowed to be defined per module.")
                     subkernel_classes[slug] = (package_name, class_name)
 
-        # Write out mappings for each context and subkernel to an individual json file
+
         build_config = self.build_config.build_config
+        shared_data = build_config["targets"]["wheel"]["shared-data"]
+
+        # Map the main beaker kernel for inclusion/installation
+        kernel_json_file = os.path.join(here, "beaker_kernel", "kernel.json")
+        shared_data[kernel_json_file] = f"share/jupyter/kernels/beaker_kernel/kernel.json"
+
+        # Write out mappings for each context and subkernel to an individual json file
         for typename, src in [("contexts", context_classes), ("subkernels", subkernel_classes)]:
             dest_dir = os.path.join(dest, typename)
             os.makedirs(dest_dir, exist_ok=True)
@@ -76,4 +83,4 @@ class CustomHook(BuildHookInterface):
                 with open(dest_file, "w") as f:
                     json.dump({"slug": slug, "package": package_name, "class_name": class_name}, f, indent=2)
                 # Add wheel.shared-data mappings for each file so it is installed to the correct location
-                build_config["targets"]["wheel"]["shared-data"][dest_file] = f"share/beaker/{typename}/{slug}.json"
+                shared_data[dest_file] = f"share/beaker/{typename}/{slug}.json"

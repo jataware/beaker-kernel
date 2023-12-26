@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "beaker-kernel"
-version = "1.2.1"
+version = "1.2.2"
 description = ""
 readme = "README.md"
 requires-python = ">=3.10"
