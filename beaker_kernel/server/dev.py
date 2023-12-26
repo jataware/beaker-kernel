@@ -34,7 +34,7 @@ class DevHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandl
             # Use camelCase here, since that's what the lab components expect
             "baseUrl": self.base_url,
             "token": self.settings["token"],
-            "notebookPath": "test.ipynb",
+            "notebookPath": "default.ipynb",
             "fullStaticUrl": ujoin(self.base_url, "static", self.name),
             "frontendUrl": ujoin(self.base_url, "example/"),
             "mathjaxUrl": mathjax_url,

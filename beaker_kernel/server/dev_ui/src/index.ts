@@ -21,11 +21,13 @@ import { CommandRegistry } from '@lumino/commands';
 import { CommandPalette, SplitPanel, Widget, Panel } from '@lumino/widgets';
 import { NotebookActions } from '@jupyterlab/notebook';
 import { CodeCell } from '@jupyterlab/cells';
+import { FileBrowserModel } from '@jupyterlab/filebrowser';
 
 import { ServiceManager } from '@jupyterlab/services';
 import { MathJaxTypesetter } from '@jupyterlab/mathjax2';
 
 import {
+  Notebook,
   NotebookModelFactory,
   NotebookPanel,
   NotebookWidgetFactory
@@ -119,14 +121,35 @@ async function createApp(manager: ServiceManager.IManager): void {
   docRegistry.addWidgetFactory(wFactory);
 
   const notebookPath = PageConfig.getOption('notebookPath');
-  const nbWidget = docManager.open(notebookPath) as NotebookPanel;
+  const fileBrowser = new FileBrowserModel({
+    manager: docManager
+  });
+
+  // Use the filebrowser to check if the default file exists, and if not create it.
+  let nbFileExists = false;
+  await fileBrowser.refresh();
+  const fileIter = fileBrowser.items();
+  let fileItem = fileIter.next();
+  while (fileItem) {
+    if (fileItem.name == notebookPath) {
+      nbFileExists = true;
+    }
+    fileItem = fileIter.next();
+  }
+
+  // Open default notebook if it exists, otherwise create a new notebook.
+  const nbWidget = (
+    nbFileExists
+    ? docManager.open(notebookPath) as NotebookPanel
+    : docManager.createNew(notebookPath, undefined, {name: "beaker_kernel"}) as NotebookPanel
+  );
+
   const notebook = nbWidget.content;
+  const sessionContext = nbWidget.context.sessionContext;
 
   const editor =
     notebook.activeCell && notebook.activeCell.editor;
-  const model = new CompleterModel();
-  const completer = new Completer({ editor, model });
-  const sessionContext = nbWidget.context.sessionContext;
+  const completer = new Completer({ editor, model: new CompleterModel() });
   const connector = new KernelConnector({
     session: sessionContext.session
   });
@@ -297,8 +320,6 @@ async function createApp(manager: ServiceManager.IManager): void {
   const setContext = () => {
     languageSelect.innerHTML = '';
     const contextInfo = contexts[contextSelect.value];
-    console.log(contextInfo);
-    // const languageSet = con[contextSelect.value];
     contextInfo.languages.forEach((lang) => {
       const option = document.createElement('option');
       option.setAttribute("label", lang[0]);
