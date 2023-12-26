@@ -61,9 +61,15 @@ class BaseContext:
             )
 
             for template_file in self.jinja_env.list_templates():
-                template_name, _ = os.path.splitext(template_file)
-                template = self.jinja_env.get_template(template_file)
-                self.templates[template_name] = template
+                if template_file.startswith('__'):
+                    continue
+                try:
+                    template_name, _ = os.path.splitext(template_file)
+                    template = self.jinja_env.get_template(template_file)
+                    self.templates[template_name] = template
+                except UnicodeDecodeError:
+                    # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
+                    logger.warn(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
 
     async def setup(self, config=None, parent_header=None):
         if config:
