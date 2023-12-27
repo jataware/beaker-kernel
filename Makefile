@@ -5,6 +5,10 @@ BASEDIR = $(shell pwd)
 build:
 	docker build . -t beaker-kernel:latest
 
+.PHONY:clean
+clean:
+	rm -r build/ dist/
+
 .PHONY:dev
 dev:beaker_kernel/server/dev_ui/build/index.js
 	if [[ "$$(docker compose ps | grep 'jupyter')" == "" ]]; then \
