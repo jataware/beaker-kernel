@@ -1,0 +1,8 @@
+{
+    "argv": [
+        "python3", "-m", "beaker_kernel.kernel",
+        "start", "{connection_file}"
+    ],
+    "display_name": "Beaker Kernel",
+    "language": "beaker"
+}

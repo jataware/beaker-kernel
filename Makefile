@@ -6,7 +6,7 @@ build:
 	docker build . -t beaker-kernel:latest
 
 .PHONY:dev
-dev:service/dev_ui/build/index.js
+dev:beaker_kernel/server/dev_ui/build/index.js
 	if [[ "$$(docker compose ps | grep 'jupyter')" == "" ]]; then \
 		docker compose pull; \
 		docker compose up -d --build && \
@@ -26,28 +26,15 @@ dev:service/dev_ui/build/index.js
 		echo "Don't forget to set your OPENAI key in the .env file!"; \
 	fi
 
-service/dev_ui/node_modules:service/dev_ui/package*.json
+beaker_kernel/server/dev_ui/node_modules:beaker_kernel/server/dev_ui/package*.json
 	export `cat .env` && \
-	(cd service/dev_ui && npm install) && \
-	touch service/dev_ui/node_modules
+	(cd beaker_kernel/server/dev_ui && npm install) && \
+	touch beaker_kernel/server/dev_ui/node_modules
 
-service/dev_ui/build/index.js:service/dev_ui/node_modules service/dev_ui/src/** service/dev_ui/index.css service/dev_ui/*.js service/dev_ui/*.json service/dev_ui/templates/**
+beaker_kernel/server/dev_ui/build/index.js:beaker_kernel/server/dev_ui/node_modules beaker_kernel/server/dev_ui/src/** beaker_kernel/server/dev_ui/index.css beaker_kernel/server/dev_ui/*.js beaker_kernel/server/dev_ui/*.json beaker_kernel/server/dev_ui/templates/**
 	export `cat .env` && \
-	(cd service/dev_ui && npm run build) && \
-	touch service/dev_ui/build/*
-
-.PHONY:dev-install
-dev-install:.env
-	@poetry install; \
-	make service/dev_ui/build/index.js; \
-	ENVDIR=$$(poetry -q run python -c 'import os; print(os.environ.get("VIRTUAL_ENV", ""))'); \
-	KERNEL_INSTALL_PATH=$${ENVDIR}/share/jupyter/kernels/beaker; \
-	if [[ ! -e "$${KERNEL_INSTALL_PATH}" && -n "$${ENVDIR}" ]]; then \
-		ln -s "${BASEDIR}/beaker" "$${KERNEL_INSTALL_PATH}"; \
-	fi; \
-	if [[ ! -e "service/test.ipynb" ]]; then \
-		cp service/dev_ui/test.ipynb service/test.ipynb; \
-	fi
+	(cd beaker_kernel/server/dev_ui && npm run build) && \
+	touch beaker_kernel/server/dev_ui/build/*
 
 .PHONY:changed-files
 changed-files:

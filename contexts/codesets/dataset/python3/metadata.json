@@ -1,5 +1,0 @@
-{
-    "name": "Python",
-    "libraries": "pandas as pd, numpy as np, scipy, pickle",
-    "df_lib_name": "Pandas"
-}
