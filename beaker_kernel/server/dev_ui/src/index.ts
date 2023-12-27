@@ -30,23 +30,6 @@ import {
   EditorThemeRegistry,
   ybinding
 } from '@jupyterlab/codemirror';
-import { CommandRegistry } from '@lumino/commands';
-
-import { CommandPalette, SplitPanel, Widget, Panel } from '@lumino/widgets';
-import { NotebookActions } from '@jupyterlab/notebook';
-import { CodeCell } from '@jupyterlab/cells';
-import { FileBrowserModel } from '@jupyterlab/filebrowser';
-
-import { ServiceManager } from '@jupyterlab/services';
-import { MathJaxTypesetter } from '@jupyterlab/mathjax2';
-
-import {
-  Notebook,
-  NotebookModelFactory,
-  NotebookPanel,
-  NotebookWidgetFactory
-} from '@jupyterlab/notebook';
-
 import {
   Completer,
   CompleterModel,
@@ -76,6 +59,7 @@ import { CommandPalette, SplitPanel, Widget, Panel } from '@lumino/widgets';
 
 import { COMMAND_IDS, setupCommands } from './commands';
 
+import { FileBrowserModel } from '@jupyterlab/filebrowser';
 
 import { createMessage } from '@jupyterlab/services/lib/kernel/messages';
 import { BeakerSession } from 'beaker-kernel';
@@ -296,7 +280,7 @@ async function createApp(manager: ServiceManager.IManager): void {
   await fileBrowser.refresh();
   const fileIter = fileBrowser.items();
   let fileItem = fileIter.next();
-  while (fileItem) {
+  while (fileItem && !fileItem.done) {
     if (fileItem.name == notebookPath) {
       nbFileExists = true;
     }
@@ -311,13 +295,24 @@ async function createApp(manager: ServiceManager.IManager): void {
   );
 
   const notebook = nbWidget.content;
-  const sessionContext = nbWidget.context.sessionContext;
+  const palette = new CommandPalette({ commands });
+  palette.addClass('notebookCommandPalette');
 
   const editor =
-    notebook.activeCell && notebook.activeCell.editor;
-  const completer = new Completer({ editor, model: new CompleterModel() });
-  const connector = new KernelConnector({
-    session: sessionContext.session
+    nbWidget.content.activeCell && nbWidget.content.activeCell.editor;
+  const model = new CompleterModel();
+  const completer = new Completer({ editor, model });
+  // const sessionContext = nbWidget.context.sessionContext;
+  // console.log("nbWidget.context.sessionContext == beakerSession", nbWidget.context.sessionContext === beakerSession);
+  const sessionContext = beakerSession.session;
+  // console.log("sessionContext", sessionContext);
+  // console.log("nbWidget.context", nbWidget.context);
+  const timeout = 1000;
+  const provider = new KernelCompleterProvider();
+  const reconciliator = new ProviderReconciliator({
+    context: { widget: nbWidget, editor, session: sessionContext.session },
+    providers: [provider],
+    timeout: timeout
   });
   const handler = new CompletionHandler({ completer, reconciliator });
 
@@ -364,11 +359,8 @@ async function createApp(manager: ServiceManager.IManager): void {
     }
     else if (msg_type === "decapodes_preview") {
       const content = msg.content;
-      // dataPreview.innerHTML = `
-      //   <div>${content["image/svg"]}</div>
-      //   <div>${JSON.stringify(content["application/json"], null, 2)}</div>
-      // `;
       dataPreview.innerHTML = `
+        <div>${content["image/svg"]}</div>
         <div>${JSON.stringify(content["application/json"], null, 2)}</div>
       `;
     }
@@ -561,6 +553,7 @@ async function createApp(manager: ServiceManager.IManager): void {
 
   messageButton.textContent = "Submit";
   messageButton.onclick = (evt) => {
+    console.log("click event:", evt);
     let channel = messageChannelSelect.value;
     let msgType = messageTypeInput.value;
     let contentString = messagePayloadInput.value;
