@@ -64,3 +64,4 @@ create.sql
 **/.venv/
 .openai.toml
 shell.nix
+**/.jekyll-cache

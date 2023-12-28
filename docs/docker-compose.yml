@@ -1,0 +1,13 @@
+version: "3.5"
+
+services:
+  docs:
+    build:
+      context: ./
+    ports:
+      - 4000:4000
+    volumes:
+      - .:/usr/src/app
+    stdin_open: true
+    tty: true
+    command: jekyll serve -d /_site --watch --force_polling -H 0.0.0.0 -P 4000 --config _config_local.yaml
