@@ -8,9 +8,16 @@ has_toc: true
 
 # Adding a new Context
 
-Adding a new context is as simple as installing your context as a regular python library and adding a JSON file to one of a specific set of directories, similar to how Jupyter kernels are installed. Like Jupyter kernels, the context json file is added to a shared library location on the filesystem.
+Adding a new context is as simple as installing your context as a regular Python
+library and adding a JSON file to one of a specific set of directories, similar
+to how Jupyter kernels are installed. Like Jupyter kernels, the context json
+file is added to a shared library location on the filesystem.
 
-Upon startup, Beaker will review the preset locations for any installed Beaker contexts. If a context is found, it will be automatically registered and be able to be used. If more than one context is found with the same slug id, then the most specific version will be found, that is: a per-user install will take precedence over a system-wide install.
+Upon startup, Beaker will review the preset locations for any installed Beaker
+contexts. If a context is found, it will be automatically registered and be able
+to be used. If more than one context is found with the same slug id, then the
+most specific version will be found, that is: a per-user install will take
+precedence over a system-wide install.
 
 
 ### Context json file format

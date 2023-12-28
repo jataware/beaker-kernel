@@ -9,6 +9,15 @@ build:
 clean:
 	rm -r build/ dist/
 
+.PHONY:docs-up
+docs-up:
+	(cd docs && docker compose up -d) && \
+	(sleep 1; python -m webbrowser "http://localhost:4000/")
+
+.PHONY:docs-down
+docs-down:
+	(cd docs && docker compose down)
+
 .PHONY:dev
 dev:beaker_kernel/server/dev_ui/build/index.js
 	if [[ "$$(docker compose ps | grep 'jupyter')" == "" ]]; then \
@@ -22,7 +31,6 @@ dev:beaker_kernel/server/dev_ui/build/index.js
 		(sleep 1; python -m webbrowser "http://localhost:8888/dev_ui"); \
 		docker compose logs -f jupyter || true; \
 	fi
-
 
 .env:
 	@if [[ ! -e ./.env ]]; then \

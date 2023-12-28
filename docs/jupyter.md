@@ -8,22 +8,32 @@ has_toc: true
 
 # Working with Jupyter
 
-Communication within the Jupyter framework is all done via [messaging](https://jupyter-client.readthedocs.io/en/latest/messaging.html), allowing for asynchronous communication.
+Communication within the Jupyter framework is all done via
+[messaging](https://jupyter-client.readthedocs.io/en/latest/messaging.html),
+allowing for asynchronous communication.
 
-These messages are transferred over one of 5 different channels, each of which has its purpose.
+These messages are transferred over one of 5 different channels, each of which
+has its purpose.
 
 
 ## Channels
 
-* **Shell**: Used for requests and replies. This is the channel that should be used for any custom defined action.
+* **Shell**: Used for requests and replies. This is the channel that should be
+used for any custom defined action.
 
-* **IOPub**: Used for "broadcast" messages, including the contents of stdout, stderr, and any communication regarding what is going on inside the kernel.
+* **IOPub**: Used for "broadcast" messages, including the contents of stdout,
+stderr, and any communication regarding what is going on inside the kernel.
 
-* **stdin**: This channel is used to accept custom input from the front-end when prompted by the user or kernel. This will be used for when the the LLM agent requires asking the user questions to be able to accomplish its task.
+* **stdin**: This channel is used to accept custom input from the front-end
+when prompted by the user or kernel. This will be used for when the the LLM
+agent requires asking the user questions to be able to accomplish its task.
 
-* **Control**: This is a specialized channel that controls things like shutdown and debug messages. You probably won't need to ever need to access this channel directly.
+* **Control**: This is a specialized channel that controls things like shutdown
+and debug messages. You probably won't need to ever need to access this channel
+directly.
 
-* **Heartbeat**: This channel allows for a simple "ping" heartbeat check to ensure that the connection is valid and working.
+* **Heartbeat**: This channel allows for a simple "ping" heartbeat check to
+ensure that the connection is valid and working.
 
 
 ## Message format
@@ -40,7 +50,8 @@ All Jupyter messages generally will have the following format:
 }
 ```
 
-All of the items above are required to be defined, but may be left empty as needed (i.e. `{}` or `[]`).
+All of the items above are required to be defined, but may be left empty as
+needed (i.e. `{}` or `[]`).
 
 ### header
 
@@ -62,7 +73,8 @@ Format:
 
 ### parent_header
 
-If a message is a reply to or is created by the actions resulting from a request message, this should contain the contents of this "parent" message.
+If a message is a reply to or is created by the actions resulting from a
+request message, this should contain the contents of this "parent" message.
 
 For example, if a message came in with this header:
 ```js
@@ -103,7 +115,8 @@ Then a response message should look something like this:
 }
 ```
 
-And an message announcing some stdout output generated during the execution would look like this:
+And an message announcing some stdout output generated during the execution
+would look like this:
 ```js
 {
   "header": {
@@ -129,14 +142,19 @@ And an message announcing some stdout output generated during the execution woul
 
 ### metadata
 
-Metadata can be any content and behaves like you probably expect metadata to behave. Certain message types behave differently based on the provided metadata, dependent on message type.
+Metadata can be any content and behaves like you probably expect metadata to
+behave. Certain message types behave differently based on the provided metadata,
+dependent on message type.
 
 
 ### content
 
-The content of the message is the main body of the message. The content's schema and requirements is dictated by the message type.
+The content of the message is the main body of the message. The content's schema
+and requirements is dictated by the message type.
 
 
 ### buffers
 
-Buffers are used to transfer binary data that may be used by a message handler that does not fit in the content. This is not commonly used and can generally be safely ignored.
+Buffers are used to transfer binary data that may be used by a message handler
+that does not fit in the content. This is not commonly used and can generally be
+safely ignored.
