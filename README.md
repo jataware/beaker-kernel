@@ -165,4 +165,4 @@ are:
 These security settings will be reviewed in the future in an attempt to tighten
 the modifications.
 
-More information can be found in the official docs (link coming soon).
+More information can be found in [the official docs](https://jataware.github.io/beaker-kernel/).
