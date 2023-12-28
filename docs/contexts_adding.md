@@ -33,20 +33,20 @@ precedence over a system-wide install.
 ### Context json file search locations
 
 #### Linux:
- * /usr/share/beaker
- * /usr/local/share/beaker
- * {sys.prefix}/share/beaker
- * ~/.local/share/beaker
- * {os.environ["XDG_DATA_HOME"]}/beaker
+ * /usr/share/beaker/contexts
+ * /usr/local/share/beaker/contexts
+ * {sys.prefix}/share/beaker/contexts
+ * ~/.local/share/beaker/contexts
+ * {os.environ["XDG_DATA_HOME"]}/beaker/contexts
 
 #### Mac OSX:
 
- * /usr/share/beaker
- * /usr/local/share/beaker
- * ~/.local/share/beaker
- * ~/Library/Beaker
+ * /usr/share/beaker/contexts
+ * /usr/local/share/beaker/contexts
+ * ~/.local/share/beaker/contexts
+ * ~/Library/Beaker/contexts
 
 #### Windows:
- * %PROGRAMDATA%\beaker
- * %APPDATA%\beaker
- * %LOCALAPPDATA%\beaker
+ * %PROGRAMDATA%\beaker/contexts
+ * %APPDATA%\beaker/contexts
+ * %LOCALAPPDATA%\beaker/contexts

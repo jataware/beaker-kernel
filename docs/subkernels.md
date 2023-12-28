@@ -33,3 +33,39 @@ For most languages, this means serializing the response to JSON or another
 interchange format. But beyond this, the R kernel does not send a
 execute_response message, so to evaluate the response, we must capture and parse
 the stdout text.
+
+## Adding a subkernel
+
+A subkernel can registered and added similarly as to how a context is. That is,
+
+
+### Subkernel json file structure
+
+```js
+{
+    "slug": string, // A unique short string name used to identify your subkernel.
+    "package": string, // A dot-seperated import path string to the package module that contains the subkernel class definition.
+    "class_name": class_name, // The case sensitive name of the subkernel class that can be imported from the package listed above.
+}
+```
+
+### Subkernel json file search locations
+
+#### Linux:
+ * /usr/share/beaker/subkernels
+ * /usr/local/share/beaker/subkernels
+ * {sys.prefix}/share/beaker/subkernels
+ * ~/.local/share/beaker/subkernels
+ * {os.environ["XDG_DATA_HOME"]}/beaker/subkernels
+
+#### Mac OSX:
+
+ * /usr/share/beaker/subkernels
+ * /usr/local/share/beaker/subkernels
+ * ~/.local/share/beaker/subkernels
+ * ~/Library/Beaker/subkernels
+
+#### Windows:
+ * %PROGRAMDATA%\beaker/subkernels
+ * %APPDATA%\beaker/subkernels
+ * %LOCALAPPDATA%\beaker/subkernels
