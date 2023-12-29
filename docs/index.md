@@ -28,7 +28,7 @@ This package contains the following components:
 
 * The Beaker Jupyter kernel (`beaker`)
 * A stand-alone Jupyter service (`service`)
-  * Contains a both a production-ready custom server and a standalone 
+  * Contains a both a production-ready custom server and a standalone
   development interface
 * A library of contexts (`contexts`) that can be extended to add functionality
 to Beaker
@@ -57,7 +57,7 @@ Beaker, you need to set a context.
 
 ## Contexts
 
-Setting a [context](./contexts.md) adds extra functionality to the existing
+Setting a [context](./contexts.html) adds extra functionality to the existing
 session. Where before Beaker was a slightly smarter Jupyter notebook, now it
 has a mission and special tools at its disposal. The contexts add custom
 message handlers, tools for the agent, and a specialized LLM prompt to focus
@@ -66,13 +66,13 @@ the agent to help in the current situation at hand.
 
 ## Differences from vanilla Jupyter
 
-This setup uses stock Jupyter services as provided in the Jupyter Python 
+This setup uses stock Jupyter services as provided in the Jupyter Python
 packages.
 
 The entry point of the docker file runs the file main.py which starts a
 JupyterLab Server App. The only differences here are:
 1. This service does not run any front-end and only provides API and websocket
-access as the expectation is for 
+access as the expectation is for
 2. Some settings are changed to allow access through the Terarium interface and
 be accessed by the proxy kernel:
     1. allow_orgin rule
