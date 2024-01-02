@@ -1,0 +1,15 @@
+title: "Beaker Kernel"
+search_enabled: true
+theme: "just-the-docs"
+
+gems:
+- just-the-docs
+- jekyll-github-metadata
+- jekyll-mentions
+- jekyll-redirect-from
+- jekyll-sitemap
+- jemoji
+
+aux_links:
+  "Beaker on Github":
+    - "//github.com/DARPA-ASKEM/beaker-kernel"
