@@ -12,11 +12,8 @@
   <script id="jupyter-config-data" type="application/json">
     {{ page_config_full | tojson }}
   </script>
-  <!-- <script src="{{page_config['fullStaticUrl'] | e}}/js/app.32d55177.js" main="index"></script> -->
+  <script src="{{page_config['fullStaticUrl'] | e}}/bundle.js" main="index"></script>
   <!-- <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script> -->
-  <script defer="defer" src="{{page_config['fullStaticUrl'] | e}}/js/chunk-vendors.0ca105b2.js"></script>
-  <script defer="defer" src="{{page_config['fullStaticUrl'] | e}}/js/app.32d55177.js"></script>
-  <link href="{{page_config['fullStaticUrl'] | e}}/css/app.76ab3bda.css" rel="stylesheet">
 </head>
 <body>
 

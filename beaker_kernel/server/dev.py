@@ -60,7 +60,7 @@ class DevBeakerJupyterApp(BeakerJupyterApp):
     app_url = "/dev_ui"
     app_settings_dir = os.path.join(HERE, "build", "application_settings")
     schemas_dir = os.path.join(HERE, "build", "schemas")
-    static_dir = os.path.join(HERE, "build")
+    static_dir = os.path.join(HERE, "dist")
     templates_dir = os.path.join(HERE, "templates")
     themes_dir = os.path.join(HERE, "build", "themes")
     user_settings_dir = os.path.join(HERE, "build", "user_settings")
@@ -71,7 +71,7 @@ class DevBeakerJupyterApp(BeakerJupyterApp):
         super().initialize_handlers()
         """Add dev handler"""
         self.handlers.append(("/dev_ui", DevHandler))
-        # self.handlers.append(("/dev_ui_vue", DevVueHandler))
+        # self.handlers.append(("/vue", DevVueHandler))
 
 
 if __name__ == "__main__":

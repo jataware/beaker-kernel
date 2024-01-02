@@ -190,7 +190,7 @@ export class BeakerSession {
 
     public toJSON(): string {
         return JSON.stringify({
-            notebook: this.notebook.toJSON()
+            notebook: this._notebookModel?.toJSON()
         });
     }
 
