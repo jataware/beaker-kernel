@@ -1,66 +1,56 @@
 <template>
-    <div>
-        <h1>Notebook. There should be cells below.</h1>
-        <div>Imagine this is a toolbar.</div>
-        <div id="cell-container">
-            <!-- <BeakerCodeCell v-for="cell of session?.notebook?.cells" :key="cell.id" :content="cell"/> -->
-            <BeakerCodeCell v-for="cell of session?._notebookModel?.sharedModel?.cells" :key="cell.id" :content="cell"/>
+    <div class="beaker-notebook">
+        <h2>Your notebook:</h2>
+        <div class="beaker-nb-toolbar">
+            <span class="button btn" @click="addCell">add cell</span>
         </div>
-        <div>{{ session }}</div>
-        <div>notebook: {{ session?.notebook }}</div>
-        <div>_notebookModel: {{ session?._notebookModel }}</div>
-        <div @click="addCell">add cell</div>
+        <div id="cell-container">
+            <BeakerCodeCell
+                v-for="cell of props.session?.notebook?.cells" :key="cell.id" :cell="cell"
+                :session="props.session" v-model="foo"
+            />
+            <div>{{ props.session.notebook.toJSON() }}</div>
+        </div>
 
     </div>
 </template>
 
-<!-- // <script setup> -->
 <script setup lang="ts">
-import { ref, onMounted, defineProps, getCurrentInstance } from "vue";
+import { ref, onMounted, defineProps, computed } from "vue";
 import { BeakerSession } from 'beaker-kernel';
 
 import BeakerCodeCell from './BeakerCodecell.vue'
 
 const props = defineProps([
-    "session", "foo"
-])
+    "session"
+]);
 
-// const cells = ref(["Hello world", "something else", "cell 3"]);
-
-// const baseUrl = PageConfig.getBaseUrl();
-
-// console.log(settings);
-// const session = ref(
-//     new BeakerSession(
-//         {
-//             settings: settings,
-//             name: "MyKernel",
-//             kernelName: "beaker"
-//         }
-//     )
-// );
-
+const foo = ref("Hello world");
 
 const addCell = () => {
-    props.session.addCodeCell("Hello World!");
-    let [cell] = props.session?._notebookModel?.sharedModel?.cells;
-    console.log(cell);
-    // const instance = getCurrentInstance();
-    // console.log(instance);
-    // instance?.proxy.forceUpdate();
-    // props.session.proxy.forceUpdate();
-
+    props.session.addCodeCell("");
+    console.log(props.session.notebook);
 }
-
-// onMounted(() => {
-//     console.log("mounted", session.value)
-//     // console.log('beakerSession', beakerSession);
-//     // session.value = beakerSession;
-// })
-
 </script>
 
 
 <style>
+.beaker-notebook {
+    margin-left: 30%;
+    margin-right: 30%;
+}
+
+.beaker-nb-toolbar {
+    vertical-align: middle;
+    background-color: #aaa;
+    height: 4ex;
+    padding-top: 1em;
+}
+
+.btn {
+    border: gray 1px ;
+    border-style: ridge;
+    padding: 1ex;
+}
 
 </style>

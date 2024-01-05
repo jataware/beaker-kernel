@@ -12,19 +12,25 @@ import BeakerNotebook from './components/BeakerNotebook.vue';
 
 // TODO: Move the config outside this file. Fetch from environment?
 const settings = {
-    baseUrl: "http://localhost:8888/",
-    appUrl: "http://localhost:8888/",
-    wsUrl: "http://localhost:8888/",
+    baseUrl: "http://localhost:8080",
+    appUrl: "http://localhost:8080",
+    wsUrl: "ws://localhost:8080",
     token: "89f73481102c46c0bc13b2998f9a4fce",
 };
-
-const beakerSession = reactive(new BeakerSession(
+//
+const rawSession = new BeakerSession(
   {
     settings: settings,
     name: "MyKernel",
-    kernelName: "beaker"
+    kernelName: "beaker_kernel",
+    sessionId: "dev_session",
   }
-));
+);
+rawSession.addCodeCell('print("Hello world")\n"This is the return"');
+const beakerSession = reactive(rawSession);
+// const beakerSession = reactive(rawSession);
+
+
 </script>
 
 <style lang="scss">
