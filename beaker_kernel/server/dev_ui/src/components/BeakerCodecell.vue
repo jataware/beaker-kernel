@@ -41,7 +41,11 @@ const execute = (evt: any) => {
     evt.stopPropagation();
     const sourceCode = cell.value.source;
     console.log(`about to exectute: "${sourceCode}"`);
+    console.log(props.cell);
+    console.log(props.session);
     const future = props.cell.execute(props.session);
+    console.log(future);
+    console.log(props.cell);
     future.done.then(handleDone);
 }
 </script>
@@ -50,7 +54,6 @@ const execute = (evt: any) => {
 <style>
 .code-cell {
     padding: 1em;
-    border: 1px solid black;
 }
 
 </style>

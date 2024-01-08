@@ -1,13 +1,18 @@
 <template>
     <div class="beaker-notebook">
         <h2>Your notebook:</h2>
+        <BeakerAgentQuery class="agent-query-container" :session="session" />
         <div class="beaker-nb-toolbar">
-            <span class="button btn" @click="addCell">add cell</span>
+            <span class="btn" @click="addCell">add cell</span>
+            <span class="btn" @click="removeCell">remove cell</span>
+            <span class="btn" @click="runCell">run cell</span>
         </div>
         <div id="cell-container">
-            <BeakerCodeCell
-                v-for="cell of props.session?.notebook?.cells" :key="cell.id" :cell="cell"
-                :session="props.session" v-model="foo"
+            <component
+                v-for="(cell, index) in props.session?.notebook?.cells" :key="cell.id" :cell="cell"
+                :is="componentMap[cell.cell_type]"
+                :session="props.session" class="beaker-cell" :class="{selected: (index == selectedCellIndex)}"
+                @click="selectCell(index)"
             />
             <div>{{ props.session.notebook.toJSON() }}</div>
         </div>
@@ -16,21 +21,65 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineProps, computed } from "vue";
+import { ref, onBeforeMount, onMounted, defineProps, computed } from "vue";
 import { BeakerSession } from 'beaker-kernel';
 
-import BeakerCodeCell from './BeakerCodecell.vue'
+import BeakerCodeCell from './BeakerCodecell.vue';
+import BeakerLLMQueryCell from "./BeakerLLMQueryCell.vue";
+import BeakerAgentQuery from './BeakerAgentQuery.vue';
+
+const componentMap = {
+    'code': BeakerCodeCell,
+    'query': BeakerLLMQueryCell,
+}
 
 const props = defineProps([
     "session"
 ]);
 
-const foo = ref("Hello world");
+const selectedCellIndex = ref(0);
+
+const selectedCell = computed(() => {
+    return props.session.notebook.cells[selectedCellIndex.value];
+});
+
+const selectCell = (index: number) => {
+    selectedCellIndex.value = index;
+}
 
 const addCell = () => {
     props.session.addCodeCell("");
     console.log(props.session.notebook);
 }
+
+const runCell = () => {
+    console.log(selectedCell.value);
+    const cell = selectedCell.value;
+    if (cell !== undefined) {
+        cell.execute(props.session);
+    }
+}
+
+const removeCell = () => {
+    console.log(selectedCellIndex.value)
+    // props.session.notebook.cells.splice(selectedCellIndex.value, 1);
+    props.session.notebook.removeCell(selectedCellIndex.value);
+    // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
+    if (props.session.notebook.cells.length == 0) {
+        props.session.addCodeCell("");
+    }
+    // Fixup the selection if we remove the last item.
+    if (selectedCellIndex.value <= props.session.notebook.cells.length) {
+        selectedCellIndex.value = props.session.notebook.cells.length - 1;
+    }
+};
+
+onBeforeMount(() => {
+    if (props.session.notebook.cells.length <= 0) {
+        props.session.addCodeCell("");
+    }
+});
+
 </script>
 
 
@@ -38,6 +87,7 @@ const addCell = () => {
 .beaker-notebook {
     margin-left: 30%;
     margin-right: 30%;
+    text-align: start;
 }
 
 .beaker-nb-toolbar {
@@ -47,10 +97,30 @@ const addCell = () => {
     padding-top: 1em;
 }
 
+#cell-container {
+    border: solid 1px black;
+    padding: 10px;
+}
+
+.beaker-cell {
+    border: solid 1px lightgray;
+}
+
+.beaker-cell.selected {
+    border: solid 1px black;
+}
+
+.agent-query-container {
+    /* margin-bottom: 10px; */
+    padding-left: 0.5em;
+}
+
 .btn {
     border: gray 1px ;
     border-style: ridge;
     padding: 1ex;
+    cursor: pointer;
+    margin: 0.5em;
 }
 
 </style>

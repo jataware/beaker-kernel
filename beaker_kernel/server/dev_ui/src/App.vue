@@ -26,9 +26,20 @@ const rawSession = new BeakerSession(
     sessionId: "dev_session",
   }
 );
-rawSession.addCodeCell('print("Hello world")\n"This is the return"');
+
+rawSession.sessionReady.then(() => {
+  console.log("connecting");
+  rawSession.session.iopubMessage.connect((session, msg) => {
+    if (msg.header.msg_type === "code_cell") {
+      beakerSession.addCodeCell(msg.content.code);
+    }
+  })
+  beakerSession.addCodeCell("print('hello world');\n'this is the return'")
+
+});
+
+
 const beakerSession = reactive(rawSession);
-// const beakerSession = reactive(rawSession);
 
 
 </script>

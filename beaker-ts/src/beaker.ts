@@ -2,15 +2,12 @@ import * as nbformat from '@jupyterlab/nbformat';
 import { SessionContext } from '@jupyterlab/apputils';
 import { ServerConnection } from '@jupyterlab/services/lib/serverconnection';
 import { Kernel, KernelConnection } from '@jupyterlab/services/lib/kernel';
-import { INotebookModel, NotebookModelFactory } from '@jupyterlab/notebook';
 import {IKernelConnection} from '@jupyterlab/services/lib/kernel/kernel'
 import { ServiceManager } from '@jupyterlab/services';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import { JSONObject, JSONValue, PartialJSONValue } from '@lumino/coreutils';
+import { JSONObject, PartialJSONValue } from '@lumino/coreutils';
 import { v4 as uuidv4 } from 'uuid';
 import { ISessionConnection } from '@jupyterlab/services/lib/session/session';
-import { MethodDeclaration, convertToObject } from 'typescript';
-import { renderHTML, renderImage, renderLatex, renderMarkdown, renderSVG, renderText, RenderMimeRegistry} from '@jupyterlab/rendermime';
 
 
 // Lower case states to match the naming in the messages.
@@ -50,10 +47,16 @@ export interface IBeakerHeader extends messages.IHeader {
     msg_type: any
 }
 
-export interface IBeakerMessage extends messages.IShellMessage {
+export interface IBeakerShellMessage extends messages.IShellMessage {
     header: IBeakerHeader;
     channel: "shell";
     content: JSONObject;
+}
+
+export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
+    header: IBeakerHeader;
+    channel: "iopub";
+    content: any;
 }
 
 export interface IBeakerFuture extends Kernel.IShellFuture {
@@ -74,7 +77,8 @@ declare module "@jupyterlab/services/lib/kernel" {
 }
 
 declare module "@jupyterlab/services/lib/kernel/messages" {
-    function createMessage<T extends IBeakerMessage>(options: messages.IOptions<T>): T;
+    function createMessage<T extends IBeakerShellMessage>(options: messages.IOptions<T>): T;
+
 }
 
 export class BeakerSession {
@@ -84,11 +88,11 @@ export class BeakerSession {
         name: string;
         kernelName: string;
         sessionId?: string;
+        messageHandler?: Function; //(func: Function): void;
     }) {
         this._serverSettings = ServerConnection.makeSettings(options.settings);
         this._services = new ServiceManager({
             serverSettings: this._serverSettings,
-
         });
 
         this.notebook = new BeakerNotebook();
@@ -112,9 +116,15 @@ export class BeakerSession {
         });
 
         // Initialize the session
-        this._sessionContext.initialize().then((e) => {
+        this._sessionContext.initialize().then(() => {
             this._sessionContext.ready.then(() => {
-                this._sessionContext.session.anyMessage.connect(this._messageHandler);
+                if (options.messageHandler) {
+                    this._messageHandler = options.messageHandler;
+                }
+                else {
+                    this._messageHandler = this._defaultMessageHandler;
+                }
+                this._sessionContext.iopubMessage.connect(this._messageHandler);
             });
         });
     }
@@ -124,10 +134,11 @@ export class BeakerSession {
         content: JSONObject,
         messageId: string = null
     ) {
+        console.log("sendBeakerMessage");
         if (messageId === null) {
             messageId = createMessageId(messageType);
         }
-        const msg: IBeakerMessage = messages.createMessage({
+        const msg: IBeakerShellMessage = messages.createMessage({
             session: this.session.session.id,
             channel: "shell",
             msgType: messageType,
@@ -143,7 +154,7 @@ export class BeakerSession {
         return future;
     }
 
-    private _messageHandler(sessionConnection: ISessionConnection, {direction, msg}) {
+    private _defaultMessageHandler(sessionConnection: ISessionConnection, {direction, msg}) {
         // if (messages.isExecuteResultMsg(msg)) {
         //     console.log(msg, ` is an execution result`);
         // }
@@ -171,14 +182,12 @@ export class BeakerSession {
     }
 
     public addCodeCell(source: string, metadata={}, outputs=[]) {
-        console.log("creating new cell")
         const newCell = new BeakerCodeCell({
                 cell_type: "code",
                 source,
                 metadata,
                 outputs,
             });
-        console.log("newcell1:", newCell)
 
         this.notebook.addCell(
             newCell
@@ -205,6 +214,16 @@ export class BeakerSession {
         );
     }
 
+    public addQueryCell(source: string, metadata={}) {
+        this.notebook.addCell(
+            new BeakerQueryCell({
+                cell_type: "query",
+                source,
+                metadata,
+            })
+        );
+    };
+
     public toJSON(): string {
         return JSON.stringify({
             notebook: this.notebook?.toJSON()
@@ -214,6 +233,14 @@ export class BeakerSession {
     public fromJSON(): BeakerSession {
 
         return new BeakerSession();
+    }
+
+    get sessionReady(): Promise<void> {
+        return new Promise(async (resolve) => {
+            await this._services.ready;
+            await this._sessionContext.ready;
+            resolve();
+        })
     }
 
     get session(): SessionContext {
@@ -232,6 +259,7 @@ export class BeakerSession {
     private _services: ServiceManager;
     private _serverSettings;
     private _sessionContext;
+    private _messageHandler: Function;
 
     public notebook: BeakerNotebook;
 
@@ -258,40 +286,62 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     source: nbformat.MultilineString;
 }
 
+export interface IQueryCell extends nbformat.IBaseCell {
+    cell_type: 'query';
+    id?: string;
+    thoughts: string[];
+    debug?: string[];
+    response: nbformat.MultilineString;
+
+}
+
 export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
     cell_type: 'raw';
     id?: string;
     attachments?: nbformat.IAttachments;
     metadata: Partial<nbformat.IRawCellMetadata>;
+
+    constructor(content: nbformat.ICell) {
+        super();
+        Object.keys(content).forEach((key) => {this[key] = content[key] });
+        if (this.id === undefined) {
+            this.id = uuidv4();
+        }
+    }
+
+    public execute(session: BeakerSession): IBeakerFuture | null {
+        return null
+    };
 }
 
 export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell {
     cell_type: 'code';
     id?: string;
     outputs: nbformat.IOutput[];
-    execution_count: number;
+    execution_count: nbformat.ExecutionCount;
     metadata: Partial<nbformat.ICodeCellMetadata>;
 
     constructor(content: nbformat.ICell) {
         super();
         Object.keys(content).forEach((key) => {this[key] = content[key] });
+        if (this.id === undefined) {
+            this.id = uuidv4();
+        }
     }
 
 
-    public execute(session: BeakerSession): IBeakerFuture {
-        const handleIOPub = (msg: messages.IIOPubMessage<messages.IOPubMessageType> | messages.IExecuteResultMsg): void => {
+    public execute(session: BeakerSession): IBeakerFuture | null {
+        const handleIOPub = (msg: IBeakerIOPubMessage): void => {
             const msg_type = msg.header.msg_type;
             const content = msg.content;
             if (msg_type === "execute_result") {
-                const content = msg.content;
-                // if (content.execution_count) {
-                //     this.execution_count = content.execution_count;
-                // }
+                if (content.execution_count) {
+                    this.execution_count = content.execution_count;
+                }
                 this.outputs.push({
                     output_type: "execute_result",
                     ...content
                 })
-
             }
             else if (msg_type === "stream") {
                 this.outputs.push({
@@ -320,6 +370,66 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
     cell_type: 'markdown';
     id?: string;
     attachments?: nbformat.IAttachments;
+
+    constructor(content: nbformat.ICell) {
+        super();
+        Object.keys(content).forEach((key) => {this[key] = content[key] });
+        if (this.id === undefined) {
+            this.id = uuidv4();
+        }
+    }
+
+    public execute(session: BeakerSession): IBeakerFuture | null {
+        // TODO: Replace this with code to render markdown.
+        return null
+    };
+}
+
+export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
+    cell_type: 'query';
+    id?: string;
+    thoughts: string[];
+    debug?: string[];
+    response: nbformat.MultilineString;
+
+    constructor(content: nbformat.ICell) {
+        super();
+        this.thoughts = this.thoughts || [];
+        this.debug = this.debug || [];
+        this.response = this.response || "";
+        Object.keys(content).forEach((key) => {this[key] = content[key] });
+        if (this.id === undefined) {
+            this.id = uuidv4();
+        }
+    }
+
+    public execute(session: BeakerSession): IBeakerFuture | null {
+        console.log('executing');
+        const handleIOPub = (msg: messages.IIOPubMessage<messages.IOPubMessageType> | IBeakerIOPubMessage): void => {
+            const msg_type = msg.header.msg_type;
+            const content = msg.content;
+            console.log('msg_type', msg_type);
+            console.log('content', content);
+            if (msg_type === "llm_thought") {
+                this.thoughts.push(content.thought);
+            }
+            else if (msg_type === "llm_response") {
+                if (content.name === "response_text") {
+                    this.response = content.text;
+                }
+            }
+        };
+
+        const future = session.sendBeakerMessage(
+            "llm_request",
+            {
+                request: this.source
+            }
+        );
+        console.log(future);
+        future.onIOPub = handleIOPub;
+        return future;
+    };
 }
 
 export type IBeakerCell = BeakerCodeCell | BeakerMarkdownCell | BeakerRawCell | nbformat.IUnrecognizedCell;
@@ -348,20 +458,15 @@ export class BeakerNotebook {
     }
 
     public toJSON() {
-        console.log("I'm called!");
         return JSON.stringify(this.content);
     }
 
     public addCell(cell: IBeakerCell | nbformat.ICell) {
-        console.log('cell1', cell);
-        // if (cell.cell_type === "code") {
-        //     cell = new BeakerCodeCell(cell);
-        //     console.log("Generated cell:", cell);
-        // }
-        // console.log('cell2', cell);
-        // console.log("before push", this.cells);
         this.cells.push(cell);
-        // console.log("after push", this.cells);
+    }
+
+    public removeCell(index: number) {
+        this.cells.splice(index, 1);
     }
 
     private content: BeakerNotebookContent;
