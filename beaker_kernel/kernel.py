@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 import traceback
+from functools import partial
 from typing import TYPE_CHECKING, Optional
 
 import requests
@@ -396,6 +397,8 @@ class LLMKernel(KernelProxyManager):
         if not self.context:
             raise Exception("Context has not been set")
         try:
+            # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track thoughts
+            self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
             result = await self.context.agent.react_async(request)
         except Exception as err:
             error_text = f"""LLM Error:
@@ -436,6 +439,9 @@ class LLMKernel(KernelProxyManager):
             self.send_response(
                 "iopub", "llm_response", stream_content, parent_header=message.header
             )
+        finally:
+            # When done, put thought handler back to default to not potentially cause confused thoughts.
+            self.context.agent.thought_handler = self.handle_thoughts
 
     @message_handler
     async def context_setup_request(self, message):
