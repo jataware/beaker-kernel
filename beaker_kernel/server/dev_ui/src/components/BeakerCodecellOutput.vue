@@ -2,6 +2,7 @@
     <div class="code-cell-output">
         <div v-for="output of props.outputs" :key="output">
             <div v-if="output.output_type == 'stream'" :class="output.name">{{ output.text }}</div>
+            <div v-else-if="output.output_type == 'display_data'" :class="output.name" v-html="renderResult(output)"></div>
             <div v-else-if="output.output_type == 'execute_result'" :class="output.name" v-html="renderResult(output)"></div>
         </div>
     </div>
@@ -32,12 +33,7 @@ const renderResult = (resultOutput) => {
         metadata: resultOutput.metadata,
     });
     renderer.render(model);
-    // console.log("aa");
-    // console.log(renderer);
-    console.log(renderer.node);
-    console.log(renderer.node.innerHTML);
     return renderer.node.innerHTML;
-
 }
 
 </script>

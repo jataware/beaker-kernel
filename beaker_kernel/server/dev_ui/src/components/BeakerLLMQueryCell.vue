@@ -1,8 +1,8 @@
 <template>
     <div class="llm-query-cell">
-        <div class="query">{{ props.cell?.source }}</div>
-        <div class="thought" v-for="thought of props.cell?.thoughts" :key="thought.id">Thought: {{ thought }}</div>
-        <div class="response">{{ props.cell?.response }}</div>
+        <div class="query">{{ cell.source }}</div>
+        <div class="thought" v-for="thought of cell.thoughts" :key="thought">Thought: {{ thought }}</div>
+        <div class="response">{{ cell.response }}</div>
     </div>
 
 </template>
@@ -11,14 +11,11 @@
 import { defineProps, ref, onMounted } from "vue";
 
 const props = defineProps([
-    "session",
     "cell",
+    "session",
 ]);
 
-// onMounted(() => {
-
-// });
-
+const cell = ref(props.cell);
 
 </script>
 
@@ -39,6 +36,8 @@ const props = defineProps([
 
 .response {
     margin-top: 1em;
+    white-space: pre-line;
+    /* color: black; */
 }
 
 </style>

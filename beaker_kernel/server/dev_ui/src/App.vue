@@ -28,13 +28,12 @@ const rawSession = new BeakerSession(
 );
 
 rawSession.sessionReady.then(() => {
-  console.log("connecting");
   rawSession.session.iopubMessage.connect((session, msg) => {
     if (msg.header.msg_type === "code_cell") {
       beakerSession.addCodeCell(msg.content.code);
     }
   })
-  beakerSession.addCodeCell("print('hello world');\n'this is the return'")
+  beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
 
 });
 

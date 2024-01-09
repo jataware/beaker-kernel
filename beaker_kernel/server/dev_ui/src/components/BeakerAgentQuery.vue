@@ -9,16 +9,25 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref } from "vue";
+import { defineProps, defineEmits, ref, nextTick } from "vue";
 
 const props = defineProps([
     "session",
 ]);
 
 const query = ref("");
+const emit = defineEmits([
+    "select-cell",
+    "run-cell",
+]);
 
 const handleQuery = (e: any) => {
-    props.session.addQueryCell(query.value);
+    const cell = props.session.addQueryCell(query.value);
+    emit("select-cell", cell);
+    nextTick(() => {
+        // Delay running of cell by a ticket to allow selection and rendering to complete.
+        emit("run-cell", cell);
+    })
 }
 </script>
 

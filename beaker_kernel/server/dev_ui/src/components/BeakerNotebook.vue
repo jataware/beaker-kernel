@@ -1,7 +1,7 @@
 <template>
     <div class="beaker-notebook">
         <h2>Your notebook:</h2>
-        <BeakerAgentQuery class="agent-query-container" :session="session" />
+        <BeakerAgentQuery class="agent-query-container" :session="session" @select-cell="selectCell" @run-cell="runCell"/>
         <div class="beaker-nb-toolbar">
             <span class="btn" @click="addCell">add cell</span>
             <span class="btn" @click="removeCell">remove cell</span>
@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { ref, onBeforeMount, onMounted, defineProps, computed } from "vue";
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerSession, IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerLLMQueryCell from "./BeakerLLMQueryCell.vue";
@@ -40,29 +40,51 @@ const props = defineProps([
 const selectedCellIndex = ref(0);
 
 const selectedCell = computed(() => {
-    return props.session.notebook.cells[selectedCellIndex.value];
+    return _getCell(selectedCellIndex.value);
 });
 
-const selectCell = (index: number) => {
+const _cellIndex = (cell: IBeakerCell): number => {
+    let index = -1;
+    if (cell instanceof BeakerBaseCell) {
+        index = props.session.notebook.cells.indexOf(cell);
+    }
+    return index;
+}
+
+const _getCell = (cell: number | IBeakerCell) => {
+    const index = _cellIndex(cell);
+    return props.session.notebook.cells[index];
+}
+
+
+const selectCell = (cell: number | IBeakerCell) => {
+    let index = -1;
+    if (Number.isInteger(cell) ) {
+        index = cell;
+    }
+    else if (cell instanceof BeakerBaseCell) {
+        index = _cellIndex(cell);
+    }
     selectedCellIndex.value = index;
 }
 
 const addCell = () => {
     props.session.addCodeCell("");
-    console.log(props.session.notebook);
 }
 
-const runCell = () => {
-    console.log(selectedCell.value);
-    const cell = selectedCell.value;
+const runCell = (cell: number | IBeakerCell) => {
+    if (cell) {
+        cell = _getCell(cell);
+    }
+    else {
+        cell = selectedCell.value;
+    }
     if (cell !== undefined) {
         cell.execute(props.session);
     }
 }
 
 const removeCell = () => {
-    console.log(selectedCellIndex.value)
-    // props.session.notebook.cells.splice(selectedCellIndex.value, 1);
     props.session.notebook.removeCell(selectedCellIndex.value);
     // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
     if (props.session.notebook.cells.length == 0) {

@@ -155,73 +155,48 @@ export class BeakerSession {
     }
 
     private _defaultMessageHandler(sessionConnection: ISessionConnection, {direction, msg}) {
-        // if (messages.isExecuteResultMsg(msg)) {
-        //     console.log(msg, ` is an execution result`);
-        // }
-        // else if (messages.isStreamMsg(msg)) {
-        //     console.log(msg, ` is a stream message`);
-        // }
-        // else if (messages.isStatusMsg(msg)) {
-        //     console.log(msg, ` is a status message`);
-        // }
-        // else if (messages.isCommOpenMsg(msg)) {
-        //     console.log(msg, ` is an commopen message`);
-        // }
-        // else if (messages.isErrorMsg(msg)) {
-        //     console.log(msg, ` is an error message`);
-        // }
-        // else if (msg.channel === "iopub") {
-        //     console.log(msg, ` is an iopub message`);
-        // }
-        // else if (msg.channel === "shell") {
-        //     console.log(msg, ` is a shell message`);
-        // }
-        // else {
-        //     console.log("unhandled", msg);
-        // }
+        //noop
     }
 
     public addCodeCell(source: string, metadata={}, outputs=[]) {
-        const newCell = new BeakerCodeCell({
+        const cell = new BeakerCodeCell({
                 cell_type: "code",
                 source,
                 metadata,
                 outputs,
             });
-
-        this.notebook.addCell(
-            newCell
-        );
+        this.notebook.addCell(cell);
+        return cell;
     }
 
     public addMarkdownCell(source: string, metadata={}) {
-        this.notebook.addCell(
-            new BeakerMarkdownCell({
-                cell_type: "markdown",
-                source,
-                metadata,
-            })
-        );
+        const cell = new BeakerMarkdownCell({
+            cell_type: "markdown",
+            source,
+            metadata,
+        });
+        this.notebook.addCell(cell);
+        return cell;
     }
 
     public addRawCell(source:string, metadata={}) {
-        this.notebook.addCell(
-            new BeakerRawCell({
-                cell_type: "raw",
-                source,
-                metadata,
-            })
-        );
+        const cell = new BeakerRawCell({
+            cell_type: "raw",
+            source,
+            metadata,
+        });
+        this.notebook.addCell(cell);
+        return cell;
     }
 
     public addQueryCell(source: string, metadata={}) {
-        this.notebook.addCell(
-            new BeakerQueryCell({
-                cell_type: "query",
-                source,
-                metadata,
-            })
-        );
+        const cell = new BeakerQueryCell({
+            cell_type: "query",
+            source,
+            metadata,
+        });
+        this.notebook.addCell(cell);
+        return cell;
     };
 
     public toJSON(): string {
@@ -231,7 +206,7 @@ export class BeakerSession {
     }
 
     public fromJSON(): BeakerSession {
-
+        // TODO
         return new BeakerSession();
     }
 
@@ -268,17 +243,6 @@ export class BeakerSession {
 export type BeakerCellType = nbformat.CellType | string | 'query' ;
 
 export class BeakerBaseCell implements nbformat.IBaseCell {
-
-    // constructor(content: nbformat.ICell) {
-    //     console.log("Adding cell", content);
-    //     console.log("before:", this);
-    //     Object.keys(content).forEach((key) => {
-    //         console.log("Key?: ", key);
-    //         this[key] = content[key];
-    //     });
-    //     console.log("after:", this);
-    // }
-
     // Override index type to allow methods to be defined on the class
     [key: string]: any;
     cell_type: BeakerCellType;
@@ -349,7 +313,14 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
                     ...content
                 })
             }
+            else if (msg_type === "display_data") {
+                this.outputs.push({
+                    output_type: "display_data",
+                    ...content
+                })
+            }
         };
+        this.outputs.splice(0, this.outputs.length);
         const future = session.sendBeakerMessage(
             "execute_request",
             {
@@ -397,26 +368,23 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         this.thoughts = this.thoughts || [];
         this.debug = this.debug || [];
         this.response = this.response || "";
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
         if (this.id === undefined) {
             this.id = uuidv4();
         }
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
-        console.log('executing');
-        const handleIOPub = (msg: messages.IIOPubMessage<messages.IOPubMessageType> | IBeakerIOPubMessage): void => {
+        const handleIOPub = (msg: IBeakerIOPubMessage): void => {
             const msg_type = msg.header.msg_type;
             const content = msg.content;
-            console.log('msg_type', msg_type);
-            console.log('content', content);
+            if (msg_type === "status") {
+                return;
+            }
             if (msg_type === "llm_thought") {
                 this.thoughts.push(content.thought);
             }
-            else if (msg_type === "llm_response") {
-                if (content.name === "response_text") {
-                    this.response = content.text;
-                }
+            else if (msg_type === "llm_response" && content.name === "response_text") {
+                this.response = content.text;
             }
         };
 
@@ -426,10 +394,29 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 request: this.source
             }
         );
-        console.log(future);
         future.onIOPub = handleIOPub;
         return future;
     };
+
+    public toMarkdownCell() {
+        const renderedMarkdownLines = [`# ${this.source}\n`];
+        this.thoughts.forEach((thought) => renderedMarkdownLines.push(`> Thought: ${thought}\n> `));
+        renderedMarkdownLines.push(`\n`)
+        renderedMarkdownLines.push(`**${this.response}**`)
+        const renderedMarkdown = renderedMarkdownLines.join("\n");
+        return new BeakerMarkdownCell(
+            {
+                cell_type: "markdown",
+                id: this.id,
+                source: renderedMarkdown,
+                metadata: this.metadata,
+            }
+        );
+    }
+
+    public toJSON() {
+        return this.toMarkdownCell();
+    }
 }
 
 export type IBeakerCell = BeakerCodeCell | BeakerMarkdownCell | BeakerRawCell | nbformat.IUnrecognizedCell;

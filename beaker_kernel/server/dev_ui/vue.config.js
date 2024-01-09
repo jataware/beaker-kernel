@@ -6,14 +6,14 @@ module.exports = defineConfig({
   configureWebpack: {
     resolve: {
       alias: {
-        "beaker-kernel": path.resolve(__dirname, "../../../beaker-ts/src/")
+        "beaker-kernel": "/beaker-ts/src/"
       }
     }
   },
   devServer: {
     proxy: {
       '^/api': {
-        target: 'http://localhost:8888',
+        target: 'http://jupyter:8888',
         ws: true,
         changeOrigin: true,
       },
