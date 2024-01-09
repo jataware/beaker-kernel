@@ -27,7 +27,9 @@
     "@lumino/commands": "^2.2.0",
     "@lumino/coreutils": "^2.1.2",
     "@lumino/widgets": "^2.3.1",
+    "@types/node-fetch": "^2.6.6",
     "json-schema": "^0.4.0",
+    "node-fetch": "^2.6.6",
     "tslib": "^2.6.2",
     "typescript": "^5.2.2",
     "uuid": "^9.0.1"

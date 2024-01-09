@@ -3,6 +3,7 @@
     <h1>Beaker dev notebook</h1>
     <BeakerNotebook :session="beakerSession" />
   </div>
+
 </template>
 
 <script setup lang="ts">

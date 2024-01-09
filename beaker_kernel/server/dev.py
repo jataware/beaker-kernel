@@ -1,3 +1,6 @@
+import datetime
+import json
+import logging
 import os
 
 from jupyter_server.base.handlers import JupyterHandler
@@ -6,10 +9,13 @@ from jupyter_server.extension.handler import (
     ExtensionHandlerMixin,
 )
 from jupyter_server.utils import url_path_join as ujoin
-from jupyterlab_server import LabServerApp
 
 from .main import BeakerJupyterApp
 
+logger = logging.getLogger(__name__)
+
+# Global notebook storage for notebook that lives for lifetime of service
+notebook_content = None
 
 HERE = os.path.join(os.path.dirname(__file__), "dev_ui")
 
@@ -51,6 +57,18 @@ class DevHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandl
         )
 
 
+class NotebookHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandler):
+
+    def get(self):
+        return self.write(json.dumps(notebook_content))
+
+    def post(self):
+        global notebook_content
+        notebook_content = self.get_json_body()
+        notebook_content["lastSaved"] = datetime.datetime.utcnow().isoformat()
+        return self.write(json.dumps(notebook_content))
+
+
 class DevBeakerJupyterApp(BeakerJupyterApp):
     name = __name__
     load_other_extensions = True
@@ -71,7 +89,7 @@ class DevBeakerJupyterApp(BeakerJupyterApp):
         super().initialize_handlers()
         """Add dev handler"""
         self.handlers.append(("/dev_ui", DevHandler))
-        # self.handlers.append(("/vue", DevVueHandler))
+        self.handlers.append(("/notebook", NotebookHandler))
 
 
 if __name__ == "__main__":

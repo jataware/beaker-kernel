@@ -35,7 +35,6 @@ const renderResult = (resultOutput) => {
     renderer.render(model);
     return renderer.node.innerHTML;
 }
-
 </script>
 
 

@@ -42,5 +42,4 @@ const handleQuery = (e: any) => {
     border: 1px solid darkgray;
     padding: 0.5em;
 }
-
 </style>

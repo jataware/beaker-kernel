@@ -82,6 +82,9 @@ class LLMKernel(KernelProxyManager):
         Adds intercepts used by the Beaker kernel
         """
         self.server.intercept_message(
+            "shell", "context_info_request", self.context_info_request
+        )
+        self.server.intercept_message(
             "shell", "context_setup_request", self.context_setup_request
         )
         self.server.intercept_message("shell", "llm_request", self.llm_request)
@@ -442,6 +445,29 @@ class LLMKernel(KernelProxyManager):
         finally:
             # When done, put thought handler back to default to not potentially cause confused thoughts.
             self.context.agent.thought_handler = self.handle_thoughts
+
+    @message_handler
+    async def context_info_request(self, message):
+        context_slugs_by_class = dict((cls, slug) for slug, cls in AVAILABLE_CONTEXTS.items())
+        context_class = self.context.__class__
+        context_slug = context_slugs_by_class.get(context_class, "Not Found")
+        full_context_class = f"{context_class.__module__}.{context_class.__name__}"
+        context_config = getattr(self.context, "config", None)
+        self.send_response(
+            stream="iopub",
+            msg_or_type="context_info_response",
+            content={
+                "slug": context_slug,
+                "class": full_context_class,
+                "config": context_config,
+                "language": {
+                    "slug": self.context.subkernel.SLUG,
+                    "subkernel": self.context.subkernel.KERNEL_NAME,
+                }
+            },
+            parent_header=message.header,
+        )
+        return False
 
     @message_handler
     async def context_setup_request(self, message):

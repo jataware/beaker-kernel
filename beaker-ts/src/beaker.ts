@@ -8,6 +8,8 @@ import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import { JSONObject, PartialJSONValue } from '@lumino/coreutils';
 import { v4 as uuidv4 } from 'uuid';
 import { ISessionConnection } from '@jupyterlab/services/lib/session/session';
+import fetch from 'node-fetch';
+import { Slot } from '@lumino/signaling';
 
 
 // Lower case states to match the naming in the messages.
@@ -81,15 +83,19 @@ declare module "@jupyterlab/services/lib/kernel/messages" {
 
 }
 
+export interface IBeakerSessionOptions {
+    settings: any;
+    name: string;
+    kernelName: string;
+    sessionId?: string;
+    messageHandler?: Function; //(func: Function): void;
+};
+
+
 export class BeakerSession {
 
-    constructor(options?: {
-        settings: any;
-        name: string;
-        kernelName: string;
-        sessionId?: string;
-        messageHandler?: Function; //(func: Function): void;
-    }) {
+    constructor(options?: IBeakerSessionOptions) {
+        this._sessionOptions = options;
         this._serverSettings = ServerConnection.makeSettings(options.settings);
         this._services = new ServiceManager({
             serverSettings: this._serverSettings,
@@ -129,12 +135,11 @@ export class BeakerSession {
         });
     }
 
-    public sendBeakerMessage (
+    public sendBeakerMessage(
         messageType: string,
         content: JSONObject,
         messageId: string = null
     ) {
-        console.log("sendBeakerMessage");
         if (messageId === null) {
             messageId = createMessageId(messageType);
         }
@@ -156,6 +161,32 @@ export class BeakerSession {
 
     private _defaultMessageHandler(sessionConnection: ISessionConnection, {direction, msg}) {
         //noop
+    }
+
+    public async availableContexts(): Promise<IBeakerAvailableContexts> {
+        return new Promise(async (resolve) => {
+            const url = `${this._serverSettings.baseUrl}contexts`;
+            const response = await fetch(`${this._serverSettings.baseUrl}contexts`);
+            const data = await response.json();
+            resolve(data);
+        });
+    }
+
+    public async activeContext(): Promise<IActiveContextInfo> {
+        return new Promise(async (resolve, reject)  => {
+            await this.sessionReady;
+            const future = this.sendBeakerMessage(
+                "context_info_request",
+                {}
+            );
+            future.onIOPub = (msg: any) => {
+                if (msg.header.msg_type === "context_info_response") {
+                    resolve(msg.content);
+                }
+            }
+            await future.done;
+            reject({});
+        });
     }
 
     public addCodeCell(source: string, metadata={}, outputs=[]) {
@@ -210,6 +241,15 @@ export class BeakerSession {
         return new BeakerSession();
     }
 
+    public reset(fullReset: boolean = false) {
+        // Remove cells via splice.
+        this.notebook.cells.splice(0, this.notebook.cells.length);
+        if (fullReset) {
+            this._sessionContext.dispose();
+            this.initialize(this._sessionOptions);
+        }
+    }
+
     get sessionReady(): Promise<void> {
         return new Promise(async (resolve) => {
             await this._services.ready;
@@ -222,19 +262,19 @@ export class BeakerSession {
         return this._sessionContext;
     }
 
-    get kernel(): KernelConnection {
-        const kernel = this._sessionContext?.session?.kernel;
-        return kernel;
+    get kernel(): IKernelConnection {
+        return this._sessionContext?.session?.kernel;
     }
 
     get services(): ServiceManager {
         return this._services;
     }
 
+    private _sessionOptions: IBeakerSessionOptions;
     private _services: ServiceManager;
-    private _serverSettings;
-    private _sessionContext;
-    private _messageHandler: Function;
+    private _serverSettings: ServerConnection.ISettings;
+    private _sessionContext: SessionContext;
+    private _messageHandler: Slot<any, any>; // TODO: fix any typing here
 
     public notebook: BeakerNotebook;
 
@@ -365,6 +405,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
 
     constructor(content: nbformat.ICell) {
         super();
+        Object.keys(content).forEach((key) => {this[key] = content[key] });
         this.thoughts = this.thoughts || [];
         this.debug = this.debug || [];
         this.response = this.response || "";
@@ -404,6 +445,13 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         renderedMarkdownLines.push(`\n`)
         renderedMarkdownLines.push(`**${this.response}**`)
         const renderedMarkdown = renderedMarkdownLines.join("\n");
+        const metadata = {
+            ...this.metadata,
+            beaker_cell_type: "query",
+            beaker_thoughts: this.thoughts,
+            beaker_debug: this.debug,
+            beaker_response: this.response,
+        }
         return new BeakerMarkdownCell(
             {
                 cell_type: "markdown",
@@ -458,4 +506,25 @@ export class BeakerNotebook {
 
     private content: BeakerNotebookContent;
     public cells: IBeakerCell[];
+}
+
+
+export interface IBeakerAvailableContexts {
+    [context_slug: string]: {
+        languages: {
+            slug: string,
+            kernel: string,
+        },
+        defaultPayload: string,
+    };
+}
+
+export interface IActiveContextInfo {
+    slug: string;
+    class: string;
+    config: JSONObject;
+    language: {
+        slug: string;
+        subkernel: string;
+    }
 }

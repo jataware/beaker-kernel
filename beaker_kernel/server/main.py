@@ -40,7 +40,10 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         context_data = {
             context_slug: {
                 "languages": [
-                    [subkernel_slug, getattr(subkernels.get(subkernel_slug), "KERNEL_NAME")]
+                    {
+                        "slug": subkernel_slug,
+                        "subkernel": getattr(subkernels.get(subkernel_slug), "KERNEL_NAME")
+                    }
                     for subkernel_slug in context.available_subkernels()
                     if subkernel_slug in subkernels
                 ],
@@ -49,6 +52,28 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
             for context_slug, context in contexts.items()
         }
 
+        context_data["foo"] = {
+            "languages": [
+                {
+                    "slug": "reddit",
+                    "subkernel": "reddit-v1"
+                }
+            ],
+            "defaultPayload": "{foo:bar}"
+        }
+        context_data["bar"] = {
+            "languages": [
+                {
+                    "slug": "reddit",
+                    "subkernel": "reddit-v1"
+                },
+                {
+                    "slug": "python3",
+                    "subkernel": "python3"
+                }
+            ],
+            "defaultPayload": "{bar:foo}"
+        }
         return self.write(context_data)
 
 
