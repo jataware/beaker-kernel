@@ -19,6 +19,6 @@ class PyPackageContext(BaseContext):
             raise ValueError("This context is only valid for Python.")
         super().__init__(beaker_kernel, subkernel, self.agent_cls, config)
 
-    @classmethod
-    def available_subkernels(cls) -> List["BaseSubkernel"]:
-        return ["python3"]
+    async def setup(self, config=None, parent_header=None):
+        await self.execute(self.get_code("setup", {}))
+        return await super().setup(config, parent_header)
