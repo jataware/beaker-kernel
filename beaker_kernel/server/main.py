@@ -51,29 +51,6 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
             }
             for context_slug, context in contexts.items()
         }
-
-        context_data["foo"] = {
-            "languages": [
-                {
-                    "slug": "reddit",
-                    "subkernel": "reddit-v1"
-                }
-            ],
-            "defaultPayload": "{foo:bar}"
-        }
-        context_data["bar"] = {
-            "languages": [
-                {
-                    "slug": "reddit",
-                    "subkernel": "reddit-v1"
-                },
-                {
-                    "slug": "python3",
-                    "subkernel": "python3"
-                }
-            ],
-            "defaultPayload": "{bar:foo}"
-        }
         return self.write(context_data)
 
 

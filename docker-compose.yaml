@@ -22,7 +22,7 @@ services:
   ui:
     image: node:20
     volumes:
-      - ./beaker_kernel/server/dev_ui:/ui
+      - ./beaker-vue:/ui
       - ./beaker-ts:/beaker-ts
     working_dir: "/ui"
     ports:
