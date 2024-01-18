@@ -12,20 +12,17 @@ from jupyter_server.extension.handler import (
     ExtensionHandlerMixin,
 )
 from jupyter_server.utils import url_path_join as ujoin
-from jupyterlab_server import LabServerApp
 from watchdog.observers import Observer
 from watchdog import events as watchdog_events
 
-from beaker_kernel.server.main import BeakerJupyterApp
 import beaker_kernel
+from beaker_kernel.server.main import BeakerJupyterApp
 from beaker_kernel.lib.autodiscovery import autodiscover
 
 logger = logging.getLogger(__file__)
 
 HERE = os.path.join(os.path.dirname(__file__), "dev_ui")
-
-# serverapp = None
-process = None
+subprocess = None
 
 def _jupyter_server_extension_points():
     return [{"module": __name__, "app": DevBeakerJupyterApp}]
@@ -94,7 +91,7 @@ class BeakerHandler(watchdog_events.FileSystemEventHandler):
         self.modules = modules
 
     def on_any_event(self, event):
-        global process
+        global subprocess
         # Only restart based on specific message types below
         if not isinstance(
             event,
@@ -122,8 +119,8 @@ class BeakerHandler(watchdog_events.FileSystemEventHandler):
             except ImportError:
                 logger.error("Error reloading")
 
-            if process:
-                process.kill()
+            if subprocess:
+                subprocess.kill()
 
 
 def create_observer():
@@ -161,14 +158,14 @@ if __name__ == "__main__":
         observer = create_observer()
         try:
             while True:
-                process = subprocess.Popen([
+                subprocess = subprocess.Popen([
                     sys.executable,
                     sys.argv[0]],
                     env=os.environ
                 )
-                process.wait()
+                subprocess.wait()
         finally:
             logger.error("Shutting down subprocess...")
-            process.kill()
+            subprocess.kill()
     else:
         main()
