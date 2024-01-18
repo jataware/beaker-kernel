@@ -22,7 +22,7 @@ from beaker_kernel.lib.autodiscovery import autodiscover
 logger = logging.getLogger(__file__)
 
 HERE = os.path.join(os.path.dirname(__file__), "dev_ui")
-subprocess = None
+app_subprocess = None
 
 def _jupyter_server_extension_points():
     return [{"module": __name__, "app": DevBeakerJupyterApp}]
@@ -91,7 +91,7 @@ class BeakerHandler(watchdog_events.FileSystemEventHandler):
         self.modules = modules
 
     def on_any_event(self, event):
-        global subprocess
+        global app_subprocess
         # Only restart based on specific message types below
         if not isinstance(
             event,
@@ -119,8 +119,8 @@ class BeakerHandler(watchdog_events.FileSystemEventHandler):
             except ImportError:
                 logger.error("Error reloading")
 
-            if subprocess:
-                subprocess.kill()
+            if app_subprocess:
+                app_subprocess.kill()
 
 
 def create_observer():
@@ -158,14 +158,15 @@ if __name__ == "__main__":
         observer = create_observer()
         try:
             while True:
-                subprocess = subprocess.Popen([
+                app_subprocess = subprocess.Popen([
                     sys.executable,
                     sys.argv[0]],
                     env=os.environ
                 )
-                subprocess.wait()
+                app_subprocess.wait()
         finally:
-            logger.error("Shutting down subprocess...")
-            subprocess.kill()
+            if app_subprocess:
+                logger.error("Shutting down subprocess...")
+                app_subprocess.kill()
     else:
         main()
