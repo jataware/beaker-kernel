@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Any, Dict, List
 
+from beaker_kernel.lib.utils import intercept
 from beaker_kernel.lib.context import BaseContext
 from beaker_kernel.lib.subkernels.python import PythonSubkernel
 
