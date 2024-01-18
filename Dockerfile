@@ -8,6 +8,10 @@ RUN pip install --upgrade --no-cache-dir hatch pip
 # Install project requirements
 COPY --chown=1000:1000 pyproject.toml README.md hatch_build.py /jupyter/
 
+# TODO: Move this better
+# Dev requirement
+RUN pip install --no-cache-dir watchdog
+
 # Hack to install requirements without requiring the rest of the files
 RUN pip install --no-cache-dir -e /jupyter/
 
