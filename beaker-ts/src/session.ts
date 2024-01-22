@@ -11,6 +11,7 @@ import { Slot } from '@lumino/signaling';
 
 import { createMessageId, IBeakerAvailableContexts, IActiveContextInfo } from './util';
 import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell } from './notebook';
+import { BeakerHistory } from './history';
 
 export interface IBeakerSessionOptions {
     settings: any;
@@ -29,6 +30,7 @@ export class BeakerSession {
         this._services = new ServiceManager({
             serverSettings: this._serverSettings,
         });
+        this._history = new BeakerHistory(this._sessionId);
 
         this.notebook = new BeakerNotebook();
 
@@ -205,6 +207,7 @@ export class BeakerSession {
     private _serverSettings: ServerConnection.ISettings;
     private _sessionContext: SessionContext;
     private _messageHandler: Slot<any, any>; // TODO: fix any typing here
+    private _history: BeakerHistory;
 
     public notebook: BeakerNotebook;
 

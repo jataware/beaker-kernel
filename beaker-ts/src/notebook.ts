@@ -1,15 +1,8 @@
 import * as nbformat from '@jupyterlab/nbformat';
-import { SessionContext } from '@jupyterlab/apputils';
-import { ServerConnection } from '@jupyterlab/services/lib/serverconnection';
-import { Kernel, KernelConnection } from '@jupyterlab/services/lib/kernel';
-import {IKernelConnection} from '@jupyterlab/services/lib/kernel/kernel'
-import { ServiceManager } from '@jupyterlab/services';
+import { Kernel } from '@jupyterlab/services/lib/kernel';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import { JSONObject, PartialJSONValue } from '@lumino/coreutils';
 import { v4 as uuidv4 } from 'uuid';
-import { ISessionConnection } from '@jupyterlab/services/lib/session/session';
-import fetch from 'node-fetch';
-import { Slot } from '@lumino/signaling';
 
 import { BeakerSession } from './session';
 import { } from './util';
@@ -84,6 +77,9 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         Object.keys(content).forEach((key) => {this[key] = content[key] });
         if (this.id === undefined) {
             this.id = uuidv4();
+        }
+        if (this.execution_count === undefined) {
+            this.execution_count = null;
         }
     }
 
@@ -203,7 +199,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             ...this.metadata,
             beaker_cell_type: "query",
             beaker_thoughts: this.thoughts,
-            beaker_debug: this.debug,
+            beaker_debug: this.debug,  // TODO: Do we actually want to store the debug information?
             beaker_response: this.response,
         }
         return new BeakerMarkdownCell(
@@ -211,7 +207,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 cell_type: "markdown",
                 id: this.id,
                 source: renderedMarkdown,
-                metadata: this.metadata,
+                metadata: metadata,
             }
         );
     }

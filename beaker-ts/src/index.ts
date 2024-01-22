@@ -5,12 +5,12 @@ if (extension === undefined) {
 }
 
 export {
+    type IBeakerSessionOptions,
     BeakerSession,
-    IBeakerSessionOptions,
 } from './session';
 
 export {
-    BeakerCellType,
+    type BeakerCellType,
     BeakerBaseCell,
     BeakerRawCell,
     BeakerCodeCell,
@@ -21,8 +21,8 @@ export {
 } from './notebook';
 
 export {
-    IBeakerHistory,
-    IBeakerHistoryEvent,
-    IBeakerHistoryExecutionEvent,
-    IBeakerHistoryQueryEvent,
+    type IBeakerHistory,
+    type IBeakerHistoryEvent,
+    type IBeakerHistoryExecutionEvent,
+    type IBeakerHistoryQueryEvent,
 } from './history';

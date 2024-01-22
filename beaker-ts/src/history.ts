@@ -13,6 +13,7 @@ export interface IBeakerHistoryExecutionEvent extends IBeakerHistoryEvent {
     execution_time: Date;
     execution_duration: number;
 
+    silent: boolean;
     execution_id: number;
     source: nbformat.MultilineString;
     result: any;
@@ -31,7 +32,25 @@ export interface IBeakerHistoryQueryEvent extends IBeakerHistoryEvent {
     result: nbformat.MultilineString;
 }
 
+export type BeakerHistoryEvent = IBeakerHistoryExecutionEvent | IBeakerHistoryQueryEvent;
+
 export interface IBeakerHistory {
+    sessionId: string;
+    events: IBeakerHistoryEvent[];
+}
+
+
+export class BeakerHistory implements IBeakerHistory {
+
+    constructor(sessionId: string) {
+        this.sessionId = sessionId;
+        this.events = [];
+    }
+
+    public addEvent(event: BeakerHistoryEvent) {
+        this.events.push(event);
+    };
+
     sessionId: string;
     events: IBeakerHistoryEvent[];
 }
