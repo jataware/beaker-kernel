@@ -59,52 +59,14 @@ import { CommandPalette, SplitPanel, Widget, Panel } from '@lumino/widgets';
 
 import { COMMAND_IDS, setupCommands } from './commands';
 
-import { FileBrowserModel } from '@jupyterlab/filebrowser';
+
 
 import { createMessage } from '@jupyterlab/services/lib/kernel/messages';
-import { BeakerSession } from 'beaker-kernel';
 
 
 const baseUrl = PageConfig.getBaseUrl();
-var beakerSession: BeakerSession = new BeakerSession(
-  {
-    settings: {},
-    name: "MyKernel",
-    kernelName: "beaker"
-  }
-);
 
-console.log("beakerSession", beakerSession);
 function main(): void {
-  // session = new BeakerSession(
-  //   {
-  //     settings: {},
-  //     name: "MyKernel",
-  //     kernelName: "beaker"
-  //   }
-  // );
-  // console.log(session);
-  // session.session.ready.then(() => {
-  //   console.log(session.session);
-  //   console.log(session.kernel);
-  //   setTimeout(() => {
-  //     console.log("Sending message")
-  //     const f = session.sendBeakerMessage(
-  //       "context_setup_request",
-  //       {
-  //         context: "dataset",
-  //         context_info: {},
-  //         language: "python3"
-  //       }
-  //     );
-  //     f.done.then((e) => {
-  //       console.log("I'm back!");
-  //       console.log(e);
-  //     });
-  // }, 6000);
-  // });
-
-
   const manager = new ServiceManager();
   void manager.ready.then(() => {
     createApp(manager);
@@ -271,29 +233,7 @@ async function createApp(manager: ServiceManager.IManager): void {
   docRegistry.addWidgetFactory(wFactory);
 
   const notebookPath = PageConfig.getOption('notebookPath');
-  const fileBrowser = new FileBrowserModel({
-    manager: docManager
-  });
-
-  // Use the filebrowser to check if the default file exists, and if not create it.
-  let nbFileExists = false;
-  await fileBrowser.refresh();
-  const fileIter = fileBrowser.items();
-  let fileItem = fileIter.next();
-  while (fileItem && !fileItem.done) {
-    if (fileItem.name == notebookPath) {
-      nbFileExists = true;
-    }
-    fileItem = fileIter.next();
-  }
-
-  // Open default notebook if it exists, otherwise create a new notebook.
-  const nbWidget = (
-    nbFileExists
-    ? docManager.open(notebookPath) as NotebookPanel
-    : docManager.createNew(notebookPath, undefined, {name: "beaker_kernel"}) as NotebookPanel
-  );
-
+  const nbWidget = docManager.open(notebookPath) as NotebookPanel;
   const notebook = nbWidget.content;
   const palette = new CommandPalette({ commands });
   palette.addClass('notebookCommandPalette');
@@ -302,11 +242,7 @@ async function createApp(manager: ServiceManager.IManager): void {
     nbWidget.content.activeCell && nbWidget.content.activeCell.editor;
   const model = new CompleterModel();
   const completer = new Completer({ editor, model });
-  // const sessionContext = nbWidget.context.sessionContext;
-  // console.log("nbWidget.context.sessionContext == beakerSession", nbWidget.context.sessionContext === beakerSession);
-  const sessionContext = beakerSession.session;
-  // console.log("sessionContext", sessionContext);
-  // console.log("nbWidget.context", nbWidget.context);
+  const sessionContext = nbWidget.context.sessionContext;
   const timeout = 1000;
   const provider = new KernelCompleterProvider();
   const reconciliator = new ProviderReconciliator({
@@ -334,11 +270,6 @@ async function createApp(manager: ServiceManager.IManager): void {
     }
     if (msg_type === "stream" && msg.parent_header?.msg_type == "llm_request") {
       notebook.model.cells.nbmodel.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: msg.content.text});
-    }
-    else if (msg_type === "input_request") {
-      const prompt = msg.content.prompt;
-      const response = window.prompt(prompt);
-      sendCustomMessage("stdin", "input_reply", {"prompt": prompt, "reply": response})
     }
     else if (msg_type === "llm_response") {
       const text = msg.content.text;
@@ -414,13 +345,8 @@ async function createApp(manager: ServiceManager.IManager): void {
 
 
   const sendLLMQuery = (query: string) => {
-    // const session = sessionContext.session;
-    const session = beakerSession;
-    console.log(1);
+    const session = sessionContext.session;
     const kernel = session?.kernel;
-    console.log(kernel);
-    console.log(session.notebook);
-    console.log(session.notebook.addCell);
     if (kernel) {
       const message: JupyterMessage = createMessage({
         session: session?.name || '',
@@ -430,9 +356,7 @@ async function createApp(manager: ServiceManager.IManager): void {
         msgId: `${kernel.id}-query`
       });
       const colored_text = `LLM Query: <span style="color: green; font-weight: bold">${query}</span>`
-      session.notebook.addCell({id: `${message.header.msg_id}-text-${Date.now()}`, cell_type: 'markdown', source: colored_text});
-
-      // notebook.model.cells.nbmodel.addCell({id: `${message.header.msg_id}-text-${Date.now()}`, cell_type: 'markdown', source: colored_text});
+      notebook.model.cells.nbmodel.addCell({id: `${message.header.msg_id}-text-${Date.now()}`, cell_type: 'markdown', source: colored_text});
       kernel.sendShellMessage(message);
     }
 
@@ -487,18 +411,7 @@ async function createApp(manager: ServiceManager.IManager): void {
   llmButton.textContent = "Submit";
   llmWidget.node.appendChild(llmContainer);
 
-  const languageMap = {};
-  const setContext = () => {
-    languageSelect.innerHTML = '';
-    const contextInfo = contexts[contextSelect.value];
-    contextInfo.languages.forEach((lang) => {
-      const option = document.createElement('option');
-      option.setAttribute("label", lang[0]);
-      option.setAttribute("value", lang[1]);
-      languageSelect.appendChild(option);
-    });
-    contextPayloadInput.value = contextInfo.defaultPayload;
-  };
+  const languageSet = new Set();
 
   const contextWidget = new Widget();
   const contextNode = document.createElement('div');
@@ -515,12 +428,18 @@ async function createApp(manager: ServiceManager.IManager): void {
     option.setAttribute("value", context);
     option.setAttribute("label", context);
     contextSelect.appendChild(option);
-    languageMap[context] = languages;
+    languages.forEach((lang) => {languageSet.add(lang)});
   }
-  contextSelect.onchange = setContext;
-
+  // for (const lang of ["python3", "julia"]) {
+  languageSet.forEach((lang) => {
+    console.log(lang);
+    const option = document.createElement('option');
+    option.setAttribute("value", lang.slug);
+    option.setAttribute("label", lang.slug);
+    languageSelect.appendChild(option);
+  });
   contextPayloadInput.className = 'json-input';
-  contextPayloadInput.value = '';
+  contextPayloadInput.value = '{\n  "df_hosp": "truth-incident-hospitalization",\n  "df_cases": "truth-incident-case"\n}';
   contextButton.textContent = 'Submit';
   contextButton.addEventListener("click", (e) => {
     setKernelContext({
@@ -606,9 +525,6 @@ async function createApp(manager: ServiceManager.IManager): void {
   SplitPanel.setStretch(nbWidget, 2);
   mainPanel.addWidget(leftPanel);
   mainPanel.addWidget(nbWidget);
-
-  // Set up the context after the UI has been defined.
-  setContext();
 
   // Attach the panel to the DOM.
   Widget.attach(mainPanel, document.body);

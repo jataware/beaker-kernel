@@ -1,6 +1,5 @@
 const webpack = require('webpack');
 const crypto = require('crypto');
-const { VueLoaderPlugin } = require('vue-loader');
 
 // Workaround for loaders using "md4" by default, which is not supported in FIPS-compliant OpenSSL
 const cryptoOrigCreateHash = crypto.createHash;
@@ -8,7 +7,7 @@ crypto.createHash = algorithm =>
   cryptoOrigCreateHash(algorithm == 'md4' ? 'sha256' : algorithm);
 
 module.exports = {
-  entry: ['whatwg-fetch', './build/vue.js'],
+  entry: ['whatwg-fetch', './build/index.js'],
   output: {
     path: __dirname + '/build',
     filename: 'bundle.js',
@@ -19,7 +18,6 @@ module.exports = {
   mode: 'development',
   module: {
     rules: [
-      { test: /\.vue$/, use: 'vue-loader' },
       { test: /\.css$/, use: ['style-loader', 'css-loader'] },
       { test: /\.html$/, use: 'file-loader' },
       { test: /\.md$/, use: 'raw-loader' },
@@ -54,7 +52,6 @@ module.exports = {
       'process.env': '{}',
       // Needed for various packages using cwd(), like the path polyfill
       process: { cwd: () => '/' }
-    }),
-    new VueLoaderPlugin(),
+    })
   ]
 };
