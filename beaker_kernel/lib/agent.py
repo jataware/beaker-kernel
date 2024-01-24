@@ -37,9 +37,13 @@ class BaseAgent(ReActAgent):
             **kwargs
         )
 
-    def debug(self, msg: str, debug_metadata: dict = None) -> None:
-        logger.error(f"Archytas debug: {msg}")
-        return super().debug(msg, debug_metadata=debug_metadata)
+    def debug(self, event_type: str, content: typing.Any = None) -> None:
+        self.context.beaker_kernel.debug(
+            event_type=f"agent_{event_type}",
+            content=content
+        )
+        logger.error(f"Archytas debug: {event_type} -- {content}")
+        return super().debug(event_type=event_type, content=content)
 
     def display_observation(self, observation):
         content = {

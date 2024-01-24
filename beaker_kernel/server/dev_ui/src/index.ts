@@ -200,6 +200,9 @@ async function createApp(manager: ServiceManager.IManager): void {
         <div>${JSON.stringify(content["application/json"], null, 2)}</div>
       `;
     }
+    else if (msg.msg_type === "debug_event") {
+      console.log(`Debug log, event type: ${msg.content.event}`, msg.content.body);
+    }
     else {
       console.log(msg);
     }
@@ -356,6 +359,7 @@ async function createApp(manager: ServiceManager.IManager): void {
       context: contextSelect.value,
       language: languageSelect.value,
       context_info: JSON.parse(contextPayloadInput.value),
+      debug: true,
     })
   }, false);
   contextNode.appendChild(contextHeader);
