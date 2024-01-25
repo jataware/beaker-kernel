@@ -1,48 +1,189 @@
 <template>
     <div class="beaker-notebook">
-        <h2>Your notebook:</h2>
-        <BeakerAgentQuery class="agent-query-container" :session="session" @select-cell="selectCell" @run-cell="runCell"/>
-        <BeakerContextSelection :session="session" :expanded="contextSelectionExpanded" :context-data="activeContext" @update-context-info="updateContextInfo"/>
-        <BeakerCustomMessage :session="session" :expanded="customMessageExpanded"/>
-        <div class="beaker-nb-toolbar">
-            <span style="display: inline-block; text-align: center;">Current context:<br/>{{ activeContext?.slug || "... fetching ..." }}</span>
-            <span class="btn" @click="contextSelectionExpanded = !contextSelectionExpanded">set context</span>
-            <span class="btn" @click="customMessageExpanded = !customMessageExpanded">custom message</span>
-        </div>
-        <div class="beaker-nb-toolbar">
-            <span class="btn" @click="addCell()">add cell</span>
-            <span class="btn" @click="removeCell()">remove cell</span>
-            <span class="btn" @click="runCell()">run cell</span>
-            <span class="btn" @click="resetNB">reset notebook</span>
-            <span class="btn" @click="loadNB">load notebook</span>
-            <span class="btn" @click="exportNB">export notebook</span>
-        </div>
-        <div id="cell-container">
-            <component
-                v-for="(cell, index) in props.session?.notebook?.cells" :key="cell.id" :cell="cell"
-                :is="componentMap[cell.cell_type]"
-                :session="props.session" class="beaker-cell" :class="{selected: (index == selectedCellIndex)}"
-                @click="selectCell(index)"
-            />
-            <div>{{ props.session.notebook.toJSON() }}</div>
-        </div>
-    </div>
-    <div id="external-links">
-        <a class="btn" href="https://jataware.github.io/beaker-kernel/">docs</a>
-        &nbsp;
-        <a class="btn" href="https://github.com/jataware/beaker-kernel">github</a>
+        <header>
+            <Toolbar style="width: 100%; padding: 0.5rem 1rem;">
+                <template #start>
+                    <div class="status-bar">
+                        <i class="pi pi-circle-fill" style="font-size: inherit; color: #81ea81;" />
+                        Connected
+                    </div>
+                    &nbsp;
+                    &nbsp;
+                    <Dropdown 
+                        v-model="selectedKernel"
+                        :options="kernels" 
+                        optionLabel="slug"
+                        dataKey="slug"
+                        :loading="!activeContext?.slug"
+                    />
+                </template>
+
+                <template #center>
+                    <div style="width: 20rem; text-align: left;">
+                        <h4 class="logo">
+                            Beaker
+                        </h4>
+                    </div>
+                </template>
+
+                <template #end>
+                    <nav>
+                        <a
+                            href="https://jataware.github.io/beaker-kernel"
+                            rel="noopener"
+                            target="_blank"
+                        >
+                            <Button 
+                                text
+                                style="margin: 0; color: gray;" 
+                                aria-label="Beaker Documentation"
+                                icon="pi pi-book"
+                            />
+                        </a>
+                        <a
+                            href="https://github.com/jataware/beaker-kernel"
+                            rel="noopener"
+                            target="_blank"
+                        >
+                            <Button 
+                                text
+                                style="margin: 0; color: gray;" 
+                                aria-label="Github Repository Link Icon"
+                                icon="pi pi-github"
+                            />
+                        </a>
+                    </nav>
+                </template>
+            </Toolbar>
+
+        </header>
+
+        <main>
+
+            <Splitter class="splitter">
+
+                <SplitterPanel 
+                  :minSize="12"
+                  :size="20"
+                  class="justify-content-center ide-panel"
+                >
+                    <h4 style="padding-left: 1.5rem">Context</h4>
+                    <Tree
+                        class="context-tree"
+                        :value="contextNodes"
+                        filterMode="lenient"
+                     ></Tree>
+                </SplitterPanel>
+
+                <SplitterPanel 
+                    :size="50"
+                    :minSize="30"
+                    class="justify-content-center main-panel"
+                >
+                <div class="notebook-controls">
+                    <InputGroup>
+                        <Button @onClick="addCell" icon="pi pi-plus" size="small" outlined />
+                        <Button @onClick="removeCell" icon="pi pi-minus" size="small" outlined />
+                        <Button @onClick="runCell" icon="pi pi-play" size="small" outlined />
+                        <Button icon="pi pi-upload" size="small" outlined />
+                    </InputGroup>
+                </div>
+
+                    <div class="ide-cells">
+                        <div style="flex: 1; position: relative;">
+                            <div class="cell-container">
+                                <Component
+                                    v-for="(cell, index) in props.session?.notebook?.cells" :key="cell.id" :cell="cell"
+                                    :is="componentMap[cell.cell_type]"
+                                    :session="props.session" class="beaker-cell" :class="{selected: (index == selectedCellIndex)}"
+                                    @click="selectCell(index)"
+                                />
+                            </div>
+                        </div>
+
+                        <BeakerAgentQuery
+                            class="agent-query-container"
+                            :session="session"
+                            @select-cell="selectCell"
+                            @run-cell="runCell"
+                        />
+                    </div>
+                </SplitterPanel>
+
+                <SplitterPanel
+                    :minSize="20"
+                    class="justify-content-center"
+                >
+                    <TabView :activeIndex="0">
+                        <TabPanel header="Preview">
+                            <DataTable :value="products">
+                                <Column field="name" header="Name"></Column>
+                                <Column field="category" header="Category"></Column>
+                                <Column field="quantity" header="Quantity"></Column>
+                            </DataTable>                        
+                        </TabPanel>
+
+                        <TabPanel header="Execute">
+                        </TabPanel>
+
+                        <TabPanel header="Debug">
+                            <div class="card flex align-items-center">
+                                <Card>
+                                    <template #title>State</template>
+                                    <template #content>
+                                        <pre class="notebook-json">
+                                            {{JSON.stringify(JSON.parse(props.session.notebook.toJSON()), undefined, 2)}}
+                                        </pre>
+                                        <Button label="Copy" />
+                                    </template>
+                                </Card>
+                            </div>
+                        </TabPanel>
+
+                    </TabView>
+                </SplitterPanel>
+                
+            </Splitter>
+                
+        </main>
+
+        <footer>
+            <LoggingDrawer />
+         </footer>
     </div>
 </template>
 
 <script setup lang="ts">
+
 import { ref, onBeforeMount, onMounted, defineProps, computed, Component } from "vue";
 import { BeakerSession, IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
+import Card from 'primevue/card';
+import Button from 'primevue/button';
+import Splitter from 'primevue/splitter';
+import SplitterPanel from 'primevue/splitterpanel';
+import TabView from 'primevue/tabview';
+import TabPanel from 'primevue/tabpanel';
+import Toolbar from 'primevue/toolbar';
+import Tree from 'primevue/tree';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+
+import Accordion from 'primevue/accordion';
+import AccordionTab from 'primevue/accordiontab';
+// import ColumnGroup from 'primevue/columngroup';   // optional
+// import Row from 'primevue/row';                   // optional
+import DataView from 'primevue/dataview';
+import DataViewLayoutOptions from 'primevue/dataviewlayoutoptions'   // optional
+import Dropdown from 'primevue/dropdown';
+import InputGroup from 'primevue/inputgroup';
+
 import BeakerCodeCell from './BeakerCodecell.vue';
-import BeakerLLMQueryCell from "./BeakerLLMQueryCell.vue";
+import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
+import LoggingDrawer from './LoggingDrawer.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
-import BeakerContextSelection from "./BeakerContextSelection.vue";
-import BeakerCustomMessage from "./BeakerCustomMessage.vue";
+// import BeakerContextSelection from "./BeakerContextSelection.vue";
+// import BeakerCustomMessage from "./BeakerCustomMessage.vue";
 
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
@@ -53,14 +194,86 @@ const props = defineProps([
     "session"
 ]);
 
+const products = [
+{
+    id: '1000',
+    name: 'Bamboo Watch',
+    description: 'Product Description',
+    price: 65,
+    category: 'Accessories',
+    quantity: 24,
+    inventoryStatus: 'INSTOCK',
+    rating: 5
+},
+{
+    id: '1000',
+    name: 'Bamboo Watch',
+    description: 'Product Description',
+    price: 65,
+    category: 'Accessories',
+    quantity: 24,
+    inventoryStatus: 'INSTOCK',
+    rating: 5
+}];
+
+const contextNodes = [{
+    key: '0',
+    label: 'Kernel',
+    data: 'Kernel Details',
+    icon: 'pi pi-fw pi-cog',
+    expanded: true,
+    children: [{
+        key: '0-0',
+        label: 'language=python',
+        data: 'Python',
+        icon: 'pi pi-fw pi-align-justify'
+    },
+    {
+        key: '0-1',
+        label: 'version=3.11.2',
+        data: '3.11.2',
+        icon: 'pi pi-fw pi-wrench'
+    }]
+},
+{
+    key: '1',
+    label: 'env',
+    data: 'Environment Variables',
+    icon: 'pi pi-fw pi-cloud',
+    expanded: true,
+    children: [{
+        key: '1-0',
+        label: 'deployment=dev',
+            data: 'development',
+        icon: 'pi pi-fw pi-cog'
+    },
+    {
+        key: '1-1',
+        label: 'agent-backend=openai',
+        data: 'openai',
+        icon: 'pi pi-fw pi-qrcode'
+    }]
+}];
+
 const activeContext = ref<{slug: string, class: string, context: any} | undefined>(undefined);
 const contextSelectionExpanded = ref(false);
-const customMessageExpanded = ref(false);
+// const customMessageExpanded = ref(false);
 const selectedCellIndex = ref(0);
 
 const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
 });
+
+// console.log(activeContext.value);
+
+// activeContext?.slug
+
+const selectedKernel = ref();
+const kernels = ref([
+    { slug: 'pypackage' },
+    { slug: 'julia' }
+]);
+
 
 const _cellIndex = (cell: IBeakerCell): number => {
     let index = -1;
@@ -138,6 +351,7 @@ const exportNB = () => {
 const updateContextInfo = async () => {
     const activeContextInfo = await props.session.activeContext();
     activeContext.value = activeContextInfo;
+    selectedKernel.value = {slug: activeContextInfo.slug};
     contextSelectionExpanded.value = false;
 }
 
@@ -154,54 +368,147 @@ onMounted(() => {
 </script>
 
 
-<style>
-#external-links {
-    position: absolute;
-    top: 0;
-    right: 0;
-    text-align: end;
-    padding: 1em;
-    margin-top: 0.5em;
-}
 
+<style lang="scss">
 
 .beaker-notebook {
-    margin-left: 28%;
-    margin-right: 28%;
-    text-align: start;
+    height: 100vh;    
+    width: 100vw;
+    display: grid;
+
+    grid-gap: 1px;
+
+    grid-template-areas:
+        "header header header header"
+        "main main main main"
+        "footer footer footer footer";
+
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+}
+
+.notebook-json {
+    text-align: left;
+    background: #fbfbfb;
+    border-radius: 0.5rem;
+    border: 1px solid #eaeaea;    
+    overflow: auto;
+}
+
+header {
+    grid-area: header;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+main {
+    grid-area: main;
+}
+
+footer {
+    grid-area: footer;
+}
+
+.main-panel {
+    display: flex;
+    flex-direction: column;
 }
 
 .beaker-nb-toolbar {
     vertical-align: middle;
-    background-color: #aaa;
-    height: 6ex;
-    padding-top: 1em;
+    height: 5rem;
+    padding: 1em;
 }
 
-#cell-container {
-    border: solid 1px black;
-    padding: 10px;
+.ide-cells {
+    display: flex;
+    flex-direction: column;
+    // justify-content: space-between;
+    height: 100%;
+}
+
+.splitter {
+    Height: 100%;
 }
 
 .beaker-cell {
-    border: solid 1px lightgray;
+    border-bottom: 1px solid lightgray;
+    background-color: #f6f6f6;
 }
 
 .beaker-cell.selected {
-    border: solid 1px black;
+    border-right: 4px solid blue;
+    background-color: unset;
 }
 
 .agent-query-container {
-    /* margin-bottom: 10px; */
-    padding-left: 0.5em;
+    flex: 0 1 10rem;
 }
 
+.status-bar {
+    display: flex;
+    line-height: inherit;
+    align-items: center;
+    min-width: 7rem;
+    justify-content: space-evenly;
+}
+
+.main-ide-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+}
 .btn {
-    border: gray 1px ;
-    border-style: ridge;
+    border: gray 1px lightgray;
     padding: 1ex;
     cursor: pointer;
-    margin: 0.5em;
+}
+
+.logo {
+    font-size: 1.5rem;
+    margin: 0;
+    padding: 0;
+}
+
+// .context-tree {
+  // .p-treenode-toggler {
+  //   color: green;
+  //   border: 1px dashed cyan;
+  //   background: orange;
+  // }
+  // .p-treenode-toggler-icon {
+  //   color: green;
+  //   border: 1px dashed cyan;
+  //   background: orange;
+  // }
+// }
+
+.cell-container {
+    position: absolute;
+    top: 0;
+    overflow-y: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+}
+
+.notebook-controls {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .p-inputgroup {
+        width: unset;
+    }
+    
 }
 
 </style>
+
+
+

@@ -1,15 +1,34 @@
 <template>
-    <div class="query-input-container">
-        How can the agent help?
-        <div>
-            <input id="llm-query-input" @keydown.enter="handleQuery" v-model="query" placeholder="Type here to ask the AI a question or to do something for you..." />
-            <button @click="handleQuery">Submit</button>
-        </div>
-    </div>
+    <Card>
+        <template #title>
+            How can the agent help?
+        </template>
+
+        <template #content>
+            <div class="query-input-container">
+                <InputText 
+                    type="text"
+                    id="llm-query-input"
+                    @keydown.enter="handleQuery"
+                    v-model="query"
+                    placeholder="Your wish is my command..."
+                />
+
+                <Button @click="handleQuery" icon="pi pi-reply" label="enter" />
+            </div>
+        </template>
+    </Card>
 </template>
 
+
 <script setup lang="ts">
+
 import { defineProps, defineEmits, ref, nextTick } from "vue";
+
+import Card from 'primevue/card';
+// import Panel from 'primevue/panel';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
 
 const props = defineProps([
     "session",
@@ -34,12 +53,13 @@ const handleQuery = (e: any) => {
 
 <style>
 #llm-query-input {
-    margin-right: 1em;
-    width: 80%;
+    margin-right: 0.75rem;
+    width: 15rem;
 }
 
 .query-input-container {
-    border: 1px solid darkgray;
+/*
     padding: 0.5em;
+*/
 }
 </style>
