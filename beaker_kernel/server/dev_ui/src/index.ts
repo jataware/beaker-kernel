@@ -201,7 +201,7 @@ async function createApp(manager: ServiceManager.IManager): void {
       `;
     }
     else if (msg.msg_type === "debug_event") {
-      console.log(`Debug log, event type: ${msg.content.event}`, msg.content.body);
+      console.log("beaker-debug", `${msg.content.event}`, msg.content.body);
     }
     else {
       console.log(msg);
@@ -337,8 +337,16 @@ async function createApp(manager: ServiceManager.IManager): void {
   const contextSelect = document.createElement('select');
   const languageSelect = document.createElement('select');
   const contextPayloadInput = document.createElement('textarea');
+  const contextDebug = document.createElement('input');
+  const contextDebugLabel = document.createElement('label');
+  const contextVerbose = document.createElement('input');
+  const contextVerboseLabel = document.createElement('label');
   const contextButton = document.createElement('button');
   const contextHeader = document.createElement('h2');
+  const contextSelectionHolder = document.createElement('span');
+  const contextDivTop = document.createElement('div');
+  const contextDivBottom = document.createElement('div');
+
   contextHeader.textContent = "Context setup";
   contextNode.id = 'context-node';
   for (const context of Object.keys(contexts)){
@@ -351,6 +359,17 @@ async function createApp(manager: ServiceManager.IManager): void {
   }
   contextSelect.onchange = setContext;
 
+  contextDebug.type = "checkbox";
+  contextDebug.id = "context-debug-input";
+  contextDebug.name = "context-debug-input";
+  contextDebugLabel.innerText = "Debug";
+  contextDebugLabel.setAttribute("for", "context-debug-input");
+  contextVerbose.type = "checkbox";
+  contextVerbose.id = "context-verbose-input";
+  contextVerbose.name = "context-verbose-input";
+  contextVerboseLabel.innerText = "Verbose";
+  contextVerboseLabel.setAttribute("for", "context-verbose-input");
+
   contextPayloadInput.className = 'json-input';
   contextPayloadInput.value = '';
   contextButton.textContent = 'Submit';
@@ -359,12 +378,21 @@ async function createApp(manager: ServiceManager.IManager): void {
       context: contextSelect.value,
       language: languageSelect.value,
       context_info: JSON.parse(contextPayloadInput.value),
-      debug: true,
+      debug: contextDebug.checked,
+      verbose: contextVerbose.checked,
     })
   }, false);
+  contextSelectionHolder.style.display = 'inline-block';
   contextNode.appendChild(contextHeader);
-  contextNode.appendChild(contextSelect);
-  contextNode.appendChild(languageSelect);
+  contextDivTop.appendChild(contextDebugLabel);
+  contextDivTop.appendChild(contextDebug);
+  contextDivTop.appendChild(contextVerboseLabel);
+  contextDivTop.appendChild(contextVerbose);
+  contextDivBottom.appendChild(contextSelect);
+  contextDivBottom.appendChild(languageSelect);
+  contextSelectionHolder.appendChild(contextDivTop);
+  contextSelectionHolder.appendChild(contextDivBottom);
+  contextNode.appendChild(contextSelectionHolder);
   contextNode.appendChild(contextPayloadInput);
   contextNode.appendChild(contextButton);
   contextWidget.node.appendChild(contextNode);

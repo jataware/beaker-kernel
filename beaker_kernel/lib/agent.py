@@ -25,11 +25,15 @@ class BaseAgent(ReActAgent):
     ):
         self.context = context
 
+        self.context.beaker_kernel.debug("init-agent", {
+            "debug": self.context.beaker_kernel.debug_enabled,
+            "verbose": self.context.beaker_kernel.verbose,
+        })
         super().__init__(
             # model="gpt-4",  # Use default
             # api_key=api_key,  # TODO: get this from configuration
             tools=tools,
-            verbose=True,
+            verbose=self.context.beaker_kernel.verbose,
             spinner=None,
             rich_print=False,
             allow_ask_user=False,

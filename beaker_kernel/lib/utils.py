@@ -1,7 +1,9 @@
 import os
+import json
 import logging
 import traceback
 from functools import wraps, update_wrapper
+from typing import Any
 
 from archytas.tool_utils import tool
 
@@ -72,4 +74,10 @@ def togglable_tool(env_var, *, name: str | None = None):
         return disable
     else:
         return tool(name=name)
-    
+
+class LogMessageEncoder(json.JSONEncoder):
+    def default(self, o: Any) -> Any:
+        try:
+            return super().default(o)
+        except:
+            return str(o)

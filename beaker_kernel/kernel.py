@@ -18,7 +18,7 @@ from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
 from .lib.subkernels import autodiscover_subkernels
-from .lib.utils import message_handler
+from .lib.utils import message_handler, LogMessageEncoder
 
 if TYPE_CHECKING:
     from .lib.agent import BaseAgent
@@ -139,7 +139,6 @@ class LLMKernel(KernelProxyManager):
             "tool_name": tool_name,
             "tool_input": tool_input,
         }
-        self.debug("handling_thought", content, parent_header=parent_header)
         self.send_response(
             stream="iopub",
             msg_or_type="llm_thought",
@@ -313,7 +312,7 @@ class LLMKernel(KernelProxyManager):
     async def set_context(self, context_name, context_info, language="python3", parent_header={}):
 
         context_cls = AVAILABLE_CONTEXTS.get(context_name, None)
-        if not context_cls or context_cls is self.context.__class__:
+        if not context_cls:
             # TODO: Should we return an error if the requested context isn't available?
             return False
 
@@ -397,6 +396,8 @@ class LLMKernel(KernelProxyManager):
     def debug(self, event_type: str, content, parent_header=None):
         if not self.debug_enabled:
             return
+        # Re-encode data to fix issues with un-json-encodable elements in the debug output
+        content = json.loads(json.dumps(content, cls=LogMessageEncoder))
         message_content = {
             "seq": 0,
             "type": "event",
@@ -410,6 +411,7 @@ class LLMKernel(KernelProxyManager):
         )
         stream = self.server.streams.iopub
         stream.send_multipart(message)
+        stream.flush()
 
     @message_handler
     async def llm_request(self, message):
