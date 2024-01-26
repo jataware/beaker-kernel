@@ -85,7 +85,7 @@
             <Splitter class="splitter">
 
                 <SplitterPanel 
-                    :size="50"
+                    :size="70"
                     :minSize="30"
                     class="justify-content-center main-panel"
                 >
@@ -124,43 +124,55 @@
 
                 <SplitterPanel
                     :minSize="20"
-                    class="justify-content-center"
+                    :size="30"
+                    class="justify-content-center right-splitter"
                 >
                     <TabView :activeIndex="0">
                         <TabPanel header="Preview">
-                            <Accordion multiple :activeIndex="[0]">
-                                <AccordionTab header="Petri Net">
-                                    <div style="width: 100%; display: flex; justify-content: flex-end; margin-bottom: 1rem">
-                                        <SelectButton v-model="previewOneMockValue" :options="previewOneMimeTypes" />
-                                    </div>
-                                    <img class="preview-image" src="https://picsum.photos/500/400">
-                                </AccordionTab>
+                            <div style="position: absolute; top:0; bottom: 0; right: 0; left: 0; overflow-y: auto;">
+                                <Accordion multiple :activeIndex="[0]" style="height: 100%;">
+                                    <AccordionTab header="Petri Net">
+                                        <div style="width: 100%; display: flex; justify-content: flex-end; margin-bottom: 1rem">
+                                            <SelectButton
+                                                :allowEmpty="false"
+                                                v-model="previewOneMockValue"
+                                                :options="previewOneMimeTypes"
+                                            />
+                                        </div>
+                                        <img class="preview-image" src="https://assets-global.website-files.com/6308b9e1771b56be92fe7491/636416a672f13fa441c4e7e6_petri-nets-preview.jpg">
+                                    </AccordionTab>
                             
-                                <AccordionTab header="df_2">
-                                    <DataTable :value="products">
-                                        <Column field="price" header="x"></Column>
-                                        <Column field="quantity" header="y"></Column>
-                                    </DataTable>                        
-                                </AccordionTab>
-                            </Accordion>
+                                    <AccordionTab header="df_2">
+                                        <DataTable :value="products">
+                                            <Column field="price" header="x"></Column>
+                                            <Column field="quantity" header="y"></Column>
+                                        </DataTable>                        
+                                    </AccordionTab>
+                                </Accordion>
+                            </div>
                         </TabPanel>
 
                         <TabPanel header="Execute">
                             <BeakerCustomMessage :session="session" :expanded="true"/>
                         </TabPanel>
 
-                        <TabPanel header="Debug" class="debug">
-                            <div class="card flex align-items-center">
-                                <Card>
-                                    <template #title>State</template>
-                                    <template #content>
-                                        <pre class="notebook-json">
-                                            {{JSON.stringify(JSON.parse(props.session.notebook.toJSON()), undefined, 2)}}
-                                        </pre>
-                                        <Button label="Copy" />
-                                    </template>
-                                </Card>
+                        <TabPanel header="Debug">
+                            <div style="position: absolute; top:0; bottom: 0; right: 0; left: 0; overflow-y: auto;">
+                                <div class="card flex align-items-center">
+                                    <Card>
+                                        <template #title>State</template>
+                                        <template #content>
+                                            <pre class="notebook-json">
+                                                {{JSON.stringify(JSON.parse(props.session.notebook.toJSON()), undefined, 2)}}
+                                            </pre>
+                                            <Button label="Copy" />
+                                        </template>
+                                    </Card>
+                                </div>
                             </div>
+                        </TabPanel>
+
+                        <TabPanel header="Settings">
                         </TabPanel>
 
                     </TabView>
@@ -174,6 +186,14 @@
             <LoggingDrawer />
          </footer>
     </div>
+
+    <BeakerContextSelection
+        :session="props.session"
+        :expanded="true"
+        :context-data="activeContext"
+        @update-context-info="updateContextInfo"
+    />
+
 </template>
 
 <script setup lang="tsx">
@@ -208,7 +228,7 @@ import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import LoggingDrawer from './LoggingDrawer.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
-// import BeakerContextSelection from "./BeakerContextSelection.vue";
+import BeakerContextSelection from "./BeakerContextSelection.vue";
 import BeakerCustomMessage from "./BeakerCustomMessage.vue";
 
 const componentMap: {[key: string]: Component} = {
@@ -601,6 +621,22 @@ footer {
 
 .button-rotate {
     transform: rotate(180deg);
+}
+
+.right-splitter {
+    display: flex;
+    flex-direction: column;
+
+    .p-tabview {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .p-tabview-panels {
+        flex: 1;
+        position: relative;
+    }
 }
 
 </style>

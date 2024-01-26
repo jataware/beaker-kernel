@@ -1,27 +1,54 @@
 <template>
-    <div :class="{'context-selection-container': true, 'expanded': props.expanded}">
-        <div>
-            <select class="context-name" v-model="selectedContextSlug">
-                <option v-for="contextName of Object.keys(contextData || {})" :value="contextName" :label="contextName" :key="contextName"></option>
-            </select>
-            <select v-model="selectedLanguage">
-                <option v-for="{slug, subkernel} of languageOptions" :value="subkernel" :label="slug" :key="subkernel"></option>
-            </select>
-            <!-- <textarea class="json-input" v-model="contextPayload"></textarea> -->
-            <div class="message-content-container">
-                <Codemirror
-                    :tab-size="2"
-                    language="javascript"
-                    v-model="contextPayload"
-                />
-            </div>
-            <button @click="setContext">Submit</button>
+
+    <Dialog
+        v-model:visible="contextDialogOpen"
+        :closable="false"
+        modal
+        header="Configure Context"
+        :style="{ width: '30rem' }"
+    >
+        <InputGroup>
+            <Dropdown
+                v-model="selectedContextSlug"
+                :options="contextOptions"
+                optionLabel="slug"
+                optionValue="slug"
+            />
+
+            <Dropdown
+                v-model="selectedLanguage"
+                :options="languageOptions"
+                optionLabel="slug"
+                optionValue="subkernel"
+            />
+        </InputGroup>
+
+        <br />
+
+        <Codemirror
+            :tab-size="2"
+            language="javascript"
+            v-model="contextPayload"
+        />
+
+        <div style="width: 100%; margin: auto; text-align: center; margin-top: 1rem;">
+            <Button @click="setContext" size="small">Get Started</Button>
         </div>
-    </div>
+
+    </Dialog>
 </template>
 
 <script setup lang="ts">
+
+
 import { defineProps, defineEmits, ref, defineModel, onMounted, computed, nextTick, onBeforeMount, watchEffect } from "vue";
+import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
+// import InputText from 'primevue/inputtext';
+import InputGroup from 'primevue/inputgroup';
+import Dropdown from 'primevue/dropdown';
+// import Panel from 'primevue/panel';
+import Fieldset from 'primevue/fieldset';
 import { Codemirror } from "vue-codemirror";
 
 const props = defineProps([
@@ -29,6 +56,8 @@ const props = defineProps([
     "contextData",
     "expanded",
 ]);
+
+const contextDialogOpen = ref(true);
 
 const contextData = ref(undefined);
 
@@ -51,7 +80,16 @@ interface IBeakerContext {
     defaultPayload: string,
 }
 
-// const selectedContext = computed<{languages: [string, string][], defaultPayload: string} | undefined>(() => {
+const contextOptions = computed(() => {
+    const availableOptions = Object.keys(contextData.value || {});
+
+    if (Array.isArray(availableOptions)) {
+        return availableOptions.map(s => ({slug: s}))
+    }
+
+    return [];
+});
+
 const selectedContext = computed<IBeakerContext | undefined>(() => {
     if (contextData.value !== undefined && selectedContextSlug.value) {
         return contextData.value[selectedContextSlug.value];
@@ -94,6 +132,7 @@ const setContext = () => {
     );
     future.done.then(() => {
         emit("update-context-info");
+        contextDialogOpen.value = false; 
     });
 }
 
@@ -107,11 +146,8 @@ onMounted(async () => {
 
 <style>
 .context-selection-container {
-    /* padding: 0.5em; */
     height: 0px;
     overflow: hidden;
-    /* min-height: 300px; */
-    /* margin-top: -100%; */
     transition: all 0s;
     display: hidden;
 }
