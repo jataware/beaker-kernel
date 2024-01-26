@@ -520,6 +520,7 @@ footer {
     align-items: center;
     min-width: 7rem;
     justify-content: space-evenly;
+    color: var(--text-color);
 }
 
 .main-ide-panel {
