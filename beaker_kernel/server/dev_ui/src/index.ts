@@ -295,6 +295,9 @@ async function createApp(manager: ServiceManager.IManager): void {
         <div>${JSON.stringify(content["application/json"], null, 2)}</div>
       `;
     }
+    else if (msg.msg_type === "debug_event") {
+      console.log("beaker-debug", `${msg.content.event}`, msg.content.body);
+    }
     else {
       console.log("Unhandled message:", msg);
     }
@@ -418,8 +421,16 @@ async function createApp(manager: ServiceManager.IManager): void {
   const contextSelect = document.createElement('select');
   const languageSelect = document.createElement('select');
   const contextPayloadInput = document.createElement('textarea');
+  const contextDebug = document.createElement('input');
+  const contextDebugLabel = document.createElement('label');
+  const contextVerbose = document.createElement('input');
+  const contextVerboseLabel = document.createElement('label');
   const contextButton = document.createElement('button');
   const contextHeader = document.createElement('h2');
+  const contextSelectionHolder = document.createElement('span');
+  const contextDivTop = document.createElement('div');
+  const contextDivBottom = document.createElement('div');
+
   contextHeader.textContent = "Context setup";
   contextNode.id = 'context-node';
   for (const context of Object.keys(contexts)){
@@ -430,27 +441,49 @@ async function createApp(manager: ServiceManager.IManager): void {
     contextSelect.appendChild(option);
     languages.forEach((lang) => {languageSet.add(lang)});
   }
-  // for (const lang of ["python3", "julia"]) {
   languageSet.forEach((lang) => {
-    console.log(lang);
     const option = document.createElement('option');
     option.setAttribute("value", lang.slug);
     option.setAttribute("label", lang.slug);
     languageSelect.appendChild(option);
   });
+
+  contextSelect.onchange = setContext;
+
+  contextDebug.type = "checkbox";
+  contextDebug.id = "context-debug-input";
+  contextDebug.name = "context-debug-input";
+  contextDebugLabel.innerText = "Debug";
+  contextDebugLabel.setAttribute("for", "context-debug-input");
+  contextVerbose.type = "checkbox";
+  contextVerbose.id = "context-verbose-input";
+  contextVerbose.name = "context-verbose-input";
+  contextVerboseLabel.innerText = "Verbose";
+  contextVerboseLabel.setAttribute("for", "context-verbose-input");
+
   contextPayloadInput.className = 'json-input';
-  contextPayloadInput.value = '{\n  "df_hosp": "truth-incident-hospitalization",\n  "df_cases": "truth-incident-case"\n}';
+  contextPayloadInput.value = '';
   contextButton.textContent = 'Submit';
   contextButton.addEventListener("click", (e) => {
     setKernelContext({
       context: contextSelect.value,
       language: languageSelect.value,
       context_info: JSON.parse(contextPayloadInput.value),
+      debug: contextDebug.checked,
+      verbose: contextVerbose.checked,
     })
   }, false);
+  contextSelectionHolder.style.display = 'inline-block';
   contextNode.appendChild(contextHeader);
-  contextNode.appendChild(contextSelect);
-  contextNode.appendChild(languageSelect);
+  contextDivTop.appendChild(contextDebugLabel);
+  contextDivTop.appendChild(contextDebug);
+  contextDivTop.appendChild(contextVerboseLabel);
+  contextDivTop.appendChild(contextVerbose);
+  contextDivBottom.appendChild(contextSelect);
+  contextDivBottom.appendChild(languageSelect);
+  contextSelectionHolder.appendChild(contextDivTop);
+  contextSelectionHolder.appendChild(contextDivBottom);
+  contextNode.appendChild(contextSelectionHolder);
   contextNode.appendChild(contextPayloadInput);
   contextNode.appendChild(contextButton);
   contextWidget.node.appendChild(contextNode);
