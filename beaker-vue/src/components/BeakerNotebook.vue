@@ -56,21 +56,33 @@
 
         </header>
 
-        <main>
+        <main style="display: flex;">
+
+            <div
+                class="context-sidebar"
+            >
+                <h4 style="color: var(--text-color-secondary); margin: 1rem 1.25rem 0.25rem 1.25rem;">Context</h4>
+                
+                <Button 
+                    class="context-toggle-button"
+                    icon="pi pi-angle-right"
+                    size="small"
+                    outlined
+                    aria-label="Toggle"
+                    :class="{ 'button-rotate': contextPanelOpen }"
+                    :onClick="toggleContextPanel"
+                />
+
+                <Tree
+                    v-if="contextPanelOpen"
+                    class="context-tree"
+                    :value="contextNodes"
+                    v-model:expandedKeys="contextExpandedKeys"
+                 ></Tree>
+
+            </div>
 
             <Splitter class="splitter">
-
-                <SplitterPanel 
-                  :minSize="12"
-                  :size="20"
-                  class="justify-content-center ide-panel"
-                >
-                    <h4 style="padding-left: 1.5rem">Context</h4>
-                    <Tree
-                        class="context-tree"
-                        :value="contextNodes"
-                     ></Tree>
-                </SplitterPanel>
 
                 <SplitterPanel 
                     :size="50"
@@ -118,6 +130,9 @@
                         <TabPanel header="Preview">
                             <Accordion multiple :activeIndex="[0]">
                                 <AccordionTab header="Petri Net">
+                                    <div style="width: 100%; display: flex; justify-content: flex-end; margin-bottom: 1rem">
+                                        <SelectButton v-model="previewOneMockValue" :options="previewOneMimeTypes" />
+                                    </div>
                                     <img class="preview-image" src="https://picsum.photos/500/400">
                                 </AccordionTab>
                             
@@ -176,13 +191,16 @@ import Toolbar from 'primevue/toolbar';
 import Tree from 'primevue/tree';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import SelectButton from 'primevue/selectbutton';
+
+// import Sidebar from 'primevue/sidebar';
 
 import Accordion from 'primevue/accordion';
 import AccordionTab from 'primevue/accordiontab';
 // import ColumnGroup from 'primevue/columngroup';   // optional
 // import Row from 'primevue/row';                   // optional
-import DataView from 'primevue/dataview';
-import DataViewLayoutOptions from 'primevue/dataviewlayoutoptions'   // optional
+// import DataView from 'primevue/dataview';
+// import DataViewLayoutOptions from 'primevue/dataviewlayoutoptions'   // optional
 import Dropdown from 'primevue/dropdown';
 import InputGroup from 'primevue/inputgroup';
 
@@ -201,6 +219,10 @@ const componentMap: {[key: string]: Component} = {
 const props = defineProps([
     "session"
 ]);
+
+
+const previewOneMockValue = ref('PNG');
+const previewOneMimeTypes = ref(['PNG', 'LATEX']);
 
 const products = [
 {
@@ -264,13 +286,19 @@ const contextNodes = [{
 }];
 
 const activeContext = ref<{slug: string, class: string, context: any} | undefined>(undefined);
-const contextSelectionExpanded = ref(false);
-const customMessageExpanded = ref(false);
+// const contextSelectionExpanded = ref(false);
 const selectedCellIndex = ref(0);
+
+const contextExpandedKeys = ref({0: true, 1: true});
 
 const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
 });
+
+const contextPanelOpen = ref(true);
+const toggleContextPanel = () => {
+    contextPanelOpen.value = !contextPanelOpen.value;
+}
 
 const identity = (args) => {console.log('identity func called'); return args;};
 
@@ -369,7 +397,7 @@ const updateContextInfo = async () => {
     const activeContextInfo = await props.session.activeContext();
     activeContext.value = activeContextInfo;
     selectedKernel.value = {slug: activeContextInfo.slug};
-    contextSelectionExpanded.value = false;
+    // contextSelectionExpanded.value = false;
 }
 
 onBeforeMount(() => {
@@ -441,23 +469,25 @@ footer {
 .ide-cells {
     display: flex;
     flex-direction: column;
-    // justify-content: space-between;
     height: 100%;
+    z-index: 3;
+    background: var(--surface-a);
 }
 
 .splitter {
-    Height: 100%;
+    height: 100%;
+    flex: 1;
 }
 
 .beaker-cell {
     border-top: 1px solid lightgray;
     border-bottom: 1px solid lightgray;
-    background-color: #f6f6f6;
+    background-color: var(--surface-c);
 }
 
 .beaker-cell.selected {
     border-right: 4px solid var(--primary-color);
-    background-color: unset;
+    background-color: var(--surface-a);
 }
 
 .agent-query-container {
@@ -499,6 +529,7 @@ footer {
     bottom: 0;
     right: 0;
     left: 0;
+    z-index: 2;
 }
 
 .notebook-controls {
@@ -511,19 +542,18 @@ footer {
     .p-inputgroup {
         width: unset;
     }
-    
-    
-    align-ite2s: center;
-
-    .p-price {
-        x: unset;
-    }
-    
 }
 
 .context-tree {
+    padding: 0;
+    border: none;
+    
+    width: 19rem;
+    padding: 0.75rem;
+    
     .p-tree-container .p-treenode .p-treenode-content {
         padding: 0;
+        border: none;
     }
 }
 
@@ -533,6 +563,44 @@ footer {
 
 .preview-image {
     width: 100%;
+}
+
+.p-selectbutton .p-button {
+    background: #f1f5f9;
+    border: 1px solid #f1f5f9;
+    color: #64748b;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, outline-color 0.2s;
+    height: 2rem;
+}
+
+
+.p-selectbutton .p-button.p-highlight {
+    background: #ffffff;
+    border-color: #4e34bf;
+    border: 3px solid var(--gray-50);
+}
+
+.p-selectbutton .p-button.p-highlight::before {
+    box-shadow: 0px 1px 2px 0px rgba(0, 0, 0, 0.02), 0px 1px 2px 0px rgba(0, 0, 0, 0.04);
+}
+
+.context-sidebar {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.context-toggle-button {
+    position: absolute;
+    right: -0.5rem;
+    top: 40%;
+    background: var(--surface-a);
+    border-color: var(--surface-300);
+    color: var(--primary-300);
+}
+
+.button-rotate {
+    transform: rotate(180deg);
 }
 
 </style>
