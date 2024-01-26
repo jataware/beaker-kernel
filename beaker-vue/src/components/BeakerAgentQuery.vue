@@ -51,15 +51,21 @@ const handleQuery = (e: any) => {
 </script>
 
 
-<style>
+<style lang="scss">
 #llm-query-input {
     margin-right: 0.75rem;
     width: 15rem;
 }
 
-.query-input-container {
+
+.p-card .p-card-content, .p-card-body {
+    padding-bottom: 0.5rem;
+    padding-top: 1rem;
+}
+
+// .query-input-container {
 /*
     padding: 0.5em;
 */
-}
+// }
 </style>

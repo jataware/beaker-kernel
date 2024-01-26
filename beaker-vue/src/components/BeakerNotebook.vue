@@ -19,11 +19,9 @@
                 </template>
 
                 <template #center>
-                    <div style="width: 20rem; text-align: left;">
-                        <h4 class="logo">
-                            Beaker
-                        </h4>
-                    </div>
+                    <h4 class="logo">
+                        Beaker
+                    </h4>
                 </template>
 
                 <template #end>
@@ -71,7 +69,6 @@
                     <Tree
                         class="context-tree"
                         :value="contextNodes"
-                        filterMode="lenient"
                      ></Tree>
                 </SplitterPanel>
 
@@ -80,14 +77,17 @@
                     :minSize="30"
                     class="justify-content-center main-panel"
                 >
-                <div class="notebook-controls">
-                    <InputGroup>
-                        <Button @onClick="addCell" icon="pi pi-plus" size="small" outlined />
-                        <Button @onClick="removeCell" icon="pi pi-minus" size="small" outlined />
-                        <Button @onClick="runCell" icon="pi pi-play" size="small" outlined />
-                        <Button icon="pi pi-upload" size="small" outlined />
-                    </InputGroup>
-                </div>
+
+                    <div class="notebook-controls">
+                        <InputGroup>
+                            <CellActionButton :onClick="addCell" primeIcon="plus" />
+                            <CellActionButton :onClick="removeCell" primeIcon="minus" />
+                            <CellActionButton :onClick="runCell" primeIcon="play" />
+                            <CellActionButton :onClick="runCell" primeIcon="stop" />
+                            <CellActionButton :onClick="runCell" primeIcon="refresh" />
+                            <CellActionButton :onClick="identity" primeIcon="upload" />
+                        </InputGroup>
+                    </div>
 
                     <div class="ide-cells">
                         <div style="flex: 1; position: relative;">
@@ -116,17 +116,25 @@
                 >
                     <TabView :activeIndex="0">
                         <TabPanel header="Preview">
-                            <DataTable :value="products">
-                                <Column field="name" header="Name"></Column>
-                                <Column field="category" header="Category"></Column>
-                                <Column field="quantity" header="Quantity"></Column>
-                            </DataTable>                        
+                            <Accordion multiple :activeIndex="[0]">
+                                <AccordionTab header="Petri Net">
+                                    <img class="preview-image" src="https://picsum.photos/500/400">
+                                </AccordionTab>
+                            
+                                <AccordionTab header="df_2">
+                                    <DataTable :value="products">
+                                        <Column field="price" header="x"></Column>
+                                        <Column field="quantity" header="y"></Column>
+                                    </DataTable>                        
+                                </AccordionTab>
+                            </Accordion>
                         </TabPanel>
 
                         <TabPanel header="Execute">
+                            <BeakerCustomMessage :session="session" :expanded="true"/>
                         </TabPanel>
 
-                        <TabPanel header="Debug">
+                        <TabPanel header="Debug" class="debug">
                             <div class="card flex align-items-center">
                                 <Card>
                                     <template #title>State</template>
@@ -153,7 +161,7 @@
     </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="tsx">
 
 import { ref, onBeforeMount, onMounted, defineProps, computed, Component } from "vue";
 import { BeakerSession, IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
@@ -183,7 +191,7 @@ import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import LoggingDrawer from './LoggingDrawer.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
 // import BeakerContextSelection from "./BeakerContextSelection.vue";
-// import BeakerCustomMessage from "./BeakerCustomMessage.vue";
+import BeakerCustomMessage from "./BeakerCustomMessage.vue";
 
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
@@ -257,14 +265,24 @@ const contextNodes = [{
 
 const activeContext = ref<{slug: string, class: string, context: any} | undefined>(undefined);
 const contextSelectionExpanded = ref(false);
-// const customMessageExpanded = ref(false);
+const customMessageExpanded = ref(false);
 const selectedCellIndex = ref(0);
 
 const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
 });
 
-// console.log(activeContext.value);
+const identity = (args) => {console.log('identity func called'); return args;};
+
+const CellActionButton = ({primeIcon, onClick}) => (
+    <Button
+        onClick={onClick}
+        icon={`pi pi-${primeIcon}`}
+        size="small"
+        severity="info"
+        text
+    />
+);
 
 // activeContext?.slug
 
@@ -340,12 +358,11 @@ const resetNB = async () => {
 };
 
 const loadNB = () => {
-    //
-
+    console.log('load notebook');
 };
 
 const exportNB = () => {
-    //
+    console.log('export notebook')
 }
 
 const updateContextInfo = async () => {
@@ -433,17 +450,18 @@ footer {
 }
 
 .beaker-cell {
+    border-top: 1px solid lightgray;
     border-bottom: 1px solid lightgray;
     background-color: #f6f6f6;
 }
 
 .beaker-cell.selected {
-    border-right: 4px solid blue;
+    border-right: 4px solid var(--primary-color);
     background-color: unset;
 }
 
 .agent-query-container {
-    flex: 0 1 10rem;
+    flex: 0 1 8rem;
 }
 
 .status-bar {
@@ -470,20 +488,9 @@ footer {
     font-size: 1.5rem;
     margin: 0;
     padding: 0;
+    width: 15rem;
 }
 
-// .context-tree {
-  // .p-treenode-toggler {
-  //   color: green;
-  //   border: 1px dashed cyan;
-  //   background: orange;
-  // }
-  // .p-treenode-toggler-icon {
-  //   color: green;
-  //   border: 1px dashed cyan;
-  //   background: orange;
-  // }
-// }
 
 .cell-container {
     position: absolute;
@@ -495,20 +502,38 @@ footer {
 }
 
 .notebook-controls {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    margin: 0;
     width: 100%;
     display: flex;
-    justify-content: center;
+    justify-content: left;
     align-items: center;
 
     .p-inputgroup {
         width: unset;
     }
     
+    
+    align-ite2s: center;
+
+    .p-price {
+        x: unset;
+    }
+    
+}
+
+.context-tree {
+    .p-tree-container .p-treenode .p-treenode-content {
+        padding: 0;
+    }
+}
+
+.p-accordion .p-accordion-header .p-accordion-header-link {
+    background: var(--surface-a);
+}
+
+.preview-image {
+    width: 100%;
 }
 
 </style>
-
-
 
