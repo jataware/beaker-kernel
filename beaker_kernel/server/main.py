@@ -40,7 +40,10 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         context_data = {
             context_slug: {
                 "languages": [
-                    [subkernel_slug, getattr(subkernels.get(subkernel_slug), "KERNEL_NAME")]
+                    {
+                        "slug": subkernel_slug,
+                        "subkernel": getattr(subkernels.get(subkernel_slug), "KERNEL_NAME")
+                    }
                     for subkernel_slug in context.available_subkernels()
                     if subkernel_slug in subkernels
                 ],
@@ -48,7 +51,6 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
             }
             for context_slug, context in contexts.items()
         }
-
         return self.write(context_data)
 
 

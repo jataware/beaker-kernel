@@ -1,3 +1,5 @@
+import datetime
+import json
 import inspect
 import importlib
 import logging
@@ -19,6 +21,9 @@ import beaker_kernel
 from beaker_kernel.server.main import BeakerJupyterApp
 from beaker_kernel.lib.autodiscovery import autodiscover
 
+
+# Global notebook storage for notebook that lives for lifetime of service
+notebook_content = None
 logger = logging.getLogger(__file__)
 
 HERE = os.path.join(os.path.dirname(__file__), "dev_ui")
@@ -62,6 +67,18 @@ class DevHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandl
         )
 
 
+class NotebookHandler(ExtensionHandlerJinjaMixin, ExtensionHandlerMixin, JupyterHandler):
+
+    def get(self):
+        return self.write(json.dumps(notebook_content))
+
+    def post(self):
+        global notebook_content
+        notebook_content = self.get_json_body()
+        notebook_content["lastSaved"] = datetime.datetime.utcnow().isoformat()
+        return self.write(json.dumps(notebook_content))
+
+
 class DevBeakerJupyterApp(BeakerJupyterApp):
     name = __name__
     load_other_extensions = True
@@ -82,6 +99,7 @@ class DevBeakerJupyterApp(BeakerJupyterApp):
         super().initialize_handlers()
         """Add dev handler"""
         self.handlers.append(("/dev_ui", DevHandler))
+        self.handlers.append(("/notebook", NotebookHandler))
 
 
 class BeakerHandler(watchdog_events.FileSystemEventHandler):

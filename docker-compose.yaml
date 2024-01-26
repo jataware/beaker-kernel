@@ -19,3 +19,12 @@ services:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
     command: ["python", "-m", "beaker_kernel.server.dev", "watch"]
+  ui:
+    image: node:20
+    volumes:
+      - ./beaker-vue:/ui
+      - ./beaker-ts:/beaker-ts
+    working_dir: "/ui"
+    ports:
+      - "8080:8080"
+    command: ["npm", "run", "serve"]
