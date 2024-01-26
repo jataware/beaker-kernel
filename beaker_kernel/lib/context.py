@@ -102,6 +102,28 @@ class BaseContext:
         else:
             return "{}"
 
+    def get_info(self) -> dict:
+        """
+        """
+        intercept_details = {
+            message_type: {
+                "func": f"{intercept_func.__module__}.{intercept_func.__class__.__name__}.{intercept_func.__name__}"
+                # TODO: Add more info here
+            }
+            for message_type, intercept_func, stream in self.intercepts
+        }
+        if self.agent:
+            agent_details = self.agent.get_info()
+        else:
+            agent_details = None
+        payload = {
+            "language": self.subkernel.DISPLAY_NAME,
+            "subkernel": self.subkernel.KERNEL_NAME,
+            "intercepts": intercept_details,
+            "procedures": list(self.templates.keys()),
+            "agent": agent_details,
+        }
+        return payload
 
     @intercept(msg_type="debug_message_history_request")
     async def debug_messages(self, message):

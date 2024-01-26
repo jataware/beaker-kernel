@@ -41,6 +41,16 @@ class BaseAgent(ReActAgent):
             **kwargs
         )
 
+    def get_info(self):
+        """
+        """
+        info = {
+            "name": self.__class__.__name__,
+            "tools": {tool_name: tool_func.__doc__.strip() for tool_name, tool_func in self.tools.items()},
+            "agent_prompt": self.__class__.__doc__.strip(),
+        }
+        return info
+
     def debug(self, event_type: str, content: typing.Any = None) -> None:
         self.context.beaker_kernel.debug(
             event_type=f"agent_{event_type}",

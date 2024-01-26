@@ -517,6 +517,15 @@ class LLMKernel(KernelProxyManager):
         if content:
             await self.set_context(context_name, context_info, language=language, parent_header=parent_header)
 
+        # Send context_response
+        context_response_content = self.context.get_info()
+        self.send_response(
+            stream="iopub",
+            msg_or_type="context_setup_resonse",
+            content=context_response_content,
+            parent_header=parent_header,
+        )
+
     @message_handler
     async def input_reply(self, message):
         content = message.content
