@@ -7,14 +7,18 @@
         <template #content>
             <div class="query-input-container">
                 <InputText 
-                    type="text"
-                    id="llm-query-input"
+                    class="llm-query-input"
                     @keydown.enter="handleQuery"
                     v-model="query"
-                    placeholder="Your wish is my command..."
+                    placeholder="Ask the AI a question or request an operation"
                 />
 
-                <Button @click="handleQuery" icon="pi pi-reply" label="enter" />
+                <Button
+                    @click="handleQuery"
+                    class="agent-submit-button"
+                    icon="pi pi-reply"
+                    label="enter"
+                />
             </div>
         </template>
     </Card>
@@ -51,21 +55,26 @@ const handleQuery = (e: any) => {
 </script>
 
 
-<style lang="scss">
-#llm-query-input {
+<style lang="scss" scoped>
+.llm-query-input {
     margin-right: 0.75rem;
-    width: 15rem;
+    flex: 1;
+    &::placeholder {
+        color: var(--gray-400);
+    }
 }
-
 
 .p-card .p-card-content, .p-card-body {
     padding-bottom: 0.5rem;
     padding-top: 1rem;
 }
 
-// .query-input-container {
-/*
-    padding: 0.5em;
-*/
-// }
+.query-input-container {
+    display: flex;
+}
+
+.agent-submit-button {
+    flex: 0 1 7rem;
+}
+
 </style>

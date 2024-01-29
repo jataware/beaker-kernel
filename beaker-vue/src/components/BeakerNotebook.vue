@@ -189,7 +189,6 @@
 
     <BeakerContextSelection
         :session="props.session"
-        :expanded="true"
         :context-data="activeContext"
         @update-context-info="updateContextInfo"
     />
@@ -306,7 +305,6 @@ const contextNodes = [{
 }];
 
 const activeContext = ref<{slug: string, class: string, context: any} | undefined>(undefined);
-// const contextSelectionExpanded = ref(false);
 const selectedCellIndex = ref(0);
 
 const contextExpandedKeys = ref({0: true, 1: true});
@@ -332,14 +330,8 @@ const CellActionButton = ({primeIcon, onClick}) => (
     />
 );
 
-// activeContext?.slug
-
 const selectedKernel = ref();
-const kernels = ref([
-    { slug: 'pypackage' },
-    { slug: 'julia' }
-]);
-
+const kernels = ref([]);
 
 const _cellIndex = (cell: IBeakerCell): number => {
     let index = -1;
@@ -417,7 +409,7 @@ const updateContextInfo = async () => {
     const activeContextInfo = await props.session.activeContext();
     activeContext.value = activeContextInfo;
     selectedKernel.value = {slug: activeContextInfo.slug};
-    // contextSelectionExpanded.value = false;
+    kernels.value = [selectedKernel.value];
 }
 
 onBeforeMount(() => {

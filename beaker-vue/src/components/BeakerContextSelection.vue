@@ -40,28 +40,22 @@
 
 <script setup lang="ts">
 
-
 import { defineProps, defineEmits, ref, defineModel, onMounted, computed, nextTick, onBeforeMount, watchEffect } from "vue";
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
-// import InputText from 'primevue/inputtext';
 import InputGroup from 'primevue/inputgroup';
 import Dropdown from 'primevue/dropdown';
-// import Panel from 'primevue/panel';
-import Fieldset from 'primevue/fieldset';
 import { Codemirror } from "vue-codemirror";
 
 const props = defineProps([
     "session",
     "contextData",
-    "expanded",
 ]);
 
 const contextDialogOpen = ref(true);
 
 const contextData = ref(undefined);
 
-const query = ref("");
 const emit = defineEmits([
     "select-cell",
     "run-cell",
@@ -151,14 +145,5 @@ onMounted(async () => {
     transition: all 0s;
     display: hidden;
 }
-
-.context-selection-container.expanded {
-    border: 1px solid darkgray;
-    height: auto;
-    padding: 0.5em;
-    display: block;
-}
-
-
 
 </style>
