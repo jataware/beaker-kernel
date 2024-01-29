@@ -48,6 +48,7 @@ import {
   NotebookWidgetFactory,
   ToolbarItems
 } from '@jupyterlab/notebook';
+import { FileBrowserModel } from '@jupyterlab/filebrowser';
 import {
   standardRendererFactories as initialFactories,
   RenderMimeRegistry
@@ -233,7 +234,25 @@ async function createApp(manager: ServiceManager.IManager): void {
   docRegistry.addWidgetFactory(wFactory);
 
   const notebookPath = PageConfig.getOption('notebookPath');
-  const nbWidget = docManager.open(notebookPath) as NotebookPanel;
+  const fileBrowser = new FileBrowserModel({
+      manager: docManager
+  });
+  // Use the filebrowser to check if the default file exists, and if not create it.
+  let nbFileExists = false;
+  await fileBrowser.refresh();
+  const fileIter = fileBrowser.items();
+  let fileItem = fileIter.next();
+  while (fileItem && !fileItem.done) {
+      if (fileItem.name == notebookPath) {
+          nbFileExists = true;
+      }
+      fileItem = fileIter.next();
+  }
+  // Open default notebook if it exists, otherwise create a new notebook.
+  const nbWidget = (nbFileExists
+      ? docManager.open(notebookPath)
+      : docManager.createNew(notebookPath, undefined, { name: "beaker_kernel" }));
+
   const notebook = nbWidget.content;
   const palette = new CommandPalette({ commands });
   palette.addClass('notebookCommandPalette');
