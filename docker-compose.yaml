@@ -18,7 +18,7 @@ services:
     volumes:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
-    command:  ["python", "-m", "beaker_kernel.server.dev", "--ip", "0.0.0.0", "-y"]
+    command: ["python", "-m", "beaker_kernel.server.dev", "watch"]
   ui:
     image: node:20
     volumes:

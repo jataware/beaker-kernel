@@ -18,7 +18,7 @@ from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
 from .lib.subkernels import autodiscover_subkernels
-from .lib.utils import message_handler
+from .lib.utils import message_handler, LogMessageEncoder
 
 if TYPE_CHECKING:
     from .lib.agent import BaseAgent
@@ -64,8 +64,11 @@ class LLMKernel(KernelProxyManager):
     subkernel: "BaseSubkernel"
     subkernel_execution_tracking: dict[str, str]
     user_responses: dict[str, str]
+    debug_enabled: bool
 
     def __init__(self, server):
+        self.debug_enabled = False
+        self.verbose = False
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.subkernel_id = None
@@ -98,6 +101,7 @@ class LLMKernel(KernelProxyManager):
         self.server.intercept_message("stdin", "input_reply", self.input_reply)
 
     def new_kernel(self, language: str):
+        self.debug("new_kernel", f"Setting new kernel of `{language}`")
         # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
         kernel_opts = {
             subkernel.KERNEL_NAME: subkernel
@@ -168,6 +172,7 @@ class LLMKernel(KernelProxyManager):
         self.server.filters.remove(InterceptionFilter(socket, msg_type, func))
 
     async def execute(self, command, response_handler=None, parent_header={}):
+        self.debug("execution_start", {"command": command}, parent_header=parent_header)
         stream = self.connected_kernel.streams.shell
         execution_message = self.connected_kernel.make_multipart_message(
             msg_type="execute_request",
@@ -294,6 +299,7 @@ class LLMKernel(KernelProxyManager):
         # Wait for any straggling messages
         await asyncio.sleep(0.2)
         self.internal_executions.remove(message_id)
+        self.debug("execution_end", message_context, parent_header=parent_header)
         return message_context
 
     async def evaluate(self, expression, parent_header={}):
@@ -309,7 +315,7 @@ class LLMKernel(KernelProxyManager):
     async def set_context(self, context_name, context_info, language="python3", parent_header={}):
 
         context_cls = AVAILABLE_CONTEXTS.get(context_name, None)
-        if not context_cls or context_cls is self.context.__class__:
+        if not context_cls:
             # TODO: Should we return an error if the requested context isn't available?
             return False
 
@@ -341,6 +347,7 @@ class LLMKernel(KernelProxyManager):
         if loop and callback and (callable(callback) or inspect.iscoroutinefunction(callback)):
             # If we have a callback function, then add it as a task to the execution loop so it runs
             loop.create_task(callback(message))
+            self.debug("post_execute", {}, parent_header=message.header)
         return data
 
     def send_response(
@@ -389,6 +396,25 @@ class LLMKernel(KernelProxyManager):
 
         raise Exception("Query timed out. User took too long to respond.")
 
+    def debug(self, event_type: str, content, parent_header=None):
+        if not self.debug_enabled:
+            return
+        # Re-encode data to fix issues with un-json-encodable elements in the debug output
+        content = json.loads(json.dumps(content, cls=LogMessageEncoder))
+        message_content = {
+            "seq": 0,
+            "type": "event",
+            "event": event_type,
+            "body": content,
+        }
+        message = self.server.make_multipart_message(
+            msg_type="debug_event",
+            content=message_content,
+            parent_header=parent_header,
+        )
+        stream = self.server.streams.iopub
+        stream.send_multipart(message)
+        stream.flush()
 
     @message_handler
     async def llm_request(self, message):
@@ -402,6 +428,7 @@ class LLMKernel(KernelProxyManager):
         try:
             # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track thoughts
             self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
+            self.debug("llm_query", request, parent_header=message.header)
             result = await self.context.agent.react_async(request)
         except Exception as err:
             error_text = f"""LLM Error:
@@ -475,6 +502,16 @@ class LLMKernel(KernelProxyManager):
         context_name = content.get("context")
         context_info = content.get("context_info", {})
         language = content.get("language", "python3")
+        enable_debug = content.get("debug", None)
+        verbose = content.get("verbose", None)
+
+        # Only update enable_debug and verbose if they are set and valid types.
+        if verbose in (True, False):
+            self.verbose = verbose
+        if enable_debug in (True, False):
+            self.debug_enabled = enable_debug
+        if enable_debug in (True, False) or verbose in (True, False):
+            self.debug("debug_update", {"debug_enabled": self.debug_enabled, "verbose": self.verbose}, parent_header=message.header)
 
         parent_header = copy.deepcopy(message.header)
         if content:

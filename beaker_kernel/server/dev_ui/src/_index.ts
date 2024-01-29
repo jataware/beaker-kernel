@@ -269,24 +269,24 @@ async function createApp(manager: ServiceManager.IManager): void {
       return;
     }
     if (msg_type === "stream" && msg.parent_header?.msg_type == "llm_request") {
-      notebook.model.cells.model.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: msg.content.text});
+      notebook.model.cells.nbmodel.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: msg.content.text});
     }
     else if (msg_type === "llm_response") {
       const text = msg.content.text;
       const colored_text = `Response:<br/><span style="color: blue">${text}</span>`
-      notebook.model.cells.model.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: colored_text});
+      notebook.model.cells.nbmodel.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: colored_text});
     }
     else if (msg_type === "dataset") {
       dataPreview.textContent = formatDataPreview(msg.content);
     }
     else if (msg_type === "code_cell") {
       const code = msg.content.code;
-      notebook.model.cells.model.addCell({id: `${msg.id}-code`, cell_type: 'code', source: code});
+      notebook.model.cells.nbmodel.addCell({id: `${msg.id}-code`, cell_type: 'code', source: code});
     }
     else if (msg_type === "llm_thought") {
       const text = msg.content.thought;
       const colored_text = `Thought: <span style="color: orange">${text}</span>`
-      notebook.model.cells.model.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: colored_text});
+      notebook.model.cells.nbmodel.addCell({id: `${msg.id}-text`, cell_type: 'markdown', source: colored_text});
     }
     else if (msg_type === "decapodes_preview") {
       const content = msg.content;
@@ -359,7 +359,7 @@ async function createApp(manager: ServiceManager.IManager): void {
         msgId: `${kernel.id}-query`
       });
       const colored_text = `LLM Query: <span style="color: green; font-weight: bold">${query}</span>`
-      notebook.model.cells.model.addCell({id: `${message.header.msg_id}-text-${Date.now()}`, cell_type: 'markdown', source: colored_text});
+      notebook.model.cells.nbmodel.addCell({id: `${message.header.msg_id}-text-${Date.now()}`, cell_type: 'markdown', source: colored_text});
       kernel.sendShellMessage(message);
     }
 
