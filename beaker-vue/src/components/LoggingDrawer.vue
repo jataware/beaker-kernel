@@ -51,11 +51,9 @@
 <script setup lang="ts">
 
 import { ref, onBeforeMount, onMounted, defineProps, computed, Component } from "vue";
-import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Menubar from 'primevue/menubar';
 import InputText from 'primevue/inputtext';
-import Toolbar from 'primevue/toolbar';
 
 
 const isLogOpen = ref(false);
@@ -84,11 +82,7 @@ const footerMenuItems = ref([
     }
 ]);
 
-
-// const props = defineProps([
-//     "isOpen"
-// ]);
-
+// TODO logs should probably be a ref or props
 const logs = [];
 
 </script>

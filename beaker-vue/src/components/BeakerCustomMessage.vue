@@ -36,7 +36,6 @@ import { defineProps, defineEmits, ref } from "vue";
 import { Codemirror } from "vue-codemirror";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-// import Panel from 'primevue/panel';
 import InputGroup from 'primevue/inputgroup';
 import Fieldset from 'primevue/fieldset';
 
@@ -67,22 +66,6 @@ const sendMessage = () => {
 
 
 <style lang="scss" scoped>
-.custom-message-container {
-    // overflow: hidden;
-    // display: hidden;
-}
-
-.custom-message-container.expanded {
-    // border: 1px solid darkgray;
-    // height: auto;
-    // padding: 0.5em;
-    // display: block;
-}
-
-.message-content-container {
-    /* display: inline; */
-    // border: 1px solid lightgray;
-}
 
 .type-send {
     width: 60%;

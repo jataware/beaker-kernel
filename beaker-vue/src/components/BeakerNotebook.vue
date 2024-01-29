@@ -58,36 +58,14 @@
 
         <main style="display: flex;">
 
-            <div
-                class="context-sidebar"
-            >
-                <h4 style="color: var(--text-color-secondary); margin: 1rem 1.25rem 0.25rem 1.25rem;">Context</h4>
-                
-                <Button 
-                    class="context-toggle-button"
-                    icon="pi pi-angle-right"
-                    size="small"
-                    outlined
-                    aria-label="Toggle"
-                    :class="{ 'button-rotate': contextPanelOpen }"
-                    :onClick="toggleContextPanel"
-                />
-
-                <Tree
-                    v-if="contextPanelOpen"
-                    class="context-tree"
-                    :value="contextNodes"
-                    v-model:expandedKeys="contextExpandedKeys"
-                 ></Tree>
-
-            </div>
+            <ContextTree />
 
             <Splitter class="splitter">
 
                 <SplitterPanel 
                     :size="70"
                     :minSize="30"
-                    class="justify-content-center main-panel"
+                    class="main-panel"
                 >
 
                     <div class="notebook-controls">
@@ -95,8 +73,8 @@
                             <CellActionButton :onClick="addCell" primeIcon="plus" />
                             <CellActionButton :onClick="removeCell" primeIcon="minus" />
                             <CellActionButton :onClick="runCell" primeIcon="play" />
-                            <CellActionButton :onClick="runCell" primeIcon="stop" />
-                            <CellActionButton :onClick="runCell" primeIcon="refresh" />
+                            <CellActionButton :onClick="identity" primeIcon="stop" />
+                            <CellActionButton :onClick="identity" primeIcon="refresh" />
                             <CellActionButton :onClick="identity" primeIcon="upload" />
                         </InputGroup>
                     </div>
@@ -125,30 +103,12 @@
                 <SplitterPanel
                     :minSize="20"
                     :size="30"
-                    class="justify-content-center right-splitter"
+                    class="right-splitter"
                 >
                     <TabView :activeIndex="0">
                         <TabPanel header="Preview">
-                            <div style="position: absolute; top:0; bottom: 0; right: 0; left: 0; overflow-y: auto;">
-                                <Accordion multiple :activeIndex="[0]" style="height: 100%;">
-                                    <AccordionTab header="Petri Net">
-                                        <div style="width: 100%; display: flex; justify-content: flex-end; margin-bottom: 1rem">
-                                            <SelectButton
-                                                :allowEmpty="false"
-                                                v-model="previewOneMockValue"
-                                                :options="previewOneMimeTypes"
-                                            />
-                                        </div>
-                                        <img class="preview-image" src="https://assets-global.website-files.com/6308b9e1771b56be92fe7491/636416a672f13fa441c4e7e6_petri-nets-preview.jpg">
-                                    </AccordionTab>
-                            
-                                    <AccordionTab header="df_2">
-                                        <DataTable :value="products">
-                                            <Column field="price" header="x"></Column>
-                                            <Column field="quantity" header="y"></Column>
-                                        </DataTable>                        
-                                    </AccordionTab>
-                                </Accordion>
+                            <div style="scroller-area">
+                                <PreviewPane />
                             </div>
                         </TabPanel>
 
@@ -157,8 +117,8 @@
                         </TabPanel>
 
                         <TabPanel header="Debug">
-                            <div style="position: absolute; top:0; bottom: 0; right: 0; left: 0; overflow-y: auto;">
-                                <div class="card flex align-items-center">
+                            <div class="scroller-area">
+                                <div>
                                     <Card>
                                         <template #title>State</template>
                                         <template #content>
@@ -196,9 +156,8 @@
 </template>
 
 <script setup lang="tsx">
-
 import { ref, onBeforeMount, onMounted, defineProps, computed, Component } from "vue";
-import { BeakerSession, IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
+import { IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
 import Card from 'primevue/card';
 import Button from 'primevue/button';
@@ -207,28 +166,17 @@ import SplitterPanel from 'primevue/splitterpanel';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import Toolbar from 'primevue/toolbar';
-import Tree from 'primevue/tree';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import SelectButton from 'primevue/selectbutton';
-
-// import Sidebar from 'primevue/sidebar';
-
-import Accordion from 'primevue/accordion';
-import AccordionTab from 'primevue/accordiontab';
-// import ColumnGroup from 'primevue/columngroup';   // optional
-// import Row from 'primevue/row';                   // optional
-// import DataView from 'primevue/dataview';
-// import DataViewLayoutOptions from 'primevue/dataviewlayoutoptions'   // optional
 import Dropdown from 'primevue/dropdown';
 import InputGroup from 'primevue/inputgroup';
 
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
-import LoggingDrawer from './LoggingDrawer.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
 import BeakerContextSelection from "./BeakerContextSelection.vue";
 import BeakerCustomMessage from "./BeakerCustomMessage.vue";
+import LoggingDrawer from './LoggingDrawer.vue';
+import ContextTree from "./ContextTree.vue";
+import PreviewPane from "./PreviewPane.vue";
 
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
@@ -239,84 +187,12 @@ const props = defineProps([
     "session"
 ]);
 
-
-const previewOneMockValue = ref('PNG');
-const previewOneMimeTypes = ref(['PNG', 'LATEX']);
-
-const products = [
-{
-    id: '1000',
-    name: 'Bamboo Watch',
-    description: 'Product Description',
-    price: 65,
-    category: 'Accessories',
-    quantity: 24,
-    inventoryStatus: 'INSTOCK',
-    rating: 5
-},
-{
-    id: '1000',
-    name: 'Bamboo Watch',
-    description: 'Product Description',
-    price: 65,
-    category: 'Accessories',
-    quantity: 24,
-    inventoryStatus: 'INSTOCK',
-    rating: 5
-}];
-
-const contextNodes = [{
-    key: '0',
-    label: 'Kernel',
-    data: 'Kernel Details',
-    icon: 'pi pi-fw pi-cog',
-    expanded: true,
-    children: [{
-        key: '0-0',
-        label: 'language=python',
-        data: 'Python',
-        icon: 'pi pi-fw pi-align-justify'
-    },
-    {
-        key: '0-1',
-        label: 'version=3.11.2',
-        data: '3.11.2',
-        icon: 'pi pi-fw pi-wrench'
-    }]
-},
-{
-    key: '1',
-    label: 'env',
-    data: 'Environment Variables',
-    icon: 'pi pi-fw pi-cloud',
-    expanded: true,
-    children: [{
-        key: '1-0',
-        label: 'deployment=dev',
-            data: 'development',
-        icon: 'pi pi-fw pi-cog'
-    },
-    {
-        key: '1-1',
-        label: 'agent-backend=openai',
-        data: 'openai',
-        icon: 'pi pi-fw pi-qrcode'
-    }]
-}];
-
 const activeContext = ref<{slug: string, class: string, context: any} | undefined>(undefined);
 const selectedCellIndex = ref(0);
-
-const contextExpandedKeys = ref({0: true, 1: true});
 
 const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
 });
-
-const contextPanelOpen = ref(true);
-const toggleContextPanel = () => {
-    contextPanelOpen.value = !contextPanelOpen.value;
-}
 
 const identity = (args) => {console.log('identity func called'); return args;};
 
@@ -348,7 +224,6 @@ const _getCell = (cell: number | IBeakerCell) => {
     const index = _cellIndex(cell);
     return props.session.notebook.cells[index];
 }
-
 
 const selectCell = (cell: number | IBeakerCell) => {
     let index = -1;
@@ -390,7 +265,7 @@ const removeCell = () => {
 };
 
 const resetNB = async () => {
-    //
+    // TODO hook to notebook-control button
     await props.session.reset();
     if (props.session.notebook.cells.length == 0) {
         props.session.addCodeCell("");
@@ -425,14 +300,11 @@ onMounted(() => {
 </script>
 
 
-
 <style lang="scss">
-
 .beaker-notebook {
     height: 100vh;    
     width: 100vw;
     display: grid;
-
     grid-gap: 1px;
 
     grid-template-areas:
@@ -521,11 +393,6 @@ footer {
     justify-content: flex-end;
     height: 100%;
 }
-.btn {
-    border: gray 1px lightgray;
-    padding: 1ex;
-    cursor: pointer;
-}
 
 .logo {
     font-size: 1.5rem;
@@ -533,7 +400,6 @@ footer {
     padding: 0;
     width: 15rem;
 }
-
 
 .cell-container {
     position: absolute;
@@ -557,65 +423,6 @@ footer {
     }
 }
 
-.context-tree {
-    padding: 0;
-    border: none;
-    
-    width: 19rem;
-    padding: 0.75rem;
-    
-    .p-tree-container .p-treenode .p-treenode-content {
-        padding: 0;
-        border: none;
-    }
-}
-
-.p-accordion .p-accordion-header .p-accordion-header-link {
-    background: var(--surface-a);
-}
-
-.preview-image {
-    width: 100%;
-}
-
-.p-selectbutton .p-button {
-    background: #f1f5f9;
-    border: 1px solid #f1f5f9;
-    color: #64748b;
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, outline-color 0.2s;
-    height: 2rem;
-}
-
-
-.p-selectbutton .p-button.p-highlight {
-    background: #ffffff;
-    border-color: #4e34bf;
-    border: 3px solid var(--gray-50);
-}
-
-.p-selectbutton .p-button.p-highlight::before {
-    box-shadow: 0px 1px 2px 0px rgba(0, 0, 0, 0.02), 0px 1px 2px 0px rgba(0, 0, 0, 0.04);
-}
-
-.context-sidebar {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-}
-
-.context-toggle-button {
-    position: absolute;
-    right: -0.5rem;
-    top: 40%;
-    background: var(--surface-a);
-    border-color: var(--surface-300);
-    color: var(--primary-300);
-}
-
-.button-rotate {
-    transform: rotate(180deg);
-}
-
 .right-splitter {
     display: flex;
     flex-direction: column;
@@ -630,6 +437,15 @@ footer {
         flex: 1;
         position: relative;
     }
+}
+
+.scroller-area {
+    position: absolute;
+    top:0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    overflow-y: auto;   
 }
 
 </style>

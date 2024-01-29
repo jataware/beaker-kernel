@@ -26,11 +26,8 @@
 
 
 <script setup lang="ts">
-
 import { defineProps, defineEmits, ref, nextTick } from "vue";
-
 import Card from 'primevue/card';
-// import Panel from 'primevue/panel';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 
