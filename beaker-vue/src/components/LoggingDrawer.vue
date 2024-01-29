@@ -50,14 +50,21 @@
 
 <script setup lang="ts">
 
-import { ref, onBeforeMount, onMounted, defineProps, computed, Component } from "vue";
+import { ref } from "vue";
 import Button from 'primevue/button';
 import Menubar from 'primevue/menubar';
 import InputText from 'primevue/inputtext';
 
+// TODO MenuBar has a pass-through (pt) prop where can can
+// pass in context and set/fix the `active` tab to logging permanently
+// while the logging drawer is open. Right now the pane remains open when
+// the button goes back to looking "unpress".
 
 const isLogOpen = ref(false);
 
+// TODO should probably add handlers for Help|Terms|Contact
+// Can also rename this file and make mor generic than Logging since it contains
+// all "footer" links/actions
 const footerMenuItems = ref([
     {
         label: 'Help',
@@ -67,9 +74,7 @@ const footerMenuItems = ref([
         label: 'Logging',
         icon: 'pi pi-search',
         command: () => {
-            // toast.add({ severity: 'warn', summary: 'Search Results', detail: 'No results found', life: 3000 });
             isLogOpen.value = !isLogOpen.value;
-            console.log('open logging panel', isLogOpen.value);
         }
     },
     {
