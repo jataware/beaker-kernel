@@ -1,9 +1,28 @@
+// @ts-ignore: Include extension code to extend typing from Jupyterlabs
+import extension from './extension';
+if (extension === undefined) {
+    throw new Error("Unable to extend Jupyterlab types");
+}
 
 export {
-    BeakerConnection,
+    type IBeakerSessionOptions,
     BeakerSession,
-    IBeakerCell,
-    IBeakerFuture,
-    BeakerNotebook,
+} from './session';
+
+export {
+    type BeakerCellType,
     BeakerBaseCell,
-} from './beaker'
+    BeakerRawCell,
+    BeakerCodeCell,
+    BeakerMarkdownCell,
+    BeakerQueryCell,
+    BeakerNotebook,
+    BeakerNotebookContent,
+} from './notebook';
+
+export {
+    type IBeakerHistory,
+    type IBeakerHistoryEvent,
+    type IBeakerHistoryExecutionEvent,
+    type IBeakerHistoryQueryEvent,
+} from './history';

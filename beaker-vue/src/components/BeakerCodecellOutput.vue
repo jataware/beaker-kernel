@@ -50,6 +50,12 @@ const renderResult = (resultOutput) => {
 
 .stdout {
     color: #448;
+    white-space: pre;
+}
+
+.stderr {
+    color: #a44;
+    white-space: pre;
 }
 
 </style>

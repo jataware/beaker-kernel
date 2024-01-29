@@ -78,7 +78,7 @@ class DevBeakerJupyterApp(BeakerJupyterApp):
     app_url = "/dev_ui"
     app_settings_dir = os.path.join(HERE, "build", "application_settings")
     schemas_dir = os.path.join(HERE, "build", "schemas")
-    static_dir = os.path.join(HERE, "dist")
+    static_dir = os.path.join(HERE, "build")
     templates_dir = os.path.join(HERE, "templates")
     themes_dir = os.path.join(HERE, "build", "themes")
     user_settings_dir = os.path.join(HERE, "build", "user_settings")
