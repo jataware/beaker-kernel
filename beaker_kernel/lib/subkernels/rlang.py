@@ -15,6 +15,8 @@ class RSubkernel(BaseSubkernel):
     KERNEL_NAME = "ir"
     DATAFRAME_TYPE_NAME = "data.frame"
 
+    WEIGHT = 60
+
     @classmethod
     def parse_subkernel_return(cls, execution_result) -> Any:
         # irkernel annoyingly does not return the last item in the code execution as the "return" item, so we print the response as part of the output

@@ -30,6 +30,8 @@ class BaseContext:
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
 
+    WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
+
     def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", agent_cls: "BaseAgent", config: Dict[str, Any]) -> None:
         self.intercepts = []
         self.jinja_env = None
@@ -84,11 +86,19 @@ class BaseContext:
 
     @classmethod
     def available_subkernels(cls) -> List["BaseSubkernel"]:
+        subkernels: Dict[str, BaseSubkernel] = autodiscover("subkernels")
+
         class_dir = inspect.getfile(cls)
         proc_dir = os.path.join(os.path.dirname(class_dir), "procedures")
         if os.path.exists(proc_dir):
-            subkernel_slugs = list(os.listdir(proc_dir))
-            return subkernel_slugs
+            proc_slugs = list(os.listdir(proc_dir))
+        else:
+            proc_slugs = None
+        subkernel_list = sorted(subkernels.values(), key=lambda subkernel: (subkernel.WEIGHT, subkernel.SLUG))
+
+        if proc_slugs and subkernel_list:
+            result = [subkernel.SLUG for subkernel in subkernel_list if subkernel.SLUG in proc_slugs]
+            return result
         else:
             return []
 

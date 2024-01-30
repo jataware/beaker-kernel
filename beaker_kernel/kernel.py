@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Optional
 import requests
 from tornado import ioloop
 
-from .contexts.pypackage.context import PyPackageContext
+from .contexts.default.context import DefaultContext
 from .lib.context import BaseContext, autodiscover_contexts
 from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
@@ -74,7 +74,7 @@ class LLMKernel(KernelProxyManager):
         self.subkernel_id = None
         super().__init__(server)
         self.new_kernel(language="python3")
-        self.context = PyPackageContext(beaker_kernel=self, subkernel=self.subkernel, config={})
+        self.context = DefaultContext(beaker_kernel=self, subkernel=self.subkernel, config={})
         self.user_responses = dict()
         event_loop = asyncio.get_event_loop()
         event_loop.run_until_complete(self.context.setup())
@@ -102,12 +102,12 @@ class LLMKernel(KernelProxyManager):
 
     def new_kernel(self, language: str):
         self.debug("new_kernel", f"Setting new kernel of `{language}`")
-        # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
         kernel_opts = {
             subkernel.KERNEL_NAME: subkernel
             for subkernel in AVAILABLE_SUBKERNELS.values()
         }
 
+        # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
         self.shutdown_subkernel()
 
         res = requests.post(
@@ -449,7 +449,6 @@ class LLMKernel(KernelProxyManager):
                 data = result
 
             if isinstance(data, dict) and data.get("action") == "code_cell":
-                logger.error('4')
                 stream_content = {
                     "language": data.get("language"),
                     "code": data.get("content"),
@@ -521,7 +520,7 @@ class LLMKernel(KernelProxyManager):
         context_response_content = self.context.get_info()
         self.send_response(
             stream="iopub",
-            msg_or_type="context_setup_resonse",
+            msg_or_type="context_setup_response",
             content=context_response_content,
             parent_header=parent_header,
         )

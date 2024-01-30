@@ -438,7 +438,7 @@ async function createApp(manager: ServiceManager.IManager): void {
       console.log(lang);
       const option = document.createElement('option');
       option.setAttribute("label", lang.slug);
-      option.setAttribute("value", lang.slug);
+      option.setAttribute("value", lang.subkernel);
       languageSelect.appendChild(option);
     });
     contextPayloadInput.value = contextInfo.defaultPayload;

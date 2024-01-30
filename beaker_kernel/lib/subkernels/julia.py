@@ -13,6 +13,8 @@ class JuliaSubkernel(BaseSubkernel):
     SLUG = "julia"
     KERNEL_NAME = "julia-1.9"
 
+    WEIGHT = 30
+
     @classmethod
     def parse_subkernel_return(cls, execution_result) -> Any:
         return_raw = execution_result.get("return")
