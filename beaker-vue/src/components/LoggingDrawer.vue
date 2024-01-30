@@ -25,22 +25,22 @@
         </div>
 
         <div class="data-container">
-        <pre>
-  [I 2024-01-25 11:41:59.000 NotebookApp] Writing notebook server cookie secret to /run/user/1000/jupyter/notebook_cookie_secret
-  [I 2024-01-25 11:41:59.000 NotebookApp] Serving notebooks from local directory: /home/user
-  [I 2024-01-25 11:41:59.000 NotebookApp] Jupyter Notebook 6.4.5 is running at:
-  [I 2024-01-25 11:41:59.000 NotebookApp] http://localhost:8888/?token=1234567890abcdef
-  [I 2024-01-25 11:41:59.000 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
-  [C 2024-01-25 11:41:59.000 NotebookApp] 
+          <pre>
+    [I 2024-01-25 11:41:59.000 NotebookApp] Writing notebook server cookie secret to /run/user/1000/jupyter/notebook_cookie_secret
+    [I 2024-01-25 11:41:59.000 NotebookApp] Serving notebooks from local directory: /home/user
+    [I 2024-01-25 11:41:59.000 NotebookApp] Jupyter Notebook 6.4.5 is running at:
+    [I 2024-01-25 11:41:59.000 NotebookApp] http://localhost:8888/?token=1234567890abcdef
+    [I 2024-01-25 11:41:59.000 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+    [C 2024-01-25 11:41:59.000 NotebookApp] 
     
-    To access the notebook, open this URL in a browser:
-       http://localhost:8888/?token=1234567890abcdef
-  [I 2024-01-25 11:42:03.000 NotebookApp] Creating new notebook in 
-  [I 2024-01-25 11:42:03.000 NotebookApp] Writing notebook-signing key to /home/user/.local/share/jupyter/notebook_secret
-  [W 2024-01-25 11:42:03.000 NotebookApp] Notebook Untitled.ipynb is not trusted
-  [I 2024-01-25 11:42:04.000 NotebookApp] Kernel started: 0987654321fedcba
-  [I 2024-01-25 11:42:07.000 NotebookApp] Adapting from protocol version 5.1 (kernel 0987654321fedcba) to 5.3 (client).
-        </pre>
+      To access the notebook, open this URL in a browser:
+         http://localhost:8888/?token=1234567890abcdef
+    [I 2024-01-25 11:42:03.000 NotebookApp] Creating new notebook in 
+    [I 2024-01-25 11:42:03.000 NotebookApp] Writing notebook-signing key to /home/user/.local/share/jupyter/notebook_secret
+    [W 2024-01-25 11:42:03.000 NotebookApp] Notebook Untitled.ipynb is not trusted
+    [I 2024-01-25 11:42:04.000 NotebookApp] Kernel started: 0987654321fedcba
+    [I 2024-01-25 11:42:07.000 NotebookApp] Adapting from protocol version 5.1 (kernel 0987654321fedcba) to 5.3 (client).
+          </pre>
         </div>
       </div>
     </div>
@@ -126,7 +126,7 @@ pre {
   padding: 0.5rem;
   border: 1px solid lightgray;
   border-radius: 3px;
-  color: #494949
+  color: var(--text-color-secondary);
 }
 
 .slide-enter-from {
