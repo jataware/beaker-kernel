@@ -1,15 +1,35 @@
 <template>
-    <div class="query-input-container">
-        How can the agent help?
-        <div>
-            <input id="llm-query-input" @keydown.enter="handleQuery" v-model="query" placeholder="Type here to ask the AI a question or to do something for you..." />
-            <button @click="handleQuery">Submit</button>
-        </div>
-    </div>
+    <Card>
+        <template #title>
+            How can the agent help?
+        </template>
+
+        <template #content>
+            <div class="query-input-container">
+                <InputText 
+                    class="llm-query-input"
+                    @keydown.enter="handleQuery"
+                    v-model="query"
+                    placeholder="Ask the AI a question or request an operation"
+                />
+
+                <Button
+                    @click="handleQuery"
+                    class="agent-submit-button"
+                    icon="pi pi-reply"
+                    label="enter"
+                />
+            </div>
+        </template>
+    </Card>
 </template>
+
 
 <script setup lang="ts">
 import { defineProps, defineEmits, ref, nextTick } from "vue";
+import Card from 'primevue/card';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
 
 const props = defineProps([
     "session",
@@ -32,14 +52,26 @@ const handleQuery = (e: any) => {
 </script>
 
 
-<style>
-#llm-query-input {
-    margin-right: 1em;
-    width: 80%;
+<style lang="scss" scoped>
+.llm-query-input {
+    margin-right: 0.75rem;
+    flex: 1;
+    &::placeholder {
+        color: var(--gray-400);
+    }
+}
+
+.p-card .p-card-content, .p-card-body {
+    padding-bottom: 0.5rem;
+    padding-top: 1rem;
 }
 
 .query-input-container {
-    border: 1px solid darkgray;
-    padding: 0.5em;
+    display: flex;
 }
+
+.agent-submit-button {
+    flex: 0 1 7rem;
+}
+
 </style>

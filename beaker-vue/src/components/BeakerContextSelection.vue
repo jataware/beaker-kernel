@@ -1,38 +1,69 @@
 <template>
-    <div :class="{'context-selection-container': true, 'expanded': props.expanded}">
-        <div>
-            <select class="context-name" v-model="selectedContextSlug">
-                <option v-for="contextName of Object.keys(contextData || {})" :value="contextName" :label="contextName" :key="contextName"></option>
-            </select>
-            <select v-model="selectedLanguage">
-                <option v-for="{slug, subkernel} of languageOptions" :value="subkernel" :label="slug" :key="subkernel"></option>
-            </select>
-            <!-- <textarea class="json-input" v-model="contextPayload"></textarea> -->
-            <div class="message-content-container">
-                <Codemirror
-                    :tab-size="2"
-                    language="javascript"
-                    v-model="contextPayload"
+
+    <Dialog
+        v-bind:visible="props.isOpen"
+        @update:visible="cancelSetContext"
+        :closable="editing"
+        modal
+        header="Configure Context"
+        :style="{ width: '30rem' }"
+    >
+        <InputGroup>
+            <Dropdown
+                v-model="selectedContextSlug"
+                :options="contextOptions"
+                optionLabel="slug"
+                optionValue="slug"
+            />
+
+            <Dropdown
+                v-model="selectedLanguage"
+                :options="languageOptions"
+                optionLabel="slug"
+                optionValue="subkernel"
+            />
+        </InputGroup>
+
+        <br />
+
+        <Codemirror
+            :tab-size="2"
+            language="javascript"
+            v-model="contextPayload"
+        />
+
+        <template #footer>
+            <div style="width: 100%; text-align: center;">
+                <Button
+                    text raised
+                    @click="setContext"
+                    :label="editing ? 'Save' : 'Get Started'"
+                    size="small"
                 />
             </div>
-            <button @click="setContext">Submit</button>
-        </div>
-    </div>
+        </template>
+
+    </Dialog>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, defineModel, onMounted, computed, nextTick, onBeforeMount, watchEffect } from "vue";
+
+import { defineProps, defineEmits, ref, onMounted, computed, watchEffect } from "vue";
+import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
+import InputGroup from 'primevue/inputgroup';
+import Dropdown from 'primevue/dropdown';
 import { Codemirror } from "vue-codemirror";
 
 const props = defineProps([
     "session",
     "contextData",
-    "expanded",
+    "isOpen"
 ]);
 
 const contextData = ref(undefined);
+const editing = ref(false);
 
-const query = ref("");
 const emit = defineEmits([
     "select-cell",
     "run-cell",
@@ -51,7 +82,16 @@ interface IBeakerContext {
     defaultPayload: string,
 }
 
-// const selectedContext = computed<{languages: [string, string][], defaultPayload: string} | undefined>(() => {
+const contextOptions = computed(() => {
+    const availableOptions = Object.keys(contextData.value || {});
+
+    if (Array.isArray(availableOptions)) {
+        return availableOptions.map(s => ({slug: s}))
+    }
+
+    return [];
+});
+
 const selectedContext = computed<IBeakerContext | undefined>(() => {
     if (contextData.value !== undefined && selectedContextSlug.value) {
         return contextData.value[selectedContextSlug.value];
@@ -83,6 +123,10 @@ watchEffect(() => {
     contextPayload.value = selectedContext.value?.defaultPayload;
 });
 
+const cancelSetContext = () => {
+    emit("update-context-info");
+}
+
 const setContext = () => {
     const future = props.session.sendBeakerMessage(
         "context_setup_request",
@@ -94,35 +138,29 @@ const setContext = () => {
     );
     future.done.then(() => {
         emit("update-context-info");
+        editing.value = true;
+        sessionStorage.setItem('active_context', selectedContextSlug.value);
+        sessionStorage.setItem('kernel_language', selectedLanguage.value);
+        sessionStorage.setItem('context_info', contextPayload.value);
     });
 }
 
 onMounted(async () => {
     const contexts = await props.session.availableContexts();
     contextData.value = contexts;
+
+    const savedContext = sessionStorage.getItem('active_context');
+
+    if (savedContext) {
+        selectedContextSlug.value = savedContext;
+        editing.value = true;
+        return;
+    }
     selectedContextSlug.value = Object.keys(contexts)[0];
 })
 </script>
 
 
-<style>
-.context-selection-container {
-    /* padding: 0.5em; */
-    height: 0px;
-    overflow: hidden;
-    /* min-height: 300px; */
-    /* margin-top: -100%; */
-    transition: all 0s;
-    display: hidden;
-}
-
-.context-selection-container.expanded {
-    border: 1px solid darkgray;
-    height: auto;
-    padding: 0.5em;
-    display: block;
-}
-
-
+<style lang="scss">
 
 </style>

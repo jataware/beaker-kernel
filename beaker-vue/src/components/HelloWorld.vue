@@ -31,7 +31,30 @@
   </div>
 </template>
 
+
 <script lang="ts">
+// <div class="beaker-nb-toolbar">
+//     <Button 
+//         severity="info"
+//         size="small"
+//         @click="contextSelectionExpanded = !contextSelectionExpanded">
+//         Reset
+//     </Button>
+// </div>
+
+// <span class="btn" @click="customMessageExpanded = !customMessageExpanded">custom message</span>
+
+// <div class="beaker-nb-toolbar">
+//     <span class="btn" @click="addCell()">add cell</span>
+//     <span class="btn" @click="removeCell()">remove cell</span>
+//     <span class="btn" @click="runCell()">run cell</span>
+//     <span class="btn" @click="resetNB">reset notebook</span>
+//     <span class="btn" @click="loadNB">load notebook</span>
+//     <span class="btn" @click="exportNB">export notebook</span>
+// </div>
+
+// <BeakerCustomMessage :session="session" :expanded="customMessageExpanded"/>
+
 import { defineComponent } from 'vue';
 
 export default defineComponent({
