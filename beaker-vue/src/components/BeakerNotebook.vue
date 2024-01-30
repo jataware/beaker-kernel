@@ -4,16 +4,19 @@
             <Toolbar style="width: 100%; padding: 0.5rem 1rem;">
                 <template #start>
                     <div class="status-bar">
-                        <i class="pi pi-circle-fill" style="font-size: inherit; color: #81ea81;" />
+                        <i class="pi pi-circle-fill" style="font-size: inherit; color: var(--green-400);" />
                         Connected
                     </div>
                     &nbsp;
                     &nbsp;
-                    <Dropdown 
-                        v-model="selectedKernel"
-                        :options="kernels" 
-                        optionLabel="slug"
-                        dataKey="slug"
+                    <Button 
+                        outlined
+                        size="small"
+                        icon="pi pi-angle-down"
+                        iconPos="right"
+                        class="connection-button"
+                        :onClick="openContextSelection"
+                        :label="selectedKernel"
                         :loading="!activeContext?.slug"
                     />
                 </template>
@@ -150,6 +153,7 @@
     <BeakerContextSelection
         :session="props.session"
         :context-data="activeContext"
+        :isOpen="contextSelectionOpen"
         @update-context-info="updateContextInfo"
     />
 
@@ -166,7 +170,6 @@ import SplitterPanel from 'primevue/splitterpanel';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import Toolbar from 'primevue/toolbar';
-import Dropdown from 'primevue/dropdown';
 import InputGroup from 'primevue/inputgroup';
 
 import BeakerCodeCell from './BeakerCodecell.vue';
@@ -189,6 +192,9 @@ const props = defineProps([
 
 const activeContext = ref<{slug: string, class: string, context: any} | undefined>(undefined);
 const selectedCellIndex = ref(0);
+const selectedKernel = ref();
+const contextSelectionOpen = ref(false);
+
 
 const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
@@ -205,9 +211,6 @@ const CellActionButton = ({primeIcon, onClick}) => (
         text
     />
 );
-
-const selectedKernel = ref();
-const kernels = ref([]);
 
 const _cellIndex = (cell: IBeakerCell): number => {
     let index = -1;
@@ -280,11 +283,18 @@ const exportNB = () => {
     console.log('export notebook')
 }
 
+
+function openContextSelection() {
+    contextSelectionOpen.value = true;
+}
+
 const updateContextInfo = async () => {
     const activeContextInfo = await props.session.activeContext();
     activeContext.value = activeContextInfo;
-    selectedKernel.value = {slug: activeContextInfo.slug};
-    kernels.value = [selectedKernel.value];
+    selectedKernel.value = activeContextInfo.slug;
+
+    const savedContext = sessionStorage.getItem('active_context');
+    contextSelectionOpen.value = !savedContext;
 }
 
 onBeforeMount(() => {
@@ -446,6 +456,10 @@ footer {
     right: 0;
     left: 0;
     overflow-y: auto;   
+}
+
+.connection-button {
+    color: var(--surface-500);
 }
 
 </style>

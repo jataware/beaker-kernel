@@ -1,8 +1,9 @@
 <template>
 
     <Dialog
-        v-model:visible="contextDialogOpen"
-        :closable="false"
+        v-bind:visible="props.isOpen"
+        @update:visible="cancelSetContext"
+        :closable="editing"
         modal
         header="Configure Context"
         :style="{ width: '30rem' }"
@@ -31,9 +32,16 @@
             v-model="contextPayload"
         />
 
-        <div style="width: 100%; margin: auto; text-align: center; margin-top: 1rem;">
-            <Button @click="setContext" size="small">Get Started</Button>
-        </div>
+        <template #footer>
+            <div style="width: 100%; text-align: center;">
+                <Button
+                    text raised
+                    @click="setContext"
+                    :label="editing ? 'Save' : 'Get Started'"
+                    size="small"
+                />
+            </div>
+        </template>
 
     </Dialog>
 </template>
@@ -50,11 +58,11 @@ import { Codemirror } from "vue-codemirror";
 const props = defineProps([
     "session",
     "contextData",
+    "isOpen"
 ]);
 
-const contextDialogOpen = ref(true);
-
 const contextData = ref(undefined);
+const editing = ref(false);
 
 const emit = defineEmits([
     "select-cell",
@@ -115,6 +123,10 @@ watchEffect(() => {
     contextPayload.value = selectedContext.value?.defaultPayload;
 });
 
+const cancelSetContext = () => {
+    emit("update-context-info");
+}
+
 const setContext = () => {
     const future = props.session.sendBeakerMessage(
         "context_setup_request",
@@ -126,24 +138,29 @@ const setContext = () => {
     );
     future.done.then(() => {
         emit("update-context-info");
-        contextDialogOpen.value = false; 
+        editing.value = true;
+        sessionStorage.setItem('active_context', selectedContextSlug.value);
+        sessionStorage.setItem('kernel_language', selectedLanguage.value);
+        sessionStorage.setItem('context_info', contextPayload.value);
     });
 }
 
 onMounted(async () => {
     const contexts = await props.session.availableContexts();
     contextData.value = contexts;
+
+    const savedContext = sessionStorage.getItem('active_context');
+
+    if (savedContext) {
+        selectedContextSlug.value = savedContext;
+        editing.value = true;
+        return;
+    }
     selectedContextSlug.value = Object.keys(contexts)[0];
 })
 </script>
 
 
-<style>
-.context-selection-container {
-    height: 0px;
-    overflow: hidden;
-    transition: all 0s;
-    display: hidden;
-}
+<style lang="scss">
 
 </style>
