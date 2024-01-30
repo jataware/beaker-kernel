@@ -87,6 +87,7 @@ const contextNodes = [{
   display: flex;
   flex-direction: column;
   position: relative;
+  background-color: var(--surface-a);
 }
 
 .context-heading {

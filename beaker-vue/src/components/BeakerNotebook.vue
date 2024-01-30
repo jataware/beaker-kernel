@@ -29,6 +29,12 @@
 
                 <template #end>
                     <nav>
+                        <Button
+                            text
+                            :onClick="toggleDarkMode"
+                            style="margin: 0; color: gray;"
+                            :icon="themeIcon"
+                        />
                         <a
                             href="https://jataware.github.io/beaker-kernel"
                             rel="noopener"
@@ -181,6 +187,7 @@ import LoggingDrawer from './LoggingDrawer.vue';
 import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 
+
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
     'query': BeakerLLMQueryCell,
@@ -223,6 +230,22 @@ const _cellIndex = (cell: IBeakerCell): number => {
     }
     return index;
 }
+
+const selectedTheme = ref(localStorage.getItem('theme') || 'light');
+const themeIcon = computed(() => {
+    return `pi pi-${selectedTheme.value == 'light' ? 'sun' : 'moon'}`;
+})
+
+const setTheme = () => {
+    const themeLink = document.querySelector('#primevue-theme');
+    themeLink.href = `/themes/soho-${selectedTheme.value}/theme.css`;
+}
+
+const toggleDarkMode = () => {
+    selectedTheme.value = selectedTheme.value === 'light' ? 'dark' : 'light'
+    localStorage.setItem('theme', selectedTheme.value);
+    setTheme();
+};
 
 const _getCell = (cell: number | IBeakerCell) => {
     const index = _cellIndex(cell);
@@ -306,6 +329,7 @@ onBeforeMount(() => {
     if (props.session.notebook.cells.length <= 0) {
         props.session.addCodeCell("");
     }
+    setTheme();
 });
 
 onMounted(() => {
@@ -333,9 +357,9 @@ onMounted(() => {
 
 .notebook-json {
     text-align: left;
-    background: #fbfbfb;
+    background: var(--surface-b);
     border-radius: 0.5rem;
-    border: 1px solid #eaeaea;
+    border: 1px solid var(--gray-300);
     overflow: auto;
 }
 
