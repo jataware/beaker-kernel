@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Dict
 
@@ -15,6 +16,7 @@ from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BaseContext
 from beaker_kernel.lib.subkernels.base import BaseSubkernel
 
+logger = logging.getLogger(__file__)
 
 HERE = os.path.dirname(__file__)
 
@@ -32,9 +34,15 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
 
     def get(self):
         """Get the main page for the application's interface."""
-
+        ksm = self.kernel_spec_manager
         contexts: Dict[str, BaseContext] = autodiscover("contexts")
-        subkernels: Dict[str, BaseSubkernel] = autodiscover("subkernels")
+        possible_subkernels: Dict[str, BaseSubkernel] = autodiscover("subkernels")
+        subkernel_by_kernel_index = {subkernel.KERNEL_NAME: subkernel for subkernel in possible_subkernels.values()}
+        installed_kernels = [
+            subkernel_by_kernel_index[kernel_name] for kernel_name in ksm.find_kernel_specs().keys()
+            if kernel_name in subkernel_by_kernel_index
+        ]
+        contexts = sorted(contexts.items(), key=lambda item: (item[1].WEIGHT, item[0]))
 
         # Extract data from auto-discovered contexts and subkernels to provide options
         context_data = {
@@ -42,14 +50,14 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
                 "languages": [
                     {
                         "slug": subkernel_slug,
-                        "subkernel": getattr(subkernels.get(subkernel_slug), "KERNEL_NAME")
+                        "subkernel": getattr(possible_subkernels.get(subkernel_slug), "KERNEL_NAME")
                     }
                     for subkernel_slug in context.available_subkernels()
-                    if subkernel_slug in subkernels
+                    if subkernel_slug in set(subkernel.SLUG for subkernel in installed_kernels)
                 ],
                 "defaultPayload": context.default_payload()
             }
-            for context_slug, context in contexts.items()
+            for context_slug, context in contexts
         }
         return self.write(context_data)
 

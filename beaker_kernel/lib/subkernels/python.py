@@ -9,6 +9,8 @@ class PythonSubkernel(BaseSubkernel):
     SLUG = "python3"
     KERNEL_NAME = "python3"
 
+    WEIGHT = 20
+
     @classmethod
     def parse_subkernel_return(cls, execution_result) -> Any:
         return_str = execution_result.get("return")
