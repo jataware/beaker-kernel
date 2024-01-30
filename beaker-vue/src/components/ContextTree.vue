@@ -3,15 +3,15 @@
       <h4 class="context-heading">
           Context
       </h4>
-    
-      <Button 
+
+      <Button
           class="context-toggle-button"
           icon="pi pi-angle-right"
           size="small"
           outlined
           aria-label="Toggle Context Pane"
           :class="{ 'button-rotate': contextPanelOpen }"
-          :onClick="toggleContextPanel"
+          @click="toggleContextPanel"
      />
 
       <Tree
@@ -91,16 +91,16 @@ const contextNodes = [{
 
 .context-heading {
   color: var(--text-color-secondary);
-  margin: 1rem 1.25rem 0.25rem 1.25rem;  
+  margin: 1rem 1.25rem 0.25rem 1.25rem;
 }
 
 .context-tree {
   padding: 0;
   border: none;
-  
+
   width: 19rem;
   padding: 0.75rem;
-  
+
   .p-tree-container .p-treenode .p-treenode-content {
       padding: 0;
       border: none;

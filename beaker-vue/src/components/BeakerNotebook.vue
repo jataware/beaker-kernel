@@ -9,13 +9,13 @@
                     </div>
                     &nbsp;
                     &nbsp;
-                    <Button 
+                    <Button
                         outlined
                         size="small"
                         icon="pi pi-angle-down"
                         iconPos="right"
                         class="connection-button"
-                        :onClick="openContextSelection"
+                        @click="openContextSelection"
                         :label="selectedKernel"
                         :loading="!activeContext?.slug"
                     />
@@ -34,9 +34,9 @@
                             rel="noopener"
                             target="_blank"
                         >
-                            <Button 
+                            <Button
                                 text
-                                style="margin: 0; color: gray;" 
+                                style="margin: 0; color: gray;"
                                 aria-label="Beaker Documentation"
                                 icon="pi pi-book"
                             />
@@ -46,9 +46,9 @@
                             rel="noopener"
                             target="_blank"
                         >
-                            <Button 
+                            <Button
                                 text
-                                style="margin: 0; color: gray;" 
+                                style="margin: 0; color: gray;"
                                 aria-label="Github Repository Link Icon"
                                 icon="pi pi-github"
                             />
@@ -65,7 +65,7 @@
 
             <Splitter class="splitter">
 
-                <SplitterPanel 
+                <SplitterPanel
                     :size="70"
                     :minSize="30"
                     class="main-panel"
@@ -73,12 +73,12 @@
 
                     <div class="notebook-controls">
                         <InputGroup>
-                            <CellActionButton :onClick="addCell" primeIcon="plus" />
-                            <CellActionButton :onClick="removeCell" primeIcon="minus" />
-                            <CellActionButton :onClick="runCell" primeIcon="play" />
-                            <CellActionButton :onClick="identity" primeIcon="stop" />
-                            <CellActionButton :onClick="identity" primeIcon="refresh" />
-                            <CellActionButton :onClick="identity" primeIcon="upload" />
+                            <CellActionButton @click="addCell" primeIcon="plus" />
+                            <CellActionButton @click="removeCell" primeIcon="minus" />
+                            <CellActionButton @click="runCell()" primeIcon="play" />
+                            <CellActionButton @click="identity" primeIcon="stop" />
+                            <CellActionButton @click="identity" primeIcon="refresh" />
+                            <CellActionButton @click="identity" primeIcon="upload" />
                         </InputGroup>
                     </div>
 
@@ -140,9 +140,9 @@
 
                     </TabView>
                 </SplitterPanel>
-                
+
             </Splitter>
-                
+
         </main>
 
         <footer>
@@ -197,6 +197,7 @@ const contextSelectionOpen = ref(false);
 
 
 const selectedCell = computed(() => {
+    console.log(3, selectedCellIndex.value);
     return _getCell(selectedCellIndex.value);
 });
 
@@ -244,12 +245,16 @@ const addCell = () => {
 }
 
 const runCell = (cell?: number | IBeakerCell) => {
-    if (cell) {
-        cell = _getCell(cell);
-    }
-    else {
+    console.log(cell);
+    if (cell === undefined) {
+        console.log(2);
         cell = selectedCell.value;
     }
+    else {
+        console.log(1);
+        cell = _getCell(cell);
+    }
+    console.log(cell);
     if (cell !== undefined) {
         cell.execute(props.session);
     }
@@ -312,7 +317,7 @@ onMounted(() => {
 
 <style lang="scss">
 .beaker-notebook {
-    height: 100vh;    
+    height: 100vh;
     width: 100vw;
     display: grid;
     grid-gap: 1px;
@@ -330,7 +335,7 @@ onMounted(() => {
     text-align: left;
     background: #fbfbfb;
     border-radius: 0.5rem;
-    border: 1px solid #eaeaea;    
+    border: 1px solid #eaeaea;
     overflow: auto;
 }
 
@@ -455,7 +460,7 @@ footer {
     bottom: 0;
     right: 0;
     left: 0;
-    overflow-y: auto;   
+    overflow-y: auto;
 }
 
 .connection-button {
@@ -463,4 +468,3 @@ footer {
 }
 
 </style>
-
