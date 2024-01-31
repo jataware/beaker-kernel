@@ -119,12 +119,16 @@
                             </div>
                         </TabPanel>
 
-                        <TabPanel header="Execute">
-                            <BeakerCustomMessage :session="session" :expanded="true"/>
-                        </TabPanel>
-
                         <TabPanel header="Debug">
                             <div class="scroller-area">
+                                <div>
+                                    <Card>
+                                        <template #title>Custom Message</template>
+                                        <template #content>
+                                            <BeakerCustomMessage :session="session" :expanded="true"/>
+                                        </template>
+                                    </Card>
+                                </div>
                                 <div>
                                     <Card>
                                         <template #title>State</template>
@@ -336,7 +340,9 @@ const updateContextInfo = async () => {
     selectedKernel.value = activeContextInfo.slug;
 
     const savedContext = sessionStorage.getItem('active_context');
-    contextSelectionOpen.value = !savedContext;
+    if (savedContext !== null) {
+        contextSelectionOpen.value = !savedContext;
+    }
 }
 
 onBeforeMount(() => {
