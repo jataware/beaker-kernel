@@ -4,11 +4,9 @@
             <Toolbar style="width: 100%; padding: 0.5rem 1rem;">
                 <template #start>
                     <div class="status-bar">
-                        <i class="pi pi-circle-fill" style="font-size: inherit; color: var(--green-400);" />
-                        Connected
+                        <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
+                        {{capitalize(props.connectionStatus)}}
                     </div>
-                    &nbsp;
-                    &nbsp;
                     <Button
                         outlined
                         size="small"
@@ -188,27 +186,43 @@ import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 
 
+function capitalize(s: string) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
     'query': BeakerLLMQueryCell,
 }
 
 const props = defineProps([
-    "session"
+    "session",
+    "connectionStatus"
 ]);
+
+const connectionStatusColorMap = {
+    'connected': 'green-400',
+    'connecting': 'green-200',
+    'error': 'red-500',
+    'offline': 'gray-400',
+    'busy': 'orange-400'
+};
+
+const connectionColor = computed(() => {
+    return connectionStatusColorMap[props.connectionStatus];
+});
 
 const activeContext = ref<{slug: string, class: string, context: any} | undefined>(undefined);
 const selectedCellIndex = ref(0);
 const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 
-
 const selectedCell = computed(() => {
     console.log(3, selectedCellIndex.value);
     return _getCell(selectedCellIndex.value);
 });
 
-const identity = (args) => {console.log('identity func called'); return args;};
+const identity = (args: any) => {console.log('identity func called'); return args;};
 
 const CellActionButton = ({primeIcon, onClick}) => (
     <Button
@@ -421,9 +435,11 @@ footer {
     display: flex;
     line-height: inherit;
     align-items: center;
-    min-width: 7rem;
-    justify-content: space-evenly;
     color: var(--text-color);
+    width: 8rem;
+    & > i {
+        margin-right: 0.5rem;
+    }
 }
 
 .main-ide-panel {

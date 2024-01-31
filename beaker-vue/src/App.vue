@@ -1,9 +1,9 @@
 <template>
-    <BeakerNotebook :session="beakerSession" />
+    <BeakerNotebook :session="beakerSession" :connectionStatus="connectionStatus" />
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
 
@@ -24,17 +24,32 @@ const rawSession = new BeakerSession(
   }
 );
 
+const connectionStatus = ref('connecting');
+
+
 rawSession.sessionReady.then(() => {
-  rawSession.session.iopubMessage.connect((session, msg) => {
-    if (msg.header.msg_type === "code_cell") {
-      beakerSession.addCodeCell(msg.content.code);
-    }
-  })
-  beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
-  // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
-  // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
-  // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
-  // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
+
+    setTimeout(() => {
+      connectionStatus.value = 'connected';
+    }, 400);
+
+    rawSession.session.iopubMessage.connect((session, msg) => {
+
+        if (msg.header.msg_type === "code_cell") {
+            connectionStatus.value = 'busy';
+            beakerSession.addCodeCell(msg.content.code);
+
+            setTimeout(() => {
+              connectionStatus.value = 'connected';
+            }, 1000);
+        }
+
+    })
+    beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
+    // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
+    // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
+    // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
+    // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
 
 });
 
