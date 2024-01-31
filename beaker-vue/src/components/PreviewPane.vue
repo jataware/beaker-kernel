@@ -69,10 +69,13 @@ const products = [
   justify-content: flex-end;
   margin-bottom: 1rem
 }
-
+// NOTE do switch the hardcoded hex color values
+// of the selectbutton to primevue vars if
+// color/theme changes bother you.
+// See available colors under public/themes/soho-light/theme.css
 .p-selectbutton .p-button.p-highlight {
     background: #ffffff;
-    border-color: #4e34bf;
+    border-color: #f1f5f9;
     border: 3px solid var(--gray-50);
 }
 
@@ -81,8 +84,8 @@ const products = [
 }
 
 .p-selectbutton .p-button {
-    background: #f1f5f9;
-    border: 1px solid #f1f5f9;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-50);
     color: #64748b;
     transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, outline-color 0.2s;
     height: 2rem;

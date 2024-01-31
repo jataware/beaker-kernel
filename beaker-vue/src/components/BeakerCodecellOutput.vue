@@ -43,9 +43,8 @@ const renderResult = (resultOutput) => {
 // @import url('@jupyterlab/theme-light-extension/style/theme.css');
 
 .code-cell-output {
-    /* margin: 1em; */
     padding: 1em;
-    background-color: lightgrey;
+    background-color: var(--surface-b);
 }
 
 .stdout {

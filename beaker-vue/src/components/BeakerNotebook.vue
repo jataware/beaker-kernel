@@ -30,7 +30,7 @@
                         <Button
                             text
                             :onClick="toggleDarkMode"
-                            style="margin: 0; color: gray;"
+                            style="margin: 0; color: var(--gray-500);"
                             :icon="themeIcon"
                         />
                         <a
@@ -40,7 +40,7 @@
                         >
                             <Button
                                 text
-                                style="margin: 0; color: gray;"
+                                style="margin: 0; color: var(--gray-500);"
                                 aria-label="Beaker Documentation"
                                 icon="pi pi-book"
                             />
@@ -52,7 +52,7 @@
                         >
                             <Button
                                 text
-                                style="margin: 0; color: gray;"
+                                style="margin: 0; color: var(--gray-500);"
                                 aria-label="Github Repository Link Icon"
                                 icon="pi pi-github"
                             />
@@ -93,6 +93,8 @@
                                     v-for="(cell, index) in props.session?.notebook?.cells" :key="cell.id" :cell="cell"
                                     :is="componentMap[cell.cell_type]"
                                     :session="props.session" class="beaker-cell" :class="{selected: (index == selectedCellIndex)}"
+                                    :context-data="activeContext"
+                                    :selectedTheme="selectedTheme"
                                     @click="selectCell(index)"
                                 />
                             </div>
@@ -121,25 +123,21 @@
 
                         <TabPanel header="Debug">
                             <div class="scroller-area">
-                                <div>
-                                    <Card>
-                                        <template #title>Custom Message</template>
-                                        <template #content>
-                                            <BeakerCustomMessage :session="session" :expanded="true"/>
-                                        </template>
-                                    </Card>
-                                </div>
-                                <div>
-                                    <Card>
-                                        <template #title>State</template>
-                                        <template #content>
-                                            <pre class="notebook-json">
-                                                {{JSON.stringify(JSON.parse(props.session.notebook.toJSON()), undefined, 2)}}
-                                            </pre>
-                                            <Button label="Copy" />
-                                        </template>
-                                    </Card>
-                                </div>
+                                <Card>
+                                    <template #title>Custom Message</template>
+                                    <template #content>
+                                        <BeakerCustomMessage :session="session" :expanded="true"/>
+                                    </template>
+                                </Card>
+                                <Card>
+                                    <template #title>State</template>
+                                    <template #content>
+                                        <pre class="notebook-json">
+                                            {{JSON.stringify(JSON.parse(props.session.notebook.toJSON()), undefined, 2)}}
+                                        </pre>
+                                        <Button label="Copy" />
+                                    </template>
+                                </Card>
                             </div>
                         </TabPanel>
 
@@ -423,8 +421,7 @@ footer {
 }
 
 .beaker-cell {
-    border-top: 1px solid lightgray;
-    border-bottom: 1px solid lightgray;
+    border-bottom: 1px solid var(--gray-300);
     background-color: var(--surface-c);
 }
 
