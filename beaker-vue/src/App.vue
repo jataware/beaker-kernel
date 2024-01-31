@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, onBeforeMount } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
 
@@ -38,6 +38,9 @@ rawSession.sessionReady.then(() => {
 
 });
 
+onBeforeMount(() => {
+  document.title = "Beaker Development Interface"
+});
 
 const beakerSession = reactive(rawSession);
 
