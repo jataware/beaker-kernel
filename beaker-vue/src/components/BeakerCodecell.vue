@@ -1,16 +1,20 @@
 <template>
-    <div class="code-cell">
+    <div
+        class="code-cell"
+        :class="{busy: isBusy}"
+    >
         <Codemirror
             v-model="cell.source"
             placeholder="Your code..."
             :extensions="extensions"
+            :disabled="isBusy"
             @keydown.ctrl.enter.self.stop.prevent="execute"
             @keydown.alt.enter="console.log('alt-enter')"
             @keydown.shift.enter.prevent="execute"
             @keydown.meta.enter="console.log('meta-enter')"
         />
 
-        <CodeCellOutput :outputs="cell.outputs"/>
+        <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
     </div>
 </template>
 
@@ -29,6 +33,7 @@ const props = defineProps([
 ]);
 
 const cell = ref(props.cell);
+const isBusy = ref(false);
 
 const extensions = computed(() => {
     const ext = [];
@@ -47,9 +52,16 @@ const extensions = computed(() => {
 
 
 const execute = (evt: any) => {
-    const handleDone = (message: any) => {
+    isBusy.value = true;
+
+    const handleDone = async (message: any) => {
         console.log("I'm done executing!: ", message);
         console.log(props.cell)
+
+        // Timeout added to busy indicators from jumping in/out too quickly
+        setTimeout(() => {
+            isBusy.value = false;
+        }, 1000);
     };
 
     evt.preventDefault();
@@ -61,9 +73,12 @@ const execute = (evt: any) => {
 </script>
 
 
-<style>
+<style lang="scss">
 .code-cell {
-    padding: 1em;
+    padding: 1rem;
+}
+
+.busy {
 }
 
 </style>

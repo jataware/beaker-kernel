@@ -1,5 +1,8 @@
 <template>
     <div class="code-cell-output">
+        <div v-if="busy">
+            <i class="pi pi-spin pi-spinner spinner" />
+        </div>
         <div v-for="output of props.outputs" :key="output">
             <div v-if="output.output_type == 'stream'" :class="output.name">{{ output.text }}</div>
             <div v-else-if="output.output_type == 'display_data'" :class="output.name" v-html="renderResult(output)"></div>
@@ -9,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed } from "vue";
+import { defineProps } from "vue";
 import { RenderMimeRegistry} from '@jupyterlab/rendermime';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
@@ -17,11 +20,9 @@ const renderMimeRegistry = new RenderMimeRegistry({
     initialFactories: standardRendererFactories
 });
 
-
-// renderMimeRegistry.
-
 const props = defineProps([
-    "outputs"
+    "outputs",
+    "busy"
 ]);
 
 const renderResult = (resultOutput) => {
@@ -45,6 +46,7 @@ const renderResult = (resultOutput) => {
 .code-cell-output {
     padding: 1em;
     background-color: var(--surface-b);
+    position: relative;
 }
 
 .stdout {
@@ -56,5 +58,13 @@ const renderResult = (resultOutput) => {
     color: #a44;
     white-space: pre;
 }
+
+.spinner {
+    color: var(--blue-500);
+    font-weight: bold;
+    position: absolute;
+    top: 0.5rem;
+}
+
 
 </style>
