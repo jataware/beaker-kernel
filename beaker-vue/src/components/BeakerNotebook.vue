@@ -4,11 +4,9 @@
             <Toolbar style="width: 100%; padding: 0.5rem 1rem;">
                 <template #start>
                     <div class="status-bar">
-                        <i class="pi pi-circle-fill" style="font-size: inherit; color: var(--green-400);" />
-                        Connected
+                        <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
+                        {{capitalize(props.connectionStatus)}}
                     </div>
-                    &nbsp;
-                    &nbsp;
                     <Button
                         outlined
                         size="small"
@@ -32,7 +30,7 @@
                         <Button
                             text
                             :onClick="toggleDarkMode"
-                            style="margin: 0; color: gray;"
+                            style="margin: 0; color: var(--gray-500);"
                             :icon="themeIcon"
                         />
                         <a
@@ -42,7 +40,7 @@
                         >
                             <Button
                                 text
-                                style="margin: 0; color: gray;"
+                                style="margin: 0; color: var(--gray-500);"
                                 aria-label="Beaker Documentation"
                                 icon="pi pi-book"
                             />
@@ -54,7 +52,7 @@
                         >
                             <Button
                                 text
-                                style="margin: 0; color: gray;"
+                                style="margin: 0; color: var(--gray-500);"
                                 aria-label="Github Repository Link Icon"
                                 icon="pi pi-github"
                             />
@@ -95,6 +93,8 @@
                                     v-for="(cell, index) in props.session?.notebook?.cells" :key="cell.id" :cell="cell"
                                     :is="componentMap[cell.cell_type]"
                                     :session="props.session" class="beaker-cell" :class="{selected: (index == selectedCellIndex)}"
+                                    :context-data="activeContext"
+                                    :selectedTheme="selectedTheme"
                                     @click="selectCell(index)"
                                 />
                             </div>
@@ -123,25 +123,21 @@
 
                         <TabPanel header="Debug">
                             <div class="scroller-area">
-                                <div>
-                                    <Card>
-                                        <template #title>Custom Message</template>
-                                        <template #content>
-                                            <BeakerCustomMessage :session="session" :expanded="true"/>
-                                        </template>
-                                    </Card>
-                                </div>
-                                <div>
-                                    <Card>
-                                        <template #title>State</template>
-                                        <template #content>
-                                            <pre class="notebook-json">
-                                                {{JSON.stringify(JSON.parse(props.session.notebook.toJSON()), undefined, 2)}}
-                                            </pre>
-                                            <Button label="Copy" />
-                                        </template>
-                                    </Card>
-                                </div>
+                                <Card>
+                                    <template #title>Custom Message</template>
+                                    <template #content>
+                                        <BeakerCustomMessage :session="session" :expanded="true"/>
+                                    </template>
+                                </Card>
+                                <Card>
+                                    <template #title>State</template>
+                                    <template #content>
+                                        <pre class="notebook-json">
+                                            {{JSON.stringify(JSON.parse(props.session.notebook.toJSON()), undefined, 2)}}
+                                        </pre>
+                                        <Button label="Copy" />
+                                    </template>
+                                </Card>
                             </div>
                         </TabPanel>
 
@@ -192,27 +188,43 @@ import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 
 
+function capitalize(s: string) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
     'query': BeakerLLMQueryCell,
 }
 
 const props = defineProps([
-    "session"
+    "session",
+    "connectionStatus"
 ]);
+
+const connectionStatusColorMap = {
+    'connected': 'green-400',
+    'connecting': 'green-200',
+    'error': 'red-500',
+    'offline': 'gray-400',
+    'busy': 'orange-400'
+};
+
+const connectionColor = computed(() => {
+    return connectionStatusColorMap[props.connectionStatus];
+});
 
 const activeContext = ref<{slug: string, class: string, context: any} | undefined>(undefined);
 const selectedCellIndex = ref(0);
 const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 
-
 const selectedCell = computed(() => {
     console.log(3, selectedCellIndex.value);
     return _getCell(selectedCellIndex.value);
 });
 
-const identity = (args) => {console.log('identity func called'); return args;};
+const identity = (args: any) => {console.log('identity func called'); return args;};
 
 const CellActionButton = ({primeIcon, onClick}) => (
     <Button
@@ -409,8 +421,7 @@ footer {
 }
 
 .beaker-cell {
-    border-top: 1px solid lightgray;
-    border-bottom: 1px solid lightgray;
+    border-bottom: 1px solid var(--gray-300);
     background-color: var(--surface-c);
 }
 
@@ -427,9 +438,11 @@ footer {
     display: flex;
     line-height: inherit;
     align-items: center;
-    min-width: 7rem;
-    justify-content: space-evenly;
     color: var(--text-color);
+    width: 8rem;
+    & > i {
+        margin-right: 0.5rem;
+    }
 }
 
 .main-ide-panel {

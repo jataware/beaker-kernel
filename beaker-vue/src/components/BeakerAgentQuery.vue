@@ -43,6 +43,7 @@ const emit = defineEmits([
 
 const handleQuery = (e: any) => {
     const cell = props.session.addQueryCell(query.value);
+    query.value = "";
     emit("select-cell", cell);
     nextTick(() => {
         // Delay running of cell by a ticket to allow selection and rendering to complete.

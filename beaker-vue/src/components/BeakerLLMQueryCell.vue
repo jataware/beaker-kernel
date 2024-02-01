@@ -1,6 +1,20 @@
 <template>
     <div class="llm-query-cell">
-        <div class="query">{{ cell.source }}</div>
+        <div style="display: flex; justify-content: space-between">
+            <div class="query">{{ cell.source }}</div>
+            <div v-if="busy">
+                <i
+                    class="pi pi-spin pi-cog"
+                    style="color: var(--yellow-500); font-weight: bold;"
+                />
+            </div>
+            <div v-else>
+                <i
+                    class="pi pi-check-circle"
+                    style="color: var(--green-500); font-weight: bold;"
+                />
+            </div>
+        </div>
         <div class="thought" v-for="thought of cell.thoughts" :key="thought">Thought: {{ thought }}</div>
         <div class="response">{{ cell.response }}</div>
     </div>
@@ -8,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onMounted } from "vue";
+import { defineProps, ref, computed } from "vue";
 
 const props = defineProps([
     "cell",
@@ -16,11 +30,22 @@ const props = defineProps([
 ]);
 
 const cell = ref(props.cell);
+const timeout = ref(false);
+
+setTimeout(() => {
+    timeout.value = true;
+}, 8000);
+
+const busy = computed(() => {
+    return props.cell.source &&
+     !props.cell.response &&
+     !timeout.value
+});
 
 </script>
 
 
-<style>
+<style lang="scss">
 .llm-query-cell {
     padding: 1em;
 }
@@ -31,13 +56,12 @@ const cell = ref(props.cell);
 }
 
 .thought {
-    color: orange;
+    color: var(--orange-400);
 }
 
 .response {
     margin-top: 1em;
     white-space: pre-line;
-    /* color: black; */
 }
 
 </style>

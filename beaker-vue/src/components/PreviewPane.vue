@@ -71,9 +71,9 @@ const products = [
 }
 
 .p-selectbutton .p-button.p-highlight {
-    background: #ffffff;
-    border-color: #4e34bf;
-    border: 3px solid var(--gray-50);
+    background: var(--surface-a);
+    border: 3px solid var(--gray-300);
+    color: var(--primary-text-color);
 }
 
 .p-selectbutton .p-button.p-highlight::before {
@@ -81,11 +81,12 @@ const products = [
 }
 
 .p-selectbutton .p-button {
-    background: #f1f5f9;
-    border: 1px solid #f1f5f9;
-    color: #64748b;
+    background: var(--gray-300);
+    border: 1px solid var(--gray-300);
+    color: var(--text-color-secondary);
     transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, outline-color 0.2s;
     height: 2rem;
+    font-size: 0.75rem;
 }
 
 .preview-image {
