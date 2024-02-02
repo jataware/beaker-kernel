@@ -64,6 +64,7 @@ const renderResult = (resultOutput) => {
     font-weight: bold;
     position: absolute;
     top: 0.5rem;
+    right: 0.25rem;
 }
 
 

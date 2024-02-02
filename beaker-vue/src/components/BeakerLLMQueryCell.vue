@@ -4,8 +4,8 @@
             <div class="query">{{ cell.source }}</div>
             <div v-if="busy">
                 <i
-                    class="pi pi-spin pi-cog"
-                    style="color: var(--yellow-500); font-weight: bold;"
+                    class="pi pi-spin pi-spinner"
+                    style="color: var(--blue-500); font-weight: bold;"
                 />
             </div>
             <div v-else>
