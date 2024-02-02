@@ -10,14 +10,14 @@
                         v-model="editingContents"
                     />
                     <div class="edit-actions">
-                        <Button outlined label="Save" size="small" @click="saveEdit"/>
-                        <Button outlined severity="danger" @click="cancelEdit" label="Cancel" size="small" />
+                        <Button outlined class="save-button" label="Save" size="small" @click="saveEdit"/>
+                        <Button outlined class="cancel-button" @click="cancelEdit" label="Cancel" size="small" />
                     </div>
                 </div>
                 <div v-else>
-                    <span v-if="savedEdit">
-                        {{savedEdit}}
-                    </span>
+                    <p v-if="savedEdit" style="margin: 0; padding: 0;">
+                        {{savedEdit}} <span style="font-weight: 100;">(edited)</span>
+                    </p>
                     <span v-else>
                         {{ cell.source }}
                     </span>
@@ -153,5 +153,14 @@ const busy = computed(() => {
     }
 }
 
+.save-button {
+    border-color: var(--surface-200);
+    color: var(--primary-text-color);
+}
+
+.cancel-button {
+    border-color: var(--surface-100);
+    color: var(--primary-text-color);
+}
 
 </style>
