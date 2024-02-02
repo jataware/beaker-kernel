@@ -6,7 +6,7 @@
         <Codemirror
             v-model="cell.source"
             placeholder="Your code..."
-            :extensions="extensions"
+            :extensions="codeExtensions"
             :disabled="isBusy"
             @keydown.ctrl.enter.self.stop.prevent="execute"
             @keydown.alt.enter="console.log('alt-enter')"
@@ -29,13 +29,13 @@ const props = defineProps([
     "cell",
     "session",
     "contextData",
-    "selectedTheme"
+    "theme"
 ]);
 
 const cell = ref(props.cell);
 const isBusy = ref(false);
 
-const extensions = computed(() => {
+const codeExtensions = computed(() => {
     const ext = [];
 
     const subkernel = props?.contextData?.language?.subkernel || '';
@@ -43,7 +43,7 @@ const extensions = computed(() => {
     if (isPython) {
         ext.push(python());
     }
-    if (props.selectedTheme === 'dark') {
+    if (props.theme === 'dark') {
         ext.push(oneDark);
     }
     return ext;

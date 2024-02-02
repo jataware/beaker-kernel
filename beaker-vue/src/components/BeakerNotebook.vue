@@ -13,7 +13,7 @@
                         icon="pi pi-angle-down"
                         iconPos="right"
                         class="connection-button"
-                        @click="openContextSelection"
+                        @click="toggleContextSelection"
                         :label="selectedKernel"
                         :loading="!activeContext?.slug"
                     />
@@ -94,7 +94,7 @@
                                     :is="componentMap[cell.cell_type]"
                                     :session="props.session" class="beaker-cell" :class="{selected: (index == selectedCellIndex)}"
                                     :context-data="activeContext"
-                                    :selectedTheme="selectedTheme"
+                                    :theme="selectedTheme"
                                     @click="selectCell(index)"
                                 />
                             </div>
@@ -126,7 +126,10 @@
                                 <Card>
                                     <template #title>Custom Message</template>
                                     <template #content>
-                                        <BeakerCustomMessage :session="session" :expanded="true"/>
+                                        <BeakerCustomMessage 
+                                            :theme="selectedTheme"
+                                            :session="session"
+                                            :expanded="true"/>
                                     </template>
                                 </Card>
                                 <Card>
@@ -160,7 +163,9 @@
         :session="props.session"
         :context-data="activeContext"
         :isOpen="contextSelectionOpen"
+        :toggleOpen="toggleContextSelection"
         @update-context-info="updateContextInfo"
+        :theme="selectedTheme"
     />
 
 </template>
@@ -202,12 +207,27 @@ const props = defineProps([
     "connectionStatus"
 ]);
 
+// TODO export/import from ts-lib utils.ts
+enum KernelState {
+	unknown = 'unknown',
+	starting = 'starting',
+	idle = 'idle',
+	busy = 'busy',
+	terminating = 'terminating',
+	restarting = 'restarting',
+	autorestarting = 'autorestarting',
+	dead = 'dead',
+  // This extends kernel status for now.
+  connected = 'connected',
+  connecting = 'connecting'
+}
+
+
 const connectionStatusColorMap = {
-    'connected': 'green-400',
-    'connecting': 'green-200',
-    'error': 'red-500',
-    'offline': 'gray-400',
-    'busy': 'orange-400'
+    [KernelState.connected]: 'green-400',
+    // [KernelState.idle]: 'green-400',
+    [KernelState.connecting]: 'green-200',
+    [KernelState.busy]: 'orange-400',
 };
 
 const connectionColor = computed(() => {
@@ -328,19 +348,14 @@ const exportNB = () => {
 }
 
 
-function openContextSelection() {
-    contextSelectionOpen.value = true;
+function toggleContextSelection() {
+    contextSelectionOpen.value = !contextSelectionOpen.value;
 }
 
 const updateContextInfo = async () => {
     const activeContextInfo = await props.session.activeContext();
     activeContext.value = activeContextInfo;
     selectedKernel.value = activeContextInfo.slug;
-
-    const savedContext = sessionStorage.getItem('active_context');
-    if (savedContext !== null) {
-        contextSelectionOpen.value = !savedContext;
-    }
 }
 
 onBeforeMount(() => {

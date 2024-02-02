@@ -29,19 +29,28 @@ const connectionStatus = ref('connecting');
 
 rawSession.sessionReady.then(() => {
 
-    setTimeout(() => {
-      connectionStatus.value = 'connected';
-    }, 400);
-
     rawSession.session.iopubMessage.connect((session, msg) => {
 
-        if (msg.header.msg_type === "code_cell") {
-            connectionStatus.value = 'busy';
-            beakerSession.addCodeCell(msg.content.code);
+        // TODO msg.header.msg_type === "status" -> change status of Beaker-ui header?
 
-            setTimeout(() => {
-              connectionStatus.value = 'connected';
-            }, 1000);
+        if (msg.header.msg_type === "code_cell") {
+            beakerSession.addCodeCell(msg.content.code);
+        }
+        else if (msg.header.msg_type === 'status') {
+          setTimeout(() => {
+            const newStatus = msg?.content?.execution_state || 'connecting';
+            connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
+          }, 1000);
+        } 
+        // TODO set this in context tree
+         else if (msg.header.msg_type === "context_setup_response") {
+            console.log('context setup:', msg);
+        // TODO add this to logging pane
+        } else if (msg.header.msg_type === "debug_event") {
+            console.log('debug event:', msg);
+        }
+        else {
+          console.log('msg type', msg.header.msg_type);
         }
 
     })

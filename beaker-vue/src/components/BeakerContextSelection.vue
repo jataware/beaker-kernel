@@ -2,12 +2,15 @@
 
     <Dialog
         v-bind:visible="props.isOpen"
-        @update:visible="cancelSetContext"
-        :closable="editing"
+        @update:visible="closeDialog"
+        closable
         modal
         header="Configure Context"
-        :style="{ width: '30rem' }"
+        :style="{ width: '40rem' }"
     >
+        <p style="margin-block-start: 0;">
+            Select kernel and language.
+        </p>
         <InputGroup>
             <Dropdown
                 v-model="selectedContextSlug"
@@ -24,20 +27,37 @@
             />
         </InputGroup>
 
-        <br />
+        <h4 class="h-less-pad">Context Info</h4>
 
-        <Codemirror
-            :tab-size="2"
-            language="javascript"
-            v-model="contextPayload"
-        />
+        <div class="code-container">
+            <Codemirror
+                :extensions="codeExtensions"
+                :tab-size="2"
+                language="javascript"
+                v-model="contextPayload"
+            />
+        </div>
+
+        <div>
+            <h4 class="h-less-pad">Logging</h4>
+            <div class="flex" style="align-items: center;">
+                <div class="labeled-check">
+                    <Checkbox v-model="logDebug" inputId="logging-debug-check" value="true" />
+                    <label for="logging-debug-check" class="ml-1">Debug</label>
+                </div>
+                <div class="labeled-check ml-2">
+                    <Checkbox v-model="logVerbose" inputId="logging-verbose-check" value="true" />
+                    <label for="logging-verbose-check" class="ml-1">Verbose</label>
+                </div>
+            </div>
+        </div>
 
         <template #footer>
             <div style="width: 100%; text-align: center;">
                 <Button
                     text raised
                     @click="setContext"
-                    :label="editing ? 'Save' : 'Get Started'"
+                    label="Save"
                     size="small"
                 />
             </div>
@@ -49,20 +69,31 @@
 <script setup lang="ts">
 
 import { defineProps, defineEmits, ref, onMounted, computed, watchEffect } from "vue";
+import { Codemirror } from "vue-codemirror";
+import { oneDark } from '@codemirror/theme-one-dark';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import Dropdown from 'primevue/dropdown';
-import { Codemirror } from "vue-codemirror";
+import Checkbox from 'primevue/checkbox';
 
 const props = defineProps([
     "session",
     "contextData",
-    "isOpen"
+    "isOpen",
+    "toggleOpen",
+    "theme"
 ]);
 
 const contextData = ref(undefined);
-const editing = ref(false);
+const logDebug = ref(false);
+const logVerbose = ref(false);
+
+const closeDialog = () => {
+    props.toggleOpen();
+    logDebug.value = false;
+    logVerbose.value = false;
+}
 
 const emit = defineEmits([
     "select-cell",
@@ -73,6 +104,17 @@ const emit = defineEmits([
 const selectedContextSlug = ref<string>();
 const selectedLanguage = ref<string | undefined>(undefined);
 const contextPayload = ref<string | undefined>(undefined);
+
+
+const codeExtensions = computed(() => {
+    const ext = [];
+
+    if (props.theme === 'dark') {
+        ext.push(oneDark);
+    }
+    return ext;
+
+});
 
 interface IBeakerContext {
     languages: {
@@ -123,25 +165,24 @@ watchEffect(() => {
     contextPayload.value = selectedContext.value?.defaultPayload;
 });
 
-const cancelSetContext = () => {
-    emit("update-context-info");
-}
-
 const setContext = () => {
+
     const future = props.session.sendBeakerMessage(
         "context_setup_request",
     {
       context: selectedContextSlug.value,
       language: selectedLanguage.value,
       context_info: JSON.parse(contextPayload.value || ''),
+      debug: Boolean(logDebug.value[0]),
+      verbose: Boolean(logVerbose.value[0]),
     }
     );
     future.done.then(() => {
         emit("update-context-info");
-        editing.value = true;
         sessionStorage.setItem('active_context', selectedContextSlug.value);
         sessionStorage.setItem('kernel_language', selectedLanguage.value);
         sessionStorage.setItem('context_info', contextPayload.value);
+        props.toggleOpen();
     });
 }
 
@@ -153,7 +194,6 @@ onMounted(async () => {
 
     if (savedContext) {
         selectedContextSlug.value = savedContext;
-        editing.value = true;
         return;
     }
     selectedContextSlug.value = Object.keys(contexts)[0];
@@ -162,5 +202,32 @@ onMounted(async () => {
 
 
 <style lang="scss">
+.labeled-check {
+    display: flex;
+    align-items: center;
+}
+
+.ml-2 {
+    margin-left: 1rem;
+}
+
+.ml-1 {
+    margin-left: 0.25rem;
+}
+
+.flex {
+    display: flex;
+}
+
+.h-less-pad {
+    margin-block-end: 1rem;   
+}
+
+.code-container {
+    border: 1px solid var(--surface-ground);
+    padding: 0.25rem;    
+    max-height: 15rem;
+    overflow: auto;
+}
 
 </style>
