@@ -65,7 +65,7 @@
 
         <main style="display: flex;">
 
-            <ContextTree />
+            <ContextTree :context="props.contextSetupData"/>
 
             <Splitter class="splitter">
 
@@ -116,7 +116,7 @@
                 >
                     <TabView :activeIndex="0">
                         <TabPanel header="Preview">
-                            <div style="scroller-area">
+                            <div class="scroller-area">
                                 <PreviewPane />
                             </div>
                         </TabPanel>
@@ -129,7 +129,8 @@
                                         <BeakerCustomMessage 
                                             :theme="selectedTheme"
                                             :session="session"
-                                            :expanded="true"/>
+                                            :expanded="true"
+                                        />
                                     </template>
                                 </Card>
                                 <Card>
@@ -204,7 +205,8 @@ const componentMap: {[key: string]: Component} = {
 
 const props = defineProps([
     "session",
-    "connectionStatus"
+    "connectionStatus",
+    "contextSetupData"
 ]);
 
 // TODO export/import from ts-lib utils.ts

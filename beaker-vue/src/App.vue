@@ -1,5 +1,9 @@
 <template>
-    <BeakerNotebook :session="beakerSession" :connectionStatus="connectionStatus" />
+    <BeakerNotebook
+      :session="beakerSession"
+      :connectionStatus="connectionStatus"
+      :contextSetupData="contextSetupData"
+      />
 </template>
 
 <script setup lang="ts">
@@ -25,13 +29,11 @@ const rawSession = new BeakerSession(
 );
 
 const connectionStatus = ref('connecting');
-
+const contextSetupData = ref(null);
 
 rawSession.sessionReady.then(() => {
 
     rawSession.session.iopubMessage.connect((session, msg) => {
-
-        // TODO msg.header.msg_type === "status" -> change status of Beaker-ui header?
 
         if (msg.header.msg_type === "code_cell") {
             beakerSession.addCodeCell(msg.content.code);
@@ -41,10 +43,8 @@ rawSession.sessionReady.then(() => {
             const newStatus = msg?.content?.execution_state || 'connecting';
             connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
           }, 1000);
-        } 
-        // TODO set this in context tree
-         else if (msg.header.msg_type === "context_setup_response") {
-            console.log('context setup:', msg);
+        } else if (['context_setup_response'].includes(msg.header.msg_type)) {
+            contextSetupData.value = msg.content;
         // TODO add this to logging pane
         } else if (msg.header.msg_type === "debug_event") {
             console.log('debug event:', msg);

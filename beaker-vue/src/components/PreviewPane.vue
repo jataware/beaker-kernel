@@ -1,5 +1,5 @@
 <template>
-  <Accordion multiple :activeIndex="[0]" style="height: 100%;">
+  <Accordion multiple :activeIndex="[0]">
       <AccordionTab header="Petri Net">
           <div class="mime-select-container">
               <SelectButton

@@ -1,30 +1,38 @@
 <template>
-  <div class="context-sidebar">
-      <h4 class="context-heading">
-          Context
-      </h4>
+    <div class="context-sidebar">
+        <h4 class="context-heading">
+            Context
+        </h4>
 
-      <Button
-          class="context-toggle-button"
-          icon="pi pi-angle-right"
-          size="small"
-          outlined
-          aria-label="Toggle Context Pane"
-          :class="{ 'button-rotate': contextPanelOpen }"
-          @click="toggleContextPanel"
-     />
+        <Button
+            class="context-toggle-button"
+            icon="pi pi-angle-right"
+            size="small"
+            outlined
+            aria-label="Toggle Context Pane"
+            :class="{ 'button-rotate': contextPanelOpen }"
+            @click="toggleContextPanel"
+        />
 
-      <Tree
-          v-if="contextPanelOpen"
-          class="context-tree"
-          :value="contextNodes"
-          v-model:expandedKeys="contextExpandedKeys"
-      ></Tree>
+        <Tree
+            v-if="contextPanelOpen"
+            class="context-tree"
+            :value="contextNodes"
+            :loading="!props.context"
+            v-model:expandedKeys="contextExpandedKeys"
+        >
+            <template v-slot:loadingicon>    
+                <div class="loading-area">
+                    No Context Loaded.
+                </div>
+            </template>
+        </Tree>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps } from "vue";
+import { ref, defineProps, computed } from "vue";
 import Button from 'primevue/button';
 import Tree from 'primevue/tree';
 
@@ -35,50 +43,62 @@ const toggleContextPanel = () => {
 
 // This should mostly be uncontrolled, but it was
 // "hard" to open by default without controlling
-const contextExpandedKeys = ref({0: true, 1: true});
+const contextExpandedKeys = ref({0: true, 1: true, 2: true});
 
-// TODO use contextData to create contextNodes below
 const props = defineProps([
-    "contextData"
+    "context"
 ]);
-const contextNodes = [{
-    key: '0',
-    label: 'Kernel',
-    data: 'Kernel Details',
-    icon: 'pi pi-fw pi-cog',
-    expanded: true,
-    children: [{
-        key: '0-0',
-        label: 'language=python',
-        data: 'Python',
-        icon: 'pi pi-fw pi-align-justify'
-    },
-    {
-        key: '0-1',
-        label: 'version=3.11.2',
-        data: '3.11.2',
-        icon: 'pi pi-fw pi-wrench'
-    }]
-},
-{
-    key: '1',
-    label: 'env',
-    data: 'Environment Variables',
-    icon: 'pi pi-fw pi-cloud',
-    expanded: true,
-    children: [{
-        key: '1-0',
-        label: 'deployment=dev',
-            data: 'development',
-        icon: 'pi pi-fw pi-cog'
-    },
-    {
-        key: '1-1',
-        label: 'agent-backend=openai',
-        data: 'openai',
-        icon: 'pi pi-fw pi-qrcode'
-    }]
-}];
+
+const contextNodes = computed(() => {
+
+    const { context } = props;
+
+    if (!context) {
+        return [];
+    }
+
+    const displayableNodes = [{
+        key: 0,
+        label: 'Kernel',
+        icon: 'pi pi-fw pi-cog',
+        expanded: true,
+        children: [{
+            key: '0-1',
+            label: `${context.subkernel} (${context.language})`,
+        }]
+    }, {
+        key: 1,
+        label: 'Intercepts',
+        icon: 'pi pi-fw pi-sign-in',
+        expanded: true,
+        children: Object.keys(context.intercepts).map((inter, idx) => ({
+            key: `1-${idx}`,
+            label: inter,
+        }))
+    }, {
+        key: 2,
+        label: 'Procedures',
+        icon: 'pi pi-fw pi-tablet',
+        expanded: true,
+        children: context.procedures.map((proc, idx) => ({
+            key: `2-${idx}`,
+            label: proc,
+        }))
+    }, {
+        key: 3,
+        label: 'Tools',
+        icon: 'pi pi-fw pi-wrench',
+        expanded: true,
+        children: Object.keys(context?.agent?.tools || {})
+            .map((tool, idx) => ({
+                key: `3-${idx}`,
+                label: tool.replace('PyPackageAgent.', ''),
+            }))
+    }];
+    return displayableNodes;
+    
+});
+
 </script>
 
 
@@ -96,10 +116,12 @@ const contextNodes = [{
 }
 
 .context-tree {
+  max-height: 75vh;
+  overflow: auto;
+
   padding: 0;
   border: none;
-
-  width: 19rem;
+  width: 21rem;
   padding: 0.75rem;
 
   .p-tree-container .p-treenode .p-treenode-content {
@@ -115,9 +137,25 @@ const contextNodes = [{
   background: var(--surface-a);
   border-color: var(--surface-300);
   color: var(--primary-300);
+  z-index: 2;
 }
 
 .button-rotate {
   transform: rotate(180deg);
 }
+
+.loading-area {
+    background: var(--surface-a);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+
 </style>

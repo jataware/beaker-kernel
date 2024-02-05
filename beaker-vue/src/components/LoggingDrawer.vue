@@ -1,9 +1,9 @@
 <template>
 
-    <Menubar
-        :model="footerMenuItems"
-        breakpoint="800"
-     />
+  <Menubar
+      :model="footerMenuItems"
+      breakpoint="800"
+   />
 
   <transition name="slide">
     <div class="logging-pane" v-if="isLogOpen">
