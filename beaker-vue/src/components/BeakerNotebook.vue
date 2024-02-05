@@ -156,7 +156,7 @@
         </main>
 
         <footer>
-            <LoggingDrawer />
+            <LoggingDrawer :theme="selectedTheme"/>
          </footer>
     </div>
 

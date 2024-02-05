@@ -7,7 +7,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onBeforeMount } from 'vue';
+import { reactive, ref, onBeforeMount, provide } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
 
@@ -30,6 +30,9 @@ const rawSession = new BeakerSession(
 
 const connectionStatus = ref('connecting');
 const contextSetupData = ref(null);
+const debug_logs = reactive([]);
+
+provide('debug_logs', debug_logs);
 
 rawSession.sessionReady.then(() => {
 
@@ -45,9 +48,9 @@ rawSession.sessionReady.then(() => {
           }, 1000);
         } else if (['context_setup_response'].includes(msg.header.msg_type)) {
             contextSetupData.value = msg.content;
-        // TODO add this to logging pane
         } else if (msg.header.msg_type === "debug_event") {
             console.log('debug event:', msg);
+            debug_logs.push(msg.content);
         }
         else {
           console.log('msg type', msg.header.msg_type);

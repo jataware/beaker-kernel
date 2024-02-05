@@ -14,19 +14,22 @@
             @click="toggleContextPanel"
         />
 
-        <Tree
+        <div 
             v-if="contextPanelOpen"
             class="context-tree"
-            :value="contextNodes"
-            :loading="!props.context"
-            v-model:expandedKeys="contextExpandedKeys"
         >
-            <template v-slot:loadingicon>    
-                <div class="loading-area">
-                    No Context Loaded.
-                </div>
-            </template>
-        </Tree>
+            <Tree
+                :value="contextNodes"
+                :loading="!props.context"
+                v-model:expandedKeys="contextExpandedKeys"
+            >
+                <template v-slot:loadingicon>    
+                    <div class="loading-area">
+                        No Context Loaded.
+                    </div>
+                </template>
+            </Tree>
+        </div>
 
   </div>
 </template>
@@ -116,18 +119,30 @@ const contextNodes = computed(() => {
 }
 
 .context-tree {
-  max-height: 75vh;
-  overflow: auto;
+  margin-top: 0.5rem;
+  flex: 1;
 
-  padding: 0;
   border: none;
   width: 21rem;
-  padding: 0.75rem;
+  position: relative;
 
-  .p-tree-container .p-treenode .p-treenode-content {
-      padding: 0;
-      border: none;
+  .p-tree {
+    border: none;
   }
+
+  .p-tree-wrapper {
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: 0;
+    right: 0;
+
+    .p-treenode .p-treenode-content {
+      padding: 0;
+    }
+
+  }
+
 }
 
 .context-toggle-button {
