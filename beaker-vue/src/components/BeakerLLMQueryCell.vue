@@ -1,17 +1,51 @@
 <template>
     <div class="llm-query-cell">
-        <div style="display: flex; justify-content: space-between">
-            <div class="query">{{ cell.source }}</div>
-            <div v-if="busy">
-                <i
-                    class="pi pi-spin pi-cog"
-                    style="color: var(--yellow-500); font-weight: bold;"
-                />
+        <div class="query-row">
+            <div class="query">
+                <div v-if="editing" style="display: flex">
+                    <InputText
+                        type="text"
+                        size="small"
+                        ref="autofocus"
+                        v-model="editingContents"
+                    />
+                    <div class="edit-actions">
+                        <Button outlined class="save-button" label="Save" size="small" @click="saveEdit"/>
+                        <Button outlined class="cancel-button" @click="cancelEdit" label="Cancel" size="small" />
+                    </div>
+                </div>
+                <div v-else>
+                    <p v-if="savedEdit" style="margin: 0; padding: 0;">
+                        {{savedEdit}} <span style="font-weight: 100;">(edited)</span>
+                    </p>
+                    <span v-else>
+                        {{ cell.source }}
+                    </span>
+                </div>
             </div>
-            <div v-else>
-                <i
-                    class="pi pi-check-circle"
-                    style="color: var(--green-500); font-weight: bold;"
+            <div class="actions">
+                <Button
+                    text
+                    size="small"
+                    icon="pi pi-pencil"
+                    severity="info"
+                    @click="startEdit"
+                />
+                <Button
+                    v-if="busy"
+                    style="pointer-events: none;"
+                    text
+                    size="small"
+                    severity="info"
+                    icon="pi pi-spin pi-spinner"
+                />
+                <Button
+                    v-else
+                    style="pointer-events: none;"
+                    text
+                    size="small"
+                    severity="success"
+                    icon="pi pi-check-circle"
                 />
             </div>
         </div>
@@ -22,7 +56,11 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed } from "vue";
+import { defineProps, ref, computed, nextTick } from "vue";
+import Button from "primevue/button"; 
+import InputText from 'primevue/inputtext';
+
+// TODO put actions in a card/container?
 
 const props = defineProps([
     "cell",
@@ -31,10 +69,37 @@ const props = defineProps([
 
 const cell = ref(props.cell);
 const timeout = ref(false);
+const editing = ref(false);
+const editingContents = ref("");
+const autofocus = ref();
+const savedEdit = ref("");
+
 
 setTimeout(() => {
     timeout.value = true;
 }, 8000);
+
+function cancelEdit() {
+    editing.value = false;
+    editingContents.value = savedEdit.value || cell.value.source;
+}
+
+async function startEdit() {
+    if (editing.value === true) {
+        await nextTick();
+        autofocus.value.$el.focus();
+        return;
+    }
+    editing.value = true;
+    editingContents.value = savedEdit.value || cell.value.source;
+    await nextTick();
+    autofocus.value.$el.focus();
+}
+
+function saveEdit() {
+    editing.value = false;
+    savedEdit.value = editingContents.value;
+}
 
 const busy = computed(() => {
     return props.cell.source &&
@@ -47,21 +112,55 @@ const busy = computed(() => {
 
 <style lang="scss">
 .llm-query-cell {
-    padding: 1em;
+    padding: 0.5rem 1.2rem 1rem 1.2rem;
+}
+
+.query-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .query {
     font-weight: bold;
-    margin-bottom: 0.5em;
+    flex: 1;
+    line-height: 2.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .thought {
-    color: var(--orange-400);
+    color: var(--blue-400);
 }
 
 .response {
     margin-top: 1em;
     white-space: pre-line;
+}
+
+.actions {
+    display: flex;
+    .p-button-icon {
+        font-weight: bold;
+        font-size: 1rem;
+    }
+}
+
+.edit-actions {
+    display: flex;
+    margin-left: 0.5rem;
+    .p-button {
+        margin-right: 0.5rem;
+    }
+}
+
+.save-button {
+    border-color: var(--surface-200);
+    color: var(--primary-text-color);
+}
+
+.cancel-button {
+    border-color: var(--surface-100);
+    color: var(--primary-text-color);
 }
 
 </style>

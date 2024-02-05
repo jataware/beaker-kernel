@@ -1,8 +1,9 @@
 <template>
     <div class="code-cell-output">
-        <div v-if="busy">
-            <i class="pi pi-spin pi-spinner spinner" />
-        </div>
+        <i
+            v-if="busy"
+            class="pi pi-spin pi-spinner busy-icon"
+        />
         <div v-for="output of props.outputs" :key="output">
             <div v-if="output.output_type == 'stream'" :class="output.name">{{ output.text }}</div>
             <div v-else-if="output.output_type == 'display_data'" :class="output.name" v-html="renderResult(output)"></div>
@@ -59,12 +60,13 @@ const renderResult = (resultOutput) => {
     white-space: pre;
 }
 
-.spinner {
+.busy-icon {
     color: var(--blue-500);
     font-weight: bold;
+    font-size: 1.2rem;
     position: absolute;
-    top: 0.5rem;
+    top: 0.4rem;
+    right: 1.2rem;
 }
-
 
 </style>
