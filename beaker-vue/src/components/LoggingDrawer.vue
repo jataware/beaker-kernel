@@ -25,22 +25,17 @@
         </div>
 
         <div class="data-container">
-          <pre>
-[I 2024-01-25 11:41:59.000 NotebookApp] Writing notebook server cookie secret to /run/user/1000/jupyter/notebook_cookie_secret
-[I 2024-01-25 11:41:59.000 NotebookApp] Serving notebooks from local directory: /home/user
-[I 2024-01-25 11:41:59.000 NotebookApp] Jupyter Notebook 6.4.5 is running at:
-[I 2024-01-25 11:41:59.000 NotebookApp] http://localhost:8888/?token=1234567890abcdef
-[I 2024-01-25 11:41:59.000 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
-[C 2024-01-25 11:41:59.000 NotebookApp] 
+          <div class="scroller-area">
 
-  To access the notebook, open this URL in a browser:
-     http://localhost:8888/?token=1234567890abcdef
-[I 2024-01-25 11:42:03.000 NotebookApp] Creating new notebook in 
-[I 2024-01-25 11:42:03.000 NotebookApp] Writing notebook-signing key to /home/user/.local/share/jupyter/notebook_secret
-[W 2024-01-25 11:42:03.000 NotebookApp] Notebook Untitled.ipynb is not trusted
-[I 2024-01-25 11:42:04.000 NotebookApp] Kernel started: 0987654321fedcba
-[I 2024-01-25 11:42:07.000 NotebookApp] Adapting from protocol version 5.1 (kernel 0987654321fedcba) to 5.3 (client).
-          </pre>
+            <Codemirror
+                :tab-size="2"
+                :extensions="codeExtensions"
+                disabled
+                language="json"
+                v-model="debug_logs"
+            />
+
+          </div>
         </div>
       </div>
     </div>
@@ -50,10 +45,12 @@
 
 <script setup lang="ts">
 
-import { ref } from "vue";
+import { ref, computed, defineProps, inject } from "vue";
 import Button from 'primevue/button';
 import Menubar from 'primevue/menubar';
 import InputText from 'primevue/inputtext';
+import { Codemirror } from "vue-codemirror";
+import { oneDark } from '@codemirror/theme-one-dark';
 
 // TODO MenuBar has a pass-through (pt) prop where can can
 // pass in context and set/fix the `active` tab to logging permanently
@@ -61,6 +58,26 @@ import InputText from 'primevue/inputtext';
 // the button goes back to looking "unpress".
 
 const isLogOpen = ref(false);
+
+const props = defineProps([
+  'theme'
+]);
+
+const upstream_logs = inject('debug_logs');
+
+const debug_logs = computed(() => {
+  return JSON.stringify(upstream_logs, undefined, 2);
+});
+
+const codeExtensions = computed(() => {
+    const ext = [];
+
+    if (props.theme === 'dark') {
+        ext.push(oneDark);
+    }
+    return ext;
+
+});
 
 // TODO should probably add handlers for Help|Terms|Contact
 // Can also rename this file and make mor generic than Logging since it contains
@@ -87,8 +104,6 @@ const footerMenuItems = ref([
     }
 ]);
 
-// TODO logs should probably be a ref or props
-const logs = [];
 
 </script>
 
@@ -96,7 +111,7 @@ const logs = [];
 
 .logging-pane {
   width: 100%;
-  height: 14rem;
+  height: 18rem;
   padding: 0.5rem;
   margin: 0;
 }
@@ -115,7 +130,7 @@ const logs = [];
   transition: all 0.3s ease;
 }
 
-pre {
+.scroller-area {
   display: block;
   position: absolute;
   top: 0;
@@ -124,6 +139,7 @@ pre {
   right: 0;
   overflow: auto;
   padding: 0.5rem;
+  margin-top: 0.5rem;
   border: 1px solid lightgray;
   border-radius: 3px;
   color: var(--text-color-secondary);
@@ -133,7 +149,7 @@ pre {
   height: 0;
 }
 .slide-enter-to {
-  height: 14rem;
+  height: 18rem;
 }
 .slide-leave-to {
   height: 0;
