@@ -474,11 +474,23 @@ class LLMKernel(KernelProxyManager):
 
     @message_handler
     async def context_info_request(self, message):
-        context_response_content = self.context.get_info()
+        context_slugs_by_class = dict((cls, slug) for slug, cls in AVAILABLE_CONTEXTS.items())
+        context_class = self.context.__class__
+        context_slug = context_slugs_by_class.get(context_class, "Not Found")
+        full_context_class = f"{context_class.__module__}.{context_class.__name__}"
+        context_config = getattr(self.context, "config", None)
         self.send_response(
             stream="iopub",
             msg_or_type="context_info_response",
-            content=context_response_content,
+            content={
+                "slug": context_slug,
+                "class": full_context_class,
+                "config": context_config,
+                "language": {
+                    "slug": self.context.subkernel.SLUG,
+                    "subkernel": self.context.subkernel.KERNEL_NAME,
+                }
+            },
             parent_header=message.header,
         )
         return False

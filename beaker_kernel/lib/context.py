@@ -132,8 +132,6 @@ class BaseContext:
             "intercepts": intercept_details,
             "procedures": list(self.templates.keys()),
             "agent": agent_details,
-            "debug": self.beaker_kernel.debug_enabled,
-            "verbose": self.beaker_kernel.verbose,
         }
         return payload
 
