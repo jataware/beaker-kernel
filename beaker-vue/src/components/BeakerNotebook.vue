@@ -123,7 +123,7 @@
 
                         <TabPanel header="Debug">
                             <div class="scroller-area">
-                                <Card>
+                                <Card class="debug-card">
                                     <template #title>Custom Message</template>
                                     <template #content>
                                         <BeakerCustomMessage 
@@ -133,19 +133,24 @@
                                         />
                                     </template>
                                 </Card>
-                                <Card>
+                                <Card class="debug-card">
                                     <template #title>State</template>
                                     <template #content>
-                                        <pre class="notebook-json">
-                                            {{JSON.stringify(JSON.parse(props.session.notebook.toJSON()), undefined, 2)}}
-                                        </pre>
+                                            
+                                        <vue-json-pretty 
+                                          :data="debugData()"
+                                          :deep="3"
+                                          showLength
+                                          showIcon
+                                        />
                                         <Button label="Copy" />
                                     </template>
                                 </Card>
                             </div>
                         </TabPanel>
 
-                        <TabPanel header="Settings">
+                        <TabPanel header="Logging">
+                            <LoggingPane />
                         </TabPanel>
 
                     </TabView>
@@ -156,7 +161,7 @@
         </main>
 
         <footer>
-            <LoggingDrawer :theme="selectedTheme"/>
+            <LoggingDrawer />
          </footer>
     </div>
 
@@ -175,6 +180,9 @@
 import { ref, onBeforeMount, onMounted, defineProps, computed, Component } from "vue";
 import { IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
+import VueJsonPretty from 'vue-json-pretty';
+import 'vue-json-pretty/lib/styles.css';
+
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Splitter from 'primevue/splitter';
@@ -190,6 +198,7 @@ import BeakerAgentQuery from './BeakerAgentQuery.vue';
 import BeakerContextSelection from "./BeakerContextSelection.vue";
 import BeakerCustomMessage from "./BeakerCustomMessage.vue";
 import LoggingDrawer from './LoggingDrawer.vue';
+import LoggingPane from './LoggingPane.vue';
 import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 
@@ -208,6 +217,10 @@ const props = defineProps([
     "connectionStatus",
     "contextSetupData"
 ]);
+
+const debugData = () => {
+    return JSON.parse(props.session.notebook.toJSON());
+};
 
 // TODO export/import from ts-lib utils.ts
 enum KernelState {
@@ -525,6 +538,21 @@ footer {
 
 .connection-button {
     color: var(--surface-500);
+}
+
+.debug-card {
+    &.p-card {
+        border-radius: 0;
+    }
+    .p-card-content {
+        padding-top: 0.75rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .vjs-tree-node:hover{
+        background-color: var(--surface-b);
+    }
+
 }
 
 </style>

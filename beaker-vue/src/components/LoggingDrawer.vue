@@ -27,12 +27,11 @@
         <div class="data-container">
           <div class="scroller-area">
 
-            <Codemirror
-                :tab-size="2"
-                :extensions="codeExtensions"
-                disabled
-                language="json"
-                v-model="debug_logs"
+            <vue-json-pretty 
+              :data="upstream_logs" 
+              :deep="3"
+              showLength
+              showIcon
             />
 
           </div>
@@ -46,11 +45,15 @@
 <script setup lang="ts">
 
 import { ref, computed, defineProps, inject } from "vue";
+
+import VueJsonPretty from 'vue-json-pretty';
+import 'vue-json-pretty/lib/styles.css';
+
 import Button from 'primevue/button';
 import Menubar from 'primevue/menubar';
 import InputText from 'primevue/inputtext';
-import { Codemirror } from "vue-codemirror";
-import { oneDark } from '@codemirror/theme-one-dark';
+// import { Codemirror } from "vue-codemirror";
+// import { oneDark } from '@codemirror/theme-one-dark';
 
 // TODO MenuBar has a pass-through (pt) prop where can can
 // pass in context and set/fix the `active` tab to logging permanently
@@ -59,25 +62,24 @@ import { oneDark } from '@codemirror/theme-one-dark';
 
 const isLogOpen = ref(false);
 
-const props = defineProps([
-  'theme'
-]);
+// const props = defineProps([
+//   'theme'
+// ]);
 
 const upstream_logs = inject('debug_logs');
 
-const debug_logs = computed(() => {
-  return JSON.stringify(upstream_logs, undefined, 2);
-});
+// const debug_logs = computed(() => {
+//   return JSON.stringify(upstream_logs, undefined, 2);
+// });
 
-const codeExtensions = computed(() => {
-    const ext = [];
+// const codeExtensions = computed(() => {
+//     const ext = [];
+//     if (props.theme === 'dark') {
+//         ext.push(oneDark);
+//     }
+//     return ext;
+// });
 
-    if (props.theme === 'dark') {
-        ext.push(oneDark);
-    }
-    return ext;
-
-});
 
 // TODO should probably add handlers for Help|Terms|Contact
 // Can also rename this file and make mor generic than Logging since it contains
@@ -111,7 +113,7 @@ const footerMenuItems = ref([
 
 .logging-pane {
   width: 100%;
-  height: 18rem;
+  height: 20rem;
   padding: 0.5rem;
   margin: 0;
 }
@@ -149,7 +151,7 @@ const footerMenuItems = ref([
   height: 0;
 }
 .slide-enter-to {
-  height: 18rem;
+  height: 20rem;
 }
 .slide-leave-to {
   height: 0;

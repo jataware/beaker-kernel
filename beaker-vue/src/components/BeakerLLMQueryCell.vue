@@ -60,7 +60,6 @@ import { defineProps, ref, computed, nextTick } from "vue";
 import Button from "primevue/button"; 
 import InputText from 'primevue/inputtext';
 
-// TODO put actions in a card/container?
 
 const props = defineProps([
     "cell",
