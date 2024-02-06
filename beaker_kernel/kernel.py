@@ -479,6 +479,7 @@ class LLMKernel(KernelProxyManager):
         context_slug = context_slugs_by_class.get(context_class, "Not Found")
         full_context_class = f"{context_class.__module__}.{context_class.__name__}"
         context_config = getattr(self.context, "config", None)
+        context_info = self.context.get_info()
         self.send_response(
             stream="iopub",
             msg_or_type="context_info_response",
@@ -489,7 +490,8 @@ class LLMKernel(KernelProxyManager):
                 "language": {
                     "slug": self.context.subkernel.SLUG,
                     "subkernel": self.context.subkernel.KERNEL_NAME,
-                }
+                },
+                "info": context_info,
             },
             parent_header=message.header,
         )
