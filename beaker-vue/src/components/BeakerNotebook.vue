@@ -110,7 +110,7 @@
                 </SplitterPanel>
 
                 <SplitterPanel
-                    :minSize="20"
+                    :minSize="27"
                     :size="30"
                     class="right-splitter"
                 >
@@ -143,6 +143,7 @@
                                           showLength
                                           showIcon
                                         />
+                                        <br />
                                         <Button label="Copy" />
                                     </template>
                                 </Card>
@@ -167,7 +168,7 @@
 
     <BeakerContextSelection
         :session="props.session"
-        :context-data="activeContext"
+        :activeContext="activeContext"
         :isOpen="contextSelectionOpen"
         :toggleOpen="toggleContextSelection"
         @update-context-info="updateContextInfo"
@@ -451,12 +452,13 @@ footer {
 }
 
 .beaker-cell {
-    border-bottom: 1px solid var(--gray-300);
+    border-bottom: 2px solid var(--surface-b);
     background-color: var(--surface-c);
 }
 
 .beaker-cell.selected {
-    border-right: 4px solid var(--primary-color);
+    border-right: 5px solid var(--purple-400);
+    border-top: unset;
     background-color: var(--surface-a);
 }
 

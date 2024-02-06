@@ -8,7 +8,7 @@
         header="Configure Context"
         :style="{ width: '40rem' }"
     >
-        <p style="margin-block-start: 0;">
+        <p>
             Select kernel and language.
         </p>
         <InputGroup>
@@ -55,7 +55,7 @@
         <template #footer>
             <div style="width: 100%; text-align: center;">
                 <Button
-                    text raised
+                    raised
                     @click="setContext"
                     label="Save"
                     size="small"
@@ -79,7 +79,7 @@ import Checkbox from 'primevue/checkbox';
 
 const props = defineProps([
     "session",
-    "contextData",
+    "activeContext",
     "isOpen",
     "toggleOpen",
     "theme"
@@ -151,10 +151,10 @@ const languageOptions = computed<{slug: string, kernel: string}[]>(() => {
 
 watchEffect(() => {
     if (
-        props.contextData?.language.subkernel
+        props.activeContext?.language.subkernel
         && selectedLanguage.value === undefined
     ) {
-        selectedLanguage.value = props.contextData.language.subkernel;
+        selectedLanguage.value = props.activeContext.language.subkernel;
     }
     else if (selectedContext.value && selectedContext.value.languages.map<string|undefined>((item) => item.subkernel).indexOf(selectedLanguage.value) === -1) {
         selectedLanguage.value = selectedContext.value?.languages[0].subkernel;
@@ -228,6 +228,10 @@ onMounted(async () => {
     padding: 0.25rem;    
     max-height: 15rem;
     overflow: auto;
+}
+
+.p-dialog-header {
+    background-image: linear-gradient(45deg, var(--surface-a), var(--surface-a), var(--surface-a), var(--surface-b), var(--surface-b), var(--surface-b));
 }
 
 </style>
