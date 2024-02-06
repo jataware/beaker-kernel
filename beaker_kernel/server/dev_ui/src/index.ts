@@ -302,7 +302,7 @@ async function createApp(manager: ServiceManager.IManager): void {
       const code = msg.content.code;
       notebook.model.cells.model.addCell({id: `${msg.id}-code`, cell_type: 'code', source: code});
     }
-    else if (msg.msg_type === "input_request") {
+    else if (msg_type === "input_request") {
       const prompt = msg.content.prompt;
       const response = window.prompt(prompt);
       sendCustomMessage("stdin", "input_reply", {"prompt": prompt, "reply": response})
