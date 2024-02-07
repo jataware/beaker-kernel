@@ -100,16 +100,22 @@ const contextNodes = computed(() => {
             key: `1-${idx}`,
             label: inter,
         }))
-    }, {
-        key: 2,
-        label: 'Procedures',
-        icon: 'pi pi-fw pi-tablet',
-        expanded: true,
-        children: context.procedures.map((proc, idx) => ({
-            key: `2-${idx}`,
-            label: proc,
-        }))
-    }, {
+    }];
+
+    if (context.procedures.length) {
+        displayableNodes.push({
+            key: 2,
+            label: 'Procedures',
+            icon: 'pi pi-fw pi-tablet',
+            expanded: true,
+            children: context.procedures.map((proc, idx) => ({
+                key: `2-${idx}`,
+                label: proc,
+            }))
+        });
+    }
+
+    displayableNodes.push({
         key: 3,
         label: 'Tools',
         icon: 'pi pi-fw pi-wrench',
@@ -121,7 +127,8 @@ const contextNodes = computed(() => {
                 data: context.agent.tools[toolname],
                 type: 'tool'
             }))
-    }];
+    });
+
     return displayableNodes;
     
 });

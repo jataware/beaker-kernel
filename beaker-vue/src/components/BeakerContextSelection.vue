@@ -163,8 +163,6 @@ watch(() => props.isOpen, (open, oldValue) => {
         // Panel just opened and activeContext info avialable (verbose/debug checks)
             const strDebugValue = props.activeContext.info.debug.toString();
 
-            console.log('strDebugValue', strDebugValue);
-
             if (logDebug.value.length) {
                 logDebug.value[0] = strDebugValue;
             } else {
@@ -186,9 +184,6 @@ const setContext = () => {
     // TODO determine if there's a better way to work with primvue's checkbox state
     const isDebug = logDebug.value.includes('true');
     const isVerbose = logVerbose.value.includes('true');
-
-    console.log('isDebug', isDebug);
-    console.log('isVerbose', isVerbose);
 
     const future = props.session.sendBeakerMessage(
         "context_setup_request",

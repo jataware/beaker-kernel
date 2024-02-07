@@ -272,7 +272,6 @@ const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 
 const selectedCell = computed(() => {
-    console.log(3, selectedCellIndex.value);
     return _getCell(selectedCellIndex.value);
 });
 
@@ -336,7 +335,6 @@ const addCell = () => {
 }
 
 const runCell = (cell?: number | IBeakerCell) => {
-    console.log(cell);
     if (cell === undefined) {
         console.log(2);
         cell = selectedCell.value;

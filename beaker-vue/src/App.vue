@@ -45,16 +45,15 @@ rawSession.sessionReady.then(() => {
             const newStatus = msg?.content?.execution_state || 'connecting';
             connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
           }, 1000);
-        } else if (['context_setup_response'].includes(msg.header.msg_type)) {
-            console.log('msg', msg);
         } else if (msg.header.msg_type === "debug_event") {
-            console.log('debug event:', msg);
             debug_logs.push(msg.content);
-        } else if (msg.header.msg_type === 'context_info_response') {
-          console.log('context_info_response', msg.content);
-        } else {
-          console.log('msg type', msg);
-        }
+        } 
+        
+        // else if (msg.header.msg_type === 'context_info_response') {
+        //   console.log('context_info_response', msg.content);
+        // } else {
+        //   console.log('msg type', msg);
+        // }
 
     })
     beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")

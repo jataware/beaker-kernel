@@ -30,6 +30,7 @@
               >
                 <i class="pi pi-search" />
                 <InputText 
+                  v-model="filterValue"
                   size="small"
                   placeholder="Filter"
                 />
@@ -43,14 +44,23 @@
               />
             </div>
 
-            <vue-json-pretty 
-              :data="upstream_logs" 
-              :deep="3"
-              showLength
-              showIcon
-              :showDoubleQuotes="isQuotes"
-              :showLineNumber="linenum"
-            />
+            <Panel 
+              class="log-panel"
+              :class="{odd: index % 2 !== 0}"
+              :data-index="index"
+              v-for="(logEntry,index) in filteredLogs" :key="index"
+              :header="logEntry.event"
+            >
+              <vue-json-pretty 
+                :data="logEntry.body" 
+                :deep="2"
+                showLength
+                showIcon
+                :showDoubleQuotes="isQuotes"
+                :showLineNumber="linenum"
+              />
+            </Panel>
+
           </div>
           </div>
         </div>
@@ -65,6 +75,8 @@ import InputText from 'primevue/inputtext';
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import Checkbox from 'primevue/checkbox';
+import Panel from 'primevue/panel';
+
 
 // import { Codemirror } from "vue-codemirror";
 // import { oneDark } from '@codemirror/theme-one-dark';
@@ -73,6 +85,8 @@ import Checkbox from 'primevue/checkbox';
 // const props = defineProps([
 //   'theme'
 // ]);
+
+const filterValue = ref("");
 
 const options = ref([]);
 
@@ -84,7 +98,14 @@ const linenum = computed(() => {
   return options.value.includes('linenum');
 })
 
-const upstream_logs = inject('debug_logs');
+const upstreamLogs = inject('debug_logs');
+
+// TODO debounce for quick typing
+const filteredLogs = computed(() => {
+  return upstreamLogs.filter(logObj => {
+    return logObj.event.includes(filterValue.value);
+  });
+});
 
 
 // const debug_logs = computed(() => {
@@ -119,4 +140,29 @@ const upstream_logs = inject('debug_logs');
   align-items: center;
   margin-bottom: 0.5rem;
 }
+
+.log-panel {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+
+  .p-panel-header {
+    background: var(--surface-b);
+  }
+
+  // &.odd {
+  //   .p-panel-header {
+  //     background: var(--surface-b);
+  //   }
+  // }
+}
+
+.log-panel::before {
+  content: attr(data-index);
+  color: var(--gray-300);
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+}
+
 </style>
