@@ -1,7 +1,7 @@
 <template>
     <div class="beaker-notebook">
         <header>
-            <Toolbar style="width: 100%; padding: 0.5rem 1rem;">
+            <Toolbar class="toolbar">
                 <template #start>
                     <div class="status-bar">
                         <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
@@ -65,7 +65,7 @@
 
         <main style="display: flex;">
 
-            <ContextTree :context="props.contextSetupData"/>
+            <ContextTree :context="activeContext?.info" />
 
             <Splitter class="splitter">
 
@@ -77,10 +77,26 @@
 
                     <div class="notebook-controls">
                         <InputGroup>
-                            <CellActionButton @click="addCell" primeIcon="plus" />
-                            <CellActionButton @click="removeCell" primeIcon="minus" />
-                            <CellActionButton @click="runCell()" primeIcon="play" />
-                            <CellActionButton @click="identity" primeIcon="stop" />
+                            <CellActionButton
+                                @click="addCell"
+                                v-tooltip.bottom="{value: 'Add New Cell', showDelay: 300}"
+                                primeIcon="plus"
+                            />
+                            <CellActionButton
+                                @click="removeCell"
+                                v-tooltip.bottom="{value: 'Remove Selected Cell', showDelay: 300}"
+                                primeIcon="minus"
+                            />
+                            <CellActionButton
+                                @click="runCell()"
+                                v-tooltip.bottom="{value: 'Run Selected Cell', showDelay: 300}"
+                                primeIcon="play"
+                            />
+                            <CellActionButton
+                                @click="identity"
+                                v-tooltip.bottom="{value: 'Stop Execution', showDelay: 300}"
+                                primeIcon="stop"
+                            />
                             <CellActionButton @click="identity" primeIcon="refresh" />
                             <CellActionButton @click="identity" primeIcon="upload" />
                         </InputGroup>
@@ -110,7 +126,7 @@
                 </SplitterPanel>
 
                 <SplitterPanel
-                    :minSize="20"
+                    :minSize="27"
                     :size="30"
                     class="right-splitter"
                 >
@@ -143,6 +159,7 @@
                                           showLength
                                           showIcon
                                         />
+                                        <br />
                                         <Button label="Copy" />
                                     </template>
                                 </Card>
@@ -167,7 +184,7 @@
 
     <BeakerContextSelection
         :session="props.session"
-        :context-data="activeContext"
+        :activeContext="activeContext"
         :isOpen="contextSelectionOpen"
         :toggleOpen="toggleContextSelection"
         @update-context-info="updateContextInfo"
@@ -214,8 +231,7 @@ const componentMap: {[key: string]: Component} = {
 
 const props = defineProps([
     "session",
-    "connectionStatus",
-    "contextSetupData"
+    "connectionStatus"
 ]);
 
 const debugData = () => {
@@ -249,7 +265,8 @@ const connectionColor = computed(() => {
     return connectionStatusColorMap[props.connectionStatus];
 });
 
-const activeContext = ref<{slug: string, class: string, context: any} | undefined>(undefined);
+// TODO info object map type
+const activeContext = ref<{slug: string, class: string, context: any, info: any} | undefined>(undefined);
 const selectedCellIndex = ref(0);
 const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
@@ -451,12 +468,13 @@ footer {
 }
 
 .beaker-cell {
-    border-bottom: 1px solid var(--gray-300);
+    border-bottom: 2px solid var(--surface-b);
     background-color: var(--surface-c);
 }
 
 .beaker-cell.selected {
-    border-right: 4px solid var(--primary-color);
+    border-right: 5px solid var(--purple-400);
+    border-top: unset;
     background-color: var(--surface-a);
 }
 
@@ -553,6 +571,11 @@ footer {
         background-color: var(--surface-b);
     }
 
+}
+
+.toolbar {
+    width: 100%;
+    padding: 0.5rem 1rem;
 }
 
 </style>

@@ -42,6 +42,10 @@ const emit = defineEmits([
 ]);
 
 const handleQuery = (e: any) => {
+    if (!query.value) {
+        return; // TODO notify user that they're missing the agent query
+    }
+    
     const cell = props.session.addQueryCell(query.value);
     query.value = "";
     emit("select-cell", cell);

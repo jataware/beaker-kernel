@@ -10,29 +10,11 @@
 
       <div class="pane-contents">
         <div class="actions">
-          <div class="p-input-icon-left" style="padding: 0; margin: 0;">
-              <i class="pi pi-search" />
-              <InputText size="small" placeholder="Filter" style="margin: 0;" />
-          </div>
-          &nbsp;
-          &nbsp;
-          &nbsp;
-          <Button 
-            label="Clear"
-            severity="warning"
-            size="small"
-          />
+          <span>TODO</span>
         </div>
 
         <div class="data-container">
           <div class="scroller-area">
-
-            <vue-json-pretty 
-              :data="upstream_logs" 
-              :deep="3"
-              showLength
-              showIcon
-            />
 
           </div>
         </div>
@@ -46,12 +28,12 @@
 
 import { ref, computed, defineProps, inject } from "vue";
 
-import VueJsonPretty from 'vue-json-pretty';
-import 'vue-json-pretty/lib/styles.css';
+// import VueJsonPretty from 'vue-json-pretty';
+// import 'vue-json-pretty/lib/styles.css1rem;
 
-import Button from 'primevue/button';
+// import Button from 'primevue/button';
 import Menubar from 'primevue/menubar';
-import InputText from 'primevue/inputtext';
+// import InputText from 'primevue/inputtext';
 // import { Codemirror } from "vue-codemirror";
 // import { oneDark } from '@codemirror/theme-one-dark';
 
@@ -87,14 +69,14 @@ const upstream_logs = inject('debug_logs');
 const footerMenuItems = ref([
     {
         label: 'Help',
-        icon: 'pi pi-question'
-    },
-    {
-        label: 'Logging',
-        icon: 'pi pi-search',
+        icon: 'pi pi-question',
         command: () => {
             isLogOpen.value = !isLogOpen.value;
         }
+    },
+    {
+        label: 'About',
+        icon: 'pi pi-bookmark',
     },
     {
         label: 'Terms',
@@ -113,7 +95,7 @@ const footerMenuItems = ref([
 
 .logging-pane {
   width: 100%;
-  height: 20rem;
+  height: 19rem;
   padding: 0.5rem;
   margin: 0;
 }
@@ -136,7 +118,7 @@ const footerMenuItems = ref([
   display: block;
   position: absolute;
   top: 0;
-  bottom: 0;
+  bottom: 1rem;
   left: 0;
   right: 0;
   overflow: auto;
@@ -151,7 +133,7 @@ const footerMenuItems = ref([
   height: 0;
 }
 .slide-enter-to {
-  height: 20rem;
+  height: 19rem;
 }
 .slide-leave-to {
   height: 0;
