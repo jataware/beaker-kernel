@@ -68,7 +68,7 @@
 
 <script setup lang="ts">
 
-import { defineProps, defineEmits, ref, onMounted, computed, watchEffect } from "vue";
+import { defineProps, defineEmits, ref, onMounted, computed, watch } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
 import Dialog from 'primevue/dialog';
@@ -86,14 +86,12 @@ const props = defineProps([
 ]);
 
 const contextData = ref(undefined);
-const logDebug = ref(false);
-const logVerbose = ref(false);
+const logDebug = ref([]);
+const logVerbose = ref([]);
 
 const closeDialog = () => {
     props.toggleOpen();
-    logDebug.value = false;
-    logVerbose.value = false;
-}
+};
 
 const emit = defineEmits([
     "select-cell",
@@ -149,23 +147,48 @@ const languageOptions = computed<{slug: string, kernel: string}[]>(() => {
     return selectedContext.value.languages;
 });
 
-watchEffect(() => {
-    if (
-        props.activeContext?.language.subkernel
-        && selectedLanguage.value === undefined
-    ) {
-        selectedLanguage.value = props.activeContext.language.subkernel;
-    }
-    else if (selectedContext.value && selectedContext.value.languages.map<string|undefined>((item) => item.subkernel).indexOf(selectedLanguage.value) === -1) {
-        selectedLanguage.value = selectedContext.value?.languages[0].subkernel;
-    }
-});
+// TODO clean this once we understand how checkboxes state work..
+watch(() => props.isOpen, (open, oldValue) => {
+    // Only se up saved context state when opening the dialog (not closing).
+    if (open) {
 
-watchEffect(() => {
-    contextPayload.value = selectedContext.value?.defaultPayload;
+        if (props.activeContext?.language) {
+        // Panel just opened and activeContext data avialable:
+            selectedLanguage.value = props.activeContext.language.subkernel;
+            selectedContextSlug.value = props.activeContext.slug;
+            contextPayload.value = JSON.stringify(props.activeContext.config);
+        }
+
+        if (props.activeContext?.info) {
+        // Panel just opened and activeContext info avialable (verbose/debug checks)
+            const strDebugValue = props.activeContext.info.debug.toString();
+
+            console.log('strDebugValue', strDebugValue);
+
+            if (logDebug.value.length) {
+                logDebug.value[0] = strDebugValue;
+            } else {
+                logDebug.value.push(strDebugValue);
+            }
+            const strVerboseValue = props.activeContext.info.verbose.toString();
+
+            if (logVerbose.value.length) {
+                logVerbose.value[0] = strVerboseValue;
+            } else {
+                logVerbose.value.push(strVerboseValue);
+            }
+
+        }
+    }
 });
 
 const setContext = () => {
+    // TODO determine if there's a better way to work with primvue's checkbox state
+    const isDebug = logDebug.value.includes('true');
+    const isVerbose = logVerbose.value.includes('true');
+
+    console.log('isDebug', isDebug);
+    console.log('isVerbose', isVerbose);
 
     const future = props.session.sendBeakerMessage(
         "context_setup_request",
@@ -173,15 +196,12 @@ const setContext = () => {
       context: selectedContextSlug.value,
       language: selectedLanguage.value,
       context_info: JSON.parse(contextPayload.value || ''),
-      debug: Boolean(logDebug.value[0]),
-      verbose: Boolean(logVerbose.value[0]),
+      debug: isDebug,
+      verbose: isVerbose,
     }
     );
     future.done.then(() => {
         emit("update-context-info");
-        sessionStorage.setItem('active_context', selectedContextSlug.value);
-        sessionStorage.setItem('kernel_language', selectedLanguage.value);
-        sessionStorage.setItem('context_info', contextPayload.value);
         props.toggleOpen();
     });
 }
@@ -190,12 +210,6 @@ onMounted(async () => {
     const contexts = await props.session.availableContexts();
     contextData.value = contexts;
 
-    const savedContext = sessionStorage.getItem('active_context');
-
-    if (savedContext) {
-        selectedContextSlug.value = savedContext;
-        return;
-    }
     selectedContextSlug.value = Object.keys(contexts)[0];
 })
 </script>

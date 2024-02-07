@@ -67,7 +67,8 @@ const toggleContextPanel = () => {
 
 // This should mostly be uncontrolled, but it was
 // "hard" to open by default without controlling
-const contextExpandedKeys = ref({0: true, 1: true, 2: true});
+// TODO easier way for tree to auto-open by default
+const contextExpandedKeys = ref({0: true, 1: true, 2: true, 3: true});
 
 const props = defineProps([
     "context"
