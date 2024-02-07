@@ -28,9 +28,30 @@
                         No Context Loaded.
                     </div>
                 </template>
+                <template #tool="slotProps">
+                    <span
+                        style="cursor: help; border-bottom: 1px dotted var(--text-color-secondary);"
+                        v-tooltip="{
+                            value: `${slotProps.node.data}`,
+                            pt: {
+                                text: {
+                                    style: {
+                                        width: '20rem'
+                                    }
+                                },
+                                root: {
+                                    style: {
+                                        marginLeft: '1rem'
+                                    }
+                                }
+                            }
+                            }"                
+                        >
+                        {{ slotProps.node.label }}
+                    </span>
+                </template>
             </Tree>
         </div>
-
   </div>
 </template>
 
@@ -93,9 +114,11 @@ const contextNodes = computed(() => {
         icon: 'pi pi-fw pi-wrench',
         expanded: true,
         children: Object.keys(context?.agent?.tools || {})
-            .map((tool, idx) => ({
+            .map((toolname, idx) => ({
                 key: `3-${idx}`,
-                label: tool.replace('PyPackageAgent.', ''),
+                label: toolname.replace('PyPackageAgent.', ''),
+                data: context.agent.tools[toolname],
+                type: 'tool'
             }))
     }];
     return displayableNodes;

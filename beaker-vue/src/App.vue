@@ -2,7 +2,6 @@
     <BeakerNotebook
       :session="beakerSession"
       :connectionStatus="connectionStatus"
-      :contextSetupData="contextSetupData"
       />
 </template>
 
@@ -29,10 +28,10 @@ const rawSession = new BeakerSession(
 );
 
 const connectionStatus = ref('connecting');
-const contextSetupData = ref(null);
 const debug_logs = reactive([]);
 
 provide('debug_logs', debug_logs);
+
 
 rawSession.sessionReady.then(() => {
 
@@ -47,13 +46,14 @@ rawSession.sessionReady.then(() => {
             connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
           }, 1000);
         } else if (['context_setup_response'].includes(msg.header.msg_type)) {
-            contextSetupData.value = msg.content;
+            console.log('msg', msg);
         } else if (msg.header.msg_type === "debug_event") {
             console.log('debug event:', msg);
             debug_logs.push(msg.content);
-        }
-        else {
-          console.log('msg type', msg.header.msg_type);
+        } else if (msg.header.msg_type === 'context_info_response') {
+          console.log('context_info_response', msg.content);
+        } else {
+          console.log('msg type', msg);
         }
 
     })
