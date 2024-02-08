@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class JuliaSubkernel(BaseSubkernel):
     DISPLAY_NAME = "Julia"
     SLUG = "julia"
-    KERNEL_NAME = "julia-1.9"
+    KERNEL_NAME = "julia-1.10"
 
     WEIGHT = 30
 
