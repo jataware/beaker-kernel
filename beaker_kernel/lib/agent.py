@@ -30,7 +30,7 @@ class BaseAgent(ReActAgent):
             "verbose": self.context.beaker_kernel.verbose,
         })
         super().__init__(
-            # model="gpt-4",  # Use default
+            model="gpt-4-turbo-preview",  # Use default
             # api_key=api_key,  # TODO: get this from configuration
             tools=tools,
             verbose=self.context.beaker_kernel.verbose,
