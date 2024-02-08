@@ -10,7 +10,7 @@ import fetch from 'node-fetch';
 import { Slot } from '@lumino/signaling';
 
 import { createMessageId, IBeakerAvailableContexts, IActiveContextInfo } from './util';
-import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell } from './notebook';
+import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage, IBeakerFuture } from './notebook';
 import { BeakerHistory } from './history';
 
 export interface IBeakerSessionOptions {
@@ -18,7 +18,8 @@ export interface IBeakerSessionOptions {
     name: string;
     kernelName: string;
     sessionId?: string;
-    messageHandler?: Function; //(func: Function): void;
+    messageHandler?: Function;
+    inputRequestHandler?: Function;
 };
 
 export class BeakerSession {
@@ -61,6 +62,12 @@ export class BeakerSession {
                 else {
                     this._messageHandler = this._defaultMessageHandler;
                 }
+                if (options.inputRequestHandler) {
+                    this._inputRequestHandler = options.inputRequestHandler;
+                }
+                else {
+                    this._inputRequestHandler = this._defaultInputRequestHandler;
+                }
                 this._sessionContext.iopubMessage.connect(this._messageHandler);
             });
         });
@@ -93,6 +100,15 @@ export class BeakerSession {
     private _defaultMessageHandler(sessionConnection: ISessionConnection, {direction, msg}) {
         //noop
     }
+
+    private async _defaultInputRequestHandler(msg: messages.IInputRequestMsg, cell: BeakerQueryCell): Promise<string> {
+        //noop
+        return new Promise(async (resolve, reject) => {
+            const answer = window.prompt(msg.content.prompt);
+            resolve(answer);
+        });
+    }
+
 
     public async availableContexts(): Promise<IBeakerAvailableContexts> {
         return new Promise(async (resolve) => {
@@ -201,12 +217,21 @@ export class BeakerSession {
         return this._services;
     }
 
+    get inputRequestHandler() {
+        return this._inputRequestHandler;
+    }
+
+    set inputRequestHandler(handler: (msg: messages.IInputRequestMsg, cell: BeakerQueryCell) => Promise<string>) {
+        this._inputRequestHandler = handler;
+    }
+
     private _sessionId: string;
     private _sessionOptions: IBeakerSessionOptions;
     private _services: ServiceManager;
     private _serverSettings: ServerConnection.ISettings;
     private _sessionContext: SessionContext;
     private _messageHandler: Slot<any, any>; // TODO: fix any typing here
+    private _inputRequestHandler: (msg: messages.IInputRequestMsg, cell: BeakerQueryCell) => Promise<string>; // TODO: fix any typing here
     private _history: BeakerHistory;
 
     public notebook: BeakerNotebook;

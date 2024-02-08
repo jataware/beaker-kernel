@@ -4,7 +4,7 @@ import re
 import typing
 
 from archytas.react import ReActAgent, Undefined
-from archytas.tool_utils import AgentRef, LoopControllerRef, tool
+from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
 from beaker_kernel.lib.utils import togglable_tool
 
@@ -56,7 +56,6 @@ class BaseAgent(ReActAgent):
             event_type=f"agent_{event_type}",
             content=content
         )
-        logger.error(f"Archytas debug: {event_type} -- {content}")
         return super().debug(event_type=event_type, content=content)
 
     def display_observation(self, observation):
@@ -74,7 +73,7 @@ class BaseAgent(ReActAgent):
 
     @togglable_tool("ENABLE_USER_PROMPT")
     async def ask_user(
-        self, query: str, agent: AgentRef, loop: LoopControllerRef
+        self, query: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef,
     ) -> str:
         """
         Sends a query to the user and returns their response
@@ -85,7 +84,7 @@ class BaseAgent(ReActAgent):
         Returns:
             str: The user's response to the query.
         """
-        return await self.context.beaker_kernel.prompt_user(query)
+        return await self.context.beaker_kernel.prompt_user(query, parent_message=react_context.get("message", None))
 
     @tool()
     async def generate_code(

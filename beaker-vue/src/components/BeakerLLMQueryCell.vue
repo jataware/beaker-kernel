@@ -49,15 +49,16 @@
                 />
             </div>
         </div>
-        <div class="thought" v-for="thought of cell.thoughts" :key="thought">Thought: {{ thought }}</div>
-        <div class="response">{{ cell.response }}</div>
+        <div :class="event.type" v-for="event of cell.events" :key="event">{{ event.content }}</div>
+        <!-- <div class="thought" v-for="thought of cell.thoughts" :key="thought">Thought: {{ thought }}</div> -->
+        <!-- <div class="response">{{ cell.response }}</div> -->
     </div>
 
 </template>
 
 <script setup lang="ts">
 import { defineProps, ref, computed, nextTick } from "vue";
-import Button from "primevue/button"; 
+import Button from "primevue/button";
 import InputText from 'primevue/inputtext';
 
 

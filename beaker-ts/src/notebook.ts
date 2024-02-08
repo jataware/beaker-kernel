@@ -37,13 +37,16 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     source: nbformat.MultilineString;
 }
 
+export interface IBeakerQueryEvent extends JSONObject {
+    type: "thought" | "response" | "user_question" | "user_answer";
+    content: string;
+
+};
+
 export interface IQueryCell extends nbformat.IBaseCell {
     cell_type: 'query';
     id?: string;
-    thoughts: string[];
-    debug?: string[];
-    response: nbformat.MultilineString;
-
+    events: IBeakerQueryEvent[];
 }
 
 export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
@@ -149,35 +152,64 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     cell_type: 'query';
     id?: string;
-    thoughts: string[];
-    debug?: string[];
-    response: nbformat.MultilineString;
+    events: IBeakerQueryEvent[];
 
     constructor(content: nbformat.ICell) {
         super();
         Object.keys(content).forEach((key) => {this[key] = content[key] });
-        this.thoughts = this.thoughts || [];
-        this.debug = this.debug || [];
-        this.response = this.response || "";
+        this.events = this.events || [];
         if (this.id === undefined) {
             this.id = uuidv4();
         }
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
-        const handleIOPub = (msg: IBeakerIOPubMessage): void => {
+        this.events = [];
+
+        const handleIOPub = async (msg: IBeakerIOPubMessage) => {
             const msg_type = msg.header.msg_type;
             const content = msg.content;
             if (msg_type === "status") {
                 return;
             }
             if (msg_type === "llm_thought") {
-                this.thoughts.push(content.thought);
+                this.events.push({
+                    type: "thought",
+                    content: content.thought,
+                })
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
-                this.response = content.text;
+                this.events.push({
+                    type: "response",
+                    content: content.text,
+                })
             }
         };
+
+        const handleStdin = async (msg: messages.IStdinMessage) => {
+            if (messages.isInputRequestMsg(msg)) {
+                this.events.push({
+                    type: "user_question",
+                    content: msg.content.prompt,
+                });
+                // Fetch the reply from the async handler
+                const reply = await session.inputRequestHandler(msg, this);
+
+                this.events.push({
+                    type: "user_answer",
+                    content: reply,
+                });
+
+                // Send the reply to the kernel
+                session.kernel.sendInputReply(
+                    {
+                        "value": reply,
+                        "status": "ok",
+                    },
+                    msg.header,
+                )
+            }
+        }
 
         const future = session.sendBeakerMessage(
             "llm_request",
@@ -186,21 +218,30 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             }
         );
         future.onIOPub = handleIOPub;
+        future.onStdin = handleStdin;
         return future;
     };
 
     public toMarkdownCell() {
         const renderedMarkdownLines = [`# ${this.source}\n`];
-        this.thoughts.forEach((thought) => renderedMarkdownLines.push(`> Thought: ${thought}\n> `));
-        renderedMarkdownLines.push(`\n`)
-        renderedMarkdownLines.push(`**${this.response}**`)
+        this.events.forEach((event) => {
+            if (event.type === "thought") {
+                renderedMarkdownLines.push(`> Thought: ${event.content}\n> `);
+            }
+            else if (event.type === "response") {
+                renderedMarkdownLines.push(`**${event.content}**`);
+            }
+            else if (event.type === "user_question") {
+                renderedMarkdownLines.push(`Beaker asks: ${event.content}`);
+            }
+            else if (event.type === "user_answer") {
+                renderedMarkdownLines.push(`The user responds: ${event.content}`);
+            }
+        });
         const renderedMarkdown = renderedMarkdownLines.join("\n");
         const metadata = {
             ...this.metadata,
             beaker_cell_type: "query",
-            beaker_thoughts: this.thoughts,
-            beaker_debug: this.debug,  // TODO: Do we actually want to store the debug information?
-            beaker_response: this.response,
         }
         return new BeakerMarkdownCell(
             {

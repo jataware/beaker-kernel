@@ -17,13 +17,16 @@ const settings = {
     wsUrl: "ws://localhost:8080",
     token: "89f73481102c46c0bc13b2998f9a4fce",
 };
-//
+
 const rawSession = new BeakerSession(
   {
     settings: settings,
     name: "MyKernel",
     kernelName: "beaker_kernel",
     sessionId: "dev_session",
+    // inputRequestHandler: (msg, cell) => {
+    //   console.log(msg, cell);
+    // }
   }
 );
 
