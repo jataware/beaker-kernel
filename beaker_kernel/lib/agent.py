@@ -30,7 +30,7 @@ class BaseAgent(ReActAgent):
             "verbose": self.context.beaker_kernel.verbose,
         })
         super().__init__(
-            # model="gpt-4",  # Use default
+            model="gpt-4-turbo-preview",  # Use default
             # api_key=api_key,  # TODO: get this from configuration
             tools=tools,
             verbose=self.context.beaker_kernel.verbose,
@@ -43,6 +43,7 @@ class BaseAgent(ReActAgent):
 
     def get_info(self):
         """
+        Returns info about the agent for communication with the kernel.
         """
         info = {
             "name": self.__class__.__name__,
@@ -85,37 +86,3 @@ class BaseAgent(ReActAgent):
             str: The user's response to the query.
         """
         return await self.context.beaker_kernel.prompt_user(query, parent_message=react_context.get("message", None))
-
-    @tool()
-    async def generate_code(
-        self, query: str, agent: AgentRef, loop: LoopControllerRef
-    ) -> None:
-        """
-        Generated code to be run in an interactive Jupyter notebook.
-
-        Args:
-            query (str): A fully grammatically correct question or request.
-        """
-
-
-        prompt = f"""
-    You are a programmer writing code to help with working in a Python notebook.
-
-    Please write code that satisfies the user's request below.
-
-    Please generate the code as if you were programming inside a Jupyter Notebook and the code is to be executed inside a cell.
-    You MUST wrap the code with a line containing three backticks (```) before and after the generated code.
-    No addtional text is needed in the response, just the code block.
-    """
-
-        llm_response = await agent.oneshot(prompt=prompt, query=query)
-        loop.set_state(loop.STOP_SUCCESS)
-        preamble, code, coda = re.split("```\w*", llm_response)
-        result = json.dumps(
-            {
-                "action": "code_cell",
-                "language": "python3",
-                "content": code.strip(),
-            }
-        )
-        return result
