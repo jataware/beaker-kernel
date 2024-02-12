@@ -46,13 +46,12 @@
                 />
             </div>
         </div>
-        <div :class="event.type" v-for="event of cell.events" :key="event">{{ event.content }}</div>
-        <div v-if="cell.status === 'awaiting_input'">
-            <InputText v-model="response"></InputText><Button label="Respond" @click="respond">Respond</Button>
-
+        <div :class="event.type" v-for="event of cell.events" :key="event">
+            <span v-if="event.type === 'thought'">Thought:&nbsp;</span>{{ event.content }} 
+            <div v-if="cell.status === 'awaiting_input'">
+                <InputText v-model="response"></InputText><Button label="Respond" @click="respond">Respond</Button>
+            </div>
         </div>
-        <!-- <div class="thought" v-for="thought of cell.thoughts" :key="thought">Thought: {{ thought }}</div> -->
-        <!-- <div class="response">{{ cell.response }}</div> -->
     </div>
 
 </template>
@@ -69,17 +68,12 @@ const props = defineProps([
 ]);
 
 const cell = ref(props.cell);
-const timeout = ref(false);
 const editing = ref(false);
 const editingContents = ref("");
 const autofocus = ref();
 const savedEdit = ref("");
 const response = ref("");
 
-
-setTimeout(() => {
-    timeout.value = true;
-}, 8000);
 
 function cancelEdit() {
     editing.value = false;
@@ -104,11 +98,6 @@ function saveEdit() {
     cell.value.source = editingContents.value;
 }
 
-// const busy = computed(() => {
-//     return props.cell.source &&
-//      !props.cell.response &&
-//      !timeout.value
-// });
 
 const respond = () => {
     props.cell.respond(response.value, props.session);

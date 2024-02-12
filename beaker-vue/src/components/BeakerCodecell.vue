@@ -3,8 +3,8 @@
         class="code-cell"
         :class="{busy: isBusy}"
     >
-        <div style="display: flex;">
-            <div style="flex: 1;">
+        <div class="code-cell-grid">
+            <div class="code-data">
                 <Codemirror
                     v-model="cell.source"
                     placeholder="Your code..."
@@ -18,11 +18,11 @@
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
             <div class="execution-count">
-                [{{props.executionCount || '&nbsp;'}}]
+                <span>
+                    [{{props.executionCount || '&nbsp;'}}]
+                </span>
             </div>
         </div>
-
-        
     </div>
 </template>
 
@@ -82,20 +82,34 @@ const execute = (evt: any) => {
 
 <style lang="scss">
 .code-cell {
-    padding: 1rem;
+    padding: 1rem 0 1rem 1rem;
+}
+
+.code-cell-grid {
+    display: grid;
+
+    grid-template-areas:
+        "code code code exec";
+
+    grid-template-columns: 1fr 1fr 1fr auto;
+}
+
+.code-data {
+    grid-area: code;
 }
 
 .busy {
 }
 
 .execution-count {
-    flex-basis: 2rem;
+    grid-area: exec;
     color: var(--text-color-secondary);
     display: flex;
     justify-content: center;
-    width: 3rem;
+    width: 0;
     font-family: monospace;
     font-size: 0.75rem;    
+    padding: 0 1rem;
 }
 
 </style>
