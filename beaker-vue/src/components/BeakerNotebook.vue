@@ -177,6 +177,7 @@
 
         </main>
 
+        <!-- TODO may use HTML comments to hide footer -->
         <footer>
             <LoggingDrawer />
          </footer>
