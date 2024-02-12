@@ -21,7 +21,7 @@
 
                 <template #center>
                     <h4 class="logo">
-                        Beaker
+                        Beaker Development Interface
                     </h4>
                 </template>
 
@@ -142,7 +142,7 @@
                                 <Card class="debug-card">
                                     <template #title>Custom Message</template>
                                     <template #content>
-                                        <BeakerCustomMessage 
+                                        <BeakerCustomMessage
                                             :theme="selectedTheme"
                                             :session="session"
                                             :expanded="true"
@@ -152,8 +152,8 @@
                                 <Card class="debug-card">
                                     <template #title>State</template>
                                     <template #content>
-                                            
-                                        <vue-json-pretty 
+
+                                        <vue-json-pretty
                                           :data="debugData()"
                                           :deep="3"
                                           showLength
@@ -336,14 +336,11 @@ const addCell = () => {
 
 const runCell = (cell?: number | IBeakerCell) => {
     if (cell === undefined) {
-        console.log(2);
         cell = selectedCell.value;
     }
     else {
-        console.log(1);
         cell = _getCell(cell);
     }
-    console.log(cell);
     if (cell !== undefined) {
         cell.execute(props.session);
     }

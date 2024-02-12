@@ -32,7 +32,7 @@
                     @click="startEdit"
                 />
                 <Button
-                    v-if="busy"
+                    v-if="cell.status === 'busy'"
                     style="pointer-events: none;"
                     text
                     size="small"
@@ -50,6 +50,10 @@
             </div>
         </div>
         <div :class="event.type" v-for="event of cell.events" :key="event">{{ event.content }}</div>
+        <div v-if="cell.status === 'awaiting_input'">
+            <InputText v-model="response"></InputText><Button label="Respond" @click="respond">Respond</Button>
+
+        </div>
         <!-- <div class="thought" v-for="thought of cell.thoughts" :key="thought">Thought: {{ thought }}</div> -->
         <!-- <div class="response">{{ cell.response }}</div> -->
     </div>
@@ -73,6 +77,7 @@ const editing = ref(false);
 const editingContents = ref("");
 const autofocus = ref();
 const savedEdit = ref("");
+const response = ref("");
 
 
 setTimeout(() => {
@@ -101,11 +106,16 @@ function saveEdit() {
     savedEdit.value = editingContents.value;
 }
 
-const busy = computed(() => {
-    return props.cell.source &&
-     !props.cell.response &&
-     !timeout.value
-});
+// const busy = computed(() => {
+//     return props.cell.source &&
+//      !props.cell.response &&
+//      !timeout.value
+// });
+
+const respond = () => {
+    props.cell.respond(response.value, props.session);
+
+};
 
 </script>
 

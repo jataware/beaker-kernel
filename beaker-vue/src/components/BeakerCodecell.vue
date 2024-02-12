@@ -55,8 +55,6 @@ const execute = (evt: any) => {
     isBusy.value = true;
 
     const handleDone = async (message: any) => {
-        console.log("I'm done executing!: ", message);
-        console.log(props.cell)
 
         // Timeout added to busy indicators from jumping in/out too quickly
         setTimeout(() => {

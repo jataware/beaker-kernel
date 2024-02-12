@@ -24,9 +24,6 @@ const rawSession = new BeakerSession(
     name: "MyKernel",
     kernelName: "beaker_kernel",
     sessionId: "dev_session",
-    // inputRequestHandler: (msg, cell) => {
-    //   console.log(msg, cell);
-    // }
   }
 );
 
@@ -50,8 +47,8 @@ rawSession.sessionReady.then(() => {
           }, 1000);
         } else if (msg.header.msg_type === "debug_event") {
             debug_logs.push(msg.content);
-        } 
-        
+        }
+
         // else if (msg.header.msg_type === 'context_info_response') {
         //   console.log('context_info_response', msg.content);
         // } else {

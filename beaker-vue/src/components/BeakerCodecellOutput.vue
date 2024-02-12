@@ -8,6 +8,8 @@
             <div v-if="output.output_type == 'stream'" :class="output.name">{{ output.text }}</div>
             <div v-else-if="output.output_type == 'display_data'" :class="output.name" v-html="renderResult(output)"></div>
             <div v-else-if="output.output_type == 'execute_result'" :class="output.name" v-html="renderResult(output)"></div>
+            <div v-else-if="output.output_type == 'error'" :class="output.name" v-html="renderError(output)"></div>
+            <div v-else>{{ output }}</div>
         </div>
     </div>
 </template>
@@ -37,6 +39,14 @@ const renderResult = (resultOutput) => {
     renderer.render(model);
     return renderer.node.innerHTML;
 }
+
+const renderError = (errorOutput) => {
+    const bundle = {};
+    bundle['application/vnd.jupyter.error'] = errorOutput.content;
+    const traceback = errorOutput.content.traceback?.join('\n');
+    bundle['application/vnd.jupyter.stderr'] = traceback || `${errorOutput.content.ename}: ${errorOutput.content.evalue}`;
+    return renderResult({data: bundle});
+};
 </script>
 
 
