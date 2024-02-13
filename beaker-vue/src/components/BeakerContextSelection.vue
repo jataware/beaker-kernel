@@ -148,7 +148,7 @@ const languageOptions = computed<{slug: string, kernel: string}[]>(() => {
 });
 
 // TODO clean this once we understand how checkboxes state work..
-watch(() => props.isOpen, (open, oldValue) => {
+watch(() => props.isOpen, (open /*, oldValue*/) => {
     // Only se up saved context state when opening the dialog (not closing).
     if (open) {
 

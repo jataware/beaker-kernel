@@ -66,10 +66,14 @@
           class="bottom-actions"
         >
           <Button
+            v-if="filteredLogs.length"
             label="Clear Logs"
             severity="warning"
             size="small"
           />
+          <p v-else>
+            No logs. Ensure loaded context has debug enabled.
+          </p>
         </div>
       </div>
     </div>
@@ -139,6 +143,7 @@ const filteredLogs = computed(() => {
   align-items: center;
   margin-bottom: 0.5rem;
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .log-panel {
@@ -172,6 +177,7 @@ const filteredLogs = computed(() => {
   display: flex;
   margin-top: 0.5rem;
   justify-content: center;
+  color: var(--text-color-secondary);
 }
 
 .sort-actions {
