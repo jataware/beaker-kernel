@@ -24,6 +24,11 @@ services:
     volumes:
       - ./beaker-vue:/ui
       - ./beaker-ts:/beaker-ts
+    environment:
+      - VUE_APP_BASE_URL=http://localhost:8080
+      - VUE_APP_URL=http://localhost:8080
+      - VUE_APP_WS_URL=ws://localhost:8080
+      - VUE_APP_TOKEN
     working_dir: "/ui"
     ports:
       - "8080:8080"

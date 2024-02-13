@@ -32,10 +32,16 @@ dev:beaker_kernel/server/dev_ui/build/index.js
 		docker compose logs -f jupyter || true; \
 	fi
 
-.env:
+.env: env.example
 	@if [[ ! -e ./.env ]]; then \
 		cp env.example .env; \
 		echo "Don't forget to set your OPENAI key in the .env file!"; \
+	fi
+	$(MAKE) -C ./beaker-vue .env
+
+./beaker-vue/.env: ../.env
+	@if [[ ! -e ./.env ]]; then \
+		cat ../.env | grep VUE_APP > .env; \
 	fi
 
 beaker_kernel/server/dev_ui/node_modules:beaker_kernel/server/dev_ui/package*.json

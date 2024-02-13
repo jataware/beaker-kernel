@@ -10,13 +10,13 @@ import { reactive, ref, onBeforeMount, provide } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
 
-// TODO: Move the config outside this file. Fetch from environment?
 const settings = {
-    baseUrl: "http://localhost:8080",
-    appUrl: "http://localhost:8080",
-    wsUrl: "ws://localhost:8080",
-    token: "89f73481102c46c0bc13b2998f9a4fce",
+    baseUrl: process.env.VUE_APP_BASE_URL,
+    appUrl: process.env.VUE_APP_URL,
+    wsUrl: process.env.VUE_APP_WS_URL,
+    token: process.env.VUE_APP_TOKEN,
 };
+
 //
 const rawSession = new BeakerSession(
   {
