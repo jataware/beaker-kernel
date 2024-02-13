@@ -289,6 +289,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         );
 
         //cleanup
+        this.status = "busy";
         this._current_input_request_message = undefined;
     }
 

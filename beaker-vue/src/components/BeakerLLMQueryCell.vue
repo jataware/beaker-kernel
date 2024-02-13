@@ -51,20 +51,26 @@
             <!--
             <span v-if="event.type ==='user_answer'">Reply:</span>
             -->
-            {{ event.content }} 
-            <div class="input-request" v-if="cell.status === 'awaiting_input' && event.type === 'user_question'">
-                <InputText size="small" v-model="response"/>
-                &nbsp;
-                <Button
-                    outlined
-                    severity="success"
-                    size="small"
-                    label="reply"
-                    @click="respond"
-                    @keydown.enter="respond"
-                />
-            </div>
+            {{ event.content }}
 
+        </div>
+        <div class="input-request" v-if="cell.status === 'awaiting_input'">
+            <InputText
+                class="input-text"
+                size="small"
+                placeholder="Enter your response here"
+                @keydown.enter="respond"
+                v-model="response"
+            />
+            &nbsp;
+            <Button
+                outlined
+                severity="success"
+                size="small"
+                label="reply"
+                @click="respond"
+                @keydown.enter="respond"
+            />
         </div>
     </div>
 
@@ -115,6 +121,7 @@ function saveEdit() {
 
 const respond = () => {
     props.cell.respond(response.value, props.session);
+    response.value = "";
 
 };
 
@@ -166,6 +173,15 @@ const respond = () => {
 
 .input-request {
    padding: 0.5rem 0;
+   display: flex;
+}
+
+.input-text {
+    margin-right: 0.75rem;
+    flex: 1;
+    &::placeholder {
+        color: var(--gray-400);
+    }
 }
 
 .actions {
