@@ -46,17 +46,25 @@
                 />
             </div>
         </div>
-        <div :class="event.type" v-for="event of cell.events" :key="event">
+        <div class="events" :class="event.type" v-for="event of cell.events" :key="event">
             <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
+            <!--
+            <span v-if="event.type ==='user_answer'">Reply:</span>
+            -->
             {{ event.content }} 
-            <div class="input-request" v-if="cell.status === 'awaiting_input'">
-                <InputText v-model="response"/>
+            <div class="input-request" v-if="cell.status === 'awaiting_input' && event.type === 'user_question'">
+                <InputText size="small" v-model="response"/>
+                &nbsp;
                 <Button
-                    label="Respond"
+                    outlined
+                    severity="success"
+                    size="small"
+                    label="reply"
                     @click="respond"
                     @keydown.enter="respond"
                 />
             </div>
+
         </div>
     </div>
 
@@ -124,11 +132,15 @@ const respond = () => {
     justify-content: space-between;
 }
 
+.events {
+    padding: 0.25rem 0;
+}
+
 .query {
     font-weight: bold;
     flex: 1;
     line-height: 2.5rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
 }
 
 .user_question {
@@ -136,16 +148,24 @@ const respond = () => {
 }
 
 .user_answer {
-    
+    border-radius: 4px;
+    background-color: var(--surface-b);
+    padding: 0.4rem;
+    display: inline-block;
+    margin: 0.2rem 0;
 }
 
 .thought {
-    color: var(--blue-400);
+    color: var(--blue-500);
 }
 
 .response {
-    margin-top: 1em;
+    margin-top: 0.75em;
     white-space: pre-line;
+}
+
+.input-request {
+   padding: 0.5rem 0;
 }
 
 .actions {
