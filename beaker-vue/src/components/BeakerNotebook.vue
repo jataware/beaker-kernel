@@ -111,6 +111,7 @@
                                     :session="props.session" class="beaker-cell" :class="{selected: (index == selectedCellIndex)}"
                                     :context-data="activeContext"
                                     :theme="selectedTheme"
+                                    :execution-count="cell.execution_count"
                                     @click="selectCell(index)"
                                 />
                             </div>
@@ -152,12 +153,11 @@
                                 <Card class="debug-card">
                                     <template #title>State</template>
                                     <template #content>
-
                                         <vue-json-pretty
-                                          :data="debugData()"
-                                          :deep="3"
-                                          showLength
-                                          showIcon
+                                            :data="debugData()"
+                                            :deep="3"
+                                            showLength
+                                            showIcon
                                         />
                                         <br />
                                         <Button label="Copy" />
@@ -465,6 +465,7 @@ footer {
 .beaker-cell {
     border-bottom: 2px solid var(--surface-b);
     background-color: var(--surface-c);
+    border-right: 5px solid transparent;
 }
 
 .beaker-cell.selected {

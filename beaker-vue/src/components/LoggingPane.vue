@@ -69,7 +69,7 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, defineProps, inject } from "vue";
+import { ref, computed, inject } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import VueJsonPretty from 'vue-json-pretty';
@@ -107,7 +107,8 @@ const filteredLogs = computed(() => {
   });
 });
 
-
+// TODO some leftover code from before for now, since we just tried using this
+// new widget.
 // const debug_logs = computed(() => {
 //   return JSON.stringify(upstream_logs, undefined, 2);
 // });
@@ -148,8 +149,10 @@ const filteredLogs = computed(() => {
 
   .p-panel-header {
     background: var(--surface-b);
+    padding: 0.75rem 1rem;
   }
 
+  // If we wanted to alternate widget panel-heading bg color or so:
   // &.odd {
   //   .p-panel-header {
   //     background: var(--surface-b);
@@ -162,7 +165,7 @@ const filteredLogs = computed(() => {
   color: var(--gray-300);
   position: absolute;
   right: 1rem;
-  top: 1rem;
+  top: 0.65rem;
 }
 
 </style>

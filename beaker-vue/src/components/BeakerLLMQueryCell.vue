@@ -15,12 +15,9 @@
                     </div>
                 </div>
                 <div v-else>
-                    <p v-if="savedEdit" style="margin: 0; padding: 0;">
-                        {{savedEdit}} <span style="font-weight: 100;">(edited)</span>
-                    </p>
-                    <span v-else>
-                        {{ cell.source }}
-                    </span>
+                    <div>
+                        {{ cell.source }} <span v-if="savedEdit" style="font-weight: 100;">(edited)</span>
+                    </div>
                 </div>
             </div>
             <div class="actions">
@@ -104,6 +101,7 @@ async function startEdit() {
 function saveEdit() {
     editing.value = false;
     savedEdit.value = editingContents.value;
+    cell.value.source = editingContents.value;
 }
 
 // const busy = computed(() => {
@@ -136,6 +134,14 @@ const respond = () => {
     flex: 1;
     line-height: 2.5rem;
     margin-bottom: 0.5rem;
+}
+
+.user_question {
+    font-style: italic;
+}
+
+.user_answer {
+    
 }
 
 .thought {

@@ -3,18 +3,26 @@
         class="code-cell"
         :class="{busy: isBusy}"
     >
-        <Codemirror
-            v-model="cell.source"
-            placeholder="Your code..."
-            :extensions="codeExtensions"
-            :disabled="isBusy"
-            @keydown.ctrl.enter.self.stop.prevent="execute"
-            @keydown.alt.enter="console.log('alt-enter')"
-            @keydown.shift.enter.prevent="execute"
-            @keydown.meta.enter="console.log('meta-enter')"
-        />
+        <div style="display: flex;">
+            <div style="flex: 1;">
+                <Codemirror
+                    v-model="cell.source"
+                    placeholder="Your code..."
+                    :extensions="codeExtensions"
+                    :disabled="isBusy"
+                    @keydown.ctrl.enter.self.stop.prevent="execute"
+                    @keydown.alt.enter="console.log('alt-enter')"
+                    @keydown.shift.enter.prevent="execute"
+                    @keydown.meta.enter="console.log('meta-enter')"
+                />
+                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
+            </div>
+            <div class="execution-count">
+                [{{props.executionCount || '&nbsp;'}}]
+            </div>
+        </div>
 
-        <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
+        
     </div>
 </template>
 
@@ -29,7 +37,8 @@ const props = defineProps([
     "cell",
     "session",
     "contextData",
-    "theme"
+    "theme",
+    "executionCount"
 ]);
 
 const cell = ref(props.cell);
@@ -77,6 +86,16 @@ const execute = (evt: any) => {
 }
 
 .busy {
+}
+
+.execution-count {
+    flex-basis: 2rem;
+    color: var(--text-color-secondary);
+    display: flex;
+    justify-content: center;
+    width: 3rem;
+    font-family: monospace;
+    font-size: 0.75rem;    
 }
 
 </style>
