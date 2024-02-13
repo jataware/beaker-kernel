@@ -47,9 +47,15 @@
             </div>
         </div>
         <div :class="event.type" v-for="event of cell.events" :key="event">
-            <span v-if="event.type === 'thought'">Thought:&nbsp;</span>{{ event.content }} 
-            <div v-if="cell.status === 'awaiting_input'">
-                <InputText v-model="response"></InputText><Button label="Respond" @click="respond">Respond</Button>
+            <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
+            {{ event.content }} 
+            <div class="input-request" v-if="cell.status === 'awaiting_input'">
+                <InputText v-model="response"/>
+                <Button
+                    label="Respond"
+                    @click="respond"
+                    @keydown.enter="respond"
+                />
             </div>
         </div>
     </div>
@@ -57,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, nextTick } from "vue";
+import { defineProps, ref, nextTick } from "vue";
 import Button from "primevue/button";
 import InputText from 'primevue/inputtext';
 

@@ -20,9 +20,11 @@
                 </template>
 
                 <template #center>
-                    <h4 class="logo">
-                        Beaker Development Interface
-                    </h4>
+                    <div class="logo">
+                        <h4>
+                            Beaker <span class="longer-title">Development Interface</span>
+                        </h4>
+                    </div>
                 </template>
 
                 <template #end>
@@ -111,7 +113,6 @@
                                     :session="props.session" class="beaker-cell" :class="{selected: (index == selectedCellIndex)}"
                                     :context-data="activeContext"
                                     :theme="selectedTheme"
-                                    :execution-count="cell.execution_count"
                                     @click="selectCell(index)"
                                 />
                             </div>
@@ -444,12 +445,6 @@ footer {
     flex-direction: column;
 }
 
-.beaker-nb-toolbar {
-    vertical-align: middle;
-    height: 5rem;
-    padding: 1em;
-}
-
 .ide-cells {
     display: flex;
     flex-direction: column;
@@ -497,12 +492,6 @@ footer {
     height: 100%;
 }
 
-.logo {
-    font-size: 1.5rem;
-    margin: 0;
-    padding: 0;
-    width: 15rem;
-}
 
 .cell-container {
     position: absolute;
@@ -573,6 +562,31 @@ footer {
 .toolbar {
     width: 100%;
     padding: 0.5rem 1rem;
+
+    &.p-toolbar {
+        flex-wrap: nowrap;
+    }
+    .p-toolbar-group-end {
+        margin-left: -0.5rem;
+    }
+
+    .logo {
+        font-size: 1.5rem;
+        padding: 0 0.5rem;
+        h4 {
+            margin: 0;
+            padding: 0;
+            font-weight: 300;
+            color: var(--gray-500);
+
+            @media(max-width: 885px) {
+                .longer-title {
+                    display: none;
+                }
+            }
+        }
+    }
+   
 }
 
 </style>

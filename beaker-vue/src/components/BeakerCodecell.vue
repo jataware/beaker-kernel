@@ -19,7 +19,7 @@
             </div>
             <div class="execution-count">
                 <span>
-                    [{{props.executionCount || '&nbsp;'}}]
+                    [{{cell.execution_count || '&nbsp;'}}]
                 </span>
             </div>
         </div>
@@ -37,8 +37,7 @@ const props = defineProps([
     "cell",
     "session",
     "contextData",
-    "theme",
-    "executionCount"
+    "theme"
 ]);
 
 const cell = ref(props.cell);
@@ -73,7 +72,6 @@ const execute = (evt: any) => {
 
     evt.preventDefault();
     evt.stopPropagation();
-    // const sourceCode = cell.value.source;
     const future = props.cell.execute(props.session);
     future.done.then(handleDone);
 }

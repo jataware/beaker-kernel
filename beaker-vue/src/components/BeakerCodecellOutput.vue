@@ -58,6 +58,7 @@ const renderError = (errorOutput) => {
     padding: 1em;
     background-color: var(--surface-b);
     position: relative;
+    overflow-x: auto;
 }
 
 .stdout {
