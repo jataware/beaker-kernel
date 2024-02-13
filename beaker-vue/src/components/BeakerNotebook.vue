@@ -69,7 +69,7 @@
 
             <ContextTree :context="activeContext?.info" />
 
-            <Splitter class="splitter">
+            <Splitter @resizeend="handleSplitterResized" class="splitter">
 
                 <SplitterPanel
                     :size="70"
@@ -115,6 +115,11 @@
                                     :theme="selectedTheme"
                                     @click="selectCell(index)"
                                 />
+                                <transition name="fade">
+                                    <div class="welcome-placeholder" v-if="props.session?.notebook?.cells.length <= 2">
+                                        <SvgPlaceholder />
+                                    </div>
+                                </transition>
                             </div>
                         </div>
 
@@ -128,7 +133,8 @@
                 </SplitterPanel>
 
                 <SplitterPanel
-                    :minSize="27"
+                    v-if="showDebugPane"
+                    :minSize="5"
                     :size="30"
                     class="right-splitter"
                 >
@@ -176,6 +182,14 @@
 
             </Splitter>
 
+            <div v-if="!showDebugPane" class="debug-pane-toggler">
+                <Button text
+                    icon="pi pi-eye"
+                    size="small"
+                    @click="showDebugPane = true"
+                />
+            </div>
+
         </main>
 
         <!-- TODO may use HTML comments to hide footer -->
@@ -220,6 +234,8 @@ import LoggingDrawer from './LoggingDrawer.vue';
 import LoggingPane from './LoggingPane.vue';
 import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
+
+import SvgPlaceholder from './SvgPlaceholder.vue';
 
 
 function capitalize(s: string) {
@@ -272,6 +288,14 @@ const activeContext = ref<{slug: string, class: string, context: any, info: any}
 const selectedCellIndex = ref(0);
 const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
+const showDebugPane = ref (true);
+
+function handleSplitterResized({sizes}) {
+    const [_, rightPaneSize] = sizes;
+    if (rightPaneSize < 23) {
+        showDebugPane.value = false
+    }
+}
 
 const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
@@ -419,7 +443,7 @@ onMounted(() => {
 
 .notebook-json {
     text-align: left;
-    background: var(--surface-b);
+    background-color: var(--surface-b);
     border-radius: 0.5rem;
     border: 1px solid var(--gray-300);
     overflow: auto;
@@ -450,7 +474,7 @@ footer {
     flex-direction: column;
     height: 100%;
     z-index: 3;
-    background: var(--surface-a);
+    background-color: var(--surface-a);
 }
 
 .splitter {
@@ -459,15 +483,15 @@ footer {
 }
 
 .beaker-cell {
-    border-bottom: 2px solid var(--surface-b);
-    background-color: var(--surface-c);
+    border-bottom: 2px solid var(--surface-c);
+    background-color: var(--surface-a);
     border-right: 5px solid transparent;
 }
 
 .beaker-cell.selected {
     border-right: 5px solid var(--purple-400);
     border-top: unset;
-    background-color: var(--surface-a);
+    background-color: var(--surface-ground);
 }
 
 .agent-query-container {
@@ -587,6 +611,42 @@ footer {
         }
     }
    
+}
+
+.welcome-placeholder  {
+    position: absolute;
+    top: 7rem;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 90%;
+}
+
+.fade-enter-active {
+  transition: all 1s ease-out;
+}
+.fade-leave-active {
+  transition: all 1s ease-in;
+}
+.fade-leave-from {
+  opacity: 90%;
+}
+.fade-leave-to {
+    opacity: 0;    
+}
+.fade-enter-from {
+  opacity: 0;
+}
+.fade-enter-to {
+  opacity: 90%;
+}
+
+.debug-pane-toggler {
+    background-color: var(--surface-a);
 }
 
 </style>

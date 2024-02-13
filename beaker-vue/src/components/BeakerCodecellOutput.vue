@@ -56,7 +56,7 @@ const renderError = (errorOutput) => {
 
 .code-cell-output {
     padding: 1em;
-    background-color: var(--surface-b);
+    background-color: var(--surface-c);
     position: relative;
     overflow-x: auto;
 }

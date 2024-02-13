@@ -107,13 +107,6 @@ const footerMenuItems = ref([
   margin: 0;
 }
 
-.slide-enter-active {
-  transition: all 0.6s ease;
-}
-.slide-leave-active {
-  transition: all 0.3s ease;
-}
-
 .scroller-area {
   display: block;
   position: absolute;
@@ -127,6 +120,13 @@ const footerMenuItems = ref([
   border: 1px solid lightgray;
   border-radius: 3px;
   color: var(--text-color-secondary);
+}
+
+.slide-enter-active {
+  transition: all 0.6s ease-out;
+}
+.slide-leave-active {
+  transition: all 0.4s linear;
 }
 
 .slide-enter-from {
