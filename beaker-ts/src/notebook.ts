@@ -127,9 +127,10 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
 
         const handleReply = async (msg: messages.IExecuteReplyMsg) => {
             if (msg.content.status === "ok") {
-                // TODO: Additional success handling?
+                this.execution_count = msg.content.execution_count;
             }
             else if (msg.content.status === "error") {
+                this.execution_count = msg.content.execution_count;
                 this.outputs.push({
                     output_type: "error",
                     content: {
@@ -140,6 +141,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
                 });
             }
             else if (msg.content.status === "abort") {
+                this.execution_count = msg.content.execution_count;
                 this.outputs.push({
                     output_type: "error",
                     content: {
