@@ -44,10 +44,10 @@ allow-direct-references = true
 [tool.hatch.build]
 include = [
   "beaker_kernel",
-  "beaker_kernel/server/dev_ui/build/*",
+  "beaker_kernel/server/ui",
 ]
 artifacts = [
-  "beaker_kernel/server/dev_ui/build/*",
+  "beaker_kernel/server/ui",
 ]
 
 

@@ -65,3 +65,5 @@ create.sql
 .openai.toml
 shell.nix
 **/.jekyll-cache
+
+beaker_kernel/server/ui/*
