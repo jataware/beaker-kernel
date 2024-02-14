@@ -326,7 +326,7 @@ const _cellIndex = (cell: IBeakerCell): number => {
 
 const selectedTheme = ref(localStorage.getItem('theme') || 'light');
 const themeIcon = computed(() => {
-    return `pi pi-${selectedTheme.value == 'light' ? 'sun' : 'moon'}`;
+    return `pi pi-${selectedTheme.value == 'dark' ? 'sun' : 'moon'}`;
 })
 
 const setTheme = () => {
