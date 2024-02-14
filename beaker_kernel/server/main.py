@@ -115,7 +115,7 @@ class BeakerJupyterApp(LabServerApp):
         self.handlers.append(("/notebook", NotebookHandler))
         self.handlers.append((r"(/?)", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
         self.handlers.append((r"/index.html", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
-        self.handlers.append((r"/favicon.ico", StaticFileHandler, {"path": os.path.join(HERE, "ui")}))
+        self.handlers.append((r"/(favicon.ico)", StaticFileHandler, {"path": os.path.join(HERE, "ui")}))
         self.handlers.append((r"/static/(.*)", StaticFileHandler, {"path": os.path.join(HERE, "ui", "static")}))
         self.handlers.append((r"/themes/(.*)", StaticFileHandler, {"path": os.path.join(HERE, "ui", "themes")}))
         self.handlers.append((r"/dev_ui/?(.*)", RedirectHandler, {"url": r"/{0}"}))
