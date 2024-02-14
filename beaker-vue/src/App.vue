@@ -3,12 +3,29 @@
       :session="beakerSession"
       :connectionStatus="connectionStatus"
       />
+    <Toast position="bottom-right" />
 </template>
 
 <script setup lang="ts">
 import { defineProps, reactive, ref, onBeforeMount, provide } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+
+
+const toast = useToast();
+
+// Let's only use severity=success|warning|danger(=error) for now
+const showToast = (title, detail, life=3000, severity='success', position='bottom-right') => {
+    toast.add({
+      summary: title,
+      detail,
+      life,
+      severity,
+      position
+    });
+};
 
 const props = defineProps([
   "config"
@@ -27,6 +44,7 @@ const connectionStatus = ref('connecting');
 const debug_logs = reactive([]);
 
 provide('debug_logs', debug_logs);
+provide('show_toast', showToast);
 
 
 rawSession.sessionReady.then(() => {

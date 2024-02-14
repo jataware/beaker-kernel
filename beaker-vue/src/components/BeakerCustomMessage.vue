@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, computed } from "vue";
+import { defineProps, defineEmits, ref, computed, inject } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
 import Button from 'primevue/button';
@@ -53,6 +53,8 @@ const props = defineProps([
     "theme",
     "intercepts"
 ]);
+
+const showToast = inject('show_toast');
 
 const emit = defineEmits([
     "select-cell",
@@ -79,7 +81,9 @@ const sendMessage = () => {
         messageType.value,
         JSON.parse(messageContent.value),
     );
-    future.done.then();
+    future.done.then(() => {
+        showToast('Success', 'Message processed.');
+    });
 };
 
 const search = (event) => {

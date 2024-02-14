@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
 import App from './App.vue';
 import Tooltip from 'primevue/tooltip';
+import ToastService from 'primevue/toastservice';
 
 import 'primeicons/primeicons.css'
 import './index.scss';
@@ -28,6 +29,7 @@ const baseUrl = PageConfig.getBaseUrl();
   }
 
   const app = createApp(App, {config});
+  app.use(ToastService);
   app.use(PrimeVue);
   app.directive('tooltip', Tooltip);
   app.mount('#app');
