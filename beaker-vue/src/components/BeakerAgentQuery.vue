@@ -6,11 +6,16 @@
 
         <template #content>
             <div class="query-input-container">
-                <InputText 
+                <!--Needed to shorten the placeholder in order to
+                    Start the textarea with 1 row since it auto-grows...
+                -->
+                <Textarea
                     class="llm-query-input"
-                    @keydown.enter="handleQuery"
+                    @keydown.enter.exact="handleQuery"
+                    autoResize
+                    rows="1"
                     v-model="query"
-                    placeholder="Ask the AI a question or request an operation"
+                    placeholder="Ask the AI or request an operation."
                 />
 
                 <Button
@@ -29,7 +34,8 @@
 import { defineProps, defineEmits, ref, nextTick } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
+import Textarea from 'primevue/textarea';
+
 
 const props = defineProps([
     "session",
@@ -42,7 +48,7 @@ const emit = defineEmits([
 ]);
 
 const handleQuery = (e: any) => {
-    if (!query.value) {
+    if (!query.value.trim()) {
         return; // TODO notify user that they're missing the agent query?
     }
     
@@ -61,6 +67,11 @@ const handleQuery = (e: any) => {
 .llm-query-input {
     margin-right: 0.75rem;
     flex: 1;
+    // We may tweak the max-height,
+    // but not setting a max value and creating huge forms
+    // eventually pushes all content and breaks layout.
+    max-height: 12rem;
+
     &::placeholder {
         color: var(--gray-400);
     }
@@ -74,6 +85,7 @@ const handleQuery = (e: any) => {
 
 .query-input-container {
     display: flex;
+    align-items: flex-start;
 }
 
 .agent-submit-button {
