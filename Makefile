@@ -1,6 +1,10 @@
 SHELL=/usr/bin/env bash
 BASEDIR = $(shell pwd)
 
+.PHONY:init
+init:
+	make .env beaker-vue/node_modules
+
 .PHONY:build
 build:
 	make beaker_kernel/server/ui/index.html
