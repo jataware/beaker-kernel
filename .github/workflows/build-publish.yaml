@@ -9,10 +9,11 @@ on:
     tags: ['v*']
 
 jobs:
-
     build:
         name: Build & Publish
         runs-on: ubuntu-22.04
+        permissions:
+            id-token: write
         steps:
             - name: Apt update and build install
               shell: bash
@@ -30,7 +31,10 @@ jobs:
               run: |
                   make build
 
-            - name: hatch publish
-              shell: bash
-              run: |
-                  hatch publish
+            - name: Publish package distributions to PyPI
+              uses: pypa/gh-action-pypi-publish@release/v1
+
+            # - name: hatch publish
+            #   shell: bash
+            #   run: |
+            #       hatch publish
