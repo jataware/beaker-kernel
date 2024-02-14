@@ -6,65 +6,31 @@ name: Build and Publish
 # yamllint disable-line rule:truthy
 on:
   push:
-    branches: ['main', 'feature/switch-to-new-ui']
-    tags: ['*']
+    tags: ['v*']
 
 jobs:
-    setup:
-        name: Setup
+
+    build:
+        name: Build & Publish
         runs-on: ubuntu-22.04
         steps:
-            - name: Apt update and install
+            - name: Apt update and build install
               shell: bash
               run: |
                   sudo apt update || true
                   sudo apt install -y nodejs npm python3-pip || true
                   pip install hatch
+            - name: Checkout
+              uses: actions/checkout@v3
+              with:
+                ref: ${{ github.event.workflow_run.head_branch }}
 
-    build:
-        name: Build
-        runs-on: ubuntu-22.04
-        needs:
-            - setup
-        steps:
             - name: make build
               shell: bash
               run: |
                   make build
 
-    publish:
-        name: Publish
-        runs-on: ubuntu-22.04
-        needs:
-            - setup
-            - build
-        steps:
             - name: hatch publish
               shell: bash
               run: |
                   hatch publish
-
-
-#    npm:
-#        name: Hatch build
-#        runs-on: ubuntu-22.04
-#        needs:
-#            - setup
-#        steps:
-#            - name: npm build
-#              shell: bash
-#              run: |
-#                  
-#
-#
-#    hatch:
-#        name: Hatch build
-#        runs-on: ubuntu-22.04
-#        needs:
-#            - setup
-#            - npm
-#        steps:
-#            - name: Hatch build
-#              shell: bash
-#              run: |
-#                  
