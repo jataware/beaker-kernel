@@ -123,10 +123,10 @@ const footerMenuItems = ref([
 }
 
 .slide-enter-active {
-  transition: all 0.6s ease-out;
+  transition: height 0.6s ease-out;
 }
 .slide-leave-active {
-  transition: all 0.4s linear;
+  transition: height 0.4s linear;
 }
 
 .slide-enter-from {

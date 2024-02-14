@@ -292,7 +292,7 @@ const showDebugPane = ref (true);
 
 function handleSplitterResized({sizes}) {
     const [_, rightPaneSize] = sizes;
-    if (rightPaneSize < 23) {
+    if (rightPaneSize < 15) {
         showDebugPane.value = false
     }
 }
@@ -627,10 +627,10 @@ footer {
 }
 
 .fade-enter-active {
-  transition: all 1s ease-out;
+  transition: opacity 1s ease-out;
 }
 .fade-leave-active {
-  transition: all 1s ease-in;
+  transition: opacity 1s ease-in;
 }
 .fade-leave-from {
   opacity: 90%;
