@@ -106,11 +106,12 @@
 
                     <div class="ide-cells">
                         <div style="flex: 1; position: relative;">
-                            <div class="cell-container">
+                            <div class="cell-container" ref="cellsContainerRef">
                                 <Component
                                     v-for="(cell, index) in props.session?.notebook?.cells" :key="cell.id" :cell="cell"
                                     :is="componentMap[cell.cell_type]"
-                                    :session="props.session" class="beaker-cell" :class="{selected: (index == selectedCellIndex)}"
+                                    :session="props.session" class="beaker-cell"
+                                    :class="{selected: (index === selectedCellIndex)}"
                                     :context-data="activeContext"
                                     :theme="selectedTheme"
                                     @click="selectCell(index)"
@@ -138,7 +139,7 @@
                     :size="30"
                     class="right-splitter"
                 >
-                    <TabView :activeIndex="0">
+                    <TabView :activeIndex="1">
                         <TabPanel header="Preview">
                             <div class="scroller-area">
                                 <PreviewPane />
@@ -151,9 +152,9 @@
                                     <template #title>Custom Message</template>
                                     <template #content>
                                         <BeakerCustomMessage
+                                            :intercepts="Object.keys(activeContext?.info?.intercepts || {})"
                                             :theme="selectedTheme"
                                             :session="session"
-                                            :expanded="true"
                                         />
                                     </template>
                                 </Card>
@@ -186,6 +187,7 @@
                 <Button text
                     icon="pi pi-eye"
                     size="small"
+                    v-tooltip.left="'Inpect Tools'"
                     @click="showDebugPane = true"
                 />
             </div>
@@ -210,7 +212,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, Component } from "vue";
+import { ref, onBeforeMount, onMounted, defineProps, computed, Component, nextTick } from "vue";
 import { IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
 import VueJsonPretty from 'vue-json-pretty';
@@ -289,6 +291,7 @@ const selectedCellIndex = ref(0);
 const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 const showDebugPane = ref (true);
+const cellsContainerRef = ref(null);
 
 function handleSplitterResized({sizes}) {
     const [_, rightPaneSize] = sizes;
@@ -356,8 +359,18 @@ const selectCell = (cell: number | IBeakerCell) => {
     selectedCellIndex.value = index;
 }
 
+function scrollBottomCellContainer() {
+    if (cellsContainerRef.value) {
+        cellsContainerRef.value.scrollTop = cellsContainerRef.value.scrollHeight;
+    }
+}
+
 const addCell = () => {
-    props.session.addCodeCell("");
+    const newCell = props.session.addCodeCell("");
+    selectCell(newCell);
+    nextTick(() => {
+        scrollBottomCellContainer();
+    });
 }
 
 const runCell = (cell?: number | IBeakerCell) => {

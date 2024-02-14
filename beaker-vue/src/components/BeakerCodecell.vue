@@ -10,6 +10,7 @@
                     placeholder="Your code..."
                     :extensions="codeExtensions"
                     :disabled="isBusy"
+                    :autofocus="true"
                     @keydown.ctrl.enter.self.stop.prevent="execute"
                     @keydown.alt.enter="console.log('alt-enter')"
                     @keydown.shift.enter.prevent="execute"

@@ -12,7 +12,7 @@
             class="preview-image"
             src="https://assets-global.website-files.com/6308b9e1771b56be92fe7491/636416a672f13fa441c4e7e6_petri-nets-preview.jpg"
           > -->
-          <Card>Coming soon...</Card>
+          <span style="color: var(--text-color-secondary);">Coming soon...</span>
       </AccordionTab>
 
       <!-- <AccordionTab header="df_2">
@@ -28,9 +28,10 @@
 import { ref } from "vue";
 import Accordion from 'primevue/accordion';
 import AccordionTab from 'primevue/accordiontab';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import SelectButton from 'primevue/selectbutton';
+// import DataTable from 'primevue/datatable';
+// import Column from 'primevue/column';
+// import SelectButton from 'primevue/selectbutton';
+// import Card from 'primevue/card';
 
 const previewOneMockValue = ref('PNG');
 const previewOneMimeTypes = ref(['PNG', 'LATEX']);

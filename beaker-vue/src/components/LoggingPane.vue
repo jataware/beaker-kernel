@@ -34,7 +34,7 @@
             <InputText 
               v-model="filterValue"
               size="small"
-              placeholder="Filter"
+              placeholder="Event Type"
             />
           </div>
 
@@ -72,7 +72,8 @@
             size="small"
           />
           <p v-else>
-            No logs. Ensure loaded context has debug enabled.
+          <!-- We could detect if context debug is disabled and add a button here-->
+            No logs. Ensure debug is enabled on context configuration.
           </p>
         </div>
       </div>
@@ -154,6 +155,9 @@ const filteredLogs = computed(() => {
   .p-panel-header {
     background: var(--surface-b);
     padding: 0.5rem 1rem;
+  }
+  .p-panel-content {
+    padding: 0.5rem 0.75rem; 
   }
 
   // If we wanted to alternate widget panel-heading bg color or so:

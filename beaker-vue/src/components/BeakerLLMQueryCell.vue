@@ -54,10 +54,11 @@
             {{ event.content }}
 
         </div>
-        <div class="input-request" v-if="cell.status === 'awaiting_input'">
+        <div class="input-request" v-focustrap v-if="cell.status === 'awaiting_input'">
             <InputText
                 class="input-text"
                 size="small"
+                autofocus
                 placeholder="Enter your response here"
                 @keydown.enter="respond"
                 v-model="response"
@@ -156,7 +157,7 @@ const respond = () => {
 
 .user_answer {
     border-radius: 4px;
-    background-color: var(--surface-b);
+    background-color: var(--surface-c);
     padding: 0.4rem;
     display: inline-block;
     margin: 0.2rem 0;

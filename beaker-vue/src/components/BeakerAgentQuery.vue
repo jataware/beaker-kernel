@@ -1,5 +1,5 @@
 <template>
-    <Card>
+    <Card class="agent-input-card">
         <template #title>
             How can the agent help?
         </template>
@@ -43,7 +43,7 @@ const emit = defineEmits([
 
 const handleQuery = (e: any) => {
     if (!query.value) {
-        return; // TODO notify user that they're missing the agent query
+        return; // TODO notify user that they're missing the agent query?
     }
     
     const cell = props.session.addQueryCell(query.value);
@@ -52,12 +52,12 @@ const handleQuery = (e: any) => {
     nextTick(() => {
         // Delay running of cell by a ticket to allow selection and rendering to complete.
         emit("run-cell", cell);
-    })
+    });
 }
 </script>
 
 
-<style lang="scss" scoped>
+<style lang="scss">
 .llm-query-input {
     margin-right: 0.75rem;
     flex: 1;
@@ -66,9 +66,10 @@ const handleQuery = (e: any) => {
     }
 }
 
-.p-card .p-card-content, .p-card-body {
-    padding-bottom: 0.5rem;
-    padding-top: 1rem;
+.agent-input-card {
+    .p-card-body .p-card-content {
+        padding: 0.75rem 0;
+    }
 }
 
 .query-input-container {
