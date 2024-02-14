@@ -1,0 +1,36 @@
+---
+# Automatically build and publish
+
+name: Build and Publish
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+
+    build:
+        name: Build & Publish
+        runs-on: ubuntu-22.04
+        steps:
+            - name: Apt update and build install
+              shell: bash
+              run: |
+                  sudo apt update || true
+                  sudo apt install -y nodejs npm python3-pip || true
+                  pip install hatch
+            - name: Checkout
+              uses: actions/checkout@v3
+              with:
+                ref: ${{ github.event.workflow_run.head_branch }}
+
+            - name: make build
+              shell: bash
+              run: |
+                  make build
+
+            - name: hatch publish
+              shell: bash
+              run: |
+                  hatch publish

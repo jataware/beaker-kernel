@@ -10,7 +10,7 @@ import fetch from 'node-fetch';
 import { Slot } from '@lumino/signaling';
 
 import { createMessageId, IBeakerAvailableContexts, IActiveContextInfo } from './util';
-import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell } from './notebook';
+import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage, IBeakerFuture } from './notebook';
 import { BeakerHistory } from './history';
 
 export interface IBeakerSessionOptions {
@@ -18,7 +18,7 @@ export interface IBeakerSessionOptions {
     name: string;
     kernelName: string;
     sessionId?: string;
-    messageHandler?: Function; //(func: Function): void;
+    messageHandler?: Function;
 };
 
 export class BeakerSession {

@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 import traceback
+import uuid
 from functools import partial
 from typing import TYPE_CHECKING, Optional
 
@@ -351,12 +352,12 @@ class LLMKernel(KernelProxyManager):
         return data
 
     def send_response(
-        self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None
+        self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None, msg_id=None,
     ):
         # Parse response as needed
         stream = getattr(self.server.streams, stream)
         message = self.server.make_multipart_message(
-            msg_type=msg_or_type, content=content, parent_header=parent_header
+            msg_type=msg_or_type, content=content, parent_header=parent_header, msg_id=msg_id
         )
         if parent_identities:
             stream.send_multipart(parent_identities + message)
@@ -365,6 +366,7 @@ class LLMKernel(KernelProxyManager):
         # Flush to ensure messages are sent immediately
         # TODO: Make flushing behind a flag?
         stream.flush()
+        return message
 
     async def track_execute_request(self, server, target_stream, data):
         message = JupyterMessage.parse(data)
@@ -383,15 +385,21 @@ class LLMKernel(KernelProxyManager):
             data = message.parts
         return data
 
-    async def prompt_user(self, query):
-        if query in self.user_responses:
-                del self.user_responses[query]
+    async def prompt_user(self, query, parent_message=None):
+        msg_id = str(uuid.uuid4())
         self.send_response(
-            "iopub", "input_request", {"prompt": query}
+            "stdin",
+            "input_request",
+            {"prompt": query},
+            parent_header=parent_message.header,
+            parent_identities=getattr(parent_message, "identities", None),
+            msg_id=msg_id,
         )
         for _ in range(USER_RESPONSE_WAIT_TIME):
-            if query in self.user_responses:
-                return self.user_responses[query]
+            if msg_id in self.user_responses:
+                result = self.user_responses[msg_id]
+                del self.user_responses[msg_id]
+                return result
             await asyncio.sleep(1)
 
         raise Exception("Query timed out. User took too long to respond.")
@@ -429,7 +437,7 @@ class LLMKernel(KernelProxyManager):
             # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track thoughts
             self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
             self.debug("llm_query", request, parent_header=message.header)
-            result = await self.context.agent.react_async(request)
+            result = await self.context.agent.react_async(request, react_context={"message": message})
         except Exception as err:
             error_text = f"""LLM Error:
 {err}
@@ -530,7 +538,8 @@ class LLMKernel(KernelProxyManager):
     @message_handler
     async def input_reply(self, message):
         content = message.content
-        self.user_responses[content["prompt"]] = content["reply"]
+        parent_id = message.parent_header["msg_id"]
+        self.user_responses[parent_id] = content["value"]
 
 
 def cleanup(kernel):

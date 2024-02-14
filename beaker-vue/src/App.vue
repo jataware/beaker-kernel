@@ -6,21 +6,17 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onBeforeMount, provide } from 'vue';
+import { defineProps, reactive, ref, onBeforeMount, provide } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
 
-// TODO: Move the config outside this file. Fetch from environment?
-const settings = {
-    baseUrl: "http://localhost:8080",
-    appUrl: "http://localhost:8080",
-    wsUrl: "ws://localhost:8080",
-    token: "89f73481102c46c0bc13b2998f9a4fce",
-};
-//
+const props = defineProps([
+  "config"
+]);
+
 const rawSession = new BeakerSession(
   {
-    settings: settings,
+    settings: props.config,
     name: "MyKernel",
     kernelName: "beaker_kernel",
     sessionId: "dev_session",
@@ -47,19 +43,9 @@ rawSession.sessionReady.then(() => {
           }, 1000);
         } else if (msg.header.msg_type === "debug_event") {
             debug_logs.push(msg.content);
-        } 
-        
-        // else if (msg.header.msg_type === 'context_info_response') {
-        //   console.log('context_info_response', msg.content);
-        // } else {
-        //   console.log('msg type', msg);
-        // }
+        }
 
     })
-    beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
-    // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
-    // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
-    // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
     // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
 
 });

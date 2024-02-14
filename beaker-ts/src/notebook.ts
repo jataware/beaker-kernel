@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { BeakerSession } from './session';
 import { } from './util';
+import { MenuSvg } from '@jupyterlab/ui-components';
 
 export interface IBeakerHeader extends messages.IHeader {
     msg_type: any
@@ -27,7 +28,9 @@ export interface IBeakerFuture extends Kernel.IShellFuture {
 
 }
 
-export type BeakerCellType = nbformat.CellType | string | 'query' ;
+export type BeakerCellStatus = messages.Status | "awaiting_input";
+
+export type BeakerCellType = nbformat.CellType | string | 'query';
 
 export class BeakerBaseCell implements nbformat.IBaseCell {
     // Override index type to allow methods to be defined on the class
@@ -35,15 +38,23 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     cell_type: BeakerCellType;
     metadata: Partial<nbformat.ICellMetadata>;
     source: nbformat.MultilineString;
+    status: BeakerCellStatus;
+
+    constructor() {
+        this.status = "idle";
+    }
 }
+
+export interface IBeakerQueryEvent extends JSONObject {
+    type: "thought" | "response" | "user_question" | "user_answer" | "error";
+    content: string;
+
+};
 
 export interface IQueryCell extends nbformat.IBaseCell {
     cell_type: 'query';
     id?: string;
-    thoughts: string[];
-    debug?: string[];
-    response: nbformat.MultilineString;
-
+    events: IBeakerQueryEvent[];
 }
 
 export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
@@ -88,7 +99,10 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         const handleIOPub = (msg: IBeakerIOPubMessage): void => {
             const msg_type = msg.header.msg_type;
             const content = msg.content;
-            if (msg_type === "execute_result") {
+            if (msg_type === "status") {
+                this.status = content.execution_state;
+            }
+            else if (msg_type === "execute_result") {
                 if (content.execution_count) {
                     this.execution_count = content.execution_count;
                 }
@@ -110,6 +124,35 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
                 })
             }
         };
+
+        const handleReply = async (msg: messages.IExecuteReplyMsg) => {
+            if (msg.content.status === "ok") {
+                this.execution_count = msg.content.execution_count;
+            }
+            else if (msg.content.status === "error") {
+                this.execution_count = msg.content.execution_count;
+                this.outputs.push({
+                    output_type: "error",
+                    content: {
+                        ename: msg.content.ename,
+                        evalue: msg.content.evalue,
+                        traceback: msg.content.traceback,
+                    },
+                });
+            }
+            else if (msg.content.status === "abort") {
+                this.execution_count = msg.content.execution_count;
+                this.outputs.push({
+                    output_type: "error",
+                    content: {
+                        ename: "Execution aborted",
+                        evalue: "Execution aborted",
+                        traceback: [],
+                    },
+                });
+            }
+        };
+
         this.outputs.splice(0, this.outputs.length);
         const future = session.sendBeakerMessage(
             "execute_request",
@@ -123,6 +166,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
             }
         );
         future.onIOPub = handleIOPub;
+        future.onReply = handleReply;
         return future;
     }
 }
@@ -149,33 +193,68 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     cell_type: 'query';
     id?: string;
-    thoughts: string[];
-    debug?: string[];
-    response: nbformat.MultilineString;
+    events: IBeakerQueryEvent[];
+
+    _current_input_request_message: messages.IInputRequestMsg;
 
     constructor(content: nbformat.ICell) {
         super();
         Object.keys(content).forEach((key) => {this[key] = content[key] });
-        this.thoughts = this.thoughts || [];
-        this.debug = this.debug || [];
-        this.response = this.response || "";
+        this.events = this.events || [];
         if (this.id === undefined) {
             this.id = uuidv4();
         }
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
-        const handleIOPub = (msg: IBeakerIOPubMessage): void => {
+        this.events = [];
+
+        const handleIOPub = async (msg: IBeakerIOPubMessage) => {
             const msg_type = msg.header.msg_type;
             const content = msg.content;
             if (msg_type === "status") {
-                return;
+                this.status = content.execution_state;
             }
-            if (msg_type === "llm_thought") {
-                this.thoughts.push(content.thought);
+            else if (msg_type === "llm_thought") {
+                this.events.push({
+                    type: "thought",
+                    content: content.thought,
+                })
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
-                this.response = content.text;
+                this.events.push({
+                    type: "response",
+                    content: content.text,
+                })
+            }
+        };
+
+        const handleStdin = async (msg: messages.IStdinMessage) => {
+            if (messages.isInputRequestMsg(msg)) {
+                this.events.push({
+                    type: "user_question",
+                    content: msg.content.prompt,
+                });
+                this.status = "awaiting_input";
+                this._current_input_request_message = msg;
+            }
+        }
+
+        const handleReply = async (msg: messages.IExecuteReplyMsg) => {
+            if (msg.content.status === "ok") {
+                // TODO: Additional success handling?
+            }
+            else if (msg.content.status === "error") {
+                this.events.push({
+                    type: "error",
+                    content: msg.content.evalue,
+                });
+            }
+            else if (msg.content.status === "abort") {
+                this.events.push({
+                    type: "error",
+                    content: "Request aborted",
+                });
             }
         };
 
@@ -186,21 +265,56 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             }
         );
         future.onIOPub = handleIOPub;
+        future.onStdin = handleStdin;
+        future.onReply = handleReply;
         return future;
     };
 
+    public respond(response: string, session: BeakerSession) {
+        // Only handle if we're awaiting input
+        if (this.status !== "awaiting_input") {
+            return;
+        }
+
+        this.events.push({
+            type: "user_answer",
+            content: response,
+        });
+
+        // Send the reply to the kernel
+        session.kernel.sendInputReply(
+            {
+                "value": response,
+                "status": "ok",
+            },
+            this._current_input_request_message.header,
+        );
+
+        //cleanup
+        this.status = "busy";
+        this._current_input_request_message = undefined;
+    }
+
     public toMarkdownCell() {
         const renderedMarkdownLines = [`# ${this.source}\n`];
-        this.thoughts.forEach((thought) => renderedMarkdownLines.push(`> Thought: ${thought}\n> `));
-        renderedMarkdownLines.push(`\n`)
-        renderedMarkdownLines.push(`**${this.response}**`)
+        this.events.forEach((event) => {
+            if (event.type === "thought") {
+                renderedMarkdownLines.push(`> Thought: ${event.content}\n> `);
+            }
+            else if (event.type === "response") {
+                renderedMarkdownLines.push(`**${event.content}**`);
+            }
+            else if (event.type === "user_question") {
+                renderedMarkdownLines.push(`Beaker asks: ${event.content}`);
+            }
+            else if (event.type === "user_answer") {
+                renderedMarkdownLines.push(`The user responds: ${event.content}`);
+            }
+        });
         const renderedMarkdown = renderedMarkdownLines.join("\n");
         const metadata = {
             ...this.metadata,
             beaker_cell_type: "query",
-            beaker_thoughts: this.thoughts,
-            beaker_debug: this.debug,  // TODO: Do we actually want to store the debug information?
-            beaker_response: this.response,
         }
         return new BeakerMarkdownCell(
             {

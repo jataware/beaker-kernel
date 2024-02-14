@@ -3,18 +3,26 @@
         class="code-cell"
         :class="{busy: isBusy}"
     >
-        <Codemirror
-            v-model="cell.source"
-            placeholder="Your code..."
-            :extensions="codeExtensions"
-            :disabled="isBusy"
-            @keydown.ctrl.enter.self.stop.prevent="execute"
-            @keydown.alt.enter="console.log('alt-enter')"
-            @keydown.shift.enter.prevent="execute"
-            @keydown.meta.enter="console.log('meta-enter')"
-        />
-
-        <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
+        <div class="code-cell-grid">
+            <div class="code-data">
+                <Codemirror
+                    v-model="cell.source"
+                    placeholder="Your code..."
+                    :extensions="codeExtensions"
+                    :disabled="isBusy"
+                    @keydown.ctrl.enter.self.stop.prevent="execute"
+                    @keydown.alt.enter="console.log('alt-enter')"
+                    @keydown.shift.enter.prevent="execute"
+                    @keydown.meta.enter="console.log('meta-enter')"
+                />
+                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
+            </div>
+            <div class="execution-count">
+                <span>
+                    [{{cell.execution_count || '&nbsp;'}}]
+                </span>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -55,8 +63,6 @@ const execute = (evt: any) => {
     isBusy.value = true;
 
     const handleDone = async (message: any) => {
-        console.log("I'm done executing!: ", message);
-        console.log(props.cell)
 
         // Timeout added to busy indicators from jumping in/out too quickly
         setTimeout(() => {
@@ -66,7 +72,6 @@ const execute = (evt: any) => {
 
     evt.preventDefault();
     evt.stopPropagation();
-    // const sourceCode = cell.value.source;
     const future = props.cell.execute(props.session);
     future.done.then(handleDone);
 }
@@ -75,10 +80,34 @@ const execute = (evt: any) => {
 
 <style lang="scss">
 .code-cell {
-    padding: 1rem;
+    padding: 1rem 0 1rem 1rem;
+}
+
+.code-cell-grid {
+    display: grid;
+
+    grid-template-areas:
+        "code code code exec";
+
+    grid-template-columns: 1fr 1fr 1fr auto;
+}
+
+.code-data {
+    grid-area: code;
 }
 
 .busy {
+}
+
+.execution-count {
+    grid-area: exec;
+    color: var(--text-color-secondary);
+    display: flex;
+    justify-content: center;
+    width: 0;
+    font-family: monospace;
+    font-size: 0.75rem;    
+    padding: 0 1rem;
 }
 
 </style>

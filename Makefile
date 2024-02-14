@@ -1,13 +1,18 @@
 SHELL=/usr/bin/env bash
 BASEDIR = $(shell pwd)
 
+.PHONY:init
+init:
+	make .env beaker-vue/node_modules
+
 .PHONY:build
 build:
-	docker build . -t beaker-kernel:latest
+	make beaker_kernel/server/ui/index.html
+	hatch build
 
 .PHONY:clean
 clean:
-	rm -r build/ dist/
+	rm -r build/* dist/* beaker_kernel/server/ui/*
 
 .PHONY:docs-up
 docs-up:
@@ -19,18 +24,10 @@ docs-down:
 	(cd docs && docker compose down)
 
 .PHONY:dev
-dev:beaker_kernel/server/dev_ui/build/index.js
-	if [[ "$$(docker compose ps | grep 'jupyter')" == "" ]]; then \
-		docker compose pull; \
-		docker compose up -d --build && \
-		(sleep 1; python -m webbrowser "http://localhost:8888/dev_ui"); \
-		docker compose logs -f jupyter || true; \
-	else \
-		docker compose down jupyter && \
-		docker compose up -d jupyter && \
-		(sleep 1; python -m webbrowser "http://localhost:8888/dev_ui"); \
-		docker compose logs -f jupyter || true; \
-	fi
+dev:
+	docker compose up -d --build && \
+	(sleep 1; python -m webbrowser "http://localhost:8888/"); \
+	docker compose logs -f jupyter || true; \
 
 .env:
 	@if [[ ! -e ./.env ]]; then \
@@ -38,15 +35,15 @@ dev:beaker_kernel/server/dev_ui/build/index.js
 		echo "Don't forget to set your OPENAI key in the .env file!"; \
 	fi
 
-beaker_kernel/server/dev_ui/node_modules:beaker_kernel/server/dev_ui/package*.json
+beaker-vue/node_modules:beaker-vue/package*.json
 	export `cat .env` && \
-	(cd beaker_kernel/server/dev_ui && npm install) && \
-	touch beaker_kernel/server/dev_ui/node_modules
+	(cd beaker-vue && npm install) && \
+	touch beaker-vue/node_modules
 
-beaker_kernel/server/dev_ui/build/index.js:beaker_kernel/server/dev_ui/node_modules beaker_kernel/server/dev_ui/src/** beaker_kernel/server/dev_ui/index.css beaker_kernel/server/dev_ui/*.js beaker_kernel/server/dev_ui/*.json beaker_kernel/server/dev_ui/templates/**
-	export `cat .env` && \
-	(cd beaker_kernel/server/dev_ui && npm run build) && \
-	touch beaker_kernel/server/dev_ui/build/*
+beaker_kernel/server/ui/index.html:beaker-vue/node_modules beaker-vue/**
+	rm -r beaker_kernel/server/ui/* ; \
+	(cd beaker-vue/ && npm run build) && \
+	cp -r beaker-vue/dist/* beaker_kernel/server/ui/
 
 .PHONY:changed-files
 changed-files:

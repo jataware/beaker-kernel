@@ -15,12 +15,9 @@
                     </div>
                 </div>
                 <div v-else>
-                    <p v-if="savedEdit" style="margin: 0; padding: 0;">
-                        {{savedEdit}} <span style="font-weight: 100;">(edited)</span>
-                    </p>
-                    <span v-else>
-                        {{ cell.source }}
-                    </span>
+                    <div>
+                        {{ cell.source }} <span v-if="savedEdit" style="font-weight: 100;">(edited)</span>
+                    </div>
                 </div>
             </div>
             <div class="actions">
@@ -32,7 +29,7 @@
                     @click="startEdit"
                 />
                 <Button
-                    v-if="busy"
+                    v-if="cell.status === 'busy'"
                     style="pointer-events: none;"
                     text
                     size="small"
@@ -49,15 +46,39 @@
                 />
             </div>
         </div>
-        <div class="thought" v-for="thought of cell.thoughts" :key="thought">Thought: {{ thought }}</div>
-        <div class="response">{{ cell.response }}</div>
+        <div class="events" :class="event.type" v-for="event of cell.events" :key="event">
+            <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
+            <!--
+            <span v-if="event.type ==='user_answer'">Reply:</span>
+            -->
+            {{ event.content }}
+
+        </div>
+        <div class="input-request" v-if="cell.status === 'awaiting_input'">
+            <InputText
+                class="input-text"
+                size="small"
+                placeholder="Enter your response here"
+                @keydown.enter="respond"
+                v-model="response"
+            />
+            &nbsp;
+            <Button
+                outlined
+                severity="success"
+                size="small"
+                label="reply"
+                @click="respond"
+                @keydown.enter="respond"
+            />
+        </div>
     </div>
 
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, nextTick } from "vue";
-import Button from "primevue/button"; 
+import { defineProps, ref, nextTick } from "vue";
+import Button from "primevue/button";
 import InputText from 'primevue/inputtext';
 
 
@@ -67,16 +88,12 @@ const props = defineProps([
 ]);
 
 const cell = ref(props.cell);
-const timeout = ref(false);
 const editing = ref(false);
 const editingContents = ref("");
 const autofocus = ref();
 const savedEdit = ref("");
+const response = ref("");
 
-
-setTimeout(() => {
-    timeout.value = true;
-}, 8000);
 
 function cancelEdit() {
     editing.value = false;
@@ -98,13 +115,15 @@ async function startEdit() {
 function saveEdit() {
     editing.value = false;
     savedEdit.value = editingContents.value;
+    cell.value.source = editingContents.value;
 }
 
-const busy = computed(() => {
-    return props.cell.source &&
-     !props.cell.response &&
-     !timeout.value
-});
+
+const respond = () => {
+    props.cell.respond(response.value, props.session);
+    response.value = "";
+
+};
 
 </script>
 
@@ -120,20 +139,49 @@ const busy = computed(() => {
     justify-content: space-between;
 }
 
+.events {
+    padding: 0.25rem 0;
+}
+
 .query {
     font-weight: bold;
     flex: 1;
     line-height: 2.5rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.user_question {
+    font-style: italic;
+}
+
+.user_answer {
+    border-radius: 4px;
+    background-color: var(--surface-b);
+    padding: 0.4rem;
+    display: inline-block;
+    margin: 0.2rem 0;
 }
 
 .thought {
-    color: var(--blue-400);
+    color: var(--blue-500);
 }
 
 .response {
-    margin-top: 1em;
+    margin-top: 0.75em;
     white-space: pre-line;
+}
+
+.input-request {
+   padding: 0.5rem 0;
+   display: flex;
+}
+
+.input-text {
+    margin-right: 0.75rem;
+    flex: 1;
+    &::placeholder {
+        color: var(--gray-400);
+    }
 }
 
 .actions {

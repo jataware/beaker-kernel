@@ -1,7 +1,7 @@
 <template>
   <Accordion multiple :activeIndex="[0]">
-      <AccordionTab header="Petri Net">
-          <div class="mime-select-container">
+      <AccordionTab header="Coming soon...">
+          <!-- <div class="mime-select-container">
               <SelectButton
                   :allowEmpty="false"
                   v-model="previewOneMockValue"
@@ -11,15 +11,16 @@
           <img
             class="preview-image"
             src="https://assets-global.website-files.com/6308b9e1771b56be92fe7491/636416a672f13fa441c4e7e6_petri-nets-preview.jpg"
-          >
+          > -->
+          <Card>Coming soon...</Card>
       </AccordionTab>
 
-      <AccordionTab header="df_2">
+      <!-- <AccordionTab header="df_2">
           <DataTable :value="products">
               <Column field="price" header="x"></Column>
               <Column field="quantity" header="y"></Column>
-          </DataTable>                        
-      </AccordionTab>
+          </DataTable>
+      </AccordionTab> -->
   </Accordion>
 </template>
 
@@ -34,27 +35,27 @@ import SelectButton from 'primevue/selectbutton';
 const previewOneMockValue = ref('PNG');
 const previewOneMimeTypes = ref(['PNG', 'LATEX']);
 
-const products = [
-{
-    id: '1000',
-    name: 'Bamboo Watch',
-    description: 'Product Description',
-    price: 65,
-    category: 'Accessories',
-    quantity: 24,
-    inventoryStatus: 'INSTOCK',
-    rating: 5
-},
-{
-    id: '1000',
-    name: 'Bamboo Watch',
-    description: 'Product Description',
-    price: 65,
-    category: 'Accessories',
-    quantity: 24,
-    inventoryStatus: 'INSTOCK',
-    rating: 5
-}];
+// const products = [
+// {
+//     id: '1000',
+//     name: 'Bamboo Watch',
+//     description: 'Product Description',
+//     price: 65,
+//     category: 'Accessories',
+//     quantity: 24,
+//     inventoryStatus: 'INSTOCK',
+//     rating: 5
+// },
+// {
+//     id: '1000',
+//     name: 'Bamboo Watch',
+//     description: 'Product Description',
+//     price: 65,
+//     category: 'Accessories',
+//     quantity: 24,
+//     inventoryStatus: 'INSTOCK',
+//     rating: 5
+// }];
 </script>
 
 

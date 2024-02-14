@@ -2,6 +2,8 @@ const { defineConfig } = require('@vue/cli-service')
 const path = require('path');
 
 module.exports = defineConfig({
+  // publicPath: "/dev_ui/",
+  assetsDir: "static/",
   transpileDependencies: true,
   configureWebpack: {
     resolve: {
@@ -18,6 +20,10 @@ module.exports = defineConfig({
         changeOrigin: true,
       },
       '^/contexts': {
+        target: 'http://jupyter:8888',
+        changeOrigin: true,
+      },
+      '^/config': {
         target: 'http://jupyter:8888',
         changeOrigin: true,
       },
