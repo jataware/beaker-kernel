@@ -142,6 +142,9 @@ const contextNodes = computed(() => {
   flex-direction: column;
   position: relative;
   background-color: var(--surface-a);
+  @media(max-width: 750px) {
+    display: none;
+  }
 }
 
 .context-heading {
