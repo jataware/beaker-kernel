@@ -94,13 +94,23 @@
                                 v-tooltip.bottom="{value: 'Run Selected Cell', showDelay: 300}"
                                 primeIcon="play"
                             />
+                            <!-- TODO implement Stop-->
                             <CellActionButton
                                 @click="identity"
                                 v-tooltip.bottom="{value: 'Stop Execution', showDelay: 300}"
                                 primeIcon="stop"
                             />
+                            <CellActionButton 
+                                @click="downloadNotebook" 
+                                v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
+                                primeIcon="download" 
+                            />
+                            <!-- TODO not implemented (refresh? reload? clear?)
                             <CellActionButton @click="identity" primeIcon="refresh" />
+                            -->
+                            <!--
                             <CellActionButton @click="identity" primeIcon="upload" />
+                            -->
                         </InputGroup>
                     </div>
 
@@ -297,6 +307,43 @@ function handleSplitterResized({sizes}) {
     const [_, rightPaneSize] = sizes;
     if (rightPaneSize < 15) {
         showDebugPane.value = false
+    }
+}
+
+function getDateTime() {
+    let t = new Date();
+    // convert the local time zone offset from minutes to milliseconds
+    let z = t.getTimezoneOffset() * 60 * 1000;
+    // subtract the offset from t
+    let tLocal = t - z;
+    // create shifted Date object
+    tLocal = new Date(tLocal);
+    // convert to ISO format string
+    let iso = tLocal.toISOString();
+    // drop the milliseconds and zone
+    iso = iso.split(".")[0];
+    // replace the T with _, and : with , (: aren't allowed on filenames)
+    iso = iso.replace('T', '_').replace(/:/g,',');
+    return iso;
+}
+
+function downloadNotebook() {
+    const data = JSON.stringify(JSON.parse(props.session.notebook.toJSON()), null, 2); // TODO error handling
+
+    const filename = `Beaker-Notebook_${getDateTime()}.ipynb`;
+
+    const blob = new Blob([data], {type: 'application/x-ipynb+json'});
+
+    if (window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveBlob(blob, filename);
+    }
+    else {
+        const elem = window.document.createElement('a');
+        elem.href = window.URL.createObjectURL(blob);
+        elem.download = filename;        
+        document.body.appendChild(elem);
+        elem.click();        
+        document.body.removeChild(elem);
     }
 }
 
