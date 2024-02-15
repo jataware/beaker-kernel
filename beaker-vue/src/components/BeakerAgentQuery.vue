@@ -39,6 +39,7 @@ import Textarea from 'primevue/textarea';
 
 const props = defineProps([
     "session",
+    "runCellCallback"
 ]);
 
 const query = ref("");
@@ -58,6 +59,9 @@ const handleQuery = (e: any) => {
     nextTick(() => {
         // Delay running of cell by a ticket to allow selection and rendering to complete.
         emit("run-cell", cell);
+        setTimeout(() => {
+            props.runCellCallback();
+        }, 1000);
     });
 }
 </script>

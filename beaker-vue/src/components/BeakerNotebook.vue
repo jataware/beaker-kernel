@@ -129,6 +129,7 @@
                             :session="session"
                             @select-cell="selectCell"
                             @run-cell="runCell"
+                            :run-cell-callback="scrollBottomCellContainer"
                         />
                     </div>
                 </SplitterPanel>
@@ -196,7 +197,7 @@
 
         <!-- TODO may use HTML comments to hide footer -->
         <footer>
-            <LoggingDrawer />
+            <FooterDrawer />
          </footer>
     </div>
 
@@ -232,11 +233,10 @@ import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
 import BeakerContextSelection from "./BeakerContextSelection.vue";
 import BeakerCustomMessage from "./BeakerCustomMessage.vue";
-import LoggingDrawer from './LoggingDrawer.vue';
+import FooterDrawer from './FooterDrawer.vue';
 import LoggingPane from './LoggingPane.vue';
 import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
-
 import SvgPlaceholder from './SvgPlaceholder.vue';
 
 

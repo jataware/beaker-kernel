@@ -54,13 +54,18 @@
             {{ event.content }}
 
         </div>
-        <div class="input-request" v-focustrap v-if="cell.status === 'awaiting_input'">
-            <InputText
+        <div
+            class="input-request" 
+             v-focustrap
+             v-if="cell.status === 'awaiting_input'"
+         >
+            <Textarea
                 class="input-text"
-                size="small"
-                autofocus
+                autoFocus
+                autoResize
+                rows="1"
                 placeholder="Enter your response here"
-                @keydown.enter="respond"
+                @keydown.enter.exact="respond"
                 v-model="response"
             />
             &nbsp;
@@ -70,7 +75,6 @@
                 size="small"
                 label="reply"
                 @click="respond"
-                @keydown.enter="respond"
             />
         </div>
     </div>
@@ -81,7 +85,7 @@
 import { defineProps, ref, nextTick } from "vue";
 import Button from "primevue/button";
 import InputText from 'primevue/inputtext';
-
+import Textarea from 'primevue/textarea';
 
 const props = defineProps([
     "cell",
@@ -121,9 +125,11 @@ function saveEdit() {
 
 
 const respond = () => {
+    if (!response.value.trim()) {
+        return; // Do nothing unless the reply has contents
+    }
     props.cell.respond(response.value, props.session);
     response.value = "";
-
 };
 
 </script>
@@ -173,8 +179,10 @@ const respond = () => {
 }
 
 .input-request {
-   padding: 0.5rem 0;
-   display: flex;
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: flex-start;
+    width: 90%;
 }
 
 .input-text {

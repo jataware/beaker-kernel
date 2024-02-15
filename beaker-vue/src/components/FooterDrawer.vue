@@ -6,15 +6,31 @@
    />
 
   <transition name="slide">
-    <div class="logging-pane" v-if="isLogOpen">
+    <div class="footer-pane" v-if="isAboutOpen">
 
       <div class="pane-contents">
         <div class="actions">
-          <span>TODO</span>
+          <span></span>
         </div>
 
         <div class="data-container">
           <div class="scroller-area">
+          <pre>
+          ##     Built by:                                                                                                           
+         ####                ###                                                                                                          
+         #  #      ##        # ##          ##                                ##                      ##                                   
+         #  #    ########   ## #  ##    ########    ###     ###     ###   ########     #######   ########                                 
+         #  #      ##   ##     #           #   ##     ##    # ##   ##        ##  ##   # #       ##   #  ###                               
+         #  #    -    #  #  ## ## ##     #   ## ##  #  #   #   ##  #  #   ##   -  ##  #  ####  ## #       #                               
+         #  #   ####     #   # ##      #####  # ##  ## ## ##    # ## #    ####  # ##  #  #     #  #      ##                               
+         #  #  ##      # #   # ##     ###     # ##   ## # # ### # # ##   ##     # ##  # ##     #  # ######                                
+         #  # ##      #  #   #  #     #      ## ##    #    ## #   # #   ##     ## ##  # ##     ## ##                                      
+         #  # ###  ##    #   ##  ###  ##  ##    ##    ##   #   #   ##   ##  ##     #  # .#      ##  ####                                  
+        ## ##  ####  #####    ###  #   ###  ######     ####    #####     ###  #####-  ####       ####  ###                                
+      ##  ##      ###           ####     ###             #       #         ####                     ####                                  
+     #  ###                                                                                                                               
+      ###                            (TODO)                                                                                                     
+          </pre>
 
           </div>
         </div>
@@ -42,7 +58,7 @@ import Menubar from 'primevue/menubar';
 // while the logging drawer is open. Right now the pane remains open when
 // the button goes back to looking "unpress".
 
-const isLogOpen = ref(false);
+const isAboutOpen = ref(false);
 
 // const props = defineProps([
 //   'theme'
@@ -67,25 +83,28 @@ const upstream_logs = inject('debug_logs');
 // Can also rename this file and make mor generic than Logging since it contains
 // all "footer" links/actions
 const footerMenuItems = ref([
-    {
-        label: 'Help',
-        icon: 'pi pi-question',
-        command: () => {
-            isLogOpen.value = !isLogOpen.value;
-        }
-    },
+    // {
+    //     label: 'Help',
+    //     icon: 'pi pi-question',
+    //     command: () => {
+    //         isAboutOpen.value = !isAboutOpen.value;
+    //     }
+    // },
     {
         label: 'About',
-        icon: 'pi pi-bookmark',
+        icon: 'pi pi-question',
+        command: () => {
+            isAboutOpen.value = !isAboutOpen.value;
+        }
     },
-    {
-        label: 'Terms',
-        icon: 'pi pi-book'
-    },
-    {
-        label: 'Contact',
-        icon: 'pi pi-envelope'
-    }
+    // {
+    //     label: 'Terms',
+    //     icon: 'pi pi-book'
+    // },
+    // {
+    //     label: 'Contact',
+    //     icon: 'pi pi-envelope'
+    // }
 ]);
 
 
@@ -93,7 +112,7 @@ const footerMenuItems = ref([
 
 <style lang="scss" scoped>
 
-.logging-pane {
+.footer-pane {
   width: 100%;
   height: 19rem;
   padding: 0.5rem;
