@@ -82,11 +82,12 @@ export class BeakerSession {
             msgId: messageId
         });
 
-        const future = this.kernel.sendShellMessage(
+        const future: IBeakerFuture = this.kernel.sendShellMessage(
             msg,
             true,
             true
         );
+        future.msgId = messageId;
         return future;
     }
 
@@ -172,13 +173,12 @@ export class BeakerSession {
         return new BeakerSession();
     }
 
-    public reset(fullReset: boolean = false) {
-        // Remove cells via splice.
+    public reset() {
+        // Remove cells via splice to ensure reactivity
         this.notebook.cells.splice(0, this.notebook.cells.length);
-        if (fullReset) {
-            this._sessionContext.dispose();
-            this.initialize(this._sessionOptions);
-        }
+        this._history.clear();
+        this.addCodeCell("");
+        this._sessionContext.restartKernel();
     }
 
     get sessionReady(): Promise<void> {

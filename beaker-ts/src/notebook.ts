@@ -25,7 +25,7 @@ export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
 }
 
 export interface IBeakerFuture extends Kernel.IShellFuture {
-
+    msgId?: string;
 }
 
 export type BeakerCellStatus = messages.Status | "awaiting_input";

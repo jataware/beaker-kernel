@@ -52,7 +52,7 @@ const handleQuery = (e: any) => {
     if (!query.value.trim()) {
         return; // TODO notify user that they're missing the agent query?
     }
-    
+
     const cell = props.session.addQueryCell(query.value);
     query.value = "";
     emit("select-cell", cell);
@@ -71,6 +71,7 @@ const handleQuery = (e: any) => {
 .llm-query-input {
     margin-right: 0.75rem;
     flex: 1;
+    min-height: 3rem;
     // We may tweak the max-height,
     // but not setting a max value and creating huge forms
     // eventually pushes all content and breaks layout.

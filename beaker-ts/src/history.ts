@@ -51,6 +51,11 @@ export class BeakerHistory implements IBeakerHistory {
         this.events.push(event);
     };
 
+    public clear() {
+        // Clear with a splice to ensure reactivity
+        this.events.splice(0, this.events.splice.length);
+    }
+
     sessionId: string;
     events: IBeakerHistoryEvent[];
 }

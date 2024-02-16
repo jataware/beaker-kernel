@@ -55,7 +55,7 @@
 
         </div>
         <div
-            class="input-request" 
+            class="input-request"
              v-focustrap
              v-if="cell.status === 'awaiting_input'"
          >
