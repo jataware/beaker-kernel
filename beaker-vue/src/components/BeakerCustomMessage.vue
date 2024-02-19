@@ -11,7 +11,6 @@
             inputId="custom-message-input"
             :suggestions="messageOptions"
             @complete="search"
-            dropdown-mode="blank"
             dropdownClass="ac-button"
         />
 
@@ -107,7 +106,7 @@ const codeExtensions = computed(() => {
 const messageType = ref<string>();
 const messageNum = ref(1)
 const messageContent = ref<string>("{\n}");
-const messageOptions = ref(props.intercepts);
+const messageOptions = ref([]);
 // const messageMessages = ref<object[]>([]);
 const messageId = ref<string|undefined>(undefined);
 
@@ -130,8 +129,8 @@ const allMessageOptions = computed(() => {
 
 const search = (event: any) => {
     messageOptions.value = event.query ?
-        allMessageOptions.value.filter((item) => item.includes(event.query))
-        : allMessageOptions.value;
+        allMessageOptions.value.filter((item) => item.includes(event.query)) :
+        Object.keys(props.intercepts);
 };
 
 const logEntries = computed(() => {
