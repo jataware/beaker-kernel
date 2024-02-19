@@ -120,7 +120,7 @@ const sendMessage = () => {
         messageId.value,
     );
     future.done.then(() => {
-        showToast('Success', 'Message processed.');
+        showToast({title: 'Success', detail: 'Message processed.'});
     });
 };
 

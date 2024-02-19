@@ -82,7 +82,6 @@
                             <Button
                                 @click="addCell"
                                 v-tooltip.bottom="{value: 'Add New Cell', showDelay: 300}"
-                                primeIcon="plus"
                                 icon="pi pi-plus"
                                 size="small"
                                 severity="info"
@@ -91,7 +90,6 @@
                             <Button
                                 @click="removeCell"
                                 v-tooltip.bottom="{value: 'Remove Selected Cell', showDelay: 300}"
-                                primeIcon="minus"
                                 icon="pi pi-minus"
                                 size="small"
                                 severity="info"
@@ -100,7 +98,6 @@
                             <Button
                                 @click="runCell()"
                                 v-tooltip.bottom="{value: 'Run Selected Cell', showDelay: 300}"
-                                primeIcon="play"
                                 icon="pi pi-play"
                                 size="small"
                                 severity="info"
@@ -110,16 +107,16 @@
                             <Button
                                 @click="identity"
                                 v-tooltip.bottom="{value: 'Stop Execution', showDelay: 300}"
-                                primeIcon="stop"
                                 icon="pi pi-stop"
                                 size="small"
                                 severity="info"
                                 text
                             />
+                        </InputGroup>
+                        <InputGroup>
                             <Button
                                 @click="resetNotebook"
                                 v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
-                                primeIcon="refresh"
                                 icon="pi pi-refresh"
                                 size="small"
                                 severity="info"
@@ -128,15 +125,12 @@
                             <Button
                                 @click="downloadNotebook"
                                 v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
-                                primeIcon="download"
                                 icon="pi pi-download"
                                 size="small"
                                 severity="info"
                                 text
                             />
-                            <!--
-                            <CellActionButton @click="identity" primeIcon="upload" />
-                            -->
+                            <OpenNotebookButton />
                         </InputGroup>
                     </div>
 
@@ -279,6 +273,7 @@ import LoggingPane from './LoggingPane.vue';
 import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 import SvgPlaceholder from './SvgPlaceholder.vue';
+import OpenNotebookButton from './OpenNotebookButton.vue';
 
 
 function capitalize(s: string) {
@@ -618,7 +613,7 @@ footer {
     margin: 0;
     width: 100%;
     display: flex;
-    justify-content: left;
+    justify-content: space-between;
     align-items: center;
 
     .p-inputgroup {

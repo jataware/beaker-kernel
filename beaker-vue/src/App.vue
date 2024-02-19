@@ -19,7 +19,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 
 // Let's only use severity=success|warning|danger(=error) for now
-const showToast = (title, detail, life=3000, severity='success', position='bottom-right') => {
+const showToast = ({title, detail, life=3000, severity='success', position='bottom-right'}) => {
     toast.add({
       summary: title,
       detail,
