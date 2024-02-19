@@ -138,13 +138,17 @@
                         <div style="flex: 1; position: relative;">
                             <div class="cell-container" ref="cellsContainerRef">
                                 <Component
-                                    v-for="(cell, index) in props.session?.notebook?.cells" :key="cell.id" :cell="cell"
+                                    v-for="(cell, index) in props.session?.notebook?.cells"
+                                    :key="cell.id"
+                                    :cell="cell"
                                     :is="componentMap[cell.cell_type]"
-                                    :session="props.session" class="beaker-cell"
+                                    :session="props.session"
+                                    class="beaker-cell"
                                     :class="{selected: (index === selectedCellIndex)}"
                                     :context-data="activeContext"
                                     :theme="selectedTheme"
                                     @click="selectCell(index)"
+                                    :selected="index === selectedCellIndex"
                                 />
                                 <transition name="fade">
                                     <div class="welcome-placeholder" v-if="props.session?.notebook?.cells.length <= 2">

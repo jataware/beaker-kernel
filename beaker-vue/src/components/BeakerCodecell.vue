@@ -38,7 +38,8 @@ const props = defineProps([
     "cell",
     "session",
     "contextData",
-    "theme"
+    "theme",
+    "selected"
 ]);
 
 const cell = ref(props.cell);
@@ -82,6 +83,12 @@ const execute = (evt: any) => {
 <style lang="scss">
 .code-cell {
     padding: 1rem 0 1rem 1rem;
+
+    &.selected {
+        .execution-count {
+            color: var(--green-400);
+        }
+    }
 }
 
 .code-cell-grid {
