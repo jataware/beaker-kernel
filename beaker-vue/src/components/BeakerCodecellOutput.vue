@@ -62,12 +62,14 @@ const renderError = (errorOutput) => {
 }
 
 .stdout {
-    color: #448;
+    // was dark purple and hard to see- replaced with theme colors
+    color: var(--text-color-secondary);
     white-space: pre;
+    font-style: italic;
 }
 
 .stderr {
-    color: #a44;
+    color: #a44; // seems unused
     white-space: pre;
 }
 
