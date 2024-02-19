@@ -4,6 +4,15 @@
         :class="{busy: isBusy}"
     >
         <div class="code-cell-grid">
+            <div
+                class="draggable"
+                :class="{'drag-disabled': props.session.notebook.cells.length <= 1}"
+                draggable="true"
+                :onDrag="handleDrag"
+                :onDragEnd="handleDrop"
+            >
+                <DraggableMarker />
+            </div>
             <div class="code-data">
                 <Codemirror
                     v-model="cell.source"
@@ -33,16 +42,19 @@ import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
+import DraggableMarker from './DraggableMarker';
 
 const props = defineProps([
     "cell",
     "session",
     "contextData",
-    "theme"
+    "theme",
+    "selected"
 ]);
 
 const cell = ref(props.cell);
 const isBusy = ref(false);
+
 
 const codeExtensions = computed(() => {
     const ext = [];
@@ -76,25 +88,56 @@ const execute = (evt: any) => {
     const future = props.cell.execute(props.session);
     future.done.then(handleDone);
 }
+
+function handleDrag(event) {
+    console.log('handling drag for', event);
+  // const selectedItem = item.target,
+  //       list = selectedItem.parentNode,
+    const x = event.clientX;
+    const y = event.clientY;
+  
+  // selectedItem.classList.add('drag-sort-active');
+  // let swapItem = document.elementFromPoint(x, y) === null ? selectedItem : document.elementFromPoint(x, y);
+  
+  // if (list === swapItem.parentNode) {
+  //   swapItem = swapItem !== selectedItem.nextSibling ? swapItem : swapItem.nextSibling;
+  //   list.insertBefore(selectedItem, swapItem);
+  // }
+}
+
+function handleDrop(item) {
+    console.log('handle drop for', item);
+  // item.target.classList.remove('drag-sort-active');
+}
+
 </script>
 
 
 <style lang="scss">
 .code-cell {
     padding: 1rem 0 1rem 1rem;
+    &.selected {
+        .execution-count {
+            color: var(--green-400);
+        }
+    }
 }
 
 .code-cell-grid {
     display: grid;
 
     grid-template-areas:
-        "code code code exec";
+        "draghandle code code code exec";
 
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 2.7rem 1fr 1fr 1fr auto;
 }
 
 .code-data {
     grid-area: code;
+}
+
+.draggable {
+    grid-area: draghandle;
 }
 
 .busy {
@@ -107,8 +150,24 @@ const execute = (evt: any) => {
     justify-content: center;
     width: 0;
     font-family: monospace;
-    font-size: 0.75rem;    
-    padding: 0 1rem;
+    font-size: 1rem;    
+    padding: 0 1.2rem;
+}
+
+.drag-disabled {
+    pointer-events: none;
+    opacity: 0.2;
+}
+
+.draggable.drag-sort-active {
+    background: transparent;
+    color: transparent;
+    border: 2px solid var(--primary-color);
+    // TODO possibly decrease height
+}
+.sorter-span.drag-sort-active {
+    background: transparent;
+    color: transparent;
 }
 
 </style>

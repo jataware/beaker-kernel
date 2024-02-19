@@ -117,15 +117,21 @@
                     <div class="ide-cells">
                         <div style="flex: 1; position: relative;">
                             <div class="cell-container" ref="cellsContainerRef">
-                                <Component
-                                    v-for="(cell, index) in props.session?.notebook?.cells" :key="cell.id" :cell="cell"
-                                    :is="componentMap[cell.cell_type]"
-                                    :session="props.session" class="beaker-cell"
-                                    :class="{selected: (index === selectedCellIndex)}"
-                                    :context-data="activeContext"
-                                    :theme="selectedTheme"
-                                    @click="selectCell(index)"
-                                />
+                                <div class="drag-sort-enable">
+                                    <Component
+                                        v-for="(cell, index) in props.session?.notebook?.cells"
+                                        :key="cell.id"
+                                        :cell="cell"
+                                        :is="componentMap[cell.cell_type]"
+                                        :session="props.session"
+                                        class="beaker-cell"
+                                        :class="{selected: (index === selectedCellIndex)}"
+                                        :context-data="activeContext"
+                                        :theme="selectedTheme"
+                                        :selected="index === selectedCellIndex"
+                                        @click="selectCell(index)"
+                                    />
+                                </div>
                                 <transition name="fade">
                                     <div class="welcome-placeholder" v-if="props.session?.notebook?.cells.length <= 2">
                                         <SvgPlaceholder />
@@ -546,6 +552,16 @@ footer {
     border-bottom: 2px solid var(--surface-c);
     background-color: var(--surface-a);
     border-right: 5px solid transparent;
+}
+.beaker-cell.drag-sort-active {
+    background: transparent;
+    color: transparent;
+    border: 2px solid var(--primary-color);
+    // TODO possibly decrease height
+}
+.sorter-span.drag-sort-active {
+    background: transparent;
+    color: transparent;
 }
 
 .beaker-cell.selected {
