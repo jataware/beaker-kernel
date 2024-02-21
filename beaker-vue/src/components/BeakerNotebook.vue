@@ -124,6 +124,7 @@
                                         :cell="cell"
                                         :is="componentMap[cell.cell_type]"
                                         :session="props.session"
+                                        :data-cellid="cell.id"
                                         class="beaker-cell"
                                         :class="{selected: (index === selectedCellIndex)}"
                                         :context-data="activeContext"
