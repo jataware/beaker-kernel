@@ -5,10 +5,10 @@
             class="pi pi-spin pi-spinner busy-icon"
         />
         <div v-for="output of props.outputs" :key="output">
-            <div v-if="output.output_type == 'stream'" :class="output.name">{{ output.text }}</div>
-            <div v-else-if="output.output_type == 'display_data'" :class="output.name" v-html="renderResult(output)"></div>
-            <div v-else-if="output.output_type == 'execute_result'" :class="output.name" v-html="renderResult(output)"></div>
-            <div v-else-if="output.output_type == 'error'" :class="output.name" v-html="renderError(output)"></div>
+            <div v-if="output.output_type == 'stream'" :class="output.output_type">{{ output.text }}</div>
+            <div v-else-if="output.output_type == 'display_data'" :class="output.output_type" v-html="renderResult(output)"></div>
+            <div v-else-if="output.output_type == 'execute_result'" :class="output.output_type" v-html="renderResult(output)"></div>
+            <div v-else-if="output.output_type == 'error'" :class="output.output_type" v-html="renderError(output)"></div>
             <div v-else>{{ output }}</div>
         </div>
     </div>
@@ -59,6 +59,12 @@ const renderError = (errorOutput) => {
     background-color: var(--surface-c);
     position: relative;
     overflow-x: auto;
+    .execute_result {
+        pre {
+            white-space: break-spaces;
+            overflow-wrap: break-word;
+        }
+    }
 }
 
 .stdout {
