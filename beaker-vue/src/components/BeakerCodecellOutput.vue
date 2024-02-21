@@ -1,5 +1,5 @@
 <template>
-    <div class="code-cell-output">
+    <div class="code-cell-output jp-RenderedText">
         <i
             v-if="busy"
             class="pi pi-spin pi-spinner busy-icon"
@@ -52,7 +52,8 @@ const renderError = (errorOutput) => {
 
 <style lang="scss">
 @import url('@jupyterlab/notebook/style/index.css');
-// @import url('@jupyterlab/theme-light-extension/style/theme.css');
+@import url('@jupyterlab/outputarea/style/index.css');
+@import url('@jupyterlab/rendermime/style/index.css');
 
 .code-cell-output {
     padding: 1em;
