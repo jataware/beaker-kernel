@@ -19,6 +19,14 @@ module.exports = defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      '^/upload': {
+        target: 'http://jupyter:8888',
+        changeOrigin: true,
+      },
+      '^/download': {
+        target: 'http://jupyter:8888',
+        changeOrigin: true,
+      },
       '^/contexts': {
         target: 'http://jupyter:8888',
         changeOrigin: true,
