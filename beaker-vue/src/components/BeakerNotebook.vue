@@ -569,7 +569,7 @@ footer {
 }
 
 .beaker-cell {
-    border-bottom: 2px solid var(--surface-c);
+    border-bottom: 4px solid var(--surface-c);
     background-color: var(--surface-a);
     border-right: 5px solid transparent;
 }

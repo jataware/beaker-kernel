@@ -55,7 +55,7 @@ const renderError = (errorOutput) => {
 // @import url('@jupyterlab/theme-light-extension/style/theme.css');
 
 .code-cell-output {
-    padding: 1em;
+    padding: 1rem;
     background-color: var(--surface-c);
     position: relative;
     overflow-x: auto;
