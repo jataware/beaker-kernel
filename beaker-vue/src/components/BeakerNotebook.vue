@@ -219,7 +219,7 @@
                         </TabPanel>
 
                         <TabPanel header="Files">
-                            <BeakerFilePane />
+                            <BeakerFilePane :session="props.session"/>
                         </TabPanel>
 
                     </TabView>

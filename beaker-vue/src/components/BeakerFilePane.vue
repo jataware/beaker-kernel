@@ -1,31 +1,61 @@
 <template>
-  <div class="data-container">
+  <div class="file-container">
     <div class="scroller-area">
       <div style="padding: 0.5rem;">
-        <Button
-            @click="openFileSelection"
-            v-tooltip.bottom="{value: 'Open ipynb file', showDelay: 300}"
-            icon="pi pi-folder"
-            size="small"
-            severity="info"
-            label="Upload file(s)"
-        />
-        <form ref="uploadForm">
-          <input
-            @change="onSelectFile"
-            ref="fileInput"
-            type="file"
-            multiple
-            style="display:none;"
-            name="uploadfiles"
+        <div class="button-header">
+          <Button
+              @click="openFileSelection"
+              v-tooltip.bottom="{value: 'Files to upload', showDelay: 300}"
+              icon="pi pi-folder"
+              size="small"
+              severity="info"
+              label="Upload file(s)"
           />
-          <input
-            type="hidden"
-            name="_xsrf"
-            :value="xsrfCookie"
+          <form ref="uploadForm">
+            <input
+              @change="onSelectFile"
+              ref="fileInput"
+              type="file"
+              multiple
+              style="display:none;"
+              name="uploadfiles"
+            />
+            <input
+              type="hidden"
+              name="_xsrf"
+              :value="xsrfCookie"
+            />
+          </form>
+          <Button
+              @click="refreshFiles"
+              v-tooltip.bottom="{value: 'Refresh files ', showDelay: 300}"
+              icon="pi pi-refresh"
+              size="small"
+              severity="info"
+              label="Refresh"
           />
-        </form>
+        </div>
 
+        <div v-if="files !== undefined">
+          <DataTable :value="files">
+            <Column field="name" header="Name" class="filename-column">
+              <template #body="slotProps">
+                <Button
+                  @click="downloadFile(slotProps.data)"
+                  icon="pi pi-file"
+                  text
+                  :label="slotProps.data.name"
+                  class="download-button"
+                ></Button>
+              </template>
+            </Column>
+            <Column field="size" header="Size (bytes)"></Column>
+            <Column field="last_modified" header="Last Modified"></Column>
+          </DataTable>
+        </div>
+        <div v-else>
+          Fetching files...
+        </div>
       </div>
     </div>
   </div>
@@ -33,126 +63,97 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, inject, defineProps } from "vue";
+import { ref, inject, defineProps, onMounted } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 // import Checkbox from 'primevue/checkbox'; // Commented dev opts in template
 import Panel from 'primevue/panel';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
 import cookie from 'cookie';
 
+import { ContentsManager } from '@jupyterlab/services';
+
+
 const props = defineProps([
+  "session",
   "entries",
   "sortby",
 ])
 
+const contentManager = new ContentsManager({});
+
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
 
-console.log(cookies);
-console.log(xsrfCookie);
-
 const showToast = inject('show_toast');
 
-const options = ref([]);
-
-const fileInput = ref(null);
+const fileInput = ref<HTMLInputElement|undefined>(undefined);
 const uploadForm = ref<HTMLFormElement|undefined>(undefined);
+const files = ref<any[]|undefined>(undefined);
 
 const openFileSelection = () => {
-   fileInput.value.click();
+   fileInput.value?.click();
 }
 
-const onSelectFile = (event) => {
+const onSelectFile = () => {
   const url = "/upload";
-  // const files = event.target.files; // ensure there's always one...
-  // console.log(uploadForm);
-  // uploadForm.value.submit();
   const formData = new FormData(uploadForm.value);
-  console.log(formData);
   const uploadFuture = fetch(url, {
     method: "post",
     body: formData,
   }).then(async (response) => {
-    console.log(response);
     const text = await response.text();
     if (response.status === 200) {
       showToast({title: 'Upload complete', detail: text, severity: 'success', life: 4000});
     }
     else {
-      showToast({title: 'Upload failed', detail: text, severity: 'error', life: 4000});
+      showToast({title: 'Upload failed', detail: text, severity: 'error', life: 8000});
     }
-  }).catch((r) => {
-    console.log("error!", r);
-
+    await refreshFiles();
+  }).catch(async (error) => {
+    showToast({title: 'Upload failed', detail: `There was an error trying to upload: ${error}`, severity: 'error', life: 8000});
+    await refreshFiles();
   });
 }
 
+const downloadFile = async (file) => {
+  const url = `/download/${file.name}`;
+  window.location.href = url;
+};
+
+const refreshFiles = async () => {
+  const contents = await contentManager.get(".");
+  const filteredFiles = contents.content.filter((item) => item.type === "file" && !item.name.startsWith('.'));
+  const sortedFiles = filteredFiles.sort((a, b) => a.name.localeCompare(b.name));
+  files.value = sortedFiles;
+};
+
+
+onMounted(async () => {
+  await refreshFiles();
+});
 </script>
 
 <style lang="scss">
-.data-container {
-  // The internal class for the json viewer-
-  // Change the hoder color for better contrast
-  .vjs-tree-node:hover{
-    background-color: var(--surface-b);
-  }
-}
 
-.ml-2 {
-  margin-left: 0.5rem;
-}
-
-.flex-container {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.5rem;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-.log-panel {
-  margin-top: 0.5rem;
-  // margin-bottom: 0;
-  position: relative;
-
-  .p-panel-header {
-    background: var(--surface-b);
-    padding: 0.5rem 1rem;
-  }
-  .p-panel-content {
-    padding: 0.5rem 0.75rem;
+  .filename-column {
+    min-width: 15rem;
   }
 
-  // If we wanted to alternate widget panel-heading bg color or so:
-  // &.odd {
-  //   .p-panel-header {
-  //     background: var(--surface-b);
-  //   }
-  // }
-}
-
-.log-panel::before {
-  content: attr(data-index);
-  color: var(--gray-300);
-  position: absolute;
-  right: 1rem;
-  top: 0.4rem;
-}
-
-.bottom-actions {
-  width: 100%;
-  display: flex;
-  margin-top: 0.5rem;
-  justify-content: center;
-  color: var(--text-color-secondary);
-}
-
-.sort-actions {
-  .p-button {
-    border-color: var(--surface-d);
+  .download-button {
+    word-break: break-all;
+    text-align: left;
   }
-}
+
+  .button-header {
+    display: flex;
+    flex-direction: row;
+
+    * {
+      margin-right: 10px;
+    }
+  }
 
 </style>
