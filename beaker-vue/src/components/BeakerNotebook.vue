@@ -218,6 +218,10 @@
                             <LoggingPane :entries="props.rawMessages" />
                         </TabPanel>
 
+                        <TabPanel header="Files">
+                            <BeakerFilePane />
+                        </TabPanel>
+
                     </TabView>
                 </SplitterPanel>
 
@@ -274,6 +278,7 @@ import BeakerContextSelection from "./BeakerContextSelection.vue";
 import BeakerCustomMessage from "./BeakerCustomMessage.vue";
 import FooterDrawer from './FooterDrawer.vue';
 import LoggingPane from './LoggingPane.vue';
+import BeakerFilePane from "./BeakerFilePane.vue";
 import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 import SvgPlaceholder from './SvgPlaceholder.vue';
