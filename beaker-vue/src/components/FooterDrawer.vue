@@ -3,6 +3,7 @@
   <Menubar
       :model="footerMenuItems"
       breakpoint="800"
+      class="footer-menu-bar"
    />
 
   <transition name="slide">
@@ -111,6 +112,12 @@ const footerMenuItems = ref([
 </script>
 
 <style lang="scss" scoped>
+
+.footer-menu-bar {
+  &.p-menubar {
+    padding: 0 0.5rem;
+  }
+}
 
 .footer-pane {
   width: 100%;

@@ -2,7 +2,7 @@
   <Button
       @click="openFileSelection"
       v-tooltip.bottom="{value: 'Open ipynb file', showDelay: 300}"
-      icon="pi pi-folder"
+      icon="pi pi-folder-open"
       size="small"
       severity="info"
       text

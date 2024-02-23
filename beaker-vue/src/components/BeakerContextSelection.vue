@@ -9,7 +9,7 @@
         :style="{ width: '40rem' }"
     >
         <p>
-            Select kernel and language.
+            Select context and language.
         </p>
         <InputGroup>
             <Dropdown
@@ -145,6 +145,24 @@ const languageOptions = computed<{slug: string, kernel: string}[]>(() => {
         return [];
     }
     return selectedContext.value.languages;
+});
+
+// When languageOptions changes (due to context changing), the selected
+// language might not be available in the new languageOptions/context
+// Ensure to default the selected language for that context to 1st option available
+watch(languageOptions, (newLanguageOptions) => {
+    const langOpts = newLanguageOptions;
+    const currentLanguage = selectedLanguage.value;
+
+    if (Array.isArray(langOpts) && langOpts.length) {
+        const isSelectedAvailable = langOpts
+           .map(i => i.subkernel)
+           .includes(currentLanguage);
+
+        if (!isSelectedAvailable) {
+            selectedLanguage.value = langOpts[0].subkernel;
+        }
+    }
 });
 
 // TODO clean this once we understand how checkboxes state work..
