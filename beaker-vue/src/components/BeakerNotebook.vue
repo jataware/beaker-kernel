@@ -249,7 +249,7 @@
         :activeContext="activeContext"
         :isOpen="contextSelectionOpen"
         :toggleOpen="toggleContextSelection"
-        @update-context-info="updateContextInfo"
+        @update-context-info="setContext"
         :theme="selectedTheme"
     />
 
@@ -339,6 +339,7 @@ const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 const showDebugPane = ref (true);
 const cellsContainerRef = ref(null);
+const activeContextPayload = ref<any>(null);
 
 function handleSplitterResized({sizes}) {
     const [_, rightPaneSize] = sizes;
@@ -386,6 +387,8 @@ function downloadNotebook() {
 
 const resetNotebook = () => {
     props.session.reset();
+    // Reapply context
+    setContext(activeContextPayload.value);
 };
 
 const selectedCell = computed(() => {
@@ -494,6 +497,21 @@ const exportNB = () => {
 
 function toggleContextSelection() {
     contextSelectionOpen.value = !contextSelectionOpen.value;
+}
+
+const setContext = async (contextPayload: any) => {
+    const future = props.session.sendBeakerMessage(
+        "context_setup_request",
+        contextPayload
+    );
+    future.done.then(async (result: any) => {
+        activeContextPayload.value = contextPayload;
+        // Close the context dialog
+        contextSelectionOpen.value = false;
+        // Update the context info in the sidebar
+        // TODO: Is this even needed? Could maybe be fed/triggered by existing events?
+        updateContextInfo();
+    });
 }
 
 const updateContextInfo = async () => {

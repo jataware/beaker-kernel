@@ -203,20 +203,14 @@ const setContext = () => {
     const isDebug = logDebug.value.includes('true');
     const isVerbose = logVerbose.value.includes('true');
 
-    const future = props.session.sendBeakerMessage(
-        "context_setup_request",
-    {
+    const contextMessageContent = {
       context: selectedContextSlug.value,
       language: selectedLanguage.value,
       context_info: JSON.parse(contextPayload.value || ''),
       debug: isDebug,
       verbose: isVerbose,
-    }
-    );
-    future.done.then(() => {
-        emit("update-context-info");
-        props.toggleOpen();
-    });
+    };
+    emit("update-context-info", contextMessageContent);
 }
 
 onMounted(async () => {
@@ -247,12 +241,12 @@ onMounted(async () => {
 }
 
 .h-less-pad {
-    margin-block-end: 1rem;   
+    margin-block-end: 1rem;
 }
 
 .code-container {
     border: 1px solid var(--surface-ground);
-    padding: 0.25rem;    
+    padding: 0.25rem;
     max-height: 15rem;
     overflow: auto;
 }
