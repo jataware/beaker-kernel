@@ -24,6 +24,7 @@ const showToast = ({title, detail, life=3000, severity='success', position='bott
       summary: title,
       detail,
       life,
+      // for options, seee https://primevue.org/toast/
       severity,
       position
     });

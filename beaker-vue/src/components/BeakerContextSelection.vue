@@ -55,6 +55,7 @@
         <template #footer>
             <div style="width: 100%; text-align: center;">
                 <Button
+                    :loading="props.contextProcessing"
                     raised
                     @click="setContext"
                     label="Save"
@@ -82,7 +83,8 @@ const props = defineProps([
     "activeContext",
     "isOpen",
     "toggleOpen",
-    "theme"
+    "theme",
+    "contextProcessing"
 ]);
 
 const contextData = ref(undefined);
@@ -167,7 +169,8 @@ watch(languageOptions, (newLanguageOptions) => {
 
 // TODO clean this once we understand how checkboxes state work..
 watch(() => props.isOpen, (open /*, oldValue*/) => {
-    // Only se up saved context state when opening the dialog (not closing).
+
+    // Only setup saved context state when opening the dialog (not closing).
     if (open) {
 
         if (props.activeContext?.language) {

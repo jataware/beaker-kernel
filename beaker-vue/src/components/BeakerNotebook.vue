@@ -251,12 +251,13 @@
         :toggleOpen="toggleContextSelection"
         @update-context-info="setContext"
         :theme="selectedTheme"
+        :contextProcessing="contextProcessing"
     />
 
 </template>
 
 <script setup lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, Component, nextTick } from "vue";
+import { ref, onBeforeMount, onMounted, defineProps, computed, Component, nextTick, inject } from "vue";
 import { IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
 import VueJsonPretty from 'vue-json-pretty';
@@ -301,6 +302,8 @@ const props = defineProps([
     "rawMessages",
 ]);
 
+const showToast = inject('show_toast');
+
 const debugData = () => {
     return JSON.parse(props.session.notebook.toJSON());
 };
@@ -340,6 +343,7 @@ const contextSelectionOpen = ref(false);
 const showDebugPane = ref (true);
 const cellsContainerRef = ref(null);
 const activeContextPayload = ref<any>(null);
+const contextProcessing = ref(false);
 
 function handleSplitterResized({sizes}) {
     const [_, rightPaneSize] = sizes;
@@ -499,13 +503,45 @@ function toggleContextSelection() {
     contextSelectionOpen.value = !contextSelectionOpen.value;
 }
 
-const setContext = async (contextPayload: any) => {
+const setContext = (contextPayload: any) => {
+
+    contextProcessing.value = true;
+
     const future = props.session.sendBeakerMessage(
         "context_setup_request",
         contextPayload
     );
-    future.done.then(async (result: any) => {
+    future.done.then((result: any) => {
+
+        contextProcessing.value = false;
         activeContextPayload.value = contextPayload;
+
+        if (result?.content?.status === 'error') {
+            let formatted = result?.content?.evalue;
+            if (formatted) {
+                const endsWithPeriod = /\.$/.test(formatted);
+                if (!endsWithPeriod) {
+                    formatted += '.';
+                }
+            }
+            showToast({
+                title: 'Context Setup Failed',
+                severity: 'error',
+                detail: `${formatted} Please try again or contact us.`,
+                life: 0
+            });
+            return;
+        }
+
+        if (result?.content?.status === 'abort') {
+            showToast({
+                title: 'Context Setup Aborted',
+                severity: 'warning',
+                detail: result?.content?.evalue,
+                life: 6000
+            });
+        }
+    
         // Close the context dialog
         contextSelectionOpen.value = false;
         // Update the context info in the sidebar
