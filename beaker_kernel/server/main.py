@@ -103,7 +103,6 @@ class UploadHandler(RequestHandler):
     def post(self):
         filenames = []
         for file in self.request.files["uploadfiles"]:
-            logger.error(file)
             # Files are actually an array within an array?
             filename = file["filename"]
             if os.path.exists(filename):
