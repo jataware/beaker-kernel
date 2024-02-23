@@ -113,7 +113,7 @@
                                 text
                             />
                         </InputGroup>
-                        <InputGroup>
+                        <InputGroup style="margin-right: 1rem;">
                             <Button
                                 @click="resetNotebook"
                                 v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
