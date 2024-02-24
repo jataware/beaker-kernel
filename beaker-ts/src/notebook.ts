@@ -34,6 +34,9 @@ export type BeakerCellType = nbformat.CellType | string | 'query';
 
 export class BeakerBaseCell implements nbformat.IBaseCell {
     // Override index type to allow methods to be defined on the class
+    IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments",
+                  "outputs", "execution_count"];
+
     [key: string]: any;
     cell_type: BeakerCellType;
     metadata: Partial<nbformat.ICellMetadata>;
@@ -42,6 +45,32 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
 
     constructor() {
         this.status = "idle";
+    }
+
+    public fromJSON(obj: any) {
+        Object.keys(obj).forEach((key) => {
+            this[key] = obj[key];
+        })
+    }
+
+    public toJSON() {
+        return {...this};
+    }
+
+    public fromIPynb(obj: any) {
+        Object.keys(obj).forEach((key) => {
+            this[key] = obj[key];
+        })
+    }
+
+    public toIPynb() {
+        const output = {};
+        for (const key of Object.keys(this)) {
+            if (this.IPYNB_KEYS.includes(key)) {
+                output[key] = this[key];
+            }
+        }
+        return(output);
     }
 }
 
@@ -92,6 +121,9 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         if (this.execution_count === undefined) {
             this.execution_count = null;
         }
+        if (Array.isArray(this.source)) {
+            this.source = this.source.join("\n");
+        }
     }
 
 
@@ -133,11 +165,9 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
                 this.execution_count = msg.content.execution_count;
                 this.outputs.push({
                     output_type: "error",
-                    content: {
-                        ename: msg.content.ename,
-                        evalue: msg.content.evalue,
-                        traceback: msg.content.traceback,
-                    },
+                    ename: msg.content.ename,
+                    evalue: msg.content.evalue,
+                    traceback: msg.content.traceback,
                 });
             }
             else if (msg.content.status === "abort") {
@@ -305,16 +335,18 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 renderedMarkdownLines.push(`**${event.content}**`);
             }
             else if (event.type === "user_question") {
-                renderedMarkdownLines.push(`Beaker asks: ${event.content}`);
+                renderedMarkdownLines.push(`*Beaker asks:* ${event.content}\n`);
             }
             else if (event.type === "user_answer") {
-                renderedMarkdownLines.push(`The user responds: ${event.content}`);
+                renderedMarkdownLines.push(`*The user responds:* ${event.content}\n`);
             }
         });
         const renderedMarkdown = renderedMarkdownLines.join("\n");
         const metadata = {
             ...this.metadata,
             beaker_cell_type: "query",
+            prompt: this.source,
+            events: this.events,
         }
         return new BeakerMarkdownCell(
             {
@@ -326,9 +358,31 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         );
     }
 
-    public toJSON() {
-        return this.toMarkdownCell();
+    // public fromJSON(obj: any) {
+    //     if (this.metadata.beaker_cell_type !== "query") {
+    //         throw TypeError("Cell is trying to be parsed as a query cell, but doesn't have the required metadata.")
+    //     }
+    //     this.source = obj.metadata.prompt;
+    //     this.events = obj.metadata.events;
+    // }
+
+    // public toJSON() {
+    //     return this.toMarkdownCell();
+    // }
+
+    public fromIPynb(obj: any) {
+        if (this.metadata.beaker_cell_type !== "query") {
+            throw TypeError("Cell is trying to be parsed as a query cell, but doesn't have the required metadata.")
+        }
+        this.source = obj.metadata.prompt;
+        this.events = obj.metadata.events;
+
     }
+
+    public toIPynb() {
+        return this.toMarkdownCell().toIPynb();
+    }
+
 }
 
 export type IBeakerCell = BeakerCodeCell | BeakerMarkdownCell | BeakerRawCell | nbformat.IUnrecognizedCell;
@@ -349,7 +403,14 @@ export class BeakerNotebook {
             nbformat: 4,
             nbformat_minor: 5,
             cells: [],
-            metadata: {},
+            metadata: {
+                "kernelspec": {
+                    "display_name": "Beaker Kernel",
+                    "name": "beaker",
+                    "language": "beaker",
+                   },
+                   "language_info": this.subkernelInfo,
+            },
         }
 
         // Using a Proxy to get around issues with reactivity in getters/setters
@@ -357,7 +418,56 @@ export class BeakerNotebook {
     }
 
     public toJSON() {
-        return JSON.stringify(this.content);
+        this.content.metadata.language_info = this.subkernelInfo;
+        return {...this.content};
+    }
+
+    public fromJSON(obj: any) {
+        Object.keys(obj).forEach((key) => {
+            this.content[key] = obj[key];
+        })
+    }
+
+    public loadFromIPynb(obj: any) {
+        this.content.nbformat = obj.nbformat;
+        this.content.nbformat_minor = obj.nbformat_minor;
+        const cellList = obj.cells.map((cell: IBeakerCell) => {
+            if (cell.cell_type === "raw") {
+                return new BeakerRawCell(cell);
+            }
+            else if (cell.cell_type === "code") {
+                return new BeakerCodeCell(cell);
+            }
+            else if (cell.metadata.beaker_cell_type === "query") {
+                return new BeakerQueryCell({
+                    cell_type: "query",
+                    id: cell.id,
+                    source: cell.metadata.prompt as nbformat.MultilineString,
+                    events: cell.metadata.events,
+                    metadata: cell.metadata,
+                });
+            }
+            else if (cell.cell_type === "markdown") {
+                return new BeakerMarkdownCell(cell);
+            }
+        });
+        this.cells.splice(
+            0,
+            this.cells.length,
+            ...cellList
+        );
+
+        this.content.metadata = obj.metadata;
+    }
+
+    public toIPynb() {
+        this.content.metadata.language_info = this.subkernelInfo;
+        return {
+            nbformat: this.content.nbformat,
+            nbformat_minor: this.content.nbformat_minor,
+            cells: this.content.cells.map((cell: BeakerBaseCell) => cell.toIPynb()),
+            metadata: this.content.metadata,
+        }
     }
 
     public addCell(cell: IBeakerCell | nbformat.ICell) {
@@ -368,6 +478,14 @@ export class BeakerNotebook {
         this.cells.splice(index, 1);
     }
 
+    public setSubkernelInfo(sessionInfo: any) {
+        this.subkernelInfo = {
+            "name": sessionInfo.subkernel,
+            "display_name": sessionInfo.language,
+        }
+    };
+
     private content: BeakerNotebookContent;
     public cells: IBeakerCell[];
+    private subkernelInfo: nbformat.ILanguageInfoMetadata;
 }

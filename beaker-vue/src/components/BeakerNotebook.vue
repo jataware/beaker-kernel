@@ -130,7 +130,7 @@
                                 severity="info"
                                 text
                             />
-                            <OpenNotebookButton />
+                            <OpenNotebookButton @open-file="loadNotebook"/>
                         </InputGroup>
                     </div>
 
@@ -194,7 +194,7 @@
                                         />
                                     </template>
                                 </Card>
-                                <Card class="debug-card">
+                                <!-- <Card class="debug-card">
                                     <template #title>State</template>
                                     <template #content>
                                         <vue-json-pretty
@@ -206,7 +206,7 @@
                                         <br />
                                         <Button label="Copy" />
                                     </template>
-                                </Card>
+                                </Card> -->
                             </div>
                         </TabPanel>
 
@@ -370,7 +370,8 @@ function getDateTime() {
 }
 
 function downloadNotebook() {
-    const data = JSON.stringify(JSON.parse(props.session.notebook.toJSON()), null, 2); // TODO error handling
+    const rawData = null;
+    const data = JSON.stringify(props.session.notebook.toIPynb(), null, 2); // TODO error handling
 
     const filename = `Beaker-Notebook_${getDateTime()}.ipynb`;
 
@@ -387,6 +388,10 @@ function downloadNotebook() {
         elem.click();
         document.body.removeChild(elem);
     }
+}
+
+function loadNotebook(notebookJSON) {
+    props.session.loadNotebook(notebookJSON);
 }
 
 const resetNotebook = () => {
@@ -490,15 +495,6 @@ const resetNB = async () => {
     }
 };
 
-const loadNB = () => {
-    console.log('load notebook');
-};
-
-const exportNB = () => {
-    console.log('export notebook')
-}
-
-
 function toggleContextSelection() {
     contextSelectionOpen.value = !contextSelectionOpen.value;
 }
@@ -541,7 +537,7 @@ const setContext = (contextPayload: any) => {
                 life: 6000
             });
         }
-    
+
         // Close the context dialog
         contextSelectionOpen.value = false;
         // Update the context info in the sidebar

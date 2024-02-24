@@ -42,9 +42,9 @@ const renderResult = (resultOutput) => {
 
 const renderError = (errorOutput) => {
     const bundle = {};
-    bundle['application/vnd.jupyter.error'] = errorOutput.content;
-    const traceback = errorOutput.content.traceback?.join('\n');
-    bundle['application/vnd.jupyter.stderr'] = traceback || `${errorOutput.content.ename}: ${errorOutput.content.evalue}`;
+    bundle['application/vnd.jupyter.error'] = errorOutput;
+    const traceback = errorOutput.traceback?.join('\n');
+    bundle['application/vnd.jupyter.stderr'] = traceback || `${errorOutput.ename}: ${errorOutput.evalue}`;
     return renderResult({data: bundle});
 };
 </script>

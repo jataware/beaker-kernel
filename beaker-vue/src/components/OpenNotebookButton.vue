@@ -8,13 +8,14 @@
       text
   />
   <form ref="fileForm">
-    <input 
+    <input
       @change="onSelectFile"
       ref="fileInput"
       type="file"
       style="display:none;"
     />
   </form>
+
 
 </template>
 
@@ -38,8 +39,6 @@ const openFileSelection = () => {
 const onSelectFile = (event) => {
   const file = event.target.files[0]; // ensure there's always one...
 
-  // console.log('file', file);
-
   if (!file.size ) {
     showToast({title: 'Error', detail: 'File looks empty. Check file.', severity: 'error', life: 10000});
     return;
@@ -57,13 +56,12 @@ const onSelectFile = (event) => {
     try {
       const json = JSON.parse(fileContent);
 
-      console.log('Open File content:');
-      console.log(json);
-
-      showToast({title: 'Well Done!', detail: 'Replacing Beaker session with ipynb file data.', life: 4000});
+      emit('open-file', json);
+      // showToast({title: 'Well Done!', detail: 'Replacing Beaker session with ipynb file data.', life: 4000});
 
     // emit('open-file', json); // pass either as string or json...
     } catch(e) {
+      console.error(e);
       showToast({
         title: 'Invalid File',
         detail: 'Unable to load. Please check file contains valid ipynb json data.',
@@ -75,7 +73,7 @@ const onSelectFile = (event) => {
   };
 
   // Reset the file selection so that selecting a file later on
-  // processes the onChange event properly 
+  // processes the onChange event properly
   fileForm.value.reset();
 };
 
