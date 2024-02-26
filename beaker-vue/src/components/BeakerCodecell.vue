@@ -15,6 +15,7 @@
     >
         <div class="code-cell-grid">
             <div
+                class="drag-handle"
                 :class="{
                     'drag-disabled': props.session.notebook.cells.length <= 1,
                 }"
@@ -45,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed } from "vue";
+import { defineProps, ref, computed, defineEmits } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
@@ -59,6 +60,10 @@ const props = defineProps([
     "theme",
     "selected",
     "index"
+]);
+
+const emit = defineEmits([
+    "select-cell"
 ]);
 
 const cell = ref(props.cell);
@@ -111,9 +116,7 @@ function arrayMove(arr, old_index, new_index) {
  * that is, dropped in center area and not in sidebar/other UI sections
  **/
 function handleDrop(item) {
-
-    const selectedCellElement = event.target.closest('.code-cell');
-    const parentContainer = selectedCellElement.closest('.drag-sort-enable');
+    const parentContainer = event.target.closest('.drag-sort-enable');
 
     if (!parentContainer) {
         return;
@@ -124,9 +127,12 @@ function handleDrop(item) {
 
     isCurrentTarget.value = false;
 
-    // Modify array in place so that refs can track changes (change by reference)
-    // (Don't reassign cells in notebook!)
-    arrayMove(props.session.notebook.cells, movedIndex, droppedIndex);
+    if (movedIndex !== droppedIndex) {
+        // Modify array in place so that refs can track changes (change by reference)
+        // (Don't reassign cells in notebook!)
+        arrayMove(props.session.notebook.cells, movedIndex, droppedIndex);
+        emit('select-cell', droppedIndex);
+    }
 }
 
 /**
@@ -191,7 +197,7 @@ function handleDragEnd(event) {
     grid-area: code;
 }
 
-.draggable {
+.drag-handle {
     grid-area: draghandle;
 }
 
@@ -211,25 +217,9 @@ function handleDragEnd(event) {
     opacity: 0.2;
 }
 
-.draggable.drag-sort-active {
-    background: transparent;
-    color: transparent;
-    border: 2px solid var(--primary-color);
-    // TODO possibly decrease height
-}
-.sorter-span.drag-sort-active {
-    background: transparent;
-    color: transparent;
-}
-
 .drag-active {
-    outline: 1px solid red;
-    // &::after {
-    //     content: "";
-    //     width: 100%;
-    //     border: 1px solid blue;
-    //     height: 2px;
-    // }
+    // TODO only if we wish to mark the moved item while dragging
+    // not necessary
 }
 
 .drag-over-bottom {
@@ -241,16 +231,10 @@ function handleDragEnd(event) {
 }
 
 .drag-target {
-    // position: relative;
-    border: 1px solid orange;
-    // &::before {
-    //     content: "";
-    //     padding: 1rem;
-    //     width: 100%;
-    //     background: gray;
-    //     height: 4rem; // ?
-    //     border: 1px solid blue;
-    // }
+    outline: 2px solid var(--primary-color);
+    * {
+        visibility: hidden;
+    }
 }
 
 

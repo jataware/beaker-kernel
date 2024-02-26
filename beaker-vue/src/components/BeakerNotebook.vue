@@ -116,24 +116,23 @@
 
                     <div class="ide-cells">
                         <div style="flex: 1; position: relative;">
-                            <div class="cell-container" ref="cellsContainerRef">
-                                <div class="drag-sort-enable">
-                                    <Component
-                                        v-for="(cell, index) in props.session?.notebook?.cells"
-                                        :key="cell.id"
-                                        :cell="cell"
-                                        :is="componentMap[cell.cell_type]"
-                                        :session="props.session"
-                                        :data-cellid="cell.id"
-                                        class="beaker-cell"
-                                        :class="{selected: (index === selectedCellIndex)}"
-                                        :context-data="activeContext"
-                                        :index="index"
-                                        :theme="selectedTheme"
-                                        :selected="index === selectedCellIndex"
-                                        @click="selectCell(index)"
-                                    />
-                                </div>
+                            <div class="cell-container drag-sort-enable" ref="cellsContainerRef">
+                                <Component
+                                    v-for="(cell, index) in props.session?.notebook?.cells"
+                                    :key="cell.id"
+                                    :cell="cell"
+                                    :is="componentMap[cell.cell_type]"
+                                    :session="props.session"
+                                    :data-cellid="cell.id"
+                                    class="beaker-cell"
+                                    :class="{selected: (index === selectedCellIndex)}"
+                                    :context-data="activeContext"
+                                    :index="index"
+                                    @select-cell="selectCell"
+                                    :theme="selectedTheme"
+                                    :selected="index === selectedCellIndex"
+                                    @click="selectCell(index)"
+                                />
                                 <transition name="fade">
                                     <div class="welcome-placeholder" v-if="props.session?.notebook?.cells.length <= 2">
                                         <SvgPlaceholder />
