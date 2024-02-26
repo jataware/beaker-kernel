@@ -34,7 +34,7 @@
                 :extensions="codeExtensions"
                 :tab-size="2"
                 language="javascript"
-                v-model="contextPayload"
+                v-model="contextPayloadData[selectedContextSlug]"
             />
         </div>
 
@@ -58,7 +58,7 @@
                     :loading="props.contextProcessing"
                     raised
                     @click="setContext"
-                    label="Save"
+                    label="Apply"
                     size="small"
                 />
             </div>
@@ -103,7 +103,7 @@ const emit = defineEmits([
 
 const selectedContextSlug = ref<string>();
 const selectedLanguage = ref<string | undefined>(undefined);
-const contextPayload = ref<string | undefined>(undefined);
+const contextPayloadData = ref({});
 
 
 const codeExtensions = computed(() => {
@@ -149,12 +149,16 @@ const languageOptions = computed<{slug: string, kernel: string}[]>(() => {
     return selectedContext.value.languages;
 });
 
-// When languageOptions changes (due to context changing), the selected
+// When selectedContextSlug dropdown changes, the selected
 // language might not be available in the new languageOptions/context
 // Ensure to default the selected language for that context to 1st option available
-watch(languageOptions, (newLanguageOptions) => {
-    const langOpts = newLanguageOptions;
+watch(selectedContextSlug, (newSelectedContextSlug: string) => {
+    const langOpts = languageOptions.value;
     const currentLanguage = selectedLanguage.value;
+
+    if(!currentLanguage) {
+        return;
+    }
 
     if (Array.isArray(langOpts) && langOpts.length) {
         const isSelectedAvailable = langOpts
@@ -163,6 +167,15 @@ watch(languageOptions, (newLanguageOptions) => {
 
         if (!isSelectedAvailable) {
             selectedLanguage.value = langOpts[0].subkernel;
+        }
+
+
+        // When changing from active context slug to a different one, set default payload
+        // if user has not modified it before (payload data is still empty)
+        const existingContextPayload = contextPayloadData.value[newSelectedContextSlug];
+
+        if (!existingContextPayload) {
+            contextPayloadData.value[newSelectedContextSlug] = contextData.value[selectedContextSlug.value].defaultPayload;
         }
     }
 });
@@ -174,14 +187,19 @@ watch(() => props.isOpen, (open /*, oldValue*/) => {
     if (open) {
 
         if (props.activeContext?.language) {
-        // Panel just opened and activeContext data avialable:
+            // Panel just opened and activeContext data available:
             selectedLanguage.value = props.activeContext.language.subkernel;
             selectedContextSlug.value = props.activeContext.slug;
-            contextPayload.value = JSON.stringify(props.activeContext.config);
+
+            // First time we open, if payload empty, load from active context
+            const existingContextPayload = contextPayloadData.value[selectedContextSlug.value];
+            if (!existingContextPayload) {
+                contextPayloadData.value[selectedContextSlug.value] = JSON.stringify(props.activeContext?.config);
+            }
         }
 
         if (props.activeContext?.info) {
-        // Panel just opened and activeContext info avialable (verbose/debug checks)
+        // Panel just opened and activeContext info available (verbose/debug checks)
             const strDebugValue = props.activeContext.info.debug.toString();
 
             if (logDebug.value.length) {
@@ -202,24 +220,35 @@ watch(() => props.isOpen, (open /*, oldValue*/) => {
 });
 
 const setContext = () => {
-    // TODO determine if there's a better way to work with primvue's checkbox state
+    // TODO determine if there's a better way to work with primevue's checkbox state
     const isDebug = logDebug.value.includes('true');
     const isVerbose = logVerbose.value.includes('true');
+
+    const contextInfo = contextPayloadData.value[selectedContextSlug.value];
 
     const contextMessageContent = {
       context: selectedContextSlug.value,
       language: selectedLanguage.value,
-      context_info: JSON.parse(contextPayload.value || ''),
+      context_info: JSON.parse(contextInfo || ''),
       debug: isDebug,
       verbose: isVerbose,
     };
     emit("update-context-info", contextMessageContent);
 }
 
+/*
+ Sample context shape:
+ TODO type interface
+{
+    decapodes: {
+        defaultPayload: "{}",
+        languages: [{slug: 'julia', subkernel: 'julia2'}]
+    }
+}
+*/
 onMounted(async () => {
     const contexts = await props.session.availableContexts();
     contextData.value = contexts;
-
     selectedContextSlug.value = Object.keys(contexts)[0];
 })
 </script>
