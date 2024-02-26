@@ -1,29 +1,17 @@
 <template>
 
-<!--
-    @row-dragstart="onRowDragStart($event)"
-    @row-dragover="onRowDragOver($event)"
-    @row-dragleave="onRowDragLeave($event)"
-    @row-dragend="onRowDragEnd($event)"
-    @row-drop="onRowDrop($event)"
--->
-
     <div
         class="code-cell"
         draggable="true"
         :class="{
             'drag-active': isDragActive,
-            'drag-over-bottom': isDragActiveBottom,
-            'drag-over-top': isDragActiveTop,
             'drag-target': isCurrentTarget
         }"
-        :onDrag="handleDrag"
         :onDragstart="handleDragStart"
+        :onDrop="handleDrop"
         :onDragover="handleDragOver"
-        :onDragenter="handleDragEnter"
         :onDragleave="handleDragLeave"
         :onDragend="handleDragEnd"
-        :onDrop="handleDrop"
     >
         <div class="code-cell-grid">
             <div
@@ -76,8 +64,6 @@ const props = defineProps([
 const cell = ref(props.cell);
 const isBusy = ref(false);
 const isDragActive = ref(false);
-const isDragActiveTop = ref(false);
-const isDragActiveBottom = ref(false);
 const isCurrentTarget = ref(false);
 
 
@@ -96,7 +82,6 @@ const codeExtensions = computed(() => {
 
 });
 
-
 const execute = (evt: any) => {
     isBusy.value = true;
 
@@ -114,82 +99,41 @@ const execute = (evt: any) => {
     future.done.then(handleDone);
 }
 
-function handleDrag(event) {
-    // // let rowY = DomHandler.getOffset(rowElement).top + DomHandler.getWindowScrollTop();
-
-    // // selectedItem.classList.add('drag-sort-active');
-    // let swapItem = document.elementFromPoint(x, y) === null ? selectedItem : document.elementFromPoint(x, y);
-
-    // // if (parentList === swapItem.parentNode) {
-    // swapItem = swapItem !== selectedItem.nextSibling ? swapItem : swapItem.nextSibling;
-
-    // console.log('swapItem')
-    //   list.insertBefore(selectedItem, swapItem);
-    // }
+/**
+ *
+ **/
+function arrayMove(arr, old_index, new_index) {
+    arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
 }
 
+/**
+ * Handles reordering of cells if dropped within the sort-enable area
+ * that is, dropped in center area and not in sidebar/other UI sections
+ **/
 function handleDrop(item) {
 
-    // TODO this whole block may not be needed like this
-    // closest target when we dropped
-    // id for item we dropped on
-    // const selectedCellID = selectedCellElement.dataset.cellid;
     const selectedCellElement = event.target.closest('.code-cell');
     const parentContainer = selectedCellElement.closest('.drag-sort-enable');
 
-    console.log('droppable parent container', parentContainer);
-
     if (!parentContainer) {
-        console.log('dropped outside list boundaries. not re-ordering');
         return;
     }
-    // console.log('selectedCellElement (drop target)', selectedCellElement);
-    // event.currentTarget
-    // const x = event.clientX;
-    // const y = event.clientY;
-    // let swapItemID = document.elementFromPoint(x, y) === null ? selectedCellID : document.elementFromPoint(x, y).closest('.code-cell').dataset.cellid;
-    // console.log('dropped cell id', selectedCellID);
-    // console.log('swap item', swapItemID); // id
 
-    const targetID = event.dataTransfer.getData('cellID');
-    const targetIndex = event.dataTransfer.getData('cellIndex');
+    const movedIndex = event.dataTransfer.getData('cellIndex');
+    const droppedIndex = props.index;
 
-    console.log('Item dragged ID', targetID);
-    console.log('From index', targetIndex);
+    isCurrentTarget.value = false;
 
-    const droppedIndex = props.index; // currentCells.findIndex((cellItem) => cellItem.id === selfID);
-    console.log('To index', droppedIndex);
-
-    const selfID = cell.value.id;
-    console.log('Dropped over cell id', selfID);
-
-    // const currentCells = props.session.notebook.cells;
-
-    // const itemID = event.dataTransfer.getData('itemID')
-
-    // const draggedIndex = currentCells.findIndex((candidateCell) => candidateCell.id === cellDragId);
-    // console.log('currentIndex', draggedIndex);
-    // console.log('dragging index', draggedIndex);
-
-    // currentCells.insertBefore(selectedItem, swapItem);
-
-    // currentCells.sort((cellA, cellB) => {
-    //     const nameA = cellA.id.toUpperCase(); // ignore upper and lowercase
-    //     const nameB = cellB.id.toUpperCase(); // ignore upper and lowercase
-
-    //     if (nameA < nameB) {
-    //         return -1;
-    //     }
-    //     if (nameA > nameB) {
-    //     return 1;
-    //     }      
-    //     return 0;
-    // });
-
+    // Modify array in place so that refs can track changes (change by reference)
+    // (Don't reassign cells in notebook!)
+    arrayMove(props.session.notebook.cells, movedIndex, droppedIndex);
 }
 
+/**
+ * Sets call to item being moved
+ * As well as dataTransfer so that drop target knows which one was dropped
+ **/
 function handleDragStart(event, item) {
-    // console.log('handleDragStart', event);
     isDragActive.value = true;
 
     event.dataTransfer.dropEffect = 'move'
@@ -198,29 +142,26 @@ function handleDragStart(event, item) {
     event.dataTransfer.setData('cellIndex', props.index);
 }
 
+/**
+ * Handles when dragging over a valid drop target
+ * Both appends class to cell to mark placement of dragged cell if dropped there.,
+ * as well as preventing the animation where the dragged cell animates back to
+ * its place when dropped into a proper target.
+ **/
 function handleDragOver(event) {
-    // console.log('handleDragOver', event);
-
-
-    event.preventDefault();
-}
-
-function handleDragEnter(event) {
-    // console.log('handleDragEnter', event);
-    // isDragActiveTop.value = true;
     isCurrentTarget.value = true;
+    event.preventDefault(); // necessary
 }
 
+/* Ensure to remove class to cell being dragged over */
 function handleDragLeave(event) {
-    // isCurrentTarget.value = false;
-    // console.log('handleDragLeave', event);
-    // isDragActiveBottom.value = true;
+    isCurrentTarget.value = false;
 }
 
+/* Remove class of cell being dragged/moved */
 function handleDragEnd(event) {
-    // console.log('handleDragEnd', event);
     isDragActive.value = false;
-    event.preventDefault();
+    event.preventDefault(); // may not be necessary
 }
 
 
