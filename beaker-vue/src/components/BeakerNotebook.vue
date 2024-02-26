@@ -128,6 +128,7 @@
                                         class="beaker-cell"
                                         :class="{selected: (index === selectedCellIndex)}"
                                         :context-data="activeContext"
+                                        :index="index"
                                         :theme="selectedTheme"
                                         :selected="index === selectedCellIndex"
                                         @click="selectCell(index)"

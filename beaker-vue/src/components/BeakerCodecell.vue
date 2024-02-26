@@ -12,10 +12,10 @@
         class="code-cell"
         draggable="true"
         :class="{
-            busy: isBusy,
             'drag-active': isDragActive,
             'drag-over-bottom': isDragActiveBottom,
-            'drag-over-top': isDragActiveTop
+            'drag-over-top': isDragActiveTop,
+            'drag-target': isCurrentTarget
         }"
         :onDrag="handleDrag"
         :onDragstart="handleDragStart"
@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, provide, inject } from "vue";
+import { defineProps, ref, computed } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
@@ -69,7 +69,8 @@ const props = defineProps([
     "session",
     "contextData",
     "theme",
-    "selected"
+    "selected",
+    "index"
 ]);
 
 const cell = ref(props.cell);
@@ -77,8 +78,8 @@ const isBusy = ref(false);
 const isDragActive = ref(false);
 const isDragActiveTop = ref(false);
 const isDragActiveBottom = ref(false);
+const isCurrentTarget = ref(false);
 
-const cellDragId = inject('cell_drag_id');
 
 const codeExtensions = computed(() => {
     const ext = [];
@@ -114,23 +115,10 @@ const execute = (evt: any) => {
 }
 
 function handleDrag(event) {
-
-    // console.log('handling drag for', event);
-
-    // const selectedItem = event.target;
-    //                     // event.currentTarget
-
-    // const parentList = document.querySelector('.drag-sort-enable');
-    // const x = event.clientX;
-    // const y = event.clientY;
     // // let rowY = DomHandler.getOffset(rowElement).top + DomHandler.getWindowScrollTop();
 
-    // // isDragActive.value = true;
-  
     // // selectedItem.classList.add('drag-sort-active');
     // let swapItem = document.elementFromPoint(x, y) === null ? selectedItem : document.elementFromPoint(x, y);
-
-    // // console.log('swapItem', swapItem);
 
     // // if (parentList === swapItem.parentNode) {
     // swapItem = swapItem !== selectedItem.nextSibling ? swapItem : swapItem.nextSibling;
@@ -142,11 +130,11 @@ function handleDrag(event) {
 
 function handleDrop(item) {
 
+    // TODO this whole block may not be needed like this
     // closest target when we dropped
-    const selectedCellElement = event.target.closest('.code-cell');
     // id for item we dropped on
-    // const selectedCellID =  selectedCellElement.dataset.cellid;
-
+    // const selectedCellID = selectedCellElement.dataset.cellid;
+    const selectedCellElement = event.target.closest('.code-cell');
     const parentContainer = selectedCellElement.closest('.drag-sort-enable');
 
     console.log('droppable parent container', parentContainer);
@@ -155,31 +143,33 @@ function handleDrop(item) {
         console.log('dropped outside list boundaries. not re-ordering');
         return;
     }
-
     // console.log('selectedCellElement (drop target)', selectedCellElement);
-
     // event.currentTarget
     // const x = event.clientX;
     // const y = event.clientY;
     // let swapItemID = document.elementFromPoint(x, y) === null ? selectedCellID : document.elementFromPoint(x, y).closest('.code-cell').dataset.cellid;
-
     // console.log('dropped cell id', selectedCellID);
     // console.log('swap item', swapItemID); // id
 
+    const targetID = event.dataTransfer.getData('cellID');
+    const targetIndex = event.dataTransfer.getData('cellIndex');
+
+    console.log('Item dragged ID', targetID);
+    console.log('From index', targetIndex);
+
+    const droppedIndex = props.index; // currentCells.findIndex((cellItem) => cellItem.id === selfID);
+    console.log('To index', droppedIndex);
+
     const selfID = cell.value.id;
+    console.log('Dropped over cell id', selfID);
 
-    console.log('dropped dragged cell id', selfID);
+    // const currentCells = props.session.notebook.cells;
 
-    console.log('cellDragId', cellDragId);
+    // const itemID = event.dataTransfer.getData('itemID')
 
-    const currentCells = props.session.notebook.cells;
-    const draggedIndex = currentCells.findIndex((candidateCell) => candidateCell.id === cellDragId);
-    const droppedIndex = currentCells.findIndex((cellItem) => cellItem.id === selfID);
-
+    // const draggedIndex = currentCells.findIndex((candidateCell) => candidateCell.id === cellDragId);
     // console.log('currentIndex', draggedIndex);
-    console.log('dropped index', droppedIndex);
-    console.log('dragging index', draggedIndex);
-
+    // console.log('dragging index', draggedIndex);
 
     // currentCells.insertBefore(selectedItem, swapItem);
 
@@ -198,32 +188,37 @@ function handleDrop(item) {
 
 }
 
-function handleDragStart(event) {
+function handleDragStart(event, item) {
     // console.log('handleDragStart', event);
-
     isDragActive.value = true;
-    provide('cell_drag_id', cell.value.id);
+
+    event.dataTransfer.dropEffect = 'move'
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('cellID', cell.value.id);
+    event.dataTransfer.setData('cellIndex', props.index);
 }
 
 function handleDragOver(event) {
     // console.log('handleDragOver', event);
+
+
     event.preventDefault();
 }
 
 function handleDragEnter(event) {
-    console.log('handleDragEnter', event);
-
-    isDragActiveTop.value = true;
+    // console.log('handleDragEnter', event);
+    // isDragActiveTop.value = true;
+    isCurrentTarget.value = true;
 }
 
 function handleDragLeave(event) {
+    // isCurrentTarget.value = false;
     // console.log('handleDragLeave', event);
-
-    isDragActiveBottom.value = true;
+    // isDragActiveBottom.value = true;
 }
 
 function handleDragEnd(event) {
-    console.log('handleDragEnd', event);
+    // console.log('handleDragEnd', event);
     isDragActive.value = false;
     event.preventDefault();
 }
@@ -257,9 +252,6 @@ function handleDragEnd(event) {
 
 .draggable {
     grid-area: draghandle;
-}
-
-.busy {
 }
 
 .execution-count {
@@ -306,5 +298,20 @@ function handleDragEnd(event) {
 .drag-over-top {
     border-top: 1px solid cyan;
 }
+
+.drag-target {
+    // position: relative;
+    border: 1px solid orange;
+    // &::before {
+    //     content: "";
+    //     padding: 1rem;
+    //     width: 100%;
+    //     background: gray;
+    //     height: 4rem; // ?
+    //     border: 1px solid blue;
+    // }
+}
+
+
 
 </style>
