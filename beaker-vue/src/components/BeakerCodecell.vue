@@ -11,6 +11,7 @@
                     :extensions="codeExtensions"
                     :disabled="isBusy"
                     :autofocus="true"
+                    @change="handleCodeChange"
                     @keydown.ctrl.enter.self.stop.prevent="execute"
                     @keydown.alt.enter="console.log('alt-enter')"
                     @keydown.shift.enter.prevent="execute"
@@ -18,7 +19,14 @@
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
-            <div class="execution-count">
+            <div 
+                class="execution-count"
+                :class="{
+                    success: executeState === ExecuteStatus.Success,
+                    modified: executeState === ExecuteStatus.Modified,
+                    error: executeState === ExecuteStatus.Error
+                }"
+            >
                 <span>
                     [{{cell.execution_count || '&nbsp;'}}]
                 </span>
@@ -45,6 +53,19 @@ const props = defineProps([
 const cell = ref(props.cell);
 const isBusy = ref(false);
 
+enum ExecuteStatus {
+  Success = 'success',
+  Modified = 'modified',
+  Error = 'error',
+  Pending = 'pending',
+}
+
+const executeState = ref<ExecuteStatus>(ExecuteStatus.Pending);
+
+function handleCodeChange() {
+    executeState.value = ExecuteStatus.Modified;
+}
+
 const codeExtensions = computed(() => {
     const ext = [];
 
@@ -66,10 +87,17 @@ const execute = (evt: any) => {
 
     const handleDone = async (message: any) => {
 
+        if (message?.content?.status === 'ok') {
+            executeState.value = ExecuteStatus.Success;
+        } else {
+            executeState.value = ExecuteStatus.Error;
+        }
+        
         // Timeout added to busy indicators from jumping in/out too quickly
         setTimeout(() => {
             isBusy.value = false;
         }, 1000);
+
     };
 
     evt.preventDefault();
@@ -86,7 +114,6 @@ const execute = (evt: any) => {
 
     &.selected {
         .execution-count {
-            color: var(--green-400);
         }
     }
 }
@@ -109,13 +136,22 @@ const execute = (evt: any) => {
 
 .execution-count {
     grid-area: exec;
-    color: var(--text-color-secondary);
+    color: var(--text-color-secondary); // Pending
     display: flex;
     justify-content: center;
     width: 0;
     font-family: monospace;
     font-size: 0.75rem;    
     padding: 0 1rem;
+    &.success {
+        color: var(--green-400);
+    }
+    &.error {
+        color: var(--red-500);
+    }
+    &.modified {
+        color: var(--orange-500);
+    }
 }
 
 </style>
