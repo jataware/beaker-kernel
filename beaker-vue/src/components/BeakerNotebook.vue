@@ -632,6 +632,9 @@ footer {
 .main-panel {
     display: flex;
     flex-direction: column;
+    &:focus {
+        outline: none;
+    }
 }
 
 .ide-cells {
@@ -695,6 +698,10 @@ footer {
 .right-splitter {
     display: flex;
     flex-direction: column;
+
+    &:focus {
+        outline: none;
+    }
 
     .p-tabview {
         height: 100%;
