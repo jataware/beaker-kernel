@@ -34,8 +34,8 @@ import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
-import DraggableMarker from './DraggableMarker';
 import Badge from 'primevue/badge';
+
 const props = defineProps([
     "cell",
     "session",
@@ -44,10 +44,7 @@ const props = defineProps([
 
 const cell = ref(props.cell);
 const isBusy = ref(false);
-const isDragActive = ref(false);
-const isCurrentTarget = ref(false);
 const theme = inject('theme');
-
 
 enum ExecuteStatus {
   Success = 'success',
@@ -112,73 +109,6 @@ const execute = (evt: any) => {
     const future = props.cell.execute(props.session);
     future.done.then(handleDone);
 }
-
-/**
- *
- **/
-// function arrayMove(arr, old_index, new_index) {
-//     arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
-// }
-
-/**
- * Handles reordering of cells if dropped within the sort-enable area
- * that is, dropped in center area and not in sidebar/other UI sections
- **/
-// function handleDrop(item) {
-//     const parentContainer = event.target.closest('.drag-sort-enable');
-
-//     if (!parentContainer) {
-//         return;
-//     }
-
-//     const movedIndex = event.dataTransfer.getData('cellIndex');
-//     const droppedIndex = props.index;
-
-//     isCurrentTarget.value = false;
-
-//     if (movedIndex !== droppedIndex) {
-//         // Modify array in place so that refs can track changes (change by reference)
-//         // (Don't reassign cells in notebook!)
-//         arrayMove(props.session.notebook.cells, movedIndex, droppedIndex);
-//         emit('select-cell', droppedIndex);
-//     }
-// }
-
-/**
- * Sets call to item being moved
- * As well as dataTransfer so that drop target knows which one was dropped
- **/
-// function handleDragStart(event, item) {
-//     isDragActive.value = true;
-
-//     event.dataTransfer.dropEffect = 'move'
-//     event.dataTransfer.effectAllowed = 'move'
-//     event.dataTransfer.setData('cellID', cell.value.id);
-//     event.dataTransfer.setData('cellIndex', props.index);
-// }
-
-/**
- * Handles when dragging over a valid drop target
- * Both appends class to cell to mark placement of dragged cell if dropped there.,
- * as well as preventing the animation where the dragged cell animates back to
- * its place when dropped into a proper target.
- **/
-// function handleDragOver(event) {
-//     isCurrentTarget.value = true;
-//     event.preventDefault(); // necessary
-// }
-
-/* Ensure to remove class to cell being dragged over */
-// function handleDragLeave(event) {
-//     isCurrentTarget.value = false;
-// }
-
-/* Remove class of cell being dragged/moved */
-// function handleDragEnd(event) {
-//     isDragActive.value = false;
-//     event.preventDefault(); // may not be necessary
-// }
-
 
 </script>
 

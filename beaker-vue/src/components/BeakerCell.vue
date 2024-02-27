@@ -47,20 +47,19 @@ const dragEnabled = computed(() => props.cellCount > 1);
 
 
 /**
- * Handles reordering of cells if dropped within the sort-enable area
- * that is, dropped in center area and not in sidebar/other UI sections
+ * Handles reordering of cells if dropped within the sort-enabled cells area.
  **/
 function handleDrop(item) {
-    const parentContainer = event.target.closest('.drag-sort-enable');
 
-    if (!parentContainer) {
+    isCurrentTarget.value = false;
+    const allowedDropArea = event.target.closest('.drag-sort-enable');
+
+    if (!allowedDropArea) {
         return;
     }
 
     const movedIndex = event.dataTransfer.getData('cellIndex');
     const droppedIndex = props.index;
-
-    isCurrentTarget.value = false;
 
     if (movedIndex !== droppedIndex) {
         // Modify array in place so that refs can track changes (change by reference)

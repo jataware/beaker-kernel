@@ -136,7 +136,12 @@
 
                     <div class="ide-cells">
                         <div style="flex: 1; position: relative;">
-                            <div class="cell-container drag-sort-enable" ref="cellsContainerRef">
+                            <!-- Added drag-sort-enable to BeakerCell parent to 
+                                 allow BeakerCell grab/drag to sort.-->
+                            <div 
+                                class="cell-container drag-sort-enable"
+                                ref="cellsContainerRef"
+                            >
                                 <BeakerCell
                                     v-for="(cell, index) in props.session?.notebook?.cells"
                                     :key="cell.id"
@@ -357,6 +362,10 @@ function handleSplitterResized({sizes}) {
     }
 }
 
+
+/**
+ * Modifies array in place to move a cell to a new location
+ **/
 function arrayMove(arr, old_index, new_index) {
     arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
 }
