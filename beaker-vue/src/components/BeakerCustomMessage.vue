@@ -74,18 +74,15 @@ import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
 import Card from 'primevue/card';
 
-import BeakerCodecellOutput from "./BeakerCodecellOutput.vue";
-import LoggingPane from "./LoggingPane.vue";
-
 
 const props = defineProps([
     "session",
-    "theme",
     "intercepts",
     "rawMessages",
 ]);
 
 const showToast = inject('show_toast');
+const theme = inject('theme');
 
 const emit = defineEmits([
     "select-cell",
@@ -96,7 +93,7 @@ const emit = defineEmits([
 const codeExtensions = computed(() => {
     const ext = [];
 
-    if (props.theme === 'dark') {
+    if (theme.value === 'dark') {
         ext.push(oneDark);
     }
     return ext;

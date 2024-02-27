@@ -61,24 +61,6 @@ import Menubar from 'primevue/menubar';
 
 const isAboutOpen = ref(false);
 
-// const props = defineProps([
-//   'theme'
-// ]);
-
-// const upstream_logs = inject('debug_logs');
-
-// const debug_logs = computed(() => {
-//   return JSON.stringify(upstream_logs, undefined, 2);
-// });
-
-// const codeExtensions = computed(() => {
-//     const ext = [];
-//     if (props.theme === 'dark') {
-//         ext.push(oneDark);
-//     }
-//     return ext;
-// });
-
 
 // TODO should probably add handlers for Help|Terms|Contact
 // Can also rename this file and make mor generic than Logging since it contains

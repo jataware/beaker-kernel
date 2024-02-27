@@ -1,8 +1,6 @@
 <template>
-    <div
-        class="code-cell"
-        :class="{busy: isBusy}"
-    >
+
+    <div class="code-cell">
         <div class="code-cell-grid">
             <div class="code-data">
                 <Codemirror
@@ -26,43 +24,27 @@
                     :value="cell.execution_count">
                 </Badge>
             </div>
-            <!--
-            <div 
-                class="execution-count"
-                :class="{
-                    success: executeState === ExecuteStatus.Success,
-                    modified: executeState === ExecuteStatus.Modified,
-                    error: executeState === ExecuteStatus.Error
-                }"
-            >
-                <span>
-                    [{{cell.execution_count || '&nbsp;'}}]
-                </span>
-            </div>
-            -->
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed } from "vue";
+import { defineProps, ref, computed, inject } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
 
-
 const props = defineProps([
     "cell",
     "session",
     "contextData",
-    "theme",
-    "selected"
 ]);
 
 const cell = ref(props.cell);
 const isBusy = ref(false);
+const theme = inject('theme');
 
 enum ExecuteStatus {
   Success = 'success',
@@ -97,13 +79,12 @@ const codeExtensions = computed(() => {
     if (isPython) {
         ext.push(python());
     }
-    if (props.theme === 'dark') {
+    if (theme.value === 'dark') {
         ext.push(oneDark);
     }
     return ext;
 
 });
-
 
 const execute = (evt: any) => {
     isBusy.value = true;
@@ -128,17 +109,13 @@ const execute = (evt: any) => {
     const future = props.cell.execute(props.session);
     future.done.then(handleDone);
 }
+
 </script>
 
 
 <style lang="scss">
 .code-cell {
-    padding: 1rem 0 1rem 1rem;
-
-    &.selected {
-        .execution-count {
-        }
-    }
+    padding-left: 1rem;
 }
 
 .code-cell-grid {
@@ -154,39 +131,16 @@ const execute = (evt: any) => {
     grid-area: code;
 }
 
-.busy {
-}
-
 .execution-count-badge {
     grid-area: exec;
     font-family: monospace;
     min-width: 3rem;
     display: flex;
     justify-content: center;
+
     &.pending {
         visibility: hidden;
     }
 }
-
-// Brackets/non-badge version
-// .execution-count {
-//     grid-area: exec;
-//     color: var(--text-color-secondary); // Pending
-//     display: flex;
-//     justify-content: center;
-//     width: 0;
-//     font-family: monospace;
-//     font-size: 0.75rem;    
-//     padding: 0 1rem;
-//     &.success {
-//         color: var(--green-400);
-//     }
-//     &.error {
-//         color: var(--red-500);
-//     }
-//     &.modified {
-//         color: var(--orange-500);
-//     }
-// }
 
 </style>
