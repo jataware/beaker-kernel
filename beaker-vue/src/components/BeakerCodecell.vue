@@ -19,6 +19,14 @@
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
+            <div class="execution-count-badge">
+                <Badge 
+                    v-if="executeState !== ExecuteStatus.Pending"
+                    :severity="badgeSeverity"
+                    :value="cell.execution_count">
+                </Badge>
+            </div>
+            <!--
             <div 
                 class="execution-count"
                 :class="{
@@ -31,6 +39,7 @@
                     [{{cell.execution_count || '&nbsp;'}}]
                 </span>
             </div>
+            -->
         </div>
     </div>
 </template>
@@ -41,6 +50,8 @@ import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
+import Badge from 'primevue/badge';
+
 
 const props = defineProps([
     "cell",
@@ -62,8 +73,20 @@ enum ExecuteStatus {
 
 const executeState = ref<ExecuteStatus>(ExecuteStatus.Pending);
 
+const badgeSeverity = computed(() => {
+    const mappings = {
+        [ExecuteStatus.Success]: 'success',
+        [ExecuteStatus.Modified]: 'warning',
+        [ExecuteStatus.Error]: 'danger',
+        [ExecuteStatus.Pending]: 'secondary',
+    };
+    return mappings[executeState.value];
+});
+
 function handleCodeChange() {
-    executeState.value = ExecuteStatus.Modified;
+    if (executeState.value !== ExecuteStatus.Pending) {
+        executeState.value = ExecuteStatus.Modified;
+    }
 }
 
 const codeExtensions = computed(() => {
@@ -134,24 +157,36 @@ const execute = (evt: any) => {
 .busy {
 }
 
-.execution-count {
+.execution-count-badge {
     grid-area: exec;
-    color: var(--text-color-secondary); // Pending
+    font-family: monospace;
+    min-width: 3rem;
     display: flex;
     justify-content: center;
-    width: 0;
-    font-family: monospace;
-    font-size: 0.75rem;    
-    padding: 0 1rem;
-    &.success {
-        color: var(--green-400);
-    }
-    &.error {
-        color: var(--red-500);
-    }
-    &.modified {
-        color: var(--orange-500);
+    &.pending {
+        visibility: hidden;
     }
 }
+
+// Brackets/non-badge version
+// .execution-count {
+//     grid-area: exec;
+//     color: var(--text-color-secondary); // Pending
+//     display: flex;
+//     justify-content: center;
+//     width: 0;
+//     font-family: monospace;
+//     font-size: 0.75rem;    
+//     padding: 0 1rem;
+//     &.success {
+//         color: var(--green-400);
+//     }
+//     &.error {
+//         color: var(--red-500);
+//     }
+//     &.modified {
+//         color: var(--orange-500);
+//     }
+// }
 
 </style>
