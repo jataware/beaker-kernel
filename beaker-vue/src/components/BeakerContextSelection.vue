@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 
-import { defineProps, defineEmits, ref, onMounted, computed, watch } from "vue";
+import { defineProps, defineEmits, ref, onMounted, computed, watch, inject } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
 import Dialog from 'primevue/dialog';
@@ -83,13 +83,13 @@ const props = defineProps([
     "activeContext",
     "isOpen",
     "toggleOpen",
-    "theme",
     "contextProcessing"
 ]);
 
 const contextData = ref(undefined);
 const logDebug = ref([]);
 const logVerbose = ref([]);
+const theme = inject("theme");
 
 const closeDialog = () => {
     props.toggleOpen();
@@ -109,7 +109,7 @@ const contextPayloadData = ref({});
 const codeExtensions = computed(() => {
     const ext = [];
 
-    if (props.theme === 'dark') {
+    if (theme.value === 'dark') {
         ext.push(oneDark);
     }
     return ext;

@@ -1,27 +1,7 @@
 <template>
 
-    <div
-        class="code-cell"
-        draggable="true"
-        :class="{
-            'drag-active': isDragActive,
-            'drag-target': isCurrentTarget
-        }"
-        :onDragstart="handleDragStart"
-        :onDrop="handleDrop"
-        :onDragover="handleDragOver"
-        :onDragleave="handleDragLeave"
-        :onDragend="handleDragEnd"
-    >
+    <div class="code-cell">
         <div class="code-cell-grid">
-            <div
-                class="drag-handle"
-                :class="{
-                    'drag-disabled': props.session.notebook.cells.length <= 1,
-                }"
-            >
-                <DraggableMarker />
-            </div>
             <div class="code-data">
                 <Codemirror
                     v-model="cell.source"
@@ -44,26 +24,12 @@
                     :value="cell.execution_count">
                 </Badge>
             </div>
-            <!--
-            <div 
-                class="execution-count"
-                :class="{
-                    success: executeState === ExecuteStatus.Success,
-                    modified: executeState === ExecuteStatus.Modified,
-                    error: executeState === ExecuteStatus.Error
-                }"
-            >
-                <span>
-                    [{{cell.execution_count || '&nbsp;'}}]
-                </span>
-            </div>
-            -->
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, defineEmits } from "vue";
+import { defineProps, ref, computed, inject } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
@@ -74,20 +40,13 @@ const props = defineProps([
     "cell",
     "session",
     "contextData",
-    "theme",
-    "selected",
-    "index",
-]);
-
-const emit = defineEmits([
-    "select-cell",
-    "selected",
 ]);
 
 const cell = ref(props.cell);
 const isBusy = ref(false);
 const isDragActive = ref(false);
 const isCurrentTarget = ref(false);
+const theme = inject('theme');
 
 
 enum ExecuteStatus {
@@ -123,7 +82,7 @@ const codeExtensions = computed(() => {
     if (isPython) {
         ext.push(python());
     }
-    if (props.theme === 'dark') {
+    if (theme.value === 'dark') {
         ext.push(oneDark);
     }
     return ext;
@@ -157,46 +116,46 @@ const execute = (evt: any) => {
 /**
  *
  **/
-function arrayMove(arr, old_index, new_index) {
-    arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
-}
+// function arrayMove(arr, old_index, new_index) {
+//     arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
+// }
 
 /**
  * Handles reordering of cells if dropped within the sort-enable area
  * that is, dropped in center area and not in sidebar/other UI sections
  **/
-function handleDrop(item) {
-    const parentContainer = event.target.closest('.drag-sort-enable');
+// function handleDrop(item) {
+//     const parentContainer = event.target.closest('.drag-sort-enable');
 
-    if (!parentContainer) {
-        return;
-    }
+//     if (!parentContainer) {
+//         return;
+//     }
 
-    const movedIndex = event.dataTransfer.getData('cellIndex');
-    const droppedIndex = props.index;
+//     const movedIndex = event.dataTransfer.getData('cellIndex');
+//     const droppedIndex = props.index;
 
-    isCurrentTarget.value = false;
+//     isCurrentTarget.value = false;
 
-    if (movedIndex !== droppedIndex) {
-        // Modify array in place so that refs can track changes (change by reference)
-        // (Don't reassign cells in notebook!)
-        arrayMove(props.session.notebook.cells, movedIndex, droppedIndex);
-        emit('select-cell', droppedIndex);
-    }
-}
+//     if (movedIndex !== droppedIndex) {
+//         // Modify array in place so that refs can track changes (change by reference)
+//         // (Don't reassign cells in notebook!)
+//         arrayMove(props.session.notebook.cells, movedIndex, droppedIndex);
+//         emit('select-cell', droppedIndex);
+//     }
+// }
 
 /**
  * Sets call to item being moved
  * As well as dataTransfer so that drop target knows which one was dropped
  **/
-function handleDragStart(event, item) {
-    isDragActive.value = true;
+// function handleDragStart(event, item) {
+//     isDragActive.value = true;
 
-    event.dataTransfer.dropEffect = 'move'
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('cellID', cell.value.id);
-    event.dataTransfer.setData('cellIndex', props.index);
-}
+//     event.dataTransfer.dropEffect = 'move'
+//     event.dataTransfer.effectAllowed = 'move'
+//     event.dataTransfer.setData('cellID', cell.value.id);
+//     event.dataTransfer.setData('cellIndex', props.index);
+// }
 
 /**
  * Handles when dragging over a valid drop target
@@ -204,21 +163,21 @@ function handleDragStart(event, item) {
  * as well as preventing the animation where the dragged cell animates back to
  * its place when dropped into a proper target.
  **/
-function handleDragOver(event) {
-    isCurrentTarget.value = true;
-    event.preventDefault(); // necessary
-}
+// function handleDragOver(event) {
+//     isCurrentTarget.value = true;
+//     event.preventDefault(); // necessary
+// }
 
 /* Ensure to remove class to cell being dragged over */
-function handleDragLeave(event) {
-    isCurrentTarget.value = false;
-}
+// function handleDragLeave(event) {
+//     isCurrentTarget.value = false;
+// }
 
 /* Remove class of cell being dragged/moved */
-function handleDragEnd(event) {
-    isDragActive.value = false;
-    event.preventDefault(); // may not be necessary
-}
+// function handleDragEnd(event) {
+//     isDragActive.value = false;
+//     event.preventDefault(); // may not be necessary
+// }
 
 
 </script>
@@ -226,24 +185,20 @@ function handleDragEnd(event) {
 
 <style lang="scss">
 .code-cell {
-    padding: 1rem 0 1rem 1rem;
+    padding-left: 1rem;
 }
 
 .code-cell-grid {
     display: grid;
 
     grid-template-areas:
-        "draghandle code code code exec";
+        "code code code exec";
 
-    grid-template-columns: 2.7rem 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr auto;
 }
 
 .code-data {
     grid-area: code;
-}
-
-.drag-handle {
-    grid-area: draghandle;
 }
 
 .execution-count-badge {
@@ -257,43 +212,5 @@ function handleDragEnd(event) {
         visibility: hidden;
     }
 }
-
-.drag-disabled {
-    pointer-events: none;
-    opacity: 0.2;
-}
-
-.drag-active {
-    // TODO only if we wish to mark the moved item while dragging
-    // not necessary
-}
-
-.drag-target {
-    outline: 2px solid var(--primary-color);
-    * {
-        visibility: hidden;
-    }
-}
-
-// Brackets/non-badge version
-// .execution-count {
-//     grid-area: exec;
-//     color: var(--text-color-secondary); // Pending
-//     display: flex;
-//     justify-content: center;
-//     width: 0;
-//     font-family: monospace;
-//     font-size: 0.75rem;    
-//     padding: 0 1rem;
-//     &.success {
-//         color: var(--green-400);
-//     }
-//     &.error {
-//         color: var(--red-500);
-//     }
-//     &.modified {
-//         color: var(--orange-500);
-//     }
-// }
 
 </style>

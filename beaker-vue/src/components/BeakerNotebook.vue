@@ -137,24 +137,25 @@
                     <div class="ide-cells">
                         <div style="flex: 1; position: relative;">
                             <div class="cell-container drag-sort-enable" ref="cellsContainerRef">
-                                <Component
+                                <BeakerCell
                                     v-for="(cell, index) in props.session?.notebook?.cells"
                                     :key="cell.id"
-                                    :cell="cell"
-                                    :is="componentMap[cell.cell_type]"
-                                    :session="props.session"
-                                    :data-cellid="cell.id"
-                                    class="beaker-cell"
                                     :class="{selected: (index === selectedCellIndex)}"
-                                    :context-data="activeContext"
                                     :index="index"
-                                    @select-cell="selectCell"
-                                    :theme="selectedTheme"
+                                    :cellID="cell.id"
+                                    :cellCount="cellCount"
+                                    @move-cell="handleMoveCell"
                                     @click="selectCell(index)"
-                                    :selected="index === selectedCellIndex"
-                                />
+                                >
+                                    <Component
+                                        :is="componentMap[cell.cell_type]"
+                                        :cell="cell"
+                                        :session="props.session"
+                                        :context-data="activeContext"
+                                    />
+                                </BeakerCell>
                                 <transition name="fade">
-                                    <div class="welcome-placeholder" v-if="props.session?.notebook?.cells.length <= 2">
+                                    <div class="welcome-placeholder" v-if="cellCount < 3">
                                         <SvgPlaceholder />
                                     </div>
                                 </transition>
@@ -191,7 +192,6 @@
                                     <template #content>
                                         <BeakerCustomMessage
                                             :intercepts="activeContext?.info?.intercepts"
-                                            :theme="selectedTheme"
                                             :session="session"
                                             :rawMessages="props.rawMessages"
                                         />
@@ -253,14 +253,13 @@
         :isOpen="contextSelectionOpen"
         :toggleOpen="toggleContextSelection"
         @update-context-info="setContext"
-        :theme="selectedTheme"
         :contextProcessing="contextProcessing"
     />
 
 </template>
 
 <script setup lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, Component, nextTick, inject } from "vue";
+import { ref, onBeforeMount, onMounted, defineProps, computed, Component, nextTick, provide, inject } from "vue";
 import { IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
 import VueJsonPretty from 'vue-json-pretty';
@@ -275,6 +274,7 @@ import TabPanel from 'primevue/tabpanel';
 import Toolbar from 'primevue/toolbar';
 import InputGroup from 'primevue/inputgroup';
 
+import BeakerCell from './BeakerCell.vue';
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
@@ -348,11 +348,21 @@ const cellsContainerRef = ref(null);
 const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
 
+const cellCount = computed(() => props.session?.notebook?.cells?.length || 0);
+
 function handleSplitterResized({sizes}) {
     const [_, rightPaneSize] = sizes;
     if (rightPaneSize < 15) {
         showDebugPane.value = false
     }
+}
+
+function arrayMove(arr, old_index, new_index) {
+    arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
+}
+function handleMoveCell(fromIndex, toIndex) {
+    arrayMove(props.session.notebook.cells, fromIndex, toIndex)
+    selectCell(toIndex);
 }
 
 function getDateTime() {
@@ -424,6 +434,8 @@ const selectedTheme = ref(localStorage.getItem('theme') || 'light');
 const themeIcon = computed(() => {
     return `pi pi-${selectedTheme.value == 'dark' ? 'sun' : 'moon'}`;
 })
+
+provide('theme', selectedTheme);
 
 const setTheme = () => {
     const themeLink = document.querySelector('#primevue-theme');
@@ -624,29 +636,6 @@ footer {
 .splitter {
     height: 100%;
     flex: 1;
-}
-
-.beaker-cell {
-    border-bottom: 4px solid var(--surface-c);
-    background-color: var(--surface-a);
-    border-right: 5px solid transparent;
-}
-// .beaker-cell.drag-sort-active {
-//     background: transparent;
-//     color: transparent;
-//     border: 2px solid var(--primary-color);
-//     // TODO possibly decrease height
-// }
-// .sorter-span.drag-sort-active {
-//     background: transparent;
-//     color: transparent;
-// }
-
-// TODO this will be moved to common Cell component (for both Code, Query cells)
-.beaker-cell.selected {
-    border-right: 5px solid var(--purple-400);
-    border-top: unset;
-    background-color: var(--surface-ground);
 }
 
 .agent-query-container {

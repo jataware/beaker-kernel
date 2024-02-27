@@ -139,7 +139,7 @@ const respond = () => {
 
 <style lang="scss">
 .llm-query-cell {
-    padding: 0.5rem 1.2rem 1rem 1.2rem;
+    padding: 0.5rem 0.35rem 1rem 1.2rem;
 }
 
 .query-row {
