@@ -10,7 +10,7 @@ from jupyter_server.extension.handler import (
 )
 from jupyter_server.utils import url_path_join as ujoin
 from jupyterlab_server import LabServerApp
-from tornado.web import StaticFileHandler, RedirectHandler
+from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTPError
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BaseContext
@@ -99,6 +99,48 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         return self.write(context_data)
 
 
+class UploadHandler(RequestHandler):
+    def post(self):
+        filenames = []
+        for file in self.request.files["uploadfiles"]:
+            # Files are actually an array within an array?
+            filename = file["filename"]
+            if os.path.exists(filename):
+                self.write(f"'{filename}' already exists.")
+                raise HTTPError(401)
+            with open(filename, 'wb') as output_file:
+                output_file.write(file["body"])
+            filenames.append(filename)
+        self.finish(f"Saved files {', '.join(filenames)} uploaded.")
+
+
+class DownloadHandler(RequestHandler):
+    def get(self, filepath: str):
+        if filepath.startswith("."):
+            raise HTTPError(404)
+        if os.path.isfile(filepath):
+            _, file_name = os.path.split(filepath)
+            if file_name.startswith("."):
+                raise HTTPError(404)
+
+            self.set_header('Content-Type', 'application/force-download')
+            self.set_header('Content-Disposition', f'attachment; filename=%s' % file_name)
+            try:
+                with open(filepath, "rb") as f:
+                    while True:
+                        _buffer = f.read(4096)
+                        if _buffer:
+                            self.write(_buffer)
+                        else:
+                            f.close()
+                            self.finish()
+                            return
+            except:
+                raise HTTPError(404)
+        else:
+            raise HTTPError(404)
+
+
 class BeakerJupyterApp(LabServerApp):
     name = "beaker_kernel"
     load_other_extensions = True
@@ -113,6 +155,8 @@ class BeakerJupyterApp(LabServerApp):
         self.handlers.append(("/contexts", ContextHandler))
         self.handlers.append(("/config", ConfigHandler))
         self.handlers.append(("/notebook", NotebookHandler))
+        self.handlers.append((r"/upload", UploadHandler))
+        self.handlers.append((r"/download/(.*)", DownloadHandler))
         self.handlers.append((r"(/?)", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
         self.handlers.append((r"/index.html", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
         self.handlers.append((r"/(favicon.ico)", StaticFileHandler, {"path": os.path.join(HERE, "ui")}))

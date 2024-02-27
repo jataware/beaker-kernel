@@ -1,6 +1,5 @@
-<template>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   class="container"
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -100,23 +99,3 @@
     </g>
   </g>
 </svg>
-</template>
-
-<style lang="scss" scoped>
-  .container {
-    // padding-top: 20%;
-    height: 90%;
-  }
-  .main-fill {
-    fill: var(--surface-b);
-  }
-  .alt-fill {
-    fill: var(--surface-c);
-  }
-  .contrast-fill {
-    fill: var(--surface-d);
-  }
-  .alt-fill-2 {
-    fill: var(--surface-50);
-  }
-</style>

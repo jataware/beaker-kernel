@@ -29,6 +29,7 @@
                     :extensions="codeExtensions"
                     :disabled="isBusy"
                     :autofocus="true"
+                    @change="handleCodeChange"
                     @keydown.ctrl.enter.self.stop.prevent="execute"
                     @keydown.alt.enter="console.log('alt-enter')"
                     @keydown.shift.enter.prevent="execute"
@@ -36,11 +37,27 @@
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
-            <div class="execution-count">
+            <div class="execution-count-badge">
+                <Badge 
+                    v-if="executeState !== ExecuteStatus.Pending"
+                    :severity="badgeSeverity"
+                    :value="cell.execution_count">
+                </Badge>
+            </div>
+            <!--
+            <div 
+                class="execution-count"
+                :class="{
+                    success: executeState === ExecuteStatus.Success,
+                    modified: executeState === ExecuteStatus.Modified,
+                    error: executeState === ExecuteStatus.Error
+                }"
+            >
                 <span>
                     [{{cell.execution_count || '&nbsp;'}}]
                 </span>
             </div>
+            -->
         </div>
     </div>
 </template>
@@ -52,18 +69,19 @@ import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import DraggableMarker from './DraggableMarker';
-
+import Badge from 'primevue/badge';
 const props = defineProps([
     "cell",
     "session",
     "contextData",
     "theme",
     "selected",
-    "index"
+    "index",
 ]);
 
 const emit = defineEmits([
-    "select-cell"
+    "select-cell",
+    "selected",
 ]);
 
 const cell = ref(props.cell);
@@ -71,6 +89,31 @@ const isBusy = ref(false);
 const isDragActive = ref(false);
 const isCurrentTarget = ref(false);
 
+
+enum ExecuteStatus {
+  Success = 'success',
+  Modified = 'modified',
+  Error = 'error',
+  Pending = 'pending',
+}
+
+const executeState = ref<ExecuteStatus>(ExecuteStatus.Pending);
+
+const badgeSeverity = computed(() => {
+    const mappings = {
+        [ExecuteStatus.Success]: 'success',
+        [ExecuteStatus.Modified]: 'warning',
+        [ExecuteStatus.Error]: 'danger',
+        [ExecuteStatus.Pending]: 'secondary',
+    };
+    return mappings[executeState.value];
+});
+
+function handleCodeChange() {
+    if (executeState.value !== ExecuteStatus.Pending) {
+        executeState.value = ExecuteStatus.Modified;
+    }
+}
 
 const codeExtensions = computed(() => {
     const ext = [];
@@ -92,10 +135,17 @@ const execute = (evt: any) => {
 
     const handleDone = async (message: any) => {
 
+        if (message?.content?.status === 'ok') {
+            executeState.value = ExecuteStatus.Success;
+        } else {
+            executeState.value = ExecuteStatus.Error;
+        }
+        
         // Timeout added to busy indicators from jumping in/out too quickly
         setTimeout(() => {
             isBusy.value = false;
         }, 1000);
+
     };
 
     evt.preventDefault();
@@ -177,11 +227,6 @@ function handleDragEnd(event) {
 <style lang="scss">
 .code-cell {
     padding: 1rem 0 1rem 1rem;
-    &.selected {
-        .execution-count {
-            color: var(--green-400);
-        }
-    }
 }
 
 .code-cell-grid {
@@ -201,15 +246,16 @@ function handleDragEnd(event) {
     grid-area: draghandle;
 }
 
-.execution-count {
+.execution-count-badge {
     grid-area: exec;
-    color: var(--text-color-secondary);
+    font-family: monospace;
+    min-width: 3rem;
     display: flex;
     justify-content: center;
-    width: 0;
-    font-family: monospace;
-    font-size: 1rem;    
-    padding: 0 1.2rem;
+
+    &.pending {
+        visibility: hidden;
+    }
 }
 
 .drag-disabled {
@@ -222,14 +268,6 @@ function handleDragEnd(event) {
     // not necessary
 }
 
-.drag-over-bottom {
-    border-bottom: 1px solid red;
-}
-
-.drag-over-top {
-    border-top: 1px solid cyan;
-}
-
 .drag-target {
     outline: 2px solid var(--primary-color);
     * {
@@ -237,6 +275,25 @@ function handleDragEnd(event) {
     }
 }
 
-
+// Brackets/non-badge version
+// .execution-count {
+//     grid-area: exec;
+//     color: var(--text-color-secondary); // Pending
+//     display: flex;
+//     justify-content: center;
+//     width: 0;
+//     font-family: monospace;
+//     font-size: 0.75rem;    
+//     padding: 0 1rem;
+//     &.success {
+//         color: var(--green-400);
+//     }
+//     &.error {
+//         color: var(--red-500);
+//     }
+//     &.modified {
+//         color: var(--orange-500);
+//     }
+// }
 
 </style>

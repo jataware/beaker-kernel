@@ -1,14 +1,14 @@
 <template>
-    <div class="code-cell-output">
+    <div class="code-cell-output jp-RenderedText">
         <i
             v-if="busy"
             class="pi pi-spin pi-spinner busy-icon"
         />
         <div v-for="output of props.outputs" :key="output">
-            <div v-if="output.output_type == 'stream'" :class="output.name">{{ output.text }}</div>
-            <div v-else-if="output.output_type == 'display_data'" :class="output.name" v-html="renderResult(output)"></div>
-            <div v-else-if="output.output_type == 'execute_result'" :class="output.name" v-html="renderResult(output)"></div>
-            <div v-else-if="output.output_type == 'error'" :class="output.name" v-html="renderError(output)"></div>
+            <div v-if="output.output_type == 'stream'" :class="output.output_type">{{ output.text }}</div>
+            <div v-else-if="output.output_type == 'display_data'" :class="output.output_type" v-html="renderResult(output)"></div>
+            <div v-else-if="output.output_type == 'execute_result'" :class="output.output_type" v-html="renderResult(output)"></div>
+            <div v-else-if="output.output_type == 'error'" :class="output.output_type" v-html="renderError(output)"></div>
             <div v-else>{{ output }}</div>
         </div>
     </div>
@@ -42,9 +42,9 @@ const renderResult = (resultOutput) => {
 
 const renderError = (errorOutput) => {
     const bundle = {};
-    bundle['application/vnd.jupyter.error'] = errorOutput.content;
-    const traceback = errorOutput.content.traceback?.join('\n');
-    bundle['application/vnd.jupyter.stderr'] = traceback || `${errorOutput.content.ename}: ${errorOutput.content.evalue}`;
+    bundle['application/vnd.jupyter.error'] = errorOutput;
+    const traceback = errorOutput.traceback?.join('\n');
+    bundle['application/vnd.jupyter.stderr'] = traceback || `${errorOutput.ename}: ${errorOutput.evalue}`;
     return renderResult({data: bundle});
 };
 </script>
@@ -52,22 +52,31 @@ const renderError = (errorOutput) => {
 
 <style lang="scss">
 @import url('@jupyterlab/notebook/style/index.css');
-// @import url('@jupyterlab/theme-light-extension/style/theme.css');
+@import url('@jupyterlab/outputarea/style/index.css');
+@import url('@jupyterlab/rendermime/style/index.css');
 
 .code-cell-output {
-    padding: 1em;
+    padding: 1rem;
     background-color: var(--surface-c);
     position: relative;
     overflow-x: auto;
+    .execute_result {
+        pre {
+            white-space: break-spaces;
+            overflow-wrap: break-word;
+        }
+    }
 }
 
 .stdout {
-    color: #448;
+    // was dark purple and hard to see- replaced with theme colors
+    color: var(--text-color-secondary);
     white-space: pre;
+    font-style: italic;
 }
 
 .stderr {
-    color: #a44;
+    color: #a44; // seems unused
     white-space: pre;
 }
 

@@ -3,8 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "preserve": "npm install",
-    "prebuild": "npm install",
     "serve": "vue-cli-service serve",
     "start": "npm run serve",
     "build": "vue-cli-service build",
@@ -35,6 +33,7 @@
     "@lumino/widgets": "^2.3.0",
     "beaker-kernel": "file:../../../beaker-ts",
     "codemirror": "^6.0.1",
+    "cookie": "^0.6.0",
     "core-js": "^3.8.3",
     "node-fetch": "^2.6.6",
     "primeicons": "^6.0.1",
@@ -45,6 +44,7 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@types/cookie": "^0.6.0",
     "@types/node-fetch": "^2.6.6",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",

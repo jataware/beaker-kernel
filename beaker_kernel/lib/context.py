@@ -137,8 +137,27 @@ class BaseContext:
         }
         return payload
 
+    @intercept()
+    async def get_subkernel_state_request(self, message):
+        """
+        Fetches the state of the subkernel, including all defined variables, imports, and functions.
+        """
+        fetch_state_code = self.subkernel.FETCH_STATE_CODE
+        state = await self.beaker_kernel.evaluate(fetch_state_code)
+        result = state["return"]
+        self.send_response(
+            stream="iopub",
+            msg_or_type="subkernel_state_response",
+            content=result,
+            parent_header=message.header,
+        )
+        return result
+    get_subkernel_state_request.default_payload = "{}"
+
     @intercept(msg_type="debug_message_history_request")
     async def debug_messages(self, message):
+        """
+        """
         agent_messages = await self.agent.all_messages()
         self.send_response(
             stream="iopub",
@@ -146,6 +165,20 @@ class BaseContext:
             content= agent_messages,
             parent_header=message.header,
         )
+
+    debug_messages.default_payload = """
+    {}
+    """
+
+    # @intercept
+    # async def get_kernel_state():
+    #     """
+    #     """
+    #     pass
+
+    # get_kernel_state.default_payload = """
+    # {}
+    # """
 
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
         return self.beaker_kernel.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)

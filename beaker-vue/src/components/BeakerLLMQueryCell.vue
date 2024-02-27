@@ -3,14 +3,16 @@
         <div class="query-row">
             <div class="query">
                 <div v-if="editing" style="display: flex">
-                    <InputText
-                        type="text"
-                        size="small"
+                    <Textarea
+                        class="input-text"
+                        style="max-width: 50%;"
+                        autoResize
                         ref="autofocus"
+                        rows="1"
                         v-model="editingContents"
                     />
                     <div class="edit-actions">
-                        <Button outlined class="save-button" label="Save" size="small" @click="saveEdit"/>
+                        <Button outlined severity="success" label="Save" size="small" @click="saveEdit"/>
                         <Button outlined class="cancel-button" @click="cancelEdit" label="Cancel" size="small" />
                     </div>
                 </div>
@@ -55,7 +57,7 @@
 
         </div>
         <div
-            class="input-request" 
+            class="input-request"
              v-focustrap
              v-if="cell.status === 'awaiting_input'"
          >
@@ -110,7 +112,7 @@ async function startEdit() {
         await nextTick();
         autofocus.value.$el.focus();
         return;
-    }
+    } // else [is]editing.value is false
     editing.value = true;
     editingContents.value = savedEdit.value || cell.value.source;
     await nextTick();
@@ -188,6 +190,7 @@ const respond = () => {
 .input-text {
     margin-right: 0.75rem;
     flex: 1;
+    max-height: 12rem;
     &::placeholder {
         color: var(--gray-400);
     }
@@ -203,15 +206,10 @@ const respond = () => {
 
 .edit-actions {
     display: flex;
-    margin-left: 0.5rem;
+    align-items: flex-start;
     .p-button {
         margin-right: 0.5rem;
     }
-}
-
-.save-button {
-    border-color: var(--surface-200);
-    color: var(--primary-text-color);
 }
 
 .cancel-button {

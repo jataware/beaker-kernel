@@ -6,7 +6,7 @@
 
         <!-- Some dev options to format json body display
         <div style="padding-bottom: 0.5rem; display: none;">
-          <Checkbox 
+          <Checkbox
             v-model="options"
             id="quotes"
             name="quotes"
@@ -14,7 +14,7 @@
           />
           <label for="quotes" class="ml-2">quotes</label>
 
-          <Checkbox 
+          <Checkbox
             class="ml-2"
             v-model="options"
             id="linenum"
@@ -26,15 +26,15 @@
         -->
 
         <div class="flex-container">
-          <div 
+          <div
             class="p-input-icon-left"
             style="padding: 0; margin: 0;"
           >
             <i class="pi pi-search" />
-            <InputText 
+            <InputText
               v-model="filterValue"
               size="small"
-              placeholder="Event Type"
+              placeholder="Type"
             />
           </div>
 
@@ -45,15 +45,15 @@
 
         </div>
 
-        <Panel 
+        <Panel
           class="log-panel"
           :class="{odd: index % 2 !== 0}"
-          :data-index="index"
-          v-for="(logEntry,index) in filteredLogs" :key="index"
-          :header="logEntry.event"
+          :data-index="logEntry.timestamp"
+          v-for="(logEntry,index) in filteredLogs" :key="`${logEntry.type}-${logEntry.timestamp}`"
+          :header="logEntry.type"
         >
-          <vue-json-pretty 
-            :data="logEntry.body" 
+          <vue-json-pretty
+            :data="logEntry.body"
             :deep="2"
             showLength
             showIcon
@@ -62,7 +62,7 @@
           />
         </Panel>
 
-        <div 
+        <div
           class="bottom-actions"
         >
           <Button
@@ -83,7 +83,7 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, inject } from "vue";
+import { ref, computed, inject, defineProps } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import VueJsonPretty from 'vue-json-pretty';
@@ -91,6 +91,10 @@ import 'vue-json-pretty/lib/styles.css';
 // import Checkbox from 'primevue/checkbox'; // Commented dev opts in template
 import Panel from 'primevue/panel';
 
+const props = defineProps([
+  "entries",
+  "sortby",
+])
 
 const filterValue = ref("");
 const sortDirection = ref("asc");
@@ -105,23 +109,21 @@ const linenum = computed(() => {
   return options.value.includes('linenum');
 })
 
-const upstreamLogs: [{event: string, body: object}] = inject('debug_logs');
-
 // TODO debounce for quick typing
 const filteredLogs = computed(() => {
-  const filtered = upstreamLogs.filter(logObj => logObj.event.includes(filterValue.value));
-  // Default sort as downloaded- return
+  const sortby = props.sortby || ((entry) => entry.timestamp);
+  const asc = (a, b) => (sortby(a) > sortby(b) ? 1 : (sortby(a) < sortby(b)) ? -1 : 0);
+  const desc = (a, b) => (sortby(a) < sortby(b) ? 1 : (sortby(a) > sortby(b)) ? -1 : 0);
+
+  const filtered = props.entries?.filter(entry => entry.type.includes(filterValue.value));
+
+  // Return sorted list
   if (sortDirection.value === 'asc') {
-     return filtered;
+    return filtered.sort(asc);
   }
-  // else we'll sort by index, reverse
-  const mapped = filtered.map((item, idx) => ({
-      event: item.event,
-      body: item.body,
-      idx
-    })
-  );
-  return mapped.sort((a,b) => b.idx - a.idx);
+  else {
+    return filtered.sort(desc);
+  }
 });
 
 </script>
@@ -157,7 +159,7 @@ const filteredLogs = computed(() => {
     padding: 0.5rem 1rem;
   }
   .p-panel-content {
-    padding: 0.5rem 0.75rem; 
+    padding: 0.5rem 0.75rem;
   }
 
   // If we wanted to alternate widget panel-heading bg color or so:

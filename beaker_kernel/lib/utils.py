@@ -81,3 +81,14 @@ class LogMessageEncoder(json.JSONEncoder):
             return super().default(o)
         except:
             return str(o)
+
+
+class SubkernelStateEncoder(json.JSONEncoder):
+    def default(self, o: Any) -> Any:
+        # if callable(o):
+        #     # return f"Function named"
+        #     return super().default(o)
+        try:
+            return super().default(o)
+        except:
+            return str(o)

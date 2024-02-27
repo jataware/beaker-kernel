@@ -11,7 +11,6 @@
             inputId="custom-message-input"
             :suggestions="messageOptions"
             @complete="search"
-            dropdown-mode="blank"
             dropdownClass="ac-button"
         />
 
@@ -35,23 +34,55 @@
             label="Send"
             iconPos="right"
         />
+
+        <!-- <Card style="height: 6em;"> -->
+        <div>
+            <Panel
+                class="log-panel"
+                :class="{odd: index % 2 !== 0}"
+                :data-index="logEntry.timestamp"
+                v-for="(logEntry,index) in logEntries" :key="`${logEntry.type}-${logEntry.timestamp}`"
+                :header="logEntry.type"
+                >
+                <vue-json-pretty
+                    :data="logEntry.body"
+                    :deep="2"
+                    showLength
+                    showIcon
+                    :showDoubleQuotes="true"
+                    :showLineNumber="false"
+                />
+            </Panel>
+        </div>
+        <!-- </Card> -->
+
     </Fieldset>
 
 </template>
 
 <script setup lang="ts">
 import { defineProps, defineEmits, ref, computed, inject } from "vue";
+import * as messages from '@jupyterlab/services/lib/kernel/messages';
+import { IBeakerIOPubMessage } from 'beaker-kernel/notebook';
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
 import Button from 'primevue/button';
 import AutoComplete from 'primevue/autocomplete';
 import Fieldset from 'primevue/fieldset';
+import VueJsonPretty from 'vue-json-pretty';
+import 'vue-json-pretty/lib/styles.css';
+import Panel from 'primevue/panel';
+import Card from 'primevue/card';
+
+import BeakerCodecellOutput from "./BeakerCodecellOutput.vue";
+import LoggingPane from "./LoggingPane.vue";
 
 
 const props = defineProps([
     "session",
     "theme",
-    "intercepts"
+    "intercepts",
+    "rawMessages",
 ]);
 
 const showToast = inject('show_toast');
@@ -73,24 +104,41 @@ const codeExtensions = computed(() => {
 });
 
 const messageType = ref<string>();
+const messageNum = ref(1)
 const messageContent = ref<string>("{\n}");
-const messageOptions = ref(props.intercepts);
+const messageOptions = ref([]);
+// const messageMessages = ref<object[]>([]);
+const messageId = ref<string|undefined>(undefined);
 
 const sendMessage = () => {
+    messageId.value = `beaker-custom-${messageType.value}-${messageNum.value}`;
+    messageNum.value += 1;
     const future = props.session.sendBeakerMessage(
         messageType.value,
         JSON.parse(messageContent.value),
+        messageId.value,
     );
     future.done.then(() => {
-        showToast('Success', 'Message processed.');
+        showToast({title: 'Success', detail: 'Message processed.'});
     });
 };
 
-const search = (event) => {
+const allMessageOptions = computed(() => {
+    return Object.keys(props.intercepts);
+});
+
+const search = (event: any) => {
     messageOptions.value = event.query ?
-        props.intercepts.filter((item) => item.includes(event.query))
-        : props.intercepts;
+        allMessageOptions.value.filter((item) => item.includes(event.query)) :
+        Object.keys(props.intercepts);
 };
+
+const logEntries = computed(() => {
+    if (!messageId.value) {
+        return [];
+    }
+    return props.rawMessages.filter((item) => {return (item.body.header.msg_id === messageId.value || item.body.parent_header.msg_id === messageId.value)});
+});
 
 </script>
 

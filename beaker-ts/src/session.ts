@@ -57,11 +57,12 @@ export class BeakerSession {
             this._sessionContext.ready.then(() => {
                 if (options.messageHandler) {
                     this._messageHandler = options.messageHandler;
+                    this._sessionContext.iopubMessage.connect(this._messageHandler);
                 }
                 else {
-                    this._messageHandler = this._defaultMessageHandler;
+                    this._messageHandler = undefined;
                 }
-                this._sessionContext.iopubMessage.connect(this._messageHandler);
+                this._sessionContext.iopubMessage.connect(this._sessionMessageHandler, this);
             });
         });
     }
@@ -82,16 +83,25 @@ export class BeakerSession {
             msgId: messageId
         });
 
-        const future = this.kernel.sendShellMessage(
+        const future: IBeakerFuture = this.kernel.sendShellMessage(
             msg,
             true,
             true
         );
+        future.msgId = messageId;
         return future;
     }
 
-    private _defaultMessageHandler(sessionConnection: ISessionConnection, {direction, msg}) {
-        //noop
+    private _sessionMessageHandler(_sessionContext: SessionContext, msg: IBeakerIOPubMessage) {
+        if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
+            if (msg.header.msg_type === "context_setup_response") {
+                this._sessionInfo = msg.content;
+            }
+            else if (msg.header.msg_type === "context_info_response") {
+                this._sessionInfo = msg.content.info;
+            }
+            this.notebook.setSubkernelInfo(this._sessionInfo);
+        }
     }
 
     public async availableContexts(): Promise<IBeakerAvailableContexts> {
@@ -119,6 +129,10 @@ export class BeakerSession {
             reject({});
         });
     }
+
+    // private async subkernelUpdated() {
+    //    this._sessionContext.session.changeKernel
+    // }
 
     public addCodeCell(source: string, metadata={}, outputs=[]) {
         const cell = new BeakerCodeCell({
@@ -172,13 +186,16 @@ export class BeakerSession {
         return new BeakerSession();
     }
 
-    public reset(fullReset: boolean = false) {
-        // Remove cells via splice.
+    public loadNotebook(notebookJSONObject) {
+        this.notebook.loadFromIPynb(notebookJSONObject);
+    }
+
+    public reset() {
+        // Remove cells via splice to ensure reactivity
         this.notebook.cells.splice(0, this.notebook.cells.length);
-        if (fullReset) {
-            this._sessionContext.dispose();
-            this.initialize(this._sessionOptions);
-        }
+        this._history.clear();
+        this.addCodeCell("");
+        this._sessionContext.restartKernel();
     }
 
     get sessionReady(): Promise<void> {
@@ -208,6 +225,7 @@ export class BeakerSession {
     private _sessionContext: SessionContext;
     private _messageHandler: Slot<any, any>; // TODO: fix any typing here
     private _history: BeakerHistory;
+    private _sessionInfo: any;
 
     public notebook: BeakerNotebook;
 

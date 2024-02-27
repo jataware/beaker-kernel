@@ -31,7 +31,7 @@
                     <nav>
                         <Button
                             text
-                            :onClick="toggleDarkMode"
+                            @click="toggleDarkMode"
                             style="margin: 0; color: var(--gray-500);"
                             :icon="themeIcon"
                         />
@@ -79,38 +79,58 @@
 
                     <div class="notebook-controls">
                         <InputGroup>
-                            <CellActionButton
+                            <Button
                                 @click="addCell"
                                 v-tooltip.bottom="{value: 'Add New Cell', showDelay: 300}"
-                                primeIcon="plus"
+                                icon="pi pi-plus"
+                                size="small"
+                                severity="info"
+                                text
                             />
-                            <CellActionButton
+                            <Button
                                 @click="removeCell"
                                 v-tooltip.bottom="{value: 'Remove Selected Cell', showDelay: 300}"
-                                primeIcon="minus"
+                                icon="pi pi-minus"
+                                size="small"
+                                severity="info"
+                                text
                             />
-                            <CellActionButton
+                            <Button
                                 @click="runCell()"
                                 v-tooltip.bottom="{value: 'Run Selected Cell', showDelay: 300}"
-                                primeIcon="play"
+                                icon="pi pi-play"
+                                size="small"
+                                severity="info"
+                                text
                             />
                             <!-- TODO implement Stop-->
-                            <CellActionButton
+                            <Button
                                 @click="identity"
                                 v-tooltip.bottom="{value: 'Stop Execution', showDelay: 300}"
-                                primeIcon="stop"
+                                icon="pi pi-stop"
+                                size="small"
+                                severity="info"
+                                text
                             />
-                            <CellActionButton 
-                                @click="downloadNotebook" 
+                        </InputGroup>
+                        <InputGroup style="margin-right: 1rem;">
+                            <Button
+                                @click="resetNotebook"
+                                v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
+                                icon="pi pi-refresh"
+                                size="small"
+                                severity="info"
+                                text
+                            />
+                            <Button
+                                @click="downloadNotebook"
                                 v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
-                                primeIcon="download" 
+                                icon="pi pi-download"
+                                size="small"
+                                severity="info"
+                                text
                             />
-                            <!-- TODO not implemented (refresh? reload? clear?)
-                            <CellActionButton @click="identity" primeIcon="refresh" />
-                            -->
-                            <!--
-                            <CellActionButton @click="identity" primeIcon="upload" />
-                            -->
+                            <OpenNotebookButton @open-file="loadNotebook"/>
                         </InputGroup>
                     </div>
 
@@ -130,8 +150,8 @@
                                     :index="index"
                                     @select-cell="selectCell"
                                     :theme="selectedTheme"
-                                    :selected="index === selectedCellIndex"
                                     @click="selectCell(index)"
+                                    :selected="index === selectedCellIndex"
                                 />
                                 <transition name="fade">
                                     <div class="welcome-placeholder" v-if="props.session?.notebook?.cells.length <= 2">
@@ -170,13 +190,14 @@
                                     <template #title>Custom Message</template>
                                     <template #content>
                                         <BeakerCustomMessage
-                                            :intercepts="Object.keys(activeContext?.info?.intercepts || {})"
+                                            :intercepts="activeContext?.info?.intercepts"
                                             :theme="selectedTheme"
                                             :session="session"
+                                            :rawMessages="props.rawMessages"
                                         />
                                     </template>
                                 </Card>
-                                <Card class="debug-card">
+                                <!-- <Card class="debug-card">
                                     <template #title>State</template>
                                     <template #content>
                                         <vue-json-pretty
@@ -188,12 +209,20 @@
                                         <br />
                                         <Button label="Copy" />
                                     </template>
-                                </Card>
+                                </Card> -->
                             </div>
                         </TabPanel>
 
                         <TabPanel header="Logging">
-                            <LoggingPane />
+                            <LoggingPane :entries="props.debugLogs" />
+                        </TabPanel>
+
+                        <TabPanel header="Raw Messages">
+                            <LoggingPane :entries="props.rawMessages" />
+                        </TabPanel>
+
+                        <TabPanel header="Files">
+                            <BeakerFilePane :session="props.session"/>
                         </TabPanel>
 
                     </TabView>
@@ -223,14 +252,15 @@
         :activeContext="activeContext"
         :isOpen="contextSelectionOpen"
         :toggleOpen="toggleContextSelection"
-        @update-context-info="updateContextInfo"
+        @update-context-info="setContext"
         :theme="selectedTheme"
+        :contextProcessing="contextProcessing"
     />
 
 </template>
 
 <script setup lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, Component, nextTick } from "vue";
+import { ref, onBeforeMount, onMounted, defineProps, computed, Component, nextTick, inject } from "vue";
 import { IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
 import VueJsonPretty from 'vue-json-pretty';
@@ -252,9 +282,11 @@ import BeakerContextSelection from "./BeakerContextSelection.vue";
 import BeakerCustomMessage from "./BeakerCustomMessage.vue";
 import FooterDrawer from './FooterDrawer.vue';
 import LoggingPane from './LoggingPane.vue';
+import BeakerFilePane from "./BeakerFilePane.vue";
 import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 import SvgPlaceholder from './SvgPlaceholder.vue';
+import OpenNotebookButton from './OpenNotebookButton.vue';
 
 
 function capitalize(s: string) {
@@ -268,8 +300,12 @@ const componentMap: {[key: string]: Component} = {
 
 const props = defineProps([
     "session",
-    "connectionStatus"
+    "connectionStatus",
+    "debugLogs",
+    "rawMessages",
 ]);
+
+const showToast = inject('show_toast');
 
 const debugData = () => {
     return JSON.parse(props.session.notebook.toJSON());
@@ -309,6 +345,8 @@ const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 const showDebugPane = ref (true);
 const cellsContainerRef = ref(null);
+const activeContextPayload = ref<any>(null);
+const contextProcessing = ref(false);
 
 function handleSplitterResized({sizes}) {
     const [_, rightPaneSize] = sizes;
@@ -335,7 +373,8 @@ function getDateTime() {
 }
 
 function downloadNotebook() {
-    const data = JSON.stringify(JSON.parse(props.session.notebook.toJSON()), null, 2); // TODO error handling
+    const rawData = null;
+    const data = JSON.stringify(props.session.notebook.toIPynb(), null, 2); // TODO error handling
 
     const filename = `Beaker-Notebook_${getDateTime()}.ipynb`;
 
@@ -347,28 +386,28 @@ function downloadNotebook() {
     else {
         const elem = window.document.createElement('a');
         elem.href = window.URL.createObjectURL(blob);
-        elem.download = filename;        
+        elem.download = filename;
         document.body.appendChild(elem);
-        elem.click();        
+        elem.click();
         document.body.removeChild(elem);
     }
 }
+
+function loadNotebook(notebookJSON) {
+    props.session.loadNotebook(notebookJSON);
+}
+
+const resetNotebook = () => {
+    props.session.reset();
+    // Reapply context
+    setContext(activeContextPayload.value);
+};
 
 const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
 });
 
 const identity = (args: any) => {console.log('identity func called'); return args;};
-
-const CellActionButton = ({primeIcon, onClick}) => (
-    <Button
-        onClick={onClick}
-        icon={`pi pi-${primeIcon}`}
-        size="small"
-        severity="info"
-        text
-    />
-);
 
 const _cellIndex = (cell: IBeakerCell): number => {
     let index = -1;
@@ -459,17 +498,55 @@ const resetNB = async () => {
     }
 };
 
-const loadNB = () => {
-    console.log('load notebook');
-};
-
-const exportNB = () => {
-    console.log('export notebook')
-}
-
-
 function toggleContextSelection() {
     contextSelectionOpen.value = !contextSelectionOpen.value;
+}
+
+const setContext = (contextPayload: any) => {
+
+    contextProcessing.value = true;
+
+    const future = props.session.sendBeakerMessage(
+        "context_setup_request",
+        contextPayload
+    );
+    future.done.then((result: any) => {
+
+        contextProcessing.value = false;
+        activeContextPayload.value = contextPayload;
+
+        if (result?.content?.status === 'error') {
+            let formatted = result?.content?.evalue;
+            if (formatted) {
+                const endsWithPeriod = /\.$/.test(formatted);
+                if (!endsWithPeriod) {
+                    formatted += '.';
+                }
+            }
+            showToast({
+                title: 'Context Setup Failed',
+                severity: 'error',
+                detail: `${formatted} Please try again or contact us.`,
+                life: 0
+            });
+            return;
+        }
+
+        if (result?.content?.status === 'abort') {
+            showToast({
+                title: 'Context Setup Aborted',
+                severity: 'warning',
+                detail: result?.content?.evalue,
+                life: 6000
+            });
+        }
+
+        // Close the context dialog
+        contextSelectionOpen.value = false;
+        // Update the context info in the sidebar
+        // TODO: Is this even needed? Could maybe be fed/triggered by existing events?
+        updateContextInfo();
+    });
 }
 
 const updateContextInfo = async () => {
@@ -550,21 +627,22 @@ footer {
 }
 
 .beaker-cell {
-    border-bottom: 2px solid var(--surface-c);
+    border-bottom: 4px solid var(--surface-c);
     background-color: var(--surface-a);
     border-right: 5px solid transparent;
 }
-.beaker-cell.drag-sort-active {
-    background: transparent;
-    color: transparent;
-    border: 2px solid var(--primary-color);
-    // TODO possibly decrease height
-}
-.sorter-span.drag-sort-active {
-    background: transparent;
-    color: transparent;
-}
+// .beaker-cell.drag-sort-active {
+//     background: transparent;
+//     color: transparent;
+//     border: 2px solid var(--primary-color);
+//     // TODO possibly decrease height
+// }
+// .sorter-span.drag-sort-active {
+//     background: transparent;
+//     color: transparent;
+// }
 
+// TODO this will be moved to common Cell component (for both Code, Query cells)
 .beaker-cell.selected {
     border-right: 5px solid var(--purple-400);
     border-top: unset;
@@ -608,7 +686,7 @@ footer {
     margin: 0;
     width: 100%;
     display: flex;
-    justify-content: left;
+    justify-content: space-between;
     align-items: center;
 
     .p-inputgroup {
@@ -675,9 +753,10 @@ footer {
         font-size: 1.5rem;
         padding: 0 0.5rem;
         h4 {
+            font-size: 1.8rem;
             margin: 0;
             padding: 0;
-            font-weight: 300;
+            font-weight: 500;
             color: var(--gray-500);
 
             @media(max-width: 885px) {
@@ -687,7 +766,7 @@ footer {
             }
         }
     }
-   
+
 }
 
 .welcome-placeholder  {
@@ -713,7 +792,7 @@ footer {
   opacity: 90%;
 }
 .fade-leave-to {
-    opacity: 0;    
+    opacity: 0;
 }
 .fade-enter-from {
   opacity: 0;
