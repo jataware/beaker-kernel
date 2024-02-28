@@ -9,20 +9,23 @@
     :onDrop="handleDrop"
     :onDragover="handleDragOver"
     :onDragleave="handleDragLeave"
+    tabindex="0"
+    @keyup.enter="focusEditor"
+    ref="beakerCellRef"
   >
     <div class="cell-grid">
-        <div
-            class="drag-handle"
-            :class="{
-                'drag-disabled': !dragEnabled,
-            }"
-        >
-          <DraggableMarker />
-        </div>
+      <div
+        class="drag-handle"
+        :class="{
+        'drag-disabled': !dragEnabled,
+        }"
+      >
+        <DraggableMarker />
+      </div>
 
-        <div class="cell-contents">
-          <slot /> <!-- children go here -->
-        </div>
+      <div class="cell-contents">
+        <slot /> <!-- children go here -->
+      </div>
     </div>
   </div>
 </template>
@@ -43,8 +46,17 @@ const emit = defineEmits([
 ]);
 
 const isCurrentTarget = ref(false);
+const beakerCellRef = ref(null);
 const dragEnabled = computed(() => props.cellCount > 1);
 
+function focusEditor() {
+    if (beakerCellRef.value) {
+        const editor = beakerCellRef.value.querySelector('.cm-content');
+        if (editor) {
+            editor.focus();
+        }
+    }
+}
 
 /**
  * Handles reordering of cells if dropped within the sort-enabled cells area.
@@ -100,7 +112,6 @@ function handleDragLeave(event) {
 
 <style lang="scss">
 
-
 .beaker-cell {
     padding: 1rem 0 1rem 1rem;
     border-right: 5px solid transparent;
@@ -111,6 +122,10 @@ function handleDragLeave(event) {
       border-right: 5px solid var(--purple-400);
       border-top: unset;
       background-color: var(--surface-ground);
+    }
+
+    &:focus {
+        outline: none;
     }
 }
 
@@ -137,7 +152,7 @@ function handleDragLeave(event) {
 }
 
 .drag-target {
-    outline: 1px solid var(--blue-300);
+    outline: 1px solid var(--purple-200);
     outline-offset: -1px;
     * {
         visibility: hidden;

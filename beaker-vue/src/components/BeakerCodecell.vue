@@ -10,10 +10,12 @@
                     :disabled="isBusy"
                     :autofocus="true"
                     @change="handleCodeChange"
+                    @ready="handleReady"
                     @keydown.ctrl.enter.self.stop.prevent="execute"
                     @keydown.alt.enter="console.log('alt-enter')"
                     @keydown.shift.enter.prevent="execute"
                     @keydown.meta.enter="console.log('meta-enter')"
+                    @keyup.esc="unfocusEditor"
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
@@ -29,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, inject } from "vue";
+import { defineProps, defineEmits, ref, shallowRef, computed, inject } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
@@ -42,9 +44,25 @@ const props = defineProps([
     "contextData",
 ]);
 
+const emit = defineEmits([
+    "keyboard-nav"
+]);
+
 const cell = ref(props.cell);
 const isBusy = ref(false);
 const theme = inject('theme');
+const editorView = shallowRef();
+
+const handleReady = (payload) => {
+    // TODO unused, but very useful for future operations.
+    // See vue codemirror api/npm docs.
+    editorView.value = payload.view;
+}
+
+const unfocusEditor = () => {
+    emit('keyboard-nav', 'focus-cell');
+};
+
 
 enum ExecuteStatus {
   Success = 'success',
@@ -69,6 +87,13 @@ function handleCodeChange() {
     if (executeState.value !== ExecuteStatus.Pending) {
         executeState.value = ExecuteStatus.Modified;
     }
+
+    // TODO See codemirror view API for future keyboard navigation
+    // eg to know if we're at the top or bottom
+    // of editor and user presser up/down arrows keys to navigate
+    // to another cell
+    // console.log(editorView.value.inputState);
+    
 }
 
 const codeExtensions = computed(() => {
@@ -129,6 +154,17 @@ const execute = (evt: any) => {
 
 .code-data {
     grid-area: code;
+
+    .cm-editor {
+        border: 1px solid var(--surface-d);
+    }
+    .cm-focused {
+        outline: none;
+        border: 1px solid var(--purple-200);
+        .cm-content {
+            background-color: var(--surface-a);
+        }
+    }
 }
 
 .execution-count-badge {

@@ -75,6 +75,8 @@
                     :size="70"
                     :minSize="30"
                     class="main-panel"
+                    @keydown.down.exact="selectNextCell"
+                    @keydown.up.exact="selectPreviousCell"
                 >
 
                     <div class="notebook-controls">
@@ -157,6 +159,7 @@
                                         :cell="cell"
                                         :session="props.session"
                                         :context-data="activeContext"
+                                        @keyboard-nav="handleKeyboardAction"
                                     />
                                 </BeakerCell>
                                 <transition name="fade">
@@ -363,6 +366,13 @@ function handleSplitterResized({sizes}) {
 }
 
 
+function handleKeyboardAction(action) {
+    // TODO types
+    if (action === 'focus-cell') {
+        focusActiveCell();
+    }
+}
+
 /**
  * Modifies array in place to move a cell to a new location
  **/
@@ -473,7 +483,68 @@ const selectCell = (cell: number | IBeakerCell) => {
     selectedCellIndex.value = index;
 }
 
-function scrollBottomCellContainer() {
+const commonSelectAction = (event) => {
+    const { target } = event;
+
+    const isEditingCode = target.className === 'cm-content'; // codemirror
+    const isAgentQueryBox = target.className.includes('llm-query-input');
+
+    if (isEditingCode || isAgentQueryBox) {
+        return false;
+    }
+
+    return true;
+};
+
+function focusActiveCell() {
+    if (!cellsContainerRef.value){
+        return;
+    }
+    const elem = cellsContainerRef.value.querySelector('.beaker-cell.selected');
+    elem.focus();
+}
+
+const selectNextCell = (event) => {
+    if (!commonSelectAction(event)) {
+        return;
+    }
+
+    const currentIndex = selectedCellIndex.value;
+    // TODO should we wrap around? Should we auto-add a new cell?
+    if (currentIndex === cellCount.value - 1) {
+        return;
+    }
+    selectCell(currentIndex + 1);
+
+    nextTick(() => {
+        focusActiveCell();
+    });
+
+    event.preventDefault();
+};
+
+const selectPreviousCell = (event) => {
+
+    if (!commonSelectAction(event)) {
+        return;
+    }
+
+    const currentIndex = selectedCellIndex.value;
+    // TODO Should we wrap around?
+    if (currentIndex === 0) {
+        return;
+    }
+    selectCell(currentIndex - 1);
+
+    nextTick(() => {
+        focusActiveCell();
+    });
+   
+    event.preventDefault();
+};
+
+
+function scrollBottomCellContainer(event) {
     if (cellsContainerRef.value) {
         cellsContainerRef.value.scrollTop = cellsContainerRef.value.scrollHeight;
     }
@@ -482,8 +553,9 @@ function scrollBottomCellContainer() {
 const addCell = () => {
     const newCell = props.session.addCodeCell("");
     selectCell(newCell);
+
     nextTick(() => {
-        scrollBottomCellContainer();
+        focusActiveCell();
     });
 }
 
@@ -501,6 +573,7 @@ const runCell = (cell?: number | IBeakerCell) => {
 
 const removeCell = () => {
     props.session.notebook.removeCell(selectedCellIndex.value);
+
     // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
     if (props.session.notebook.cells.length == 0) {
         props.session.addCodeCell("");
