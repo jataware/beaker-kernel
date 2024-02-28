@@ -186,14 +186,20 @@
                     :size="30"
                     class="right-splitter"
                 >
-                    <TabView :activeIndex="1">
-                        <TabPanel header="Preview">
+                    <TabView v-model:activeIndex="rightPaneTabIndex">
+                        <TabPanel>
+                            <template #header>
+                                <Button tabindex="-1" label="Preview" text icon="pi pi-eye" />
+                            </template>
                             <div class="scroller-area">
                                 <PreviewPane />
                             </div>
                         </TabPanel>
 
-                        <TabPanel header="Debug">
+                        <TabPanel>
+                            <template #header>
+                                <Button tabindex="-1" label="Debug" text icon="pi pi-send" />
+                            </template>
                             <div class="scroller-area">
                                 <Card class="debug-card">
                                     <template #title>Custom Message</template>
@@ -221,15 +227,24 @@
                             </div>
                         </TabPanel>
 
-                        <TabPanel header="Logging">
+                        <TabPanel>
+                            <template #header>
+                                <Button tabindex="-1" label="Logging" text icon="pi pi-list" />
+                            </template>
                             <LoggingPane :entries="props.debugLogs" />
                         </TabPanel>
 
-                        <TabPanel header="Raw Messages">
+                        <TabPanel>
+                            <template #header>
+                                <Button tabindex="-1" label="Messages" text icon="pi pi-comments" />
+                            </template>
                             <LoggingPane :entries="props.rawMessages" />
                         </TabPanel>
 
-                        <TabPanel header="Files">
+                        <TabPanel>
+                            <template #header>
+                                <Button tabindex="-1" label="Files" text icon="pi pi-file-export" />
+                            </template>
                             <BeakerFilePane :session="props.session"/>
                         </TabPanel>
 
@@ -238,12 +253,39 @@
 
             </Splitter>
 
-            <div v-if="!showDebugPane" class="debug-pane-toggler">
+            <div
+                v-if="!showDebugPane"
+                class="debug-pane-toggler"
+            >
                 <Button text
                     icon="pi pi-eye"
                     size="small"
-                    v-tooltip.left="'Inpect Tools'"
-                    @click="showDebugPane = true"
+                    v-tooltip.left="'Preview'"
+                    @click="handleRightPaneIconClick(0)"
+                />
+                <Button text
+                    icon="pi pi-send"
+                    size="small"
+                    v-tooltip.left="'Debug'"
+                    @click="handleRightPaneIconClick(1)"
+                />
+                <Button text
+                    icon="pi pi-list"
+                    size="small"
+                    v-tooltip.left="'Logs'"
+                    @click="handleRightPaneIconClick(2)"
+                />
+                <Button text
+                    icon="pi pi-comments"
+                    size="small"
+                    v-tooltip.left="'Messages'"
+                    @click="handleRightPaneIconClick(3)"
+                />
+                <Button text
+                    icon="pi pi-file-export"
+                    size="small"
+                    v-tooltip.left="'Files'"
+                    @click="handleRightPaneIconClick(4)"
                 />
             </div>
 
@@ -355,8 +397,14 @@ const showDebugPane = ref (true);
 const cellsContainerRef = ref(null);
 const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
+const rightPaneTabIndex = ref(1);
 
 const cellCount = computed(() => props.session?.notebook?.cells?.length || 0);
+
+function handleRightPaneIconClick(index) {
+    rightPaneTabIndex.value = index;
+    showDebugPane.value = true;
+}
 
 function handleSplitterResized({sizes}) {
     const [_, rightPaneSize] = sizes;
@@ -780,12 +828,21 @@ footer {
         height: 100%;
         display: flex;
         flex-direction: column;
+        li .p-tabview-nav-link {
+            padding: 0;
+            .p-button {
+                pointer-events: none;
+                color: var(--text-color-secondary);
+            }
+        }
     }
 
     .p-tabview-panels {
         flex: 1;
         position: relative;
     }
+
+
 }
 
 .scroller-area {
@@ -881,6 +938,9 @@ footer {
 
 .debug-pane-toggler {
     background-color: var(--surface-a);
+    display: flex;
+    flex-direction: column;
 }
+
 
 </style>
