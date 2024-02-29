@@ -17,7 +17,7 @@
       <div
         class="drag-handle"
         :class="{
-        'drag-disabled': !dragEnabled,
+            'drag-disabled': !dragEnabled,
         }"
       >
         <DraggableMarker />
@@ -134,7 +134,7 @@ function handleDragLeave(event) {
     grid-template-areas:
         "drag-handle cell-contents";
 
-    grid-template-columns: 1.4rem auto;
+    grid-template-columns: 1.5rem auto;
 }
 
 .cell-contents {
@@ -143,16 +143,15 @@ function handleDragLeave(event) {
 
 .drag-handle {
   grid-area: drag-handle;
-  width: 20px;
+  width: 1.5rem;
 
-  *.draggable-wrapper {
-    height: 60px;
+  .draggable-wrapper {
+    height: 4rem;
 
     &:hover {
-      opacity: 0.9;
+        opacity: 0.9;
     }
   }
-
 }
 
 .drag-disabled {
