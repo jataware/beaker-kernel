@@ -11,10 +11,8 @@
                     :autofocus="true"
                     @change="handleCodeChange"
                     @ready="handleReady"
-                    @keydown.ctrl.enter.self.stop.prevent="execute"
-                    @keydown.alt.enter="console.log('alt-enter')"
-                    @keydown.shift.enter.prevent="execute"
-                    @keydown.meta.enter="console.log('meta-enter')"
+                    @keydown.ctrl.enter.prevent="execute"
+                    @keydown.shift.enter.prevent="executeAndMove"
                     @keyup.esc="unfocusEditor"
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
@@ -121,7 +119,9 @@ const execute = (evt: any) => {
         } else {
             executeState.value = ExecuteStatus.Error;
         }
-        
+
+        unfocusEditor();
+
         // Timeout added to busy indicators from jumping in/out too quickly
         setTimeout(() => {
             isBusy.value = false;
@@ -129,11 +129,14 @@ const execute = (evt: any) => {
 
     };
 
-    evt.preventDefault();
-    evt.stopPropagation();
     const future = props.cell.execute(props.session);
     future.done.then(handleDone);
 }
+
+const executeAndMove = () => {
+    execute();
+    emit('keyboard-nav', 'select-next-cell');
+};
 
 </script>
 

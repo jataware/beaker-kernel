@@ -76,7 +76,6 @@ function handleDrop(item) {
     if (movedIndex !== droppedIndex) {
         // Modify array in place so that refs can track changes (change by reference)
         // (Don't reassign cells in notebook!)
-        // arrayMove(props.session.notebook.cells, movedIndex, droppedIndex);
         emit('move-cell', movedIndex, droppedIndex);
     }
 }

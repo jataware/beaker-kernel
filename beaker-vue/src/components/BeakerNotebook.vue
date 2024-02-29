@@ -75,14 +75,13 @@
                     :size="70"
                     :minSize="30"
                     class="main-panel"
-                    @keydown.down.exact="selectNextCell"
-                    @keydown.up.exact="selectPreviousCell"
+                    @keydown="handleKeyboardShortcut"
                 >
 
                     <div class="notebook-controls">
                         <InputGroup>
                             <Button
-                                @click="addCell"
+                                @click="addCell()"
                                 v-tooltip.bottom="{value: 'Add New Cell', showDelay: 300}"
                                 icon="pi pi-plus"
                                 size="small"
@@ -398,6 +397,7 @@ const cellsContainerRef = ref(null);
 const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
 const rightPaneTabIndex = ref(1);
+const isDeleteprefixActive = ref(false);
 
 const cellCount = computed(() => props.session?.notebook?.cells?.length || 0);
 
@@ -418,6 +418,8 @@ function handleKeyboardAction(action) {
     // TODO types
     if (action === 'focus-cell') {
         focusActiveCell();
+    } else if (action === 'select-next-cell') {
+        selectNextCell();
     }
 }
 
@@ -553,7 +555,7 @@ function focusActiveCell() {
 }
 
 const selectNextCell = (event) => {
-    if (!commonSelectAction(event)) {
+    if (event && !commonSelectAction(event)) {
         return;
     }
 
@@ -568,12 +570,14 @@ const selectNextCell = (event) => {
         focusActiveCell();
     });
 
-    event.preventDefault();
+    if (event) {
+        event.preventDefault();
+    }
 };
 
 const selectPreviousCell = (event) => {
 
-    if (!commonSelectAction(event)) {
+    if (event && !commonSelectAction(event)) {
         return;
     }
 
@@ -588,9 +592,50 @@ const selectPreviousCell = (event) => {
         focusActiveCell();
     });
    
-    event.preventDefault();
+    if (event) {
+        event.preventDefault();
+    }
 };
 
+
+function handleKeyboardShortcut(event) {
+
+    const { target } = event;
+
+    const isEditingCode = target.className === 'cm-content'; // codemirror
+    const isAgentQueryBox = target.className.includes('llm-query-input');
+
+    if (isEditingCode || isAgentQueryBox) {
+        return;
+    }
+
+    if (['ArrowDown', 'j', 'J'].includes(event.key)) {
+        selectNextCell();
+    } else if (['ArrowUp', 'k', 'K'].includes(event.key)) {
+        selectPreviousCell();
+    }
+
+    if (['b', 'B'].includes(event.key)){
+        addCell(selectedCellIndex.value + 1);
+    } else if (['a', 'A'].includes(event.key)){
+        let prevIndex = selectedCellIndex.value;
+        addCell(prevIndex);
+    }
+    
+    if (['d', 'D'].includes(event.key)) {
+        if (isDeleteprefixActive.value) {
+            isDeleteprefixActive.value = false;
+            removeCell();
+            nextTick(() => {
+                focusActiveCell();
+            })
+        } else {
+            isDeleteprefixActive.value = true;
+         }
+    } else {
+        isDeleteprefixActive.value = false;
+    }
+}
 
 function scrollBottomCellContainer(event) {
     if (cellsContainerRef.value) {
@@ -598,8 +643,14 @@ function scrollBottomCellContainer(event) {
     }
 }
 
-const addCell = () => {
+const addCell = (toIndex) => {
     const newCell = props.session.addCodeCell("");
+
+    if (typeof toIndex === 'number') {
+        // Move cell to indicated index
+        arrayMove(props.session.notebook.cells, cellCount.value - 1, toIndex)
+    }
+    
     selectCell(newCell);
 
     nextTick(() => {
@@ -623,19 +674,19 @@ const removeCell = () => {
     props.session.notebook.removeCell(selectedCellIndex.value);
 
     // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
-    if (props.session.notebook.cells.length == 0) {
+    if (cellCount.value == 0) {
         props.session.addCodeCell("");
     }
     // Fixup the selection if we remove the last item.
-    if (selectedCellIndex.value <= props.session.notebook.cells.length) {
-        selectedCellIndex.value = props.session.notebook.cells.length - 1;
+    if (selectedCellIndex.value >= cellCount.value) {
+        selectedCellIndex.value = cellCount.value - 1;
     }
 };
 
 const resetNB = async () => {
     // TODO hook to notebook-control button
     await props.session.reset();
-    if (props.session.notebook.cells.length == 0) {
+    if (cellCount.value == 0) {
         props.session.addCodeCell("");
     }
 };
