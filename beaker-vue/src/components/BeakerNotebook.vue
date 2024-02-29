@@ -419,7 +419,11 @@ function handleKeyboardAction(action) {
     if (action === 'focus-cell') {
         focusActiveCell();
     } else if (action === 'select-next-cell') {
-        selectNextCell();
+        if (selectedCellIndex.value === cellCount.value - 1) {
+            addCell();
+        } else {
+            selectNextCell();
+        }
     }
 }
 
