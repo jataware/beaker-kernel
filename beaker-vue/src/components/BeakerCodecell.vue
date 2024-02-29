@@ -16,12 +16,12 @@
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
-            <div class="execution-info">
+            <div class="state-info">
                 <div class="execution-count-badge">
                     <Badge
-                        :class="badgeSeverity"
+                        :class="{secondary: badgeSeverity === 'secondary'}"
                         :severity="badgeSeverity"
-                        :value="cell.execution_count">
+                        :value="cell.execution_count || '&nbsp;'">
                     </Badge>
                 </div>
                 <i
@@ -130,13 +130,12 @@ const execute = (evt: any) => {
         // Timeout added to busy indicators from jumping in/out too quickly
         setTimeout(() => {
             isBusy.value = false;
-        }, 1000);
+        }, 500);
 
     };
 
     const future = props.cell.execute(props.session);
     future.done.then(handleDone);
-    cell.value.execution_count = null;
     executeState.value = ExecuteStatus.Pending;
 }
 
@@ -177,31 +176,32 @@ const executeAndMove = () => {
     }
 }
 
-.execution-count-badge {
+.state-info {
     grid-area: exec;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.execution-count-badge {
     font-family: monospace;
     min-width: 3rem;
     display: flex;
     justify-content: center;
 
-    * {
+    .p-badge {
         border-radius: 15%;
-        min-width: 2em;
-        min-height: 2em;
-    }
-
-    *.secondary {
-            background-color: grey;
+        &.secondary {
+            background-color: var(--surface-d);
+        }
     }
 }
 
 .busy-icon {
-    color: var(--blue-501);
+    color: var(--blue-500);
     font-weight: bold;
-    position: relative;
-    top: 0.5rem;
-    left: calc((50% - 0.5rem));
-    text-align: center;
+    font-size: 1.3rem;
+    margin-top: 1rem;
 }
 
 </style>
