@@ -78,62 +78,13 @@
                     @keydown="handleKeyboardShortcut"
                 >
 
-                    <div class="notebook-controls">
-                        <InputGroup>
-                            <Button
-                                @click="addCell()"
-                                v-tooltip.bottom="{value: 'Add New Cell', showDelay: 300}"
-                                icon="pi pi-plus"
-                                size="small"
-                                severity="info"
-                                text
-                            />
-                            <Button
-                                @click="removeCell"
-                                v-tooltip.bottom="{value: 'Remove Selected Cell', showDelay: 300}"
-                                icon="pi pi-minus"
-                                size="small"
-                                severity="info"
-                                text
-                            />
-                            <Button
-                                @click="runCell()"
-                                v-tooltip.bottom="{value: 'Run Selected Cell', showDelay: 300}"
-                                icon="pi pi-play"
-                                size="small"
-                                severity="info"
-                                text
-                            />
-                            <!-- TODO implement Stop-->
-                            <Button
-                                @click="identity"
-                                v-tooltip.bottom="{value: 'Stop Execution', showDelay: 300}"
-                                icon="pi pi-stop"
-                                size="small"
-                                severity="info"
-                                text
-                            />
-                        </InputGroup>
-                        <InputGroup style="margin-right: 1rem;">
-                            <Button
-                                @click="resetNotebook"
-                                v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
-                                icon="pi pi-refresh"
-                                size="small"
-                                severity="info"
-                                text
-                            />
-                            <Button
-                                @click="downloadNotebook"
-                                v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
-                                icon="pi pi-download"
-                                size="small"
-                                severity="info"
-                                text
-                            />
-                            <OpenNotebookButton @open-file="loadNotebook"/>
-                        </InputGroup>
-                    </div>
+                    <NotebookControls 
+                        :session="props.session"
+                        @run-cell="runCell()"
+                        @remove-cell="removeCell"
+                        @add-cell="addCell"
+                        @set-context="reapplyContext"
+                    />
 
                     <div class="ide-cells">
                         <div style="flex: 1; position: relative;">
@@ -321,10 +272,9 @@ import SplitterPanel from 'primevue/splitterpanel';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import Toolbar from 'primevue/toolbar';
-import InputGroup from 'primevue/inputgroup';
-
 import BeakerCell from './BeakerCell.vue';
 import BeakerCodeCell from './BeakerCodecell.vue';
+import NotebookControls from './NotebookControls';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
 import BeakerContextSelection from "./BeakerContextSelection.vue";
@@ -335,12 +285,8 @@ import BeakerFilePane from "./BeakerFilePane.vue";
 import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 import SvgPlaceholder from './SvgPlaceholder.vue';
-import OpenNotebookButton from './OpenNotebookButton.vue';
+import { arrayMove, capitalize } from '../util';
 
-
-function capitalize(s: string) {
-    return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
@@ -374,7 +320,6 @@ enum KernelState {
   connected = 'connected',
   connecting = 'connecting'
 }
-
 
 const connectionStatusColorMap = {
     [KernelState.connected]: 'green-400',
@@ -413,11 +358,10 @@ function handleSplitterResized({sizes}) {
     }
 }
 
-
 function handleKeyboardAction(action) {
     // TODO types
     if (action === 'focus-cell') {
-        focusActiveCell();
+        focusSelectedCell();
     } else if (action === 'select-next-cell') {
         if (selectedCellIndex.value === cellCount.value - 1) {
             addCell();
@@ -427,70 +371,14 @@ function handleKeyboardAction(action) {
     }
 }
 
-/**
- * Modifies array in place to move a cell to a new location
- **/
-function arrayMove(arr, old_index, new_index) {
-    arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
-}
 function handleMoveCell(fromIndex, toIndex) {
     arrayMove(props.session.notebook.cells, fromIndex, toIndex)
     selectCell(toIndex);
 }
 
-function getDateTime() {
-    let t = new Date();
-    // convert the local time zone offset from minutes to milliseconds
-    let z = t.getTimezoneOffset() * 60 * 1000;
-    // subtract the offset from t
-    let tLocal = t - z;
-    // create shifted Date object
-    tLocal = new Date(tLocal);
-    // convert to ISO format string
-    let iso = tLocal.toISOString();
-    // drop the milliseconds and zone
-    iso = iso.split(".")[0];
-    // replace the T with _, and : with , (: aren't allowed on filenames)
-    iso = iso.replace('T', '_').replace(/:/g,',');
-    return iso;
-}
-
-function downloadNotebook() {
-    const rawData = null;
-    const data = JSON.stringify(props.session.notebook.toIPynb(), null, 2); // TODO error handling
-
-    const filename = `Beaker-Notebook_${getDateTime()}.ipynb`;
-
-    const blob = new Blob([data], {type: 'application/x-ipynb+json'});
-
-    if (window.navigator.msSaveOrOpenBlob) {
-        window.navigator.msSaveBlob(blob, filename);
-    }
-    else {
-        const elem = window.document.createElement('a');
-        elem.href = window.URL.createObjectURL(blob);
-        elem.download = filename;
-        document.body.appendChild(elem);
-        elem.click();
-        document.body.removeChild(elem);
-    }
-}
-
-function loadNotebook(notebookJSON) {
-    props.session.loadNotebook(notebookJSON);
-}
-
-const resetNotebook = () => {
-    props.session.reset();
-    // Reapply context
-    setContext(activeContextPayload.value);
-};
-
 const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
 });
-
-const identity = (args: any) => {console.log('identity func called'); return args;};
 
 const _cellIndex = (cell: IBeakerCell): number => {
     let index = -1;
@@ -550,7 +438,7 @@ const commonSelectAction = (event) => {
     return true;
 };
 
-function focusActiveCell() {
+function focusSelectedCell() {
     if (!cellsContainerRef.value){
         return;
     }
@@ -571,7 +459,7 @@ const selectNextCell = (event) => {
     selectCell(currentIndex + 1);
 
     nextTick(() => {
-        focusActiveCell();
+        focusSelectedCell();
     });
 
     if (event) {
@@ -593,7 +481,7 @@ const selectPreviousCell = (event) => {
     selectCell(currentIndex - 1);
 
     nextTick(() => {
-        focusActiveCell();
+        focusSelectedCell();
     });
    
     if (event) {
@@ -631,7 +519,7 @@ function handleKeyboardShortcut(event) {
             isDeleteprefixActive.value = false;
             removeCell();
             nextTick(() => {
-                focusActiveCell();
+                focusSelectedCell();
             })
         } else {
             isDeleteprefixActive.value = true;
@@ -658,7 +546,7 @@ const addCell = (toIndex) => {
     selectCell(newCell);
 
     nextTick(() => {
-        focusActiveCell();
+        focusSelectedCell();
     });
 }
 
@@ -678,7 +566,7 @@ const removeCell = () => {
     props.session.notebook.removeCell(selectedCellIndex.value);
 
     // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
-    if (cellCount.value == 0) {
+    if (cellCount.value === 0) {
         props.session.addCodeCell("");
     }
     // Fixup the selection if we remove the last item.
@@ -688,9 +576,8 @@ const removeCell = () => {
 };
 
 const resetNB = async () => {
-    // TODO hook to notebook-control button
     await props.session.reset();
-    if (cellCount.value == 0) {
+    if (cellCount.value === 0) {
         props.session.addCodeCell("");
     }
 };
@@ -746,6 +633,10 @@ const setContext = (contextPayload: any) => {
     });
 }
 
+function reapplyContext() {
+    setContext(activeContextPayload.value);
+}
+
 const updateContextInfo = async () => {
     const activeContextInfo = await props.session.activeContext();
     activeContext.value = activeContextInfo;
@@ -753,7 +644,7 @@ const updateContextInfo = async () => {
 }
 
 onBeforeMount(() => {
-    if (props.session.notebook.cells.length <= 0) {
+    if (cellCount.value <= 0) {
         props.session.addCodeCell("");
     }
     setTheme();
@@ -859,17 +750,6 @@ footer {
     z-index: 2;
 }
 
-.notebook-controls {
-    margin: 0;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    .p-inputgroup {
-        width: unset;
-    }
-}
 
 .right-splitter {
     display: flex;
@@ -996,6 +876,5 @@ footer {
     display: flex;
     flex-direction: column;
 }
-
 
 </style>
