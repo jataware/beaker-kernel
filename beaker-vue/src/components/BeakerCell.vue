@@ -112,7 +112,7 @@ function handleDragLeave(event) {
 <style lang="scss">
 
 .beaker-cell {
-    padding: 1rem 0 1rem 1rem;
+    padding: 1rem 0 1rem 0.3rem;
     border-right: 5px solid transparent;
     background-color: var(--surface-a);
     border-bottom: 4px solid var(--surface-c);
@@ -134,7 +134,7 @@ function handleDragLeave(event) {
     grid-template-areas:
         "drag-handle cell-contents";
 
-    grid-template-columns: 2rem auto;
+    grid-template-columns: 1.4rem auto;
 }
 
 .cell-contents {
@@ -143,6 +143,16 @@ function handleDragLeave(event) {
 
 .drag-handle {
   grid-area: drag-handle;
+  width: 20px;
+
+  *.draggable-wrapper {
+    height: 60px;
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+
 }
 
 .drag-disabled {

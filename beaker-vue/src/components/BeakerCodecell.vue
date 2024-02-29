@@ -1,5 +1,4 @@
 <template>
-
     <div class="code-cell">
         <div class="code-cell-grid">
             <div class="code-data">
@@ -17,12 +16,18 @@
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
-            <div class="execution-count-badge">
-                <Badge 
-                    v-if="executeState !== ExecuteStatus.Pending"
-                    :severity="badgeSeverity"
-                    :value="cell.execution_count">
-                </Badge>
+            <div class="execution-info">
+                <div class="execution-count-badge">
+                    <Badge
+                        :class="badgeSeverity"
+                        :severity="badgeSeverity"
+                        :value="cell.execution_count">
+                    </Badge>
+                </div>
+                <i
+                    v-if="isBusy"
+                    class="pi pi-spin pi-spinner busy-icon"
+                />
             </div>
         </div>
     </div>
@@ -91,7 +96,7 @@ function handleCodeChange() {
     // of editor and user presser up/down arrows keys to navigate
     // to another cell
     // console.log(editorView.value.inputState);
-    
+
 }
 
 const codeExtensions = computed(() => {
@@ -131,6 +136,8 @@ const execute = (evt: any) => {
 
     const future = props.cell.execute(props.session);
     future.done.then(handleDone);
+    cell.value.execution_count = null;
+    executeState.value = ExecuteStatus.Pending;
 }
 
 const executeAndMove = () => {
@@ -143,7 +150,7 @@ const executeAndMove = () => {
 
 <style lang="scss">
 .code-cell {
-    padding-left: 1rem;
+    padding-left: 0.2rem;
 }
 
 .code-cell-grid {
@@ -177,9 +184,24 @@ const executeAndMove = () => {
     display: flex;
     justify-content: center;
 
-    &.pending {
-        visibility: hidden;
+    * {
+        border-radius: 15%;
+        min-width: 2em;
+        min-height: 2em;
     }
+
+    *.secondary {
+            background-color: grey;
+    }
+}
+
+.busy-icon {
+    color: var(--blue-501);
+    font-weight: bold;
+    position: relative;
+    top: 0.5rem;
+    left: calc((50% - 0.5rem));
+    text-align: center;
 }
 
 </style>
