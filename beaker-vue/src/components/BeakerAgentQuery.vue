@@ -11,7 +11,7 @@
                 -->
                 <Textarea
                     class="llm-query-input"
-                    @keydown.enter.exact="handleQuery"
+                    @keydown.enter.exact.prevent="handleQuery"
                     autoResize
                     rows="1"
                     v-model="query"
