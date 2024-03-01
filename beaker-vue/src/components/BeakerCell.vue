@@ -41,6 +41,7 @@
 import { defineProps, ref, computed, defineEmits, Component } from "vue";
 import DraggableMarker from './DraggableMarker';
 import BeakerCodeCell from './BeakerCodecell.vue';
+import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 
 const props = defineProps([
@@ -62,6 +63,7 @@ const dragEnabled = computed(() => props.cellCount > 1);
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
     'query': BeakerLLMQueryCell,
+    'markdown': BeakerMarkdownCell
 }
 
 function focusEditor() {
