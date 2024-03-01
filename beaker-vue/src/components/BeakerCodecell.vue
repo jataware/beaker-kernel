@@ -1,7 +1,10 @@
 <template>
     <div class="code-cell">
         <div class="code-cell-grid">
-            <div class="code-data">
+            <div 
+                class="code-data"
+                :class="{'dark-mode': theme === 'dark'}"
+            >
                 <Codemirror
                     v-model="cell.source"
                     placeholder="Your code..."
@@ -174,7 +177,13 @@ const executeAndMove = () => {
             background-color: var(--surface-a);
         }
     }
+    &.dark-mode {
+        .cm-focused {
+            border-color: #5b3c5b;
+        }
+    }
 }
+
 
 .state-info {
     grid-area: exec;
