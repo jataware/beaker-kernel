@@ -501,6 +501,11 @@ function handleKeyboardShortcut(event) {
         return;
     }
 
+    if ('Enter' === event.key && !event.shiftKey && !event.ctrlKey) {
+        focusSelectedCell();
+        return;
+    }
+
     if (['ArrowDown', 'j', 'J'].includes(event.key)) {
         selectNextCell();
     } else if (['ArrowUp', 'k', 'K'].includes(event.key)) {
