@@ -79,7 +79,6 @@
                 >
 
                     <NotebookControls 
-                        :session="props.session"
                         @run-cell="runCell()"
                         @remove-cell="removeCell"
                         @add-cell="addCell"
@@ -95,23 +94,16 @@
                                 ref="cellsContainerRef"
                             >
                                 <BeakerCell
-                                    v-for="(cell, index) in props.session?.notebook?.cells"
+                                    v-for="(cell, index) in session.notebook?.cells"
                                     :key="cell.id"
                                     :class="{selected: (index === selectedCellIndex)}"
                                     :index="index"
-                                    :cellID="cell.id"
                                     :cellCount="cellCount"
                                     @move-cell="handleMoveCell"
                                     @click="selectCell(index)"
-                                >
-                                    <Component
-                                        :is="componentMap[cell.cell_type]"
-                                        :cell="cell"
-                                        :session="props.session"
-                                        :context-data="activeContext"
-                                        @keyboard-nav="handleKeyboardAction"
-                                    />
-                                </BeakerCell>
+                                    :cell="cell"
+                                    @keyboard-nav="handleNavAction"
+                                />
                                 <transition name="fade">
                                     <div class="welcome-placeholder" v-if="cellCount < 3">
                                         <SvgPlaceholder />
@@ -122,7 +114,6 @@
 
                         <BeakerAgentQuery
                             class="agent-query-container"
-                            :session="session"
                             @select-cell="selectCell"
                             @run-cell="runCell"
                             :run-cell-callback="scrollBottomCellContainer"
@@ -156,7 +147,6 @@
                                     <template #content>
                                         <BeakerCustomMessage
                                             :intercepts="activeContext?.info?.intercepts"
-                                            :session="session"
                                             :rawMessages="props.rawMessages"
                                         />
                                     </template>
@@ -195,7 +185,7 @@
                             <template #header>
                                 <Button tabindex="-1" label="Files" text icon="pi pi-file-export" />
                             </template>
-                            <BeakerFilePane :session="props.session"/>
+                            <BeakerFilePane />
                         </TabPanel>
 
                     </TabView>
@@ -248,8 +238,6 @@
     </div>
 
     <BeakerContextSelection
-        :session="props.session"
-        :activeContext="activeContext"
         :isOpen="contextSelectionOpen"
         :toggleOpen="toggleContextSelection"
         @update-context-info="setContext"
@@ -259,11 +247,11 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, Component, nextTick, provide, inject } from "vue";
+import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject } from "vue";
 import { IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
-import VueJsonPretty from 'vue-json-pretty';
-import 'vue-json-pretty/lib/styles.css';
+// import VueJsonPretty from 'vue-json-pretty';
+// import 'vue-json-pretty/lib/styles.css';
 
 import Card from 'primevue/card';
 import Button from 'primevue/button';
@@ -273,9 +261,7 @@ import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import Toolbar from 'primevue/toolbar';
 import BeakerCell from './BeakerCell.vue';
-import BeakerCodeCell from './BeakerCodecell.vue';
 import NotebookControls from './NotebookControls';
-import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
 import BeakerContextSelection from "./BeakerContextSelection.vue";
 import BeakerCustomMessage from "./BeakerCustomMessage.vue";
@@ -288,23 +274,16 @@ import SvgPlaceholder from './SvgPlaceholder.vue';
 import { arrayMove, capitalize } from '../util';
 
 
-const componentMap: {[key: string]: Component} = {
-    'code': BeakerCodeCell,
-    'query': BeakerLLMQueryCell,
-}
-
 const props = defineProps([
-    "session",
     "connectionStatus",
     "debugLogs",
     "rawMessages",
 ]);
 
-const showToast = inject('show_toast');
 
-const debugData = () => {
-    return JSON.parse(props.session.notebook.toJSON());
-};
+// const debugData = () => {
+//     return JSON.parse(session.notebook.toJSON());
+// };
 
 // TODO export/import from ts-lib utils.ts
 enum KernelState {
@@ -343,8 +322,30 @@ const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
 const rightPaneTabIndex = ref(1);
 const isDeleteprefixActive = ref(false);
+const selectedTheme = ref(localStorage.getItem('theme') || 'light');
 
-const cellCount = computed(() => props.session?.notebook?.cells?.length || 0);
+const themeIcon = computed(() => {
+    return `pi pi-${selectedTheme.value == 'dark' ? 'sun' : 'moon'}`;
+});
+
+const session = inject('session');
+const showToast = inject('show_toast');
+
+provide('theme', selectedTheme);
+provide('active_context', activeContext);
+
+const cellCount = computed(() => session.notebook?.cells?.length || 0);
+
+const setTheme = () => {
+    const themeLink = document.querySelector('#primevue-theme');
+    themeLink.href = `/themes/soho-${selectedTheme.value}/theme.css`;
+}
+
+const toggleDarkMode = () => {
+    selectedTheme.value = selectedTheme.value === 'light' ? 'dark' : 'light'
+    localStorage.setItem('theme', selectedTheme.value);
+    setTheme();
+};
 
 function handleRightPaneIconClick(index) {
     rightPaneTabIndex.value = index;
@@ -358,7 +359,11 @@ function handleSplitterResized({sizes}) {
     }
 }
 
-function handleKeyboardAction(action) {
+/**
+ * Parses emits by other child components to follow commands that the notebook
+ * controls.
+ **/
+function handleNavAction(action) {
     // TODO types
     if (action === 'focus-cell') {
         focusSelectedCell();
@@ -372,7 +377,7 @@ function handleKeyboardAction(action) {
 }
 
 function handleMoveCell(fromIndex, toIndex) {
-    arrayMove(props.session.notebook.cells, fromIndex, toIndex)
+    arrayMove(session.notebook.cells, fromIndex, toIndex)
     selectCell(toIndex);
 }
 
@@ -386,32 +391,15 @@ const _cellIndex = (cell: IBeakerCell): number => {
         index = cell
     }
     else if (cell instanceof BeakerBaseCell) {
-        index = props.session.notebook.cells.indexOf(cell);
+        index = session.notebook.cells.indexOf(cell);
     }
     return index;
 }
 
-const selectedTheme = ref(localStorage.getItem('theme') || 'light');
-const themeIcon = computed(() => {
-    return `pi pi-${selectedTheme.value == 'dark' ? 'sun' : 'moon'}`;
-})
-
-provide('theme', selectedTheme);
-
-const setTheme = () => {
-    const themeLink = document.querySelector('#primevue-theme');
-    themeLink.href = `/themes/soho-${selectedTheme.value}/theme.css`;
-}
-
-const toggleDarkMode = () => {
-    selectedTheme.value = selectedTheme.value === 'light' ? 'dark' : 'light'
-    localStorage.setItem('theme', selectedTheme.value);
-    setTheme();
-};
 
 const _getCell = (cell: number | IBeakerCell) => {
     const index = _cellIndex(cell);
-    return props.session.notebook.cells[index];
+    return session.notebook.cells[index];
 }
 
 const selectCell = (cell: number | IBeakerCell) => {
@@ -474,7 +462,6 @@ const selectPreviousCell = (event) => {
     }
 
     const currentIndex = selectedCellIndex.value;
-    // TODO Should we wrap around?
     if (currentIndex === 0) {
         return;
     }
@@ -541,11 +528,11 @@ function scrollBottomCellContainer(event) {
 }
 
 const addCell = (toIndex) => {
-    const newCell = props.session.addCodeCell("");
+    const newCell = session.addCodeCell("");
 
     if (typeof toIndex === 'number') {
         // Move cell to indicated index
-        arrayMove(props.session.notebook.cells, cellCount.value - 1, toIndex)
+        arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
     }
     
     selectCell(newCell);
@@ -563,16 +550,16 @@ const runCell = (cell?: number | IBeakerCell) => {
         cell = _getCell(cell);
     }
     if (cell !== undefined) {
-        cell.execute(props.session);
+        cell.execute(session);
     }
 }
 
 const removeCell = () => {
-    props.session.notebook.removeCell(selectedCellIndex.value);
+    session.notebook.removeCell(selectedCellIndex.value);
 
     // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
     if (cellCount.value === 0) {
-        props.session.addCodeCell("");
+        session.addCodeCell("");
     }
     // Fixup the selection if we remove the last item.
     if (selectedCellIndex.value >= cellCount.value) {
@@ -581,9 +568,9 @@ const removeCell = () => {
 };
 
 const resetNB = async () => {
-    await props.session.reset();
+    await session.reset();
     if (cellCount.value === 0) {
-        props.session.addCodeCell("");
+        session.addCodeCell("");
     }
 };
 
@@ -595,7 +582,7 @@ const setContext = (contextPayload: any) => {
 
     contextProcessing.value = true;
 
-    const future = props.session.sendBeakerMessage(
+    const future = session.sendBeakerMessage(
         "context_setup_request",
         contextPayload
     );
@@ -643,14 +630,14 @@ function reapplyContext() {
 }
 
 const updateContextInfo = async () => {
-    const activeContextInfo = await props.session.activeContext();
+    const activeContextInfo = await session.activeContext();
     activeContext.value = activeContextInfo;
     selectedKernel.value = activeContextInfo.slug;
 }
 
 onBeforeMount(() => {
     if (cellCount.value <= 0) {
-        props.session.addCodeCell("");
+        session.addCodeCell("");
     }
     setTheme();
 });

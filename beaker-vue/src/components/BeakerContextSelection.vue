@@ -79,8 +79,6 @@ import Dropdown from 'primevue/dropdown';
 import Checkbox from 'primevue/checkbox';
 
 const props = defineProps([
-    "session",
-    "activeContext",
     "isOpen",
     "toggleOpen",
     "contextProcessing"
@@ -90,6 +88,8 @@ const contextData = ref(undefined);
 const logDebug = ref([]);
 const logVerbose = ref([]);
 const theme = inject("theme");
+const session = inject("session");
+const activeContext = inject('active_context');
 
 const closeDialog = () => {
     props.toggleOpen();
@@ -186,28 +186,28 @@ watch(() => props.isOpen, (open /*, oldValue*/) => {
     // Only setup saved context state when opening the dialog (not closing).
     if (open) {
 
-        if (props.activeContext?.language) {
+        if (activeContext.value?.language) {
             // Panel just opened and activeContext data available:
-            selectedLanguage.value = props.activeContext.language.subkernel;
-            selectedContextSlug.value = props.activeContext.slug;
+            selectedLanguage.value = activeContext.value.language.subkernel;
+            selectedContextSlug.value = activeContext.value.slug;
 
             // First time we open, if payload empty, load from active context
             const existingContextPayload = contextPayloadData.value[selectedContextSlug.value];
             if (!existingContextPayload) {
-                contextPayloadData.value[selectedContextSlug.value] = JSON.stringify(props.activeContext?.config);
+                contextPayloadData.value[selectedContextSlug.value] = JSON.stringify(activeContext.value?.config);
             }
         }
 
-        if (props.activeContext?.info) {
+        if (activeContext.value?.info) {
         // Panel just opened and activeContext info available (verbose/debug checks)
-            const strDebugValue = props.activeContext.info.debug.toString();
+            const strDebugValue = activeContext.value.info.debug.toString();
 
             if (logDebug.value.length) {
                 logDebug.value[0] = strDebugValue;
             } else {
                 logDebug.value.push(strDebugValue);
             }
-            const strVerboseValue = props.activeContext.info.verbose.toString();
+            const strVerboseValue = activeContext.value.info.verbose.toString();
 
             if (logVerbose.value.length) {
                 logVerbose.value[0] = strVerboseValue;
@@ -247,7 +247,7 @@ const setContext = () => {
 }
 */
 onMounted(async () => {
-    const contexts = await props.session.availableContexts();
+    const contexts = await session.availableContexts();
     contextData.value = contexts;
     selectedContextSlug.value = Object.keys(contexts)[0];
 })

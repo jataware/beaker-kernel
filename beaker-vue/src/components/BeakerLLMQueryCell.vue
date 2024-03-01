@@ -84,14 +84,12 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, nextTick } from "vue";
+import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
 import Button from "primevue/button";
-import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 
 const props = defineProps([
     "cell",
-    "session",
 ]);
 
 const cell = ref(props.cell);
@@ -100,7 +98,7 @@ const editingContents = ref("");
 const autofocus = ref();
 const savedEdit = ref("");
 const response = ref("");
-
+const session = inject("session");
 
 function cancelEdit() {
     editing.value = false;
@@ -130,9 +128,15 @@ const respond = () => {
     if (!response.value.trim()) {
         return; // Do nothing unless the reply has contents
     }
-    props.cell.respond(response.value, props.session);
+    props.cell.respond(response.value, session);
     response.value = "";
 };
+
+function execute() {
+    props.cell.execute(session);
+}
+
+defineExpose({execute});
 
 </script>
 

@@ -77,10 +77,9 @@ import { ContentsManager } from '@jupyterlab/services';
 
 
 const props = defineProps([
-  "session",
   "entries",
   "sortby",
-])
+]);
 
 const contentManager = new ContentsManager({});
 

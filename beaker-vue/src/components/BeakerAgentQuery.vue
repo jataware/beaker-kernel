@@ -31,14 +31,13 @@
 
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, nextTick } from "vue";
+import { defineProps, defineEmits, ref, nextTick, inject } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Textarea from 'primevue/textarea';
 
 
 const props = defineProps([
-    "session",
     "runCellCallback"
 ]);
 
@@ -48,12 +47,14 @@ const emit = defineEmits([
     "run-cell",
 ]);
 
+const session = inject("session");
+
 const handleQuery = (e: any) => {
     if (!query.value.trim()) {
         return; // TODO notify user that they're missing the agent query?
     }
 
-    const cell = props.session.addQueryCell(query.value);
+    const cell = session.addQueryCell(query.value);
     query.value = "";
     emit("select-cell", cell);
     nextTick(() => {

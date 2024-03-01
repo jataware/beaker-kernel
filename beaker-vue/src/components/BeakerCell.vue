@@ -10,7 +10,10 @@
     :onDragover="handleDragOver"
     :onDragleave="handleDragLeave"
     tabindex="0"
-    @keyup.enter="focusEditor"
+    @keyup.enter.exact="focusEditor"
+    @keydown.ctrl.enter.prevent="execute"
+    @keydown.shift.enter.prevent="executeAndMove"
+    @keyup.esc="unfocusEditor"
     ref="beakerCellRef"
   >
     <div class="cell-grid">
@@ -24,30 +27,42 @@
       </div>
 
       <div class="cell-contents">
-        <slot /> <!-- children go here -->
+        <Component
+            :is="componentMap[props.cell.cell_type || 'raw']"
+            :cell="props.cell"
+            ref="typedCellRef"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, defineEmits } from "vue";
+import { defineProps, ref, computed, defineEmits, Component } from "vue";
 import DraggableMarker from './DraggableMarker';
+import BeakerCodeCell from './BeakerCodecell.vue';
+import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 
 const props = defineProps([
-    "session",
-    "index",
-    "cellID",
-    "cellCount",
+    'index',
+    'cell',
+    'cellCount',
 ]);
 
 const emit = defineEmits([
-    "move-cell"
+    'move-cell',
+    'keyboard-nav'
 ]);
 
 const isCurrentTarget = ref(false);
 const beakerCellRef = ref(null);
+const typedCellRef = ref(null);
 const dragEnabled = computed(() => props.cellCount > 1);
+
+const componentMap: {[key: string]: Component} = {
+    'code': BeakerCodeCell,
+    'query': BeakerLLMQueryCell,
+}
 
 function focusEditor() {
     if (beakerCellRef.value) {
@@ -57,6 +72,28 @@ function focusEditor() {
         }
     }
 }
+
+const unfocusEditor = () => {
+    if (beakerCellRef.value?.focus) {
+        beakerCellRef.value.focus();
+    }
+};
+
+function execute() {
+    if (typedCellRef?.value?.execute) {
+        typedCellRef.value.execute();
+        // For code/markdown cells
+        unfocusEditor();
+        return true;
+    }
+    return false;
+}
+
+const executeAndMove = () => {
+    if (execute()) {
+        emit('keyboard-nav', 'select-next-cell');
+    }
+};
 
 /**
  * Handles reordering of cells if dropped within the sort-enabled cells area.
@@ -87,7 +124,7 @@ function handleDrop(item) {
 function handleDragStart(event, item) {
     event.dataTransfer.dropEffect = 'move';
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('cellID', props.cellID);
+    event.dataTransfer.setData('cellID', props.cell.id);
     event.dataTransfer.setData('cellIndex', props.index);
 }
 

@@ -58,37 +58,35 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { defineEmits, inject } from 'vue';
 import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import OpenNotebookButton from './OpenNotebookButton.vue';
 import { downloadFileDOM, getDateTime } from '../util';
-
-const props = defineProps([
-  "session",
-]);
 
 const emit = defineEmits([
   "run-cell",
   "remove-cell",
   "add-cell",
   "set-context"
-])
+]);
+
+const session = inject("session");
 
 const identity = () => {console.log('identity func called');};
 
 function loadNotebook(notebookJSON) {
-    props.session.loadNotebook(notebookJSON);
+    session.loadNotebook(notebookJSON);
 }
 
 const resetNotebook = () => {
-    props.session.reset();
+    session.reset();
     emit('set-context');
 };
 
 
 function downloadNotebook() {
-    const data = JSON.stringify(props.session.notebook.toIPynb(), null, 2);
+    const data = JSON.stringify(session.notebook.toIPynb(), null, 2);
     const filename = `Beaker-Notebook_${getDateTime()}.ipynb`;
     const mimeType = 'application/x-ipynb+json';
     downloadFileDOM(data, filename, mimeType);

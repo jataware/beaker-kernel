@@ -1,6 +1,5 @@
 <template>
     <BeakerNotebook
-      :session="beakerSession"
       :connectionStatus="connectionStatus"
       :debugLogs="debugLogs"
       :rawMessages="rawMessages"
@@ -90,6 +89,7 @@ onBeforeMount(() => {
 });
 
 const beakerSession = reactive(rawSession);
+provide('session', beakerSession);
 
 
 </script>

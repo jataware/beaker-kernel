@@ -13,9 +13,6 @@
                     :autofocus="true"
                     @change="handleCodeChange"
                     @ready="handleReady"
-                    @keydown.ctrl.enter.prevent="execute"
-                    @keydown.shift.enter.prevent="executeAndMove"
-                    @keyup.esc="unfocusEditor"
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
@@ -37,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, shallowRef, computed, inject } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
@@ -46,29 +43,20 @@ import Badge from 'primevue/badge';
 
 const props = defineProps([
     "cell",
-    "session",
-    "contextData",
-]);
-
-const emit = defineEmits([
-    "keyboard-nav"
 ]);
 
 const cell = ref(props.cell);
 const isBusy = ref(false);
-const theme = inject('theme');
 const editorView = shallowRef();
+const theme = inject('theme');
+const session = inject('session');
+const activeContext = inject('active_context');
 
 const handleReady = (payload) => {
     // TODO unused, but very useful for future operations.
     // See vue codemirror api/npm docs.
     editorView.value = payload.view;
-}
-
-const unfocusEditor = () => {
-    emit('keyboard-nav', 'focus-cell');
 };
-
 
 enum ExecuteStatus {
   Success = 'success',
@@ -105,7 +93,7 @@ function handleCodeChange() {
 const codeExtensions = computed(() => {
     const ext = [];
 
-    const subkernel = props?.contextData?.language?.subkernel || '';
+    const subkernel = activeContext.value?.language?.subkernel || '';
     const isPython = subkernel.includes('python');
     if (isPython) {
         ext.push(python());
@@ -128,7 +116,6 @@ const execute = (evt: any) => {
             executeState.value = ExecuteStatus.Error;
         }
 
-        unfocusEditor();
 
         // Timeout added to busy indicators from jumping in/out too quickly
         setTimeout(() => {
@@ -137,15 +124,15 @@ const execute = (evt: any) => {
 
     };
 
-    const future = props.cell.execute(props.session);
+    const future = props.cell.execute(session);
     future.done.then(handleDone);
     executeState.value = ExecuteStatus.Pending;
 }
 
-const executeAndMove = () => {
-    execute();
-    emit('keyboard-nav', 'select-next-cell');
-};
+defineExpose({
+    execute
+});
+
 
 </script>
 

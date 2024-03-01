@@ -35,7 +35,6 @@
             iconPos="right"
         />
 
-        <!-- <Card style="height: 6em;"> -->
         <div>
             <Panel
                 class="log-panel"
@@ -54,7 +53,6 @@
                 />
             </Panel>
         </div>
-        <!-- </Card> -->
 
     </Fieldset>
 
@@ -72,14 +70,14 @@ import Fieldset from 'primevue/fieldset';
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
-import Card from 'primevue/card';
 
 
 const props = defineProps([
-    "session",
     "intercepts",
     "rawMessages",
 ]);
+
+const session = inject('session');
 
 const showToast = inject('show_toast');
 const theme = inject('theme');
@@ -110,7 +108,7 @@ const messageId = ref<string|undefined>(undefined);
 const sendMessage = () => {
     messageId.value = `beaker-custom-${messageType.value}-${messageNum.value}`;
     messageNum.value += 1;
-    const future = props.session.sendBeakerMessage(
+    const future = session.sendBeakerMessage(
         messageType.value,
         JSON.parse(messageContent.value),
         messageId.value,
@@ -134,7 +132,7 @@ const logEntries = computed(() => {
     if (!messageId.value) {
         return [];
     }
-    return props.rawMessages.filter((item) => {return (item.body.header.msg_id === messageId.value || item.body.parent_header.msg_id === messageId.value)});
+    return props.rawMessages.filter((item) => {return (item.body.header?.msg_id === messageId.value || item.body.parent_header?.msg_id === messageId.value)});
 });
 
 </script>
