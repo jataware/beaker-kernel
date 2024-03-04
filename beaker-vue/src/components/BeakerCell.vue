@@ -122,8 +122,28 @@ function handleDrop(item) {
 /**
  * Sets call to item being moved
  * As well as dataTransfer so that drop target knows which one was dropped
+ * TODO This handler is aware of some special Beaker app classes, since
+     * it needs to disable dragging when using the cursor to select text.
+     * Could accept props of disallowed classes if we want to make it generic.
  **/
 function handleDragStart(event, item) {
+
+    const selectingText = event.target.nodeName === '#text';
+    if (selectingText) {
+        event.preventDefault();
+        return;
+    }
+
+    const className = event?.target?.className;
+    const isTextArea = className && className.includes('resizeable-textarea')
+    const isEditorLine = className && className.includes('cm-line');
+    const containsTextArea = event.target.querySelector('.resizeable-textarea');
+
+    if (isTextArea || isEditorLine || containsTextArea) {
+        event.preventDefault();
+        return;
+    }
+
     event.dataTransfer.dropEffect = 'move';
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('cellID', props.cell.id);

@@ -6,15 +6,10 @@
 
         <template #content>
             <div class="query-input-container">
-                <!--Needed to shorten the placeholder in order to
-                    Start the textarea with 1 row since it auto-grows...
-                -->
-                <Textarea
-                    class="llm-query-input"
-                    @keydown.enter.exact.prevent="handleQuery"
-                    autoResize
-                    rows="1"
+                <ContainedTextArea
+                    @submit="handleQuery"
                     v-model="query"
+                    style="flex: 1; margin-right: 0.75rem"
                     placeholder="Ask the AI or request an operation."
                 />
 
@@ -34,7 +29,7 @@
 import { defineProps, defineEmits, ref, nextTick, inject } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
-import Textarea from 'primevue/textarea';
+import ContainedTextArea from './ContainedTextArea.vue';
 
 
 const props = defineProps([
@@ -65,24 +60,11 @@ const handleQuery = (e: any) => {
         }, 1000);
     });
 }
+
 </script>
 
 
 <style lang="scss">
-.llm-query-input {
-    margin-right: 0.75rem;
-    flex: 1;
-    min-height: 3rem;
-    // We may tweak the max-height,
-    // but not setting a max value and creating huge forms
-    // eventually pushes all content and breaks layout.
-    max-height: 12rem;
-
-    &::placeholder {
-        color: var(--gray-400);
-    }
-}
-
 .agent-input-card {
     .p-card-body .p-card-content {
         padding: 0.75rem 0;

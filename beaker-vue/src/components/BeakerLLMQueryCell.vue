@@ -3,12 +3,11 @@
         <div class="query-row">
             <div class="query">
                 <div v-if="editing" style="display: flex">
-                    <Textarea
-                        class="input-text"
-                        style="max-width: 50%;"
-                        autoResize
-                        ref="autofocus"
-                        rows="1"
+                    <!-- TODO move ctrl/shift event stop on keyboard controller -->
+                    <ContainedTextArea
+                        style="max-width: 50%; margin-right: 0.75rem; flex: 1;"
+                        @keydown.ctrl.enter.stop
+                        @keydown.shift.enter.stop
                         v-model="editingContents"
                     />
                     <div class="edit-actions">
@@ -61,14 +60,14 @@
              v-focustrap
              v-if="cell.status === 'awaiting_input'"
          >
-            <Textarea
-                class="input-text"
+            <ContainedTextArea
+                style="margin-right: 0.75rem; flex: 1;"
                 autoFocus
-                autoResize
-                rows="1"
                 placeholder="Enter your response here"
-                @keydown.enter.exact="respond"
                 v-model="response"
+                @keydown.ctrl.enter.stop
+                @keydown.shift.enter.stop
+                @submit="respond"
             />
             &nbsp;
             <Button
@@ -86,7 +85,7 @@
 <script setup lang="ts">
 import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
 import Button from "primevue/button";
-import Textarea from 'primevue/textarea';
+import ContainedTextArea from './ContainedTextArea.vue';
 
 const props = defineProps([
     "cell",
@@ -95,7 +94,6 @@ const props = defineProps([
 const cell = ref(props.cell);
 const editing = ref(false);
 const editingContents = ref("");
-const autofocus = ref();
 const savedEdit = ref("");
 const response = ref("");
 const session = inject("session");
@@ -107,14 +105,11 @@ function cancelEdit() {
 
 async function startEdit() {
     if (editing.value === true) {
-        await nextTick();
-        autofocus.value.$el.focus();
         return;
     } // else [is]editing.value is false
     editing.value = true;
     editingContents.value = savedEdit.value || cell.value.source;
-    await nextTick();
-    autofocus.value.$el.focus();
+
 }
 
 function saveEdit() {
@@ -189,15 +184,6 @@ defineExpose({execute});
     display: flex;
     align-items: flex-start;
     width: 90%;
-}
-
-.input-text {
-    margin-right: 0.75rem;
-    flex: 1;
-    max-height: 12rem;
-    &::placeholder {
-        color: var(--gray-400);
-    }
 }
 
 .actions {

@@ -417,9 +417,9 @@ const commonSelectAction = (event) => {
     const { target } = event;
 
     const isEditingCode = target.className === 'cm-content'; // codemirror
-    const isAgentQueryBox = target.className.includes('llm-query-input');
+    const isTextArea = target.className.includes('resizeable-textarea');
 
-    if (isEditingCode || isAgentQueryBox) {
+    if (isEditingCode || isTextArea) {
         return false;
     }
 
@@ -481,10 +481,12 @@ function handleKeyboardShortcut(event) {
 
     const { target } = event;
 
+    // TODO is there a better way to encapsulate cancelling events
+    // when writing on textarea/input/code elements ?
     const isEditingCode = target.className === 'cm-content'; // codemirror
-    const isAgentQueryBox = target.className.includes('llm-query-input');
+    const isTextArea = target.className.includes('resizeable-textarea');
 
-    if (isEditingCode || isAgentQueryBox) {
+    if (isEditingCode || isTextArea) {
         return;
     }
 
