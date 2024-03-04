@@ -130,9 +130,23 @@ export class BeakerSession {
         });
     }
 
-    // private async subkernelUpdated() {
-    //    this._sessionContext.session.changeKernel
-    // }
+    public executeAction(actionName: string, payload: JSONObject, messageId: string = null): IBeakerFuture {
+        const requestType = `${actionName}_request`;
+        const responseType = `${actionName}_response`;
+        const messageFuture: IBeakerFuture = this.sendBeakerMessage(
+            requestType,
+            payload,
+            messageId,
+        )
+        const responseHandler = async (msg: messages.IIOPubMessage<messages.IOPubMessageType>): Promise<boolean> => {
+            if (msg.header.msg_type === responseType && messageFuture.onResponse) {
+                await messageFuture.onResponse(msg);
+            }
+            return true;
+        }
+        messageFuture.registerMessageHook(responseHandler)
+        return messageFuture;
+    }
 
     public addCodeCell(source: string, metadata={}, outputs=[]) {
         const cell = new BeakerCodeCell({

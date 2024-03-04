@@ -17,7 +17,7 @@
             @click="toggleContextPanel"
         />
 
-        <div 
+        <div
             v-if="contextPanelOpen"
             class="context-tree"
         >
@@ -26,7 +26,7 @@
                 :loading="!props.context"
                 v-model:expandedKeys="contextExpandedKeys"
             >
-                <template v-slot:loadingicon>    
+                <template v-slot:loadingicon>
                     <div class="loading-area">
                         No Context Loaded.
                     </div>
@@ -48,7 +48,7 @@
                                     }
                                 }
                             }
-                            }"                
+                            }"
                         >
                         {{ slotProps.node.label }}
                     </span>
@@ -81,6 +81,7 @@ const contextNodes = computed(() => {
 
     const { context } = props;
 
+    console.log(context);
     if (!context) {
         return [];
     }
@@ -96,13 +97,17 @@ const contextNodes = computed(() => {
         }]
     }, {
         key: 1,
-        label: 'Intercepts',
-        icon: 'pi pi-fw pi-sign-in',
+        label: 'Actions',
+        icon: 'pi pi-fw pi-send',
         expanded: true,
-        children: Object.keys(context.intercepts).map((inter, idx) => ({
+        children: Object.keys(context.actions).map((action, idx) => {
+            return ({
             key: `1-${idx}`,
-            label: inter,
-        }))
+            label: action,
+            data: context.actions[action].docs + "\n\nExample payload:\n" + context.actions[action].default_payload,
+            type: 'tool',
+        })
+    })
     }];
 
     if (context.procedures.length) {
@@ -132,8 +137,23 @@ const contextNodes = computed(() => {
             }))
     });
 
+    if (Object.keys(context.custom_messages).length) {
+        displayableNodes.push({
+            key: 4,
+            label: 'Custom Messages',
+            icon: 'pi pi-fw pi-truck',
+            expanded: false,
+            children: Object.keys(context.custom_messages).map((msg, idx) => ({
+                key: `4-${idx}`,
+                label: msg,
+                data: context.custom_messages[msg].docs + "\n\nExample payload:\n" + context.custom_messages[msg].default_payload,
+                type: 'tool'
+            }))
+        });
+    }
+
     return displayableNodes;
-    
+
 });
 
 </script>

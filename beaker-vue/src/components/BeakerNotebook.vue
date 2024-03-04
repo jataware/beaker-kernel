@@ -78,7 +78,7 @@
                     @keydown="handleKeyboardShortcut"
                 >
 
-                    <NotebookControls 
+                    <NotebookControls
                         @run-cell="runCell()"
                         @remove-cell="removeCell"
                         @add-cell="addCell"
@@ -87,9 +87,9 @@
 
                     <div class="ide-cells">
                         <div style="flex: 1; position: relative;">
-                            <!-- Added drag-sort-enable to BeakerCell parent to 
+                            <!-- Added drag-sort-enable to BeakerCell parent to
                                  allow BeakerCell grab/drag to sort.-->
-                            <div 
+                            <div
                                 class="cell-container drag-sort-enable"
                                 ref="cellsContainerRef"
                             >
@@ -139,31 +139,18 @@
 
                         <TabPanel>
                             <template #header>
-                                <Button tabindex="-1" label="Debug" text icon="pi pi-send" />
+                                <Button tabindex="-1" label="Action" text icon="pi pi-send" />
                             </template>
                             <div class="scroller-area">
                                 <Card class="debug-card">
-                                    <template #title>Custom Message</template>
+                                    <template #title>Execute an Action</template>
                                     <template #content>
-                                        <BeakerCustomMessage
-                                            :intercepts="activeContext?.info?.intercepts"
+                                        <BeakerExecuteAction
+                                            :actions="activeContext?.info?.actions"
                                             :rawMessages="props.rawMessages"
                                         />
                                     </template>
                                 </Card>
-                                <!-- <Card class="debug-card">
-                                    <template #title>State</template>
-                                    <template #content>
-                                        <vue-json-pretty
-                                            :data="debugData()"
-                                            :deep="3"
-                                            showLength
-                                            showIcon
-                                        />
-                                        <br />
-                                        <Button label="Copy" />
-                                    </template>
-                                </Card> -->
                             </div>
                         </TabPanel>
 
@@ -250,9 +237,6 @@
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject } from "vue";
 import { IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
 
-// import VueJsonPretty from 'vue-json-pretty';
-// import 'vue-json-pretty/lib/styles.css';
-
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Splitter from 'primevue/splitter';
@@ -264,7 +248,7 @@ import BeakerCell from './BeakerCell.vue';
 import NotebookControls from './NotebookControls';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
 import BeakerContextSelection from "./BeakerContextSelection.vue";
-import BeakerCustomMessage from "./BeakerCustomMessage.vue";
+import BeakerExecuteAction from "./BeakerExecuteAction.vue";
 import FooterDrawer from './FooterDrawer.vue';
 import LoggingPane from './LoggingPane.vue';
 import BeakerFilePane from "./BeakerFilePane.vue";
@@ -280,10 +264,6 @@ const props = defineProps([
     "rawMessages",
 ]);
 
-
-// const debugData = () => {
-//     return JSON.parse(session.notebook.toJSON());
-// };
 
 // TODO export/import from ts-lib utils.ts
 enum KernelState {
@@ -470,7 +450,7 @@ const selectPreviousCell = (event) => {
     nextTick(() => {
         focusSelectedCell();
     });
-   
+
     if (event) {
         event.preventDefault();
     }
@@ -507,7 +487,7 @@ function handleKeyboardShortcut(event) {
         let prevIndex = selectedCellIndex.value;
         addCell(prevIndex);
     }
-    
+
     if (['d', 'D'].includes(event.key)) {
         if (isDeleteprefixActive.value) {
             isDeleteprefixActive.value = false;
@@ -536,7 +516,7 @@ const addCell = (toIndex) => {
         // Move cell to indicated index
         arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
     }
-    
+
     selectCell(newCell);
 
     nextTick(() => {

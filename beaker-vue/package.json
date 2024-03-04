@@ -31,6 +31,7 @@
     "@jupyterlab/ui-components": "^4.0.8",
     "@lumino/commands": "^2.1.3",
     "@lumino/widgets": "^2.3.0",
+    "@vue/cli": "^5.0.8",
     "beaker-kernel": "file:../../../beaker-ts",
     "codemirror": "^6.0.1",
     "cookie": "^0.6.0",
