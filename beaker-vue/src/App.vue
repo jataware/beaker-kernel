@@ -3,7 +3,7 @@
       :connectionStatus="connectionStatus"
       :debugLogs="debugLogs"
       :rawMessages="rawMessages"
-      />
+    />
     <Toast position="bottom-right" />
 </template>
 

@@ -71,6 +71,10 @@ const renderError = (errorOutput) => {
     font-style: italic;
 }
 
+.stream {
+    white-space: pre-wrap;
+}
+
 .stderr {
     color: #a44; // seems unused
     white-space: pre;
