@@ -1,6 +1,9 @@
 <template>
     <div class="context-sidebar">
-        <h4 class="context-heading">
+        <h4
+            class="context-heading"
+            :class="{hidden: !contextPanelOpen}"
+        >
             Context
         </h4>
 
@@ -204,6 +207,10 @@ const contextNodes = computed(() => {
     bottom: 0;
     left: 0;
     right: 0;
+}
+
+.hidden {
+    visibility: hidden;
 }
 
 
