@@ -81,9 +81,8 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, computed, inject } from "vue";
+import { defineProps, defineEmits, ref, computed, inject, watch } from "vue";
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import { IBeakerIOPubMessage } from 'beaker-kernel/notebook';
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
 import Button from 'primevue/button';
@@ -97,7 +96,12 @@ import Panel from 'primevue/panel';
 const props = defineProps([
     "actions",
     "rawMessages",
+    "selectedAction",
 ]);
+
+const emit = defineEmits([
+    "clearSelection",
+])
 
 const session = inject('session');
 
@@ -124,6 +128,7 @@ const messageId = ref<string|undefined>(undefined);
 const response = ref<any>();
 const result = ref<any>();
 const reply = ref<any>();
+
 
 const executeAction = () => {
     messageId.value = `beaker-custom-${actionType.value}-${messageNum.value}`;
@@ -156,10 +161,17 @@ const search = (event: any) => {
 };
 
 const actionSelected = (event: any) => {
-    selectedActionName.value = event.value;
-    const selectedAction = props.actions[event.value];
+    selectAction(event.value);
+}
+
+const selectAction = (actionName: string) => {
+    selectedActionName.value = actionName;
+    const selectedAction = props.actions[actionName];
     if (selectedAction === undefined) {
         return;
+    }
+    if (actionType.value !== actionName) {
+        actionType.value = actionName;
     }
     actionPayload.value = selectedAction.default_payload;
     actionDocs.value = selectedAction.docs;
@@ -170,6 +182,13 @@ const logEntries = computed(() => {
         return [];
     }
     return props.rawMessages.filter((item) => {return (item.body.header?.msg_id === messageId.value || item.body.parent_header?.msg_id === messageId.value)});
+});
+
+watch(() => props.selectedAction, async (newValue: string) => {
+    if (newValue !== undefined) {
+        selectAction(newValue);
+        emit("clearSelection");
+    }
 });
 
 </script>

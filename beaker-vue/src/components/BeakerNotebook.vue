@@ -67,7 +67,7 @@
 
         <main style="display: flex;">
 
-            <ContextTree :context="activeContext?.info" />
+            <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
 
             <Splitter @resizeend="handleSplitterResized" class="splitter">
 
@@ -127,8 +127,8 @@
                     :size="30"
                     class="right-splitter"
                 >
-                    <TabView v-model:activeIndex="rightPaneTabIndex">
-                        <TabPanel>
+                    <TabView v-model:activeIndex="rightPaneTabIndex" ref="debugTabView">
+                        <TabPanel tabId="preview">
                             <template #header>
                                 <Button tabindex="-1" label="Preview" text icon="pi pi-eye" />
                             </template>
@@ -137,7 +137,7 @@
                             </div>
                         </TabPanel>
 
-                        <TabPanel>
+                        <TabPanel tabId="action">
                             <template #header>
                                 <Button tabindex="-1" label="Action" text icon="pi pi-send" />
                             </template>
@@ -146,15 +146,17 @@
                                     <template #title>Execute an Action</template>
                                     <template #content>
                                         <BeakerExecuteAction
+                                            :selectedAction="selectedAction"
                                             :actions="activeContext?.info?.actions"
                                             :rawMessages="props.rawMessages"
+                                            @clear-selection="selectedAction = undefined"
                                         />
                                     </template>
                                 </Card>
                             </div>
                         </TabPanel>
 
-                        <TabPanel>
+                        <TabPanel tabId="logging">
                             <template #header>
                                 <Button tabindex="-1" label="Logging" text icon="pi pi-list" />
                             </template>
@@ -303,6 +305,8 @@ const contextProcessing = ref(false);
 const rightPaneTabIndex = ref(1);
 const isDeleteprefixActive = ref(false);
 const selectedTheme = ref(localStorage.getItem('theme') || 'light');
+const debugTabView = ref<{tabs: any[]}|null>(null);
+const selectedAction = ref<string|undefined>(undefined);
 
 const themeIcon = computed(() => {
     return `pi pi-${selectedTheme.value == 'dark' ? 'sun' : 'moon'}`;
@@ -616,6 +620,16 @@ const updateContextInfo = async () => {
     activeContext.value = activeContextInfo;
     selectedKernel.value = activeContextInfo.slug;
 }
+
+const selectAction = (actionName: string) => {
+    if (debugTabView.value === null) {
+        return;
+    }
+    const index = debugTabView.value.tabs.findIndex((tab) => (tab.props?.tabId === "action"));
+    rightPaneTabIndex.value = index;
+    showDebugPane.value = true;
+    selectedAction.value = actionName;
+};
 
 onBeforeMount(() => {
     if (cellCount.value <= 0) {

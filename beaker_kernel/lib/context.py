@@ -184,17 +184,7 @@ class BaseContext:
             parent_header=message.header,
         )
         return agent_messages
-    get_agent_history._default_payload = "{}"
-
-
-    @intercept()
-    def custom_message_request(self, msg):
-        """This is my docs"""
-        logger.error(msg)
-    custom_message_request._default_payload = '''
-    {
-        "foo": "bar"
-    }'''
+    get_agent_history._default_payload = '{}'
 
 
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
