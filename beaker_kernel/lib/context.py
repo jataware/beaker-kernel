@@ -196,15 +196,6 @@ class BaseContext:
         "foo": "bar"
     }'''
 
-    # @action()
-    # async def get_kernel_state():
-    #     """
-    #     """
-    #     pass
-
-    # get_kernel_state.default_payload = """
-    # {}
-    # """
 
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
         return self.beaker_kernel.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)

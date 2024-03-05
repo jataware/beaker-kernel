@@ -26,7 +26,6 @@ export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
 
 export interface IBeakerFuture extends Kernel.IShellFuture {
     msgId?: string;
-    onResult?: (msg: messages.IExecuteResultMsg) => void | PromiseLike<void>;
     onResponse: (msg: any) => void | PromiseLike<void>;
 }
 

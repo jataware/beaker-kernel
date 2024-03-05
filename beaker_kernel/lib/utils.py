@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 def message_handler(fn):
+    """
+    Method decorator that handles the parsing and responding to of messages.
+    """
     @wraps(fn)
     async def wrapper(self, server, target_stream, data):
         message = JupyterMessage.parse(data)
@@ -25,6 +28,7 @@ def message_handler(fn):
 
         reply_content = {
             "status": "ok",
+            "execution_count": None,
         }
         try:
             result = await fn(self, message)
@@ -39,7 +43,6 @@ def message_handler(fn):
 
         if reply_content["status"] == "ok":
             reply_content["return"] = result
-            reply_content["execution_count"] = None
 
         self.send_response(
             "shell", reply_type, reply_content, parent_header=message.header, parent_identities=message.identities
@@ -52,7 +55,7 @@ def message_handler(fn):
 
 def intercept(msg_type=None, stream="shell", docs: str|None=None, default_payload=None):
     """
-    Method wrapper to identify message intercepts.
+    Method decorator to identify message intercepts.
     """
     def register_intercept(fn):
         # Wrap function in message_handler decorator/wrapper for that functionality, which we always want.
@@ -80,7 +83,7 @@ def intercept(msg_type=None, stream="shell", docs: str|None=None, default_payloa
 
 def action(action_name: str|None=None, docs: str|None=None, default_payload=None):
     """
-    Wrapper to identify and register context actions.
+    Method decorator to identify and register context actions.
     """
     def register_method(fn):
 
@@ -97,7 +100,6 @@ def action(action_name: str|None=None, docs: str|None=None, default_payload=None
         intercept_fn = intercept(msg_type=msg_request_type, stream="shell", docs=docs, default_payload=default_payload)(fn)
         update_wrapper(register_method, intercept_fn)
         return intercept_fn
-
     return register_method
 
 

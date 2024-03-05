@@ -81,7 +81,6 @@ const contextNodes = computed(() => {
 
     const { context } = props;
 
-    console.log(context);
     if (!context) {
         return [];
     }
@@ -141,7 +140,7 @@ const contextNodes = computed(() => {
         displayableNodes.push({
             key: 4,
             label: 'Custom Messages',
-            icon: 'pi pi-fw pi-truck',
+            icon: 'pi pi-fw pi-comment',
             expanded: false,
             children: Object.keys(context.custom_messages).map((msg, idx) => ({
                 key: `4-${idx}`,

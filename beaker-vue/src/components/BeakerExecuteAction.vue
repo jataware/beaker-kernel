@@ -126,7 +126,6 @@ const result = ref<any>();
 const reply = ref<any>();
 
 const executeAction = () => {
-    // const requestMessageType = `${actionType.value}_request`;
     messageId.value = `beaker-custom-${actionType.value}-${messageNum.value}`;
     messageNum.value += 1;
     const future = session.executeAction(
@@ -208,14 +207,12 @@ const logEntries = computed(() => {
 }
 
 .code {
-    // margin-top: 1rem;
     border: 1px solid var(--surface-b);
     flex: 1;
     width: 100%;
 }
 
 .docs {
-    // margin-top: 1rem;
     white-space: pre-wrap;
 
 }
