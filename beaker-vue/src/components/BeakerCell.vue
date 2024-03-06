@@ -8,6 +8,7 @@
     @drop="handleDrop"
     @dragover="handleDragOver"
     @dragleave="handleDragLeave"
+    @dragend="handleDragEnd"
     tabindex="0"
     @keyup.enter.exact="focusEditor"
     @keydown.ctrl.enter.prevent="execute"
@@ -59,6 +60,7 @@ const emit = defineEmits([
 type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
 
 const isCurrentTarget = ref(false);
+const isDragSource = ref(false);
 const beakerCellRef = ref<HTMLDivElement|null>(null);
 const typedCellRef = ref<BeakerCellType|null>(null);
 const dragEnabled = computed(() => props.cellCount > 1);
@@ -129,6 +131,8 @@ function handleDrop(event: DragEvent) {
  **/
 function handleDragStart(event: DragEvent) {
 
+    isDragSource.value = true;
+
     var paintTarget: HTMLElement|null = (event.target as HTMLElement).closest('.beaker-cell');
 
     if (event.dataTransfer !== null) {
@@ -149,13 +153,20 @@ function handleDragStart(event: DragEvent) {
  * its place when dropped into a proper target.
  **/
 function handleDragOver(event: DragEvent) {
-    isCurrentTarget.value = true;
-    event.preventDefault(); // necessary
+
+    if (!isDragSource.value) {
+        isCurrentTarget.value = true;
+    }
+    event.preventDefault(); // necessary to prevent return animation
 }
 
 /* Ensure to remove class to cell being dragged over */
-function handleDragLeave(event: DragEvent) {
+function handleDragLeave() {
     isCurrentTarget.value = false;
+}
+
+function handleDragEnd() {
+    isDragSource.value = false;
 }
 
 </script>
