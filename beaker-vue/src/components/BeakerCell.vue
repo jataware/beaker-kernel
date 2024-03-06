@@ -126,17 +126,10 @@ function handleDrop(event: DragEvent) {
 /**
  * Sets call to item being moved
  * As well as dataTransfer so that drop target knows which one was dropped
- * TODO This handler is aware of some special Beaker app classes, since
-     * it needs to disable dragging when using the cursor to select text.
-     * Could accept props of disallowed classes if we want to make it generic.
  **/
 function handleDragStart(event: DragEvent) {
 
-    // const paintTarget = (event.target as HTMLElement).parentElement;
-    var paintTarget: HTMLElement|null = (event.target as HTMLElement);
-    while (paintTarget !== null && !paintTarget.classList.contains("beaker-cell")) {
-        paintTarget = paintTarget?.parentElement;
-    }
+    var paintTarget: HTMLElement|null = (event.target as HTMLElement).closest('.beaker-cell');
 
     if (event.dataTransfer !== null) {
         event.dataTransfer.dropEffect = 'move';
