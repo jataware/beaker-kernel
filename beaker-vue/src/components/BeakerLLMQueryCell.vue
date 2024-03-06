@@ -86,6 +86,8 @@
 import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
 import Button from "primevue/button";
 import ContainedTextArea from './ContainedTextArea.vue';
+import { IIOPubMessage } from "@jupyterlab/services/lib/kernel/messages";
+import { BeakerSession } from 'beaker-kernel';
 
 const props = defineProps([
     "cell",
@@ -96,7 +98,7 @@ const editing = ref(false);
 const editingContents = ref("");
 const savedEdit = ref("");
 const response = ref("");
-const session = inject("session");
+const session: BeakerSession = inject("session");
 
 function cancelEdit() {
     editing.value = false;
@@ -128,7 +130,14 @@ const respond = () => {
 };
 
 function execute() {
-    props.cell.execute(session);
+    const future = props.cell.execute(session);
+    future.registerMessageHook((msg: any) => {
+        if (msg.header.msg_type === "code_cell") {
+            session.addCodeCell(msg.content.code, {
+                parentCell: props.cell.id,
+            });
+        }
+    });
 }
 
 defineExpose({execute});

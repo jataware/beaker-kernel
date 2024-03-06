@@ -46,19 +46,13 @@ const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
 
-// provide('debug_logs', debug_logs);
 provide('show_toast', showToast);
-// provide('raw_messages', rawMessages);
-
 
 rawSession.sessionReady.then(() => {
 
     rawSession.session.iopubMessage.connect((session, msg) => {
 
-        if (msg.header.msg_type === "code_cell") {
-            beakerSession.addCodeCell(msg.content.code);
-        }
-        else if (msg.header.msg_type === 'status') {
+        if (msg.header.msg_type === 'status') {
           setTimeout(() => {
             const newStatus = msg?.content?.execution_state || 'connecting';
             connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
@@ -79,8 +73,6 @@ rawSession.sessionReady.then(() => {
         timestamp: msg.header.date,
       });
     });
-
-    // beakerSession.addCodeCell("import pandas as pd\ndf = pd.DataFrame([[1,2,3,4,5,6.7], [2,3,4,5,6,7,8]])\ndf.plot()")
 
 });
 

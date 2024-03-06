@@ -258,6 +258,25 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                     content: content.text,
                 })
             }
+            else if (msg_type === "code_cell") {
+                const nb = session.notebook;
+                const codeCell = new BeakerCodeCell({
+                    cell_type: "code",
+                    source: content.code,
+                    metadata: {
+                        parent_cell: this.id,
+                    },
+                    outputs: [],
+                });
+
+                const queryCellIndex = nb.cells.findIndex((cell) => (cell.id === this.id));
+                if (queryCellIndex >= 0) {
+                    session.notebook.cells.splice(queryCellIndex + 1, 0, codeCell);
+                }
+                else {
+                    nb.addCell(codeCell);
+                }
+            }
         };
 
         const handleStdin = async (msg: messages.IStdinMessage) => {
