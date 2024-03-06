@@ -1,5 +1,6 @@
 import { JSONObject } from '@lumino/coreutils';
-import { IBeakerFuture, IBeakerShellMessage } from './notebook';
+import { IBeakerShellMessage } from './notebook';
+import { IBeakerFuture } from './util';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 
 

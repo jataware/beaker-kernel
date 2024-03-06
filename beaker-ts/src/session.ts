@@ -9,8 +9,8 @@ import { ISessionConnection } from '@jupyterlab/services/lib/session/session';
 import fetch from 'node-fetch';
 import { Slot } from '@lumino/signaling';
 
-import { createMessageId, IBeakerAvailableContexts, IActiveContextInfo } from './util';
-import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage, IBeakerFuture } from './notebook';
+import { createMessageId, IBeakerAvailableContexts, IBeakerFuture, IActiveContextInfo } from './util';
+import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage } from './notebook';
 import { BeakerHistory } from './history';
 
 export interface IBeakerSessionOptions {

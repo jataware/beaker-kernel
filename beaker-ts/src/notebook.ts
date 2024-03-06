@@ -5,7 +5,7 @@ import { JSONObject, PartialJSONValue } from '@lumino/coreutils';
 import { v4 as uuidv4 } from 'uuid';
 
 import { BeakerSession } from './session';
-import { } from './util';
+import { IBeakerFuture } from './util';
 import { MenuSvg } from '@jupyterlab/ui-components';
 
 export interface IBeakerHeader extends messages.IHeader {
@@ -22,11 +22,6 @@ export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
     header: IBeakerHeader;
     channel: "iopub";
     content: any;
-}
-
-export interface IBeakerFuture extends Kernel.IShellFuture {
-    msgId?: string;
-    onResponse: (msg: any) => void | PromiseLike<void>;
 }
 
 export type BeakerCellStatus = messages.Status | "awaiting_input";
