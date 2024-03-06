@@ -17,7 +17,7 @@
             @click="toggleContextPanel"
         />
 
-        <div 
+        <div
             v-if="contextPanelOpen"
             class="context-tree"
         >
@@ -26,9 +26,33 @@
                 :loading="!props.context"
                 v-model:expandedKeys="contextExpandedKeys"
             >
-                <template v-slot:loadingicon>    
+                <template v-slot:loadingicon>
                     <div class="loading-area">
                         No Context Loaded.
+                    </div>
+                </template>
+                <template #action="slotProps">
+                    <div
+                        @mousedown="($event.detail > 1) && $event.preventDefault();"
+                        @dblclick.stop.prevent="selectAction(slotProps.node.label)"
+                        style="cursor: pointer; border-bottom: 1px dotted var(--text-color-secondary);"
+                        v-tooltip="{
+                            value: `${slotProps.node.data}`,
+                            pt: {
+                                text: {
+                                    style: {
+                                        width: '20rem'
+                                    }
+                                },
+                                root: {
+                                    style: {
+                                        marginLeft: '1rem'
+                                    }
+                                }
+                            }
+                            }"
+                        >
+                        {{ slotProps.node.label }}
                     </div>
                 </template>
                 <template #tool="slotProps">
@@ -48,7 +72,7 @@
                                     }
                                 }
                             }
-                            }"                
+                            }"
                         >
                         {{ slotProps.node.label }}
                     </span>
@@ -59,9 +83,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, computed } from "vue";
+import { ref, defineProps, defineEmits, computed } from "vue";
 import Button from 'primevue/button';
 import Tree from 'primevue/tree';
+import { emitError } from "vue-json-pretty/types/utils";
 
 const contextPanelOpen = ref(true);
 const toggleContextPanel = () => {
@@ -76,6 +101,8 @@ const contextExpandedKeys = ref({0: true, 1: true, 2: true, 3: true});
 const props = defineProps([
     "context"
 ]);
+
+const emits = defineEmits(['action-selected']);
 
 const contextNodes = computed(() => {
 
@@ -96,13 +123,21 @@ const contextNodes = computed(() => {
         }]
     }, {
         key: 1,
-        label: 'Intercepts',
-        icon: 'pi pi-fw pi-sign-in',
+        label: 'Actions',
+        icon: 'pi pi-fw pi-send',
         expanded: true,
-        children: Object.keys(context.intercepts).map((inter, idx) => ({
-            key: `1-${idx}`,
-            label: inter,
-        }))
+        children: Object.keys(context.actions).map((action, idx) => {
+            return ({
+                dblClick: (data) => {
+                    console.log("This is my data", data);
+                    // emit("select_action", )
+                },
+                key: `1-${idx}`,
+                label: action,
+                data: context.actions[action].docs + "\n\nExample payload:\n" + context.actions[action].default_payload,
+                type: 'action',
+            })
+        })
     }];
 
     if (context.procedures.length) {
@@ -132,9 +167,28 @@ const contextNodes = computed(() => {
             }))
     });
 
+    if (Object.keys(context.custom_messages).length) {
+        displayableNodes.push({
+            key: 4,
+            label: 'Custom Messages',
+            icon: 'pi pi-fw pi-comment',
+            expanded: false,
+            children: Object.keys(context.custom_messages).map((msg, idx) => ({
+                key: `4-${idx}`,
+                label: msg,
+                data: context.custom_messages[msg].docs + "\n\nExample payload:\n" + context.custom_messages[msg].default_payload,
+                type: 'tool'
+            }))
+        });
+    }
+
     return displayableNodes;
-    
+
 });
+
+const selectAction = (actionName: string) => {
+    emits("action-selected", actionName);
+}
 
 </script>
 

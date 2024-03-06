@@ -1,41 +1,63 @@
 <template>
-    <Fieldset
-        legend="Message"
-        class="custom-message"
-    >
+    <div class="execute-action-container">
         <AutoComplete
-            class="message-input"
-            placeholder="Message Type"
+            class="action-name-input"
+            placeholder="Action Name"
             dropdown
-            v-model="messageType"
-            inputId="custom-message-input"
-            :suggestions="messageOptions"
+            v-model="actionType"
+            :suggestions="actionOptions"
             @complete="search"
+            @item-select="actionSelected"
             dropdownClass="ac-button"
         />
 
-        <br />
+        <div class="docs">
+            <div v-if="selectedActionName">
+                <span style="font-weight: bold">{{ selectedActionName }}</span><br/><br/><span>{{ actionDocs }}</span>
+            </div>
+            <div v-else>
+                Select an action to see the docstring...
+            </div>
+        </div>
 
         <div class="code">
+            Action Payload
             <Codemirror
                 :tab-size="2"
                 :extensions="codeExtensions"
                 language="javascript"
-                v-model="messageContent"
+                v-model="actionPayload"
             />
         </div>
-
-        <br />
 
         <Button
             icon="pi pi-bolt"
             size="small"
-            @click="sendMessage"
+            @click="executeAction"
             label="Send"
             iconPos="right"
         />
+        <h3>Results:</h3>
 
-        <div>
+        <Fieldset
+            legend="Reply"
+            :toggleable="true"
+        >
+            <VueJsonPretty v-if="reply" :data="reply"/>
+        </Fieldset>
+
+        <Fieldset
+            legend="Response (Optional)"
+            :toggleable="true"
+        >
+            <VueJsonPretty v-if="response" :data="response"/>
+        </Fieldset>
+
+        <Fieldset
+            legend="Raw Messages (Debug)"
+            :toggleable="true"
+            :collapsed="true"
+        >
             <Panel
                 class="log-panel"
                 :class="{odd: index % 2 !== 0}"
@@ -52,16 +74,15 @@
                     :showLineNumber="false"
                 />
             </Panel>
-        </div>
+        </Fieldset>
 
-    </Fieldset>
+    </div>
 
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, computed, inject } from "vue";
+import { defineProps, defineEmits, ref, computed, inject, watch } from "vue";
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import { IBeakerIOPubMessage } from 'beaker-kernel/notebook';
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
 import Button from 'primevue/button';
@@ -73,20 +94,19 @@ import Panel from 'primevue/panel';
 
 
 const props = defineProps([
-    "intercepts",
+    "actions",
     "rawMessages",
+    "selectedAction",
 ]);
+
+const emit = defineEmits([
+    "clearSelection",
+])
 
 const session = inject('session');
 
 const showToast = inject('show_toast');
 const theme = inject('theme');
-
-const emit = defineEmits([
-    "select-cell",
-    "run-cell",
-    "update-context-info",
-]);
 
 const codeExtensions = computed(() => {
     const ext = [];
@@ -98,35 +118,64 @@ const codeExtensions = computed(() => {
 
 });
 
-const messageType = ref<string>();
+const actionType = ref<string>();
+const actionPayload = ref<string>("{\n}");
+const actionOptions = ref([]);
+const actionDocs = ref<string|undefined>();
+const selectedActionName = ref<string|undefined>()
 const messageNum = ref(1)
-const messageContent = ref<string>("{\n}");
-const messageOptions = ref([]);
-// const messageMessages = ref<object[]>([]);
 const messageId = ref<string|undefined>(undefined);
+const response = ref<any>();
+const result = ref<any>();
+const reply = ref<any>();
 
-const sendMessage = () => {
-    messageId.value = `beaker-custom-${messageType.value}-${messageNum.value}`;
+
+const executeAction = () => {
+    messageId.value = `beaker-custom-${actionType.value}-${messageNum.value}`;
     messageNum.value += 1;
-    const future = session.sendBeakerMessage(
-        messageType.value,
-        JSON.parse(messageContent.value),
+    const future = session.executeAction(
+        actionType.value,
+        JSON.parse(actionPayload.value),
         messageId.value,
     );
+    future.onResponse = async (msg: messages.IIOPubMessage) => {
+        console.log("I'm here!", msg);
+        response.value = msg;
+    };
+    future.onReply = async (msg: messages.IExecuteReply) => {
+        reply.value = msg;
+    }
     future.done.then(() => {
         showToast({title: 'Success', detail: 'Message processed.'});
     });
 };
 
 const allMessageOptions = computed(() => {
-    return Object.keys(props.intercepts);
+    return Object.keys(props.actions);
 });
 
 const search = (event: any) => {
-    messageOptions.value = event.query ?
+    actionOptions.value = event.query ?
         allMessageOptions.value.filter((item) => item.includes(event.query)) :
-        Object.keys(props.intercepts);
+        Object.keys(props.actions);
 };
+
+const actionSelected = (event: any) => {
+    selectAction(event.value);
+}
+
+const selectAction = (actionName: string) => {
+    selectedActionName.value = actionName;
+    const selectedAction = props.actions[actionName];
+    if (selectedAction === undefined) {
+        return;
+    }
+    if (actionType.value !== actionName) {
+        actionType.value = actionName;
+    }
+    actionPayload.value = selectedAction.default_payload;
+    actionDocs.value = selectedAction.docs;
+}
 
 const logEntries = computed(() => {
     if (!messageId.value) {
@@ -135,10 +184,23 @@ const logEntries = computed(() => {
     return props.rawMessages.filter((item) => {return (item.body.header?.msg_id === messageId.value || item.body.parent_header?.msg_id === messageId.value)});
 });
 
+watch(() => props.selectedAction, async (newValue: string) => {
+    if (newValue !== undefined) {
+        selectAction(newValue);
+        emit("clearSelection");
+    }
+});
+
 </script>
 
 
 <style lang="scss">
+
+.execute-action-container {
+    & > *{
+        margin-bottom: 1rem;
+    }
+}
 
 .p-autocomplete-items {
     .p-autocomplete-empty-message {
@@ -159,7 +221,7 @@ const logEntries = computed(() => {
     }
 }
 
-.message-input {
+.action-name-input {
     width: 100%;
 }
 
@@ -169,11 +231,9 @@ const logEntries = computed(() => {
     width: 100%;
 }
 
-.ac-button {
-    &.p-button {
-        height: 2rem;
-    }
-}
+.docs {
+    white-space: pre-wrap;
 
+}
 
 </style>

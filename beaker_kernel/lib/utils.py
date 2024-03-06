@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 def message_handler(fn):
+    """
+    Method decorator that handles the parsing and responding to of messages.
+    """
     @wraps(fn)
     async def wrapper(self, server, target_stream, data):
         message = JupyterMessage.parse(data)
@@ -25,6 +28,7 @@ def message_handler(fn):
 
         reply_content = {
             "status": "ok",
+            "execution_count": None,
         }
         try:
             result = await fn(self, message)
@@ -49,19 +53,55 @@ def message_handler(fn):
     return wrapper
 
 
-def intercept(msg_type=None, stream="shell"):
+def intercept(msg_type=None, stream="shell", docs: str|None=None, default_payload=None):
     """
-    Method wrapper to identify interce
+    Method decorator to identify message intercepts.
     """
     def register_intercept(fn):
         # Wrap function in message_handler decorator/wrapper for that functionality, which we always want.
         fn = message_handler(fn)
         message_type = msg_type or fn.__name__  # Default msg_type value to be the name of the function if undefined/falsey
         setattr(fn, "_intercept", (message_type, stream))
+
+        fn_docs = getattr(fn, "_docs", getattr(fn, "__doc__", None))
+        if docs is not None:
+            setattr(fn, "_docs", docs.strip())
+        else:
+            if isinstance(fn_docs, str):
+                setattr(fn, "_docs", fn_docs.strip())
+            else:
+                setattr(fn, "_docs", fn_docs)
+
+        if default_payload is not None:
+            setattr(fn, "_default_payload", default_payload)
+
         update_wrapper(register_intercept, fn)
         return fn
 
     return register_intercept
+
+
+def action(action_name: str|None=None, docs: str|None=None, default_payload=None):
+    """
+    Method decorator to identify and register context actions.
+    """
+    def register_method(fn):
+
+        action_nm = action_name or fn.__name__  # Default msg_type value to be the name of the function if undefined/falsey
+        if action_nm.lower().endswith("request"):
+            logger.error("Beaker action names should not include the `_request` suffix.")
+        msg_request_type = f"{action_nm}_request"
+
+        setattr(fn, "_action", action_nm)
+
+        if default_payload and getattr(fn, '_default_payload') and default_payload != getattr(fn, '_default_payload'):
+            raise ValueError(f"The default payload for action `{action_nm}` is defined twice. Please ensure only one definition.")
+
+        intercept_fn = intercept(msg_type=msg_request_type, stream="shell", docs=docs, default_payload=default_payload)(fn)
+        update_wrapper(register_method, intercept_fn)
+        return intercept_fn
+    return register_method
+
 
 def togglable_tool(env_var, *, name: str | None = None):
     """

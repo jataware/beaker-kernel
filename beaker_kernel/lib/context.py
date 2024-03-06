@@ -5,7 +5,7 @@ import os.path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import intercept
+from beaker_kernel.lib.utils import action, intercept
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
@@ -114,13 +114,26 @@ class BaseContext:
 
     def get_info(self) -> dict:
         """
+
         """
-        intercept_details = {
+        custom_messages = {
             message_type: {
-                "func": f"{intercept_func.__module__}.{intercept_func.__class__.__name__}.{intercept_func.__name__}"
-                # TODO: Add more info here
+                "func": f"{intercept_func.__module__}.{intercept_func.__class__.__name__}.{intercept_func.__name__}",
+                "docs": getattr(intercept_func, "_docs", None),
+                "default_payload": getattr(intercept_func, "_default_payload", None),
             }
-            for message_type, intercept_func, stream in self.intercepts
+            for message_type, intercept_func, _ in self.intercepts
+            if getattr(intercept_func, "_action", None) is None
+        }
+        action_details = {
+            intercept_func._action: {
+                "intercept": message_type,
+                "func": f"{intercept_func.__module__}.{intercept_func.__class__.__name__}.{intercept_func.__name__}",
+                "docs": getattr(intercept_func, "_docs", None),
+                "default_payload": getattr(intercept_func, "_default_payload", None),
+            }
+            for message_type, intercept_func, _ in self.intercepts
+            if getattr(intercept_func, "_action", None) is not None
         }
         if self.agent:
             agent_details = self.agent.get_info()
@@ -129,16 +142,19 @@ class BaseContext:
         payload = {
             "language": self.subkernel.DISPLAY_NAME,
             "subkernel": self.subkernel.KERNEL_NAME,
-            "intercepts": intercept_details,
+            "actions": action_details,
+            "custom_messages": custom_messages,
             "procedures": list(self.templates.keys()),
             "agent": agent_details,
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
         }
+        logger.error(payload)
         return payload
 
-    @intercept()
-    async def get_subkernel_state_request(self, message):
+
+    @action()
+    async def get_subkernel_state(self, message):
         """
         Fetches the state of the subkernel, including all defined variables, imports, and functions.
         """
@@ -147,38 +163,29 @@ class BaseContext:
         result = state["return"]
         self.send_response(
             stream="iopub",
-            msg_or_type="subkernel_state_response",
+            msg_or_type="get_subkernel_state_response",
             content=result,
             parent_header=message.header,
         )
         return result
-    get_subkernel_state_request.default_payload = "{}"
+    get_subkernel_state._default_payload = "{}"
 
-    @intercept(msg_type="debug_message_history_request")
-    async def debug_messages(self, message):
+
+    @action()
+    async def get_agent_history(self, message):
         """
+        Returns all of the history for the LLM agent.
         """
         agent_messages = await self.agent.all_messages()
         self.send_response(
             stream="iopub",
-            msg_or_type="debug_message_history_reply",
+            msg_or_type="get_agent_history_response",
             content= agent_messages,
             parent_header=message.header,
         )
+        return agent_messages
+    get_agent_history._default_payload = '{}'
 
-    debug_messages.default_payload = """
-    {}
-    """
-
-    # @intercept
-    # async def get_kernel_state():
-    #     """
-    #     """
-    #     pass
-
-    # get_kernel_state.default_payload = """
-    # {}
-    # """
 
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
         return self.beaker_kernel.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)

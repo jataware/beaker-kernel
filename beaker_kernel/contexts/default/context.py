@@ -4,6 +4,7 @@ logger = logging.getLogger(__name__)
 
 from beaker_kernel.lib.context import BaseContext
 from beaker_kernel.lib.autodiscovery import autodiscover
+from beaker_kernel.lib.utils import action
 
 from .agent import DefaultAgent
 
