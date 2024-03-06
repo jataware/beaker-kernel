@@ -1,14 +1,6 @@
 <template>
   <div
     class="beaker-cell"
-    :class="{
-        'drag-target': isCurrentTarget
-    }"
-    @dragstart="handleDragStart"
-    @drop="handleDrop"
-    @dragover="handleDragOver"
-    @dragleave="handleDragLeave"
-    @dragend="handleDragEnd"
     tabindex="0"
     @keyup.enter.exact="focusEditor"
     @keydown.ctrl.enter.prevent="execute"
@@ -20,11 +12,11 @@
       <div
         class="drag-handle"
         :class="{
-            'drag-disabled': !dragEnabled,
+            'drag-disabled': !props.dragEnabled,
         }"
       >
         <DraggableMarker
-            :draggable="dragEnabled"
+            :draggable="props.dragEnabled"
         />
       </div>
 
@@ -40,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, defineEmits, Component } from "vue";
+import { defineProps, ref, computed, defineEmits, Component, nextTick } from "vue";
 import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
@@ -49,7 +41,7 @@ import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 const props = defineProps([
     'index',
     'cell',
-    'cellCount',
+    'dragEnabled',
 ]);
 
 const emit = defineEmits([
@@ -59,11 +51,8 @@ const emit = defineEmits([
 
 type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
 
-const isCurrentTarget = ref(false);
-const isDragSource = ref(false);
 const beakerCellRef = ref<HTMLDivElement|null>(null);
 const typedCellRef = ref<BeakerCellType|null>(null);
-const dragEnabled = computed(() => props.cellCount > 1);
 
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
@@ -101,73 +90,6 @@ const executeAndMove = () => {
         emit('keyboard-nav', 'select-next-cell');
     }
 };
-
-/**
- * Handles reordering of cells if dropped within the sort-enabled cells area.
- **/
-function handleDrop(event: DragEvent) {
-
-    isCurrentTarget.value = false;
-    const target = (event.target as HTMLElement);
-    const allowedDropArea = target.closest('.drag-sort-enable');
-
-    if (!allowedDropArea) {
-        return;
-    }
-
-    const movedIndex = event.dataTransfer?.getData('cellIndex');
-    const droppedIndex = props.index;
-
-    if (movedIndex !== droppedIndex) {
-        // Modify array in place so that refs can track changes (change by reference)
-        // (Don't reassign cells in notebook!)
-        emit('move-cell', movedIndex, droppedIndex);
-    }
-}
-
-/**
- * Sets call to item being moved
- * As well as dataTransfer so that drop target knows which one was dropped
- **/
-function handleDragStart(event: DragEvent) {
-
-    isDragSource.value = true;
-
-    var paintTarget: HTMLElement|null = (event.target as HTMLElement).closest('.beaker-cell');
-
-    if (event.dataTransfer !== null) {
-        event.dataTransfer.dropEffect = 'move';
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('cellID', props.cell.id);
-        event.dataTransfer.setData('cellIndex', props.index);
-        if (paintTarget !== null) {
-            event.dataTransfer.setDragImage(paintTarget, 0, 0);
-        }
-    }
-}
-
-/**
- * Handles when dragging over a valid drop target
- * Both appends class to cell to mark placement of dragged cell if dropped there.,
- * as well as preventing the animation where the dragged cell animates back to
- * its place when dropped into a proper target.
- **/
-function handleDragOver(event: DragEvent) {
-
-    if (!isDragSource.value) {
-        isCurrentTarget.value = true;
-    }
-    event.preventDefault(); // necessary to prevent return animation
-}
-
-/* Ensure to remove class to cell being dragged over */
-function handleDragLeave() {
-    isCurrentTarget.value = false;
-}
-
-function handleDragEnd() {
-    isDragSource.value = false;
-}
 
 </script>
 

@@ -94,15 +94,24 @@
                                 ref="cellsContainerRef"
                             >
                                 <BeakerCell
-                                    v-for="(cell, index) in session.notebook?.cells"
+                                    v-for="(cell, index) in renderCellList"
                                     :key="cell.id"
-                                    :class="{selected: (index === selectedCellIndex)}"
+                                    :class="{
+                                        selected: (index === selectedCellIndex),
+                                        'drag-source': isDragSource,
+                                        'drag-target': isDragTarget,
+                                        'drag-active': isDragActive,
+                                    }"
                                     :index="index"
-                                    :cellCount="cellCount"
+                                    :drag-enabled="isDragEnabled"
                                     @move-cell="handleMoveCell"
                                     @click="selectCell(index)"
                                     :cell="cell"
                                     @keyboard-nav="handleNavAction"
+                                    @dragstart="handleDragStart($event, cell, index)"
+                                    @drop="handleDrop($event, cell, index)"
+                                    @dragover="handleDragOver($event, cell, index)"
+                                    @dragend="handleDragEnd"
                                 />
                                 <transition name="fade">
                                     <div class="welcome-placeholder" v-if="cellCount < 3">
@@ -237,7 +246,7 @@
 
 <script setup lang="tsx">
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject } from "vue";
-import { IBeakerCell, BeakerBaseCell } from 'beaker-kernel';
+import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 
 import Card from 'primevue/card';
 import Button from 'primevue/button';
@@ -247,7 +256,7 @@ import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import Toolbar from 'primevue/toolbar';
 import BeakerCell from './BeakerCell.vue';
-import NotebookControls from './NotebookControls';
+import NotebookControls from './NotebookControls.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
 import BeakerContextSelection from "./BeakerContextSelection.vue";
 import BeakerExecuteAction from "./BeakerExecuteAction.vue";
@@ -307,16 +316,31 @@ const isDeleteprefixActive = ref(false);
 const selectedTheme = ref(localStorage.getItem('theme') || 'light');
 const debugTabView = ref<{tabs: any[]}|null>(null);
 const selectedAction = ref<string|undefined>(undefined);
+const isDragEnabled = computed(() => session.notebook?.cells.length > 1);
+const isDragTarget = ref(false);
+const isDragSource = ref(false);
+const isDragActive = ref(false);
+const dragCellList = ref<IBeakerCell[]|undefined>();
 
 const themeIcon = computed(() => {
     return `pi pi-${selectedTheme.value == 'dark' ? 'sun' : 'moon'}`;
 });
 
-const session = inject('session');
+const session: BeakerSession = inject('session');
 const showToast = inject('show_toast');
 
 provide('theme', selectedTheme);
 provide('active_context', activeContext);
+
+const renderCellList: IBeakerCell[] = computed(() => {
+    if (!isDragActive.value) {
+        // No drag, normal flow
+        return session.notebook.cells;
+    }
+    else {
+        return dragCellList.value;
+    }
+});
 
 const cellCount = computed(() => session.notebook?.cells?.length || 0);
 
@@ -630,6 +654,83 @@ const selectAction = (actionName: string) => {
     showDebugPane.value = true;
     selectedAction.value = actionName;
 };
+
+/**
+ * Handles reordering of cells if dropped within the sort-enabled cells area.
+ **/
+function handleDrop(event: DragEvent, beakerCell: IBeakerCell, index: number) {
+
+    const target = (event.target as HTMLElement);
+    const allowedDropArea = target.closest('.drag-sort-enable');
+
+    if (!allowedDropArea) {
+        return;
+    }
+
+    const sourceId = event.dataTransfer?.getData("cellID");
+    const sourceIndex =  Number.parseInt(event.dataTransfer?.getData("cellIndex") || "-1");
+    const targetId = session.notebook.cells[index].id
+
+    if (sourceId !== targetId){
+        arrayMove(session.notebook.cells, sourceIndex, index);
+        // const draggedCell = session.notebook.cells.splice(sourceIndex, 1)[0];
+        // session.notebook.cells.splice(index, 0, draggedCell);
+    }
+}
+
+/**
+ * Sets call to item being moved
+ * As well as dataTransfer so that drop target knows which one was dropped
+ **/
+function handleDragStart(event: DragEvent, beakerCell: IBeakerCell, index: number)  {
+
+    isDragActive.value = true;
+
+    var paintTarget: HTMLElement|null = (event.target as HTMLElement).closest('.beaker-cell');
+    dragCellList.value = structuredClone(session.notebook.cells);
+
+    if (event.dataTransfer !== null) {
+        event.dataTransfer.dropEffect = 'move';
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('cellID', beakerCell.id);
+        event.dataTransfer.setData('cellIndex', index.toString());
+        if (paintTarget !== null) {
+            event.dataTransfer.setDragImage(paintTarget, 0, 0);
+        }
+    }
+}
+
+/**
+ * Handles when dragging over a valid drop target
+ * Both appends class to cell to mark placement of dragged cell if dropped there.,
+ * as well as preventing the animation where the dragged cell animates back to
+ * its place when dropped into a proper target.
+ **/
+function handleDragOver(event: DragEvent, beakerCell: IBeakerCell, index: number) {
+
+    const cellId = event.dataTransfer?.getData("cellID");
+    const sourceIndex =  Number.parseInt(event.dataTransfer?.getData("cellIndex") || "-1");
+
+    if (cellId !== beakerCell.id){
+        dragCellList.value = structuredClone(session.notebook.cells);
+        const draggedCell = dragCellList.value?.splice(sourceIndex, 1)[0];
+        dragCellList.value?.splice(index, 0, draggedCell);
+    }
+
+    event.preventDefault(); // Allow dropping
+}
+
+/* Ensure to remove class to cell being dragged over */
+// function handleDragLeave(event: DragEvent, beakerCell: IBeakerCell, index: number) {
+//     // console.log("leave");
+//     // isDragTarget.value = false;
+// }
+
+function handleDragEnd() {
+    isDragActive.value = false;
+    dragCellList.value = undefined;
+}
+
 
 onBeforeMount(() => {
     if (cellCount.value <= 0) {
