@@ -1,14 +1,13 @@
 <template>
   <div
     class="beaker-cell"
-    :draggable="dragEnabled"
     :class="{
         'drag-target': isCurrentTarget
     }"
-    :onDragstart="handleDragStart"
-    :onDrop="handleDrop"
-    :onDragover="handleDragOver"
-    :onDragleave="handleDragLeave"
+    @dragstart="handleDragStart"
+    @drop="handleDrop"
+    @dragover="handleDragOver"
+    @dragleave="handleDragLeave"
     tabindex="0"
     @keyup.enter.exact="focusEditor"
     @keydown.ctrl.enter.prevent="execute"
@@ -23,7 +22,9 @@
             'drag-disabled': !dragEnabled,
         }"
       >
-        <DraggableMarker />
+        <DraggableMarker
+            :draggable="dragEnabled"
+        />
       </div>
 
       <div class="cell-contents">
@@ -39,7 +40,7 @@
 
 <script setup lang="ts">
 import { defineProps, ref, computed, defineEmits, Component } from "vue";
-import DraggableMarker from './DraggableMarker';
+import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
@@ -55,9 +56,11 @@ const emit = defineEmits([
     'keyboard-nav'
 ]);
 
+type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
+
 const isCurrentTarget = ref(false);
-const beakerCellRef = ref(null);
-const typedCellRef = ref(null);
+const beakerCellRef = ref<HTMLDivElement|null>(null);
+const typedCellRef = ref<BeakerCellType|null>(null);
 const dragEnabled = computed(() => props.cellCount > 1);
 
 const componentMap: {[key: string]: Component} = {
@@ -68,7 +71,7 @@ const componentMap: {[key: string]: Component} = {
 
 function focusEditor() {
     if (beakerCellRef.value) {
-        const editor = beakerCellRef.value.querySelector('.cm-content');
+        const editor: HTMLElement|null = beakerCellRef.value.querySelector('.cm-content');
         if (editor) {
             editor.focus();
         }
@@ -100,16 +103,17 @@ const executeAndMove = () => {
 /**
  * Handles reordering of cells if dropped within the sort-enabled cells area.
  **/
-function handleDrop(item) {
+function handleDrop(event: DragEvent) {
 
     isCurrentTarget.value = false;
-    const allowedDropArea = event.target.closest('.drag-sort-enable');
+    const target = (event.target as HTMLElement);
+    const allowedDropArea = target.closest('.drag-sort-enable');
 
     if (!allowedDropArea) {
         return;
     }
 
-    const movedIndex = event.dataTransfer.getData('cellIndex');
+    const movedIndex = event.dataTransfer?.getData('cellIndex');
     const droppedIndex = props.index;
 
     if (movedIndex !== droppedIndex) {
@@ -126,28 +130,23 @@ function handleDrop(item) {
      * it needs to disable dragging when using the cursor to select text.
      * Could accept props of disallowed classes if we want to make it generic.
  **/
-function handleDragStart(event, item) {
+function handleDragStart(event: DragEvent) {
 
-    const selectingText = event.target.nodeName === '#text';
-    if (selectingText) {
-        event.preventDefault();
-        return;
+    // const paintTarget = (event.target as HTMLElement).parentElement;
+    var paintTarget: HTMLElement|null = (event.target as HTMLElement);
+    while (paintTarget !== null && !paintTarget.classList.contains("beaker-cell")) {
+        paintTarget = paintTarget?.parentElement;
     }
 
-    const className = event?.target?.className;
-    const isTextArea = className && className.includes('resizeable-textarea')
-    const isEditorLine = className && className.includes('cm-line');
-    const containsTextArea = event.target.querySelector('.resizeable-textarea');
-
-    if (isTextArea || isEditorLine || containsTextArea) {
-        event.preventDefault();
-        return;
+    if (event.dataTransfer !== null) {
+        event.dataTransfer.dropEffect = 'move';
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('cellID', props.cell.id);
+        event.dataTransfer.setData('cellIndex', props.index);
+        if (paintTarget !== null) {
+            event.dataTransfer.setDragImage(paintTarget, 0, 0);
+        }
     }
-
-    event.dataTransfer.dropEffect = 'move';
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('cellID', props.cell.id);
-    event.dataTransfer.setData('cellIndex', props.index);
 }
 
 /**
@@ -156,13 +155,13 @@ function handleDragStart(event, item) {
  * as well as preventing the animation where the dragged cell animates back to
  * its place when dropped into a proper target.
  **/
-function handleDragOver(event) {
+function handleDragOver(event: DragEvent) {
     isCurrentTarget.value = true;
     event.preventDefault(); // necessary
 }
 
 /* Ensure to remove class to cell being dragged over */
-function handleDragLeave(event) {
+function handleDragLeave(event: DragEvent) {
     isCurrentTarget.value = false;
 }
 

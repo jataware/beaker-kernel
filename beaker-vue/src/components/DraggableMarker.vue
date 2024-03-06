@@ -1,5 +1,7 @@
 <template>
-<div class="draggable-wrapper">
+<div
+  class="draggable-wrapper"
+>
 </div>
 </template>
 
