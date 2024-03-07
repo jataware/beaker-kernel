@@ -37,18 +37,15 @@ jobs:
           destination: ./_site
       - name: Fix permissions
         run: sudo chown -R runner:runner _site
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        working-directory: ./beaker-ts
+#      - name: Setup Node
+#        uses: actions/setup-node@v4
+#        working-directory: ./beaker-ts
       - name: Install npm requirements
         run: npm ci
         working-directory: ./beaker-ts
       - name: Build TypeDoc
-        uses: erikyo/tsdoc-action@v1
+        run: npx typedoc --out ../_site/beaker-ts
         working-directory: ./beaker-ts
-        with:
-          output_dir: ../_site/beaker-ts
-          front_page: README.md
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
