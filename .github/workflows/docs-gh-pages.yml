@@ -35,12 +35,17 @@ jobs:
         with:
           source: ./docs
           destination: ./_site
+      - name: Install npm requirements
+        uses: actions/setup-node@v4
+        with:
+          cache-dependency-path: beaker-ts/package-lock.json
       - name: Build TypeDoc
         uses: erikyo/tsdoc-action@v1
         with:
           source_dir: ./beaker-ts/src/*
           output_dir: ./docs/beaker-ts
           front_page: README.md
+          tsconfig: ./beaker-ts/tsconfig.json
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
