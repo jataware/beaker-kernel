@@ -28,3 +28,5 @@ in the browser. Highlights of what beaker-ts provides include:
 
 It is recommended to use the beaker-ts library to create and edit your Beaker
 sessions and notebooks.
+
+[Full Beaker-ts API documentation](/beaker-kernel/beaker-ts/)
