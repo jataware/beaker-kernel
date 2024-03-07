@@ -35,10 +35,12 @@ jobs:
         with:
           source: ./docs
           destination: ./_site
-      - name: Install npm requirements
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           cache-dependency-path: beaker-ts/package-lock.json
+      - name: Install npm requirements
+        run: cp beaker-ts/package*.json . && npm ci
       - name: Build TypeDoc
         uses: erikyo/tsdoc-action@v1
         with:
