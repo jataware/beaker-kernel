@@ -2,8 +2,7 @@
 layout: default
 title: Working with Jupyter
 nav_order: 6
-has_children: true
-has_toc: true
+has_toc: false
 ---
 
 # Working with Jupyter
