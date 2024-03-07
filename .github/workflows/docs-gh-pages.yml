@@ -45,7 +45,7 @@ jobs:
         uses: erikyo/tsdoc-action@v1
         with:
           source_dir: ./beaker-ts/src/*
-          output_dir: ./docs/beaker-ts
+          output_dir: ./_site/beaker-ts
           front_page: README.md
           tsconfig: ./beaker-ts/tsconfig.json
       - name: Upload artifact
