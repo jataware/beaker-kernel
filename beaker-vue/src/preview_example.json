@@ -1,0 +1,230 @@
+{
+    "application/mira" : {
+        "mira_model_1": {
+            "askem/amr": {
+                "header": {
+                    "name": "SIR Model",
+                    "schema": "https://raw.githubusercontent.com/DARPA-ASKEM/Model-Representations/petrinet_v0.6/petrinet/petrinet_schema.json",
+                    "description": "SIR model",
+                    "schema_name": "petrinet",
+                    "model_version": "0.1"
+                },
+                "model": {
+                    "states": [
+                    {
+                        "id": "S",
+                        "name": "Susceptible",
+                        "description": "Number of individuals that are 'susceptible' to a disease infection",
+                        "grounding": {
+                        "identifiers": {
+                            "ido": "0000514"
+                        }
+                        },
+                        "units": {
+                        "expression": "person",
+                        "expression_mathml": "<ci>person</ci>"
+                        }
+                    },
+                    {
+                        "id": "I",
+                        "name": "Infected",
+                        "description": "Number of individuals that are 'infected' by a disease",
+                        "grounding": {
+                        "identifiers": {
+                            "ido": "0000511"
+                        }
+                        },
+                        "units": {
+                        "expression": "person",
+                        "expression_mathml": "<ci>person</ci>"
+                        }
+                    },
+                    {
+                        "id": "R",
+                        "name": "Recovered",
+                        "description": "Number of individuals that have 'recovered' from a disease infection",
+                        "grounding": {
+                        "identifiers": {
+                            "ido": "0000592"
+                        }
+                        },
+                        "units": {
+                        "expression": "person",
+                        "expression_mathml": "<ci>person</ci>"
+                        }
+                    }
+                    ],
+                    "transitions": [
+                    {
+                        "id": "inf",
+                        "input": ["S", "I"],
+                        "output": ["I", "I"],
+                        "properties": {
+                        "name": "Infection",
+                        "description": "Infective process between individuals"
+                        }
+                    },
+                    {
+                        "id": "rec",
+                        "input": ["I"],
+                        "output": ["R"],
+                        "properties": {
+                        "name": "Recovery",
+                        "description": "Recovery process of a infected individual"
+                        }
+                    }
+                    ]
+                },
+                "semantics": {
+                    "ode": {
+                    "rates": [
+                        {
+                        "target": "inf",
+                        "expression": "S*I*beta",
+                        "expression_mathml": "<apply><times/><ci>S</ci><ci>I</ci><ci>beta</ci></apply>"
+                        },
+                        {
+                        "target": "rec",
+                        "expression": "I*gamma",
+                        "expression_mathml": "<apply><times/><ci>I</ci><ci>gamma</ci></apply>"
+                        }
+                    ],
+                    "initials": [
+                        {
+                        "target": "S",
+                        "expression": "S0",
+                        "expression_mathml": "<ci>S0</ci>"
+                        },
+                        {
+                        "target": "I",
+                        "expression": "I0",
+                        "expression_mathml": "<ci>I0</ci>"
+                        },
+                        {
+                        "target": "R",
+                        "expression": "R0",
+                        "expression_mathml": "<ci>R0</ci>"
+                        }
+                    ],
+                    "parameters": [
+                        {
+                        "id": "beta",
+                        "name": "β",
+                        "description": "infection rate",
+                        "units": {
+                            "expression": "1/(person*day)",
+                            "expression_mathml": "<apply><divide/><cn>1</cn><apply><times/><ci>person</ci><ci>day</ci></apply></apply>"
+                        },
+                        "value": 2.7e-7,
+                        "distribution": {
+                            "type": "Uniform1",
+                            "parameters": {
+                            "minimum": 2.6e-7,
+                            "maximum": 2.8e-7
+                            }
+                        }
+                        },
+                        {
+                        "id": "gamma",
+                        "name": "γ",
+                        "description": "recovery rate",
+                        "grounding": {
+                            "identifiers": {
+                            "askemo": "0000013"
+                            }
+                        },
+                        "units": {
+                            "expression": "1/day",
+                            "expression_mathml": "<apply><divide/><cn>1</cn><ci>day</ci></apply>"
+                        },
+                        "value": 0.14,
+                        "distribution": {
+                            "type": "Uniform1",
+                            "parameters": {
+                            "minimum": 0.1,
+                            "maximum": 0.18
+                            }
+                        }
+                        },
+                        {
+                        "id": "S0",
+                        "name": "S₀",
+                        "description": "Total susceptible population at timestep 0",
+                        "value": 1000
+                        },
+                        {
+                        "id": "I0",
+                        "name": "I₀",
+                        "description": "Total infected population at timestep 0",
+                        "value": 1
+                        },
+                        {
+                        "id": "R0",
+                        "name": "R₀",
+                        "description": "Total recovered population at timestep 0",
+                        "value": 0
+                        }
+                    ],
+                    "observables": [
+                        {
+                        "id": "noninf",
+                        "name": "Non-infectious",
+                        "states": ["S", "R"],
+                        "expression": "S+R",
+                        "expression_mathml": "<apply><plus/><ci>S</ci><ci>R</ci></apply>"
+                        }
+                    ],
+                    "time": {
+                        "id": "t",
+                        "units": {
+                        "expression": "day",
+                        "expression_mathml": "<ci>day</ci>"
+                        }
+                    }
+                    }
+                },
+                "metadata": {
+                }
+            },
+            "mira/json-tree": {
+            },
+            "image/png": "iVBOR2goDgoAAfANSUhEDkdfjD88A...978bh/fpA/AAAElFTkddDRx4",
+            "text/plain": "Mira model with states S, I, R, D and transitions i, r, d."
+        },
+        "mira_model_2": {
+            "askem/amr": {
+            },
+            "mira/json-tree": {
+            },
+            "image/png": "iVBORw0KGgoAAAANSUhEUgAAAhYAA...978bh/fpAAAAAElFTkSuQmCC",
+            "text/plain": "Mira model with states S, E, I, R, D and transitions e, i, r, d.",
+            "metadata": {
+                "generated_by": "Five Grant",
+                "timestamp": "2024-03-08T21:10:40+00:00",
+                "just_about_anything": "no judgement"
+            }
+        }
+    },
+    "application/dataset": {
+        "hosp_df": {
+            "application/json": [
+                [1, 2, 3, 4],
+                [5, 6, 7, 8]
+            ],
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>0</th>\n      <th>1</th>\n      <th>2</th>\n      <th>3</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>1</td>\n      <td>2</td>\n      <td>3</td>\n      <td>4</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>5</td>\n      <td>6</td>\n      <td>7</td>\n      <td>8</td>\n    </tr>\n  </tbody>\n</table>\n</div>",
+            "text/plain": "   0  1  2  3\n0  1  2  3  4\n1  5  6  7  8"
+        }
+    },
+    "application/decapode": {
+        "halfar": {
+            "askem/amr": {
+            },
+            "decapode/decaexpr": "    h::Form0\n    Γ::Form1\n    n::Constant\n    A::Constant\n    ρ::Constant\n    g::Constant\n\n    ḣ == ∂ₜ(h)\n    ḣ == ∘(⋆, d, ⋆)(Γ * d(h) * avg₀₁(mag(♯(d(h)))^(n-1)) * avg₀₁(h^(n+2)))\n    Γ == (2/(n+2)) * A * (ρ * g)^n\n",
+            "decapode/json-tree": {
+            },
+            "image/svg": "",
+            "application/latex": "\\documentclass[12pt]{article}\n            \\usepackage{derivative}\n            \\begin{document}\n            \\[\n            \\pdv{f}{x}, \\quad \\odv{Q}{t}=\\odv{s}{t}, \\quad \\pdv{f}{x,y}, \\quad \n            \\derivset{\\odv}[switch-*=false] \\odv{y}{x}, \\quad \\odv[n]{y}{x}, \\quad\n            \\derivset{\\odv}[misc-add-delims=fun] \\odv*{\\odv{y}{x}}{x}, \\quad \n            \\derivset{\\pdv}[sort-method={sign,symbol,abs}] \\pdv[c+kn,-b+2a]{f}{x,y}\n            \\]\n\\end{document}",
+            "application/plain": ""
+        }
+    }
+}
