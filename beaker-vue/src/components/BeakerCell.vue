@@ -147,11 +147,30 @@ const executeAndMove = () => {
     opacity: 0.2;
 }
 
-.drag-target {
-    outline: 1px solid var(--purple-200);
-    outline-offset: -1px;
-    * {
-        visibility: hidden;
+.drag-source {
+    background-color: #222;
+    > * {
+        opacity: 0.5;
+        background-color: #222;
     }
+}
+
+.drag-above {
+    box-shadow: 0px -5px 1px var(--purple-200);
+
+    &:first-child {
+        margin-top: 5px;
+        padding-top: calc(1rem - 5px);
+    }
+}
+
+.drag-itself, .drag-itself.selected {
+    background-color: var(--purple-200);
+}
+
+.drag-below {
+    box-shadow: 0px 5px 0px var(--purple-200);
+    margin-bottom: 5px;
+    padding-bottom: calc(1rem - 5px);
 }
 </style>
