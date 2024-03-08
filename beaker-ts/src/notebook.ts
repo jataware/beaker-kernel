@@ -5,11 +5,11 @@ import { JSONObject, PartialJSONValue } from '@lumino/coreutils';
 import { v4 as uuidv4 } from 'uuid';
 
 import { BeakerSession } from './session';
-import { } from './util';
+import { IBeakerFuture } from './util';
 import { MenuSvg } from '@jupyterlab/ui-components';
 
 export interface IBeakerHeader extends messages.IHeader {
-    msg_type: any
+    msg_type: any;
 }
 
 export interface IBeakerShellMessage extends messages.IShellMessage {
@@ -24,18 +24,13 @@ export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
     content: any;
 }
 
-export interface IBeakerFuture extends Kernel.IShellFuture {
-    msgId?: string;
-    onResponse: (msg: any) => void | PromiseLike<void>;
-}
-
 export type BeakerCellStatus = messages.Status | "awaiting_input";
 
 export type BeakerCellType = nbformat.CellType | string | 'query';
 
 export class BeakerBaseCell implements nbformat.IBaseCell {
     // Override index type to allow methods to be defined on the class
-    IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments",
+    private IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments",
                   "outputs", "execution_count"];
 
     [key: string]: any;

@@ -5,12 +5,11 @@ import { ServiceManager } from '@jupyterlab/services';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import { JSONObject } from '@lumino/coreutils';
 import { v4 as uuidv4 } from 'uuid';
-import { ISessionConnection } from '@jupyterlab/services/lib/session/session';
 import fetch from 'node-fetch';
 import { Slot } from '@lumino/signaling';
 
-import { createMessageId, IBeakerAvailableContexts, IActiveContextInfo } from './util';
-import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage, IBeakerFuture } from './notebook';
+import { createMessageId, IBeakerAvailableContexts, IBeakerFuture, IActiveContextInfo } from './util';
+import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage } from './notebook';
 import { BeakerHistory } from './history';
 
 export interface IBeakerSessionOptions {
@@ -18,9 +17,12 @@ export interface IBeakerSessionOptions {
     name: string;
     kernelName: string;
     sessionId?: string;
-    messageHandler?: Function;
+    messageHandler?: Slot<any, any>;
 };
 
+/**
+ * Main class for connecting to and working with a Beaker kernel.
+ */
 export class BeakerSession {
 
     constructor(options?: IBeakerSessionOptions) {
@@ -39,7 +41,10 @@ export class BeakerSession {
         })
     }
 
-    private async initialize(options) {
+    /**
+     * Internal initialization logic once all the services are up and ready.
+     */
+    private async initialize(options: IBeakerSessionOptions) {
 
         // Create (or reuse existing) a session Context
         this._sessionContext = new SessionContext({
@@ -67,6 +72,13 @@ export class BeakerSession {
         });
     }
 
+    /**
+     * Low-level method for sending a message to the Beaker kernel over the "shell" channel.
+     *
+     * @param messageType - The message type, as passed in `msg.header.msg_type`
+     * @param content - Any JSON-encodable payload to be included with the message
+     * @param messageId - (Optional) Pre-defined id for the message. One will be generated if not provided.
+     */
     public sendBeakerMessage(
         messageType: string,
         content: JSONObject,
@@ -92,6 +104,13 @@ export class BeakerSession {
         return future;
     }
 
+    /**
+     * Handler for session-specific messages from the Beaker kernel.
+     * This handler will be evoked for all IOPub messages, but should ignore all messages that are not session-specific.
+     *
+     * @param _sessionContext - The session Context related to the incoming message
+     * @param msg - The incoming IOPub message
+     */
     private _sessionMessageHandler(_sessionContext: SessionContext, msg: IBeakerIOPubMessage) {
         if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
             if (msg.header.msg_type === "context_setup_response") {
@@ -104,6 +123,9 @@ export class BeakerSession {
         }
     }
 
+    /**
+     * Returns a promise, that once resolved provides all Beaker contexts available in the session.
+     */
     public async availableContexts(): Promise<IBeakerAvailableContexts> {
         return new Promise(async (resolve) => {
             const url = `${this._serverSettings.baseUrl}contexts`;
@@ -113,6 +135,9 @@ export class BeakerSession {
         });
     }
 
+    /**
+     * Returns a promise that once resolved provides detailed information about the active context.
+     */
     public async activeContext(): Promise<IActiveContextInfo> {
         return new Promise(async (resolve, reject)  => {
             await this.sessionReady;
@@ -130,6 +155,16 @@ export class BeakerSession {
         });
     }
 
+    /**
+     * Executes a Beaker Action, handling all of the message
+     *
+     * The usual IBeakerFuture response handlers can be applied to the returned future to do act upon the responses.
+     *
+     * @param actionName - Name of the action to execute
+     * @param payload - Payload to pass along with the action
+     * @param messageId - (Optional) Id for request message. If not provided, will be generated automatically.
+     * @returns - A future
+     */
     public executeAction(actionName: string, payload: JSONObject, messageId: string = null): IBeakerFuture {
         const requestType = `${actionName}_request`;
         const responseType = `${actionName}_response`;
@@ -148,6 +183,13 @@ export class BeakerSession {
         return messageFuture;
     }
 
+    /**
+     *
+     * @param source - The `code` contents of the cell.
+     * @param metadata - (Optional) Any metadata to be associated with the cell.
+     * @param outputs - (Optional) Any outputs that should be included/displayed.
+     * @returns - A reference to the generated cell
+     */
     public addCodeCell(source: string, metadata={}, outputs=[]) {
         const cell = new BeakerCodeCell({
                 cell_type: "code",
@@ -159,6 +201,13 @@ export class BeakerSession {
         return cell;
     }
 
+    /**
+     * Convenience method for adding a MarkdownCell to the notebook
+     *
+     * @param source - The raw markdown encoded text that should be rendered upon execute
+     * @param metadata - (Optional) Any metadata to be associated with the cell.
+     * @returns - A reference to the generated cell
+     */
     public addMarkdownCell(source: string, metadata={}) {
         const cell = new BeakerMarkdownCell({
             cell_type: "markdown",
@@ -169,6 +218,13 @@ export class BeakerSession {
         return cell;
     }
 
+    /**
+     * Convenience method for adding a RawCell to the notebook
+     *
+     * @param source - The raw contents to be included in the raw cell.
+     * @param metadata - (Optional) Any metadata to be associated with the cell.
+     * @returns - A reference to the generated cell
+     */
     public addRawCell(source:string, metadata={}) {
         const cell = new BeakerRawCell({
             cell_type: "raw",
@@ -179,6 +235,13 @@ export class BeakerSession {
         return cell;
     }
 
+    /**
+     * Convenience method for adding a QueryCell to the notebook
+     *
+     * @param source - The contents of the query for the LLM as a plain string
+     * @param metadata - (Optional) Any metadata to be associated with the cell.
+     * @returns - A reference to the generated cell
+     */
     public addQueryCell(source: string, metadata={}) {
         const cell = new BeakerQueryCell({
             cell_type: "query",
@@ -189,21 +252,29 @@ export class BeakerSession {
         return cell;
     };
 
-    public toJSON(): string {
-        return JSON.stringify({
-            notebook: this.notebook?.toJSON()
-        });
-    }
+    // public toJSON(): string {
+    //     return JSON.stringify({
+    //         notebook: this.notebook?.toJSON()
+    //     });
+    // }
 
-    public fromJSON(): BeakerSession {
-        // TODO
-        return new BeakerSession();
-    }
+    // public fromJSON(): BeakerSession {
+    //     // TODO
+    //     return new BeakerSession();
+    // }
 
-    public loadNotebook(notebookJSONObject) {
+    /**
+     * Populates the sessions notebook with the provided notebook json
+     *
+     * @param notebookJSONObject - The json representation of a notebook, as found inside an .ipynb file
+     */
+    public loadNotebook(notebookJSONObject: object) {
         this.notebook.loadFromIPynb(notebookJSONObject);
     }
 
+    /**
+     * Completely resets the session, clearing the notebook and history, and restarting the fresh kernel so it is in a fresh state.
+     */
     public reset() {
         // Remove cells via splice to ensure reactivity
         this.notebook.cells.splice(0, this.notebook.cells.length);
@@ -212,6 +283,9 @@ export class BeakerSession {
         this._sessionContext.restartKernel();
     }
 
+    /**
+     * A promise that resolves once everything the session requires are also ready.
+     */
     get sessionReady(): Promise<void> {
         return new Promise(async (resolve) => {
             await this._services.ready;
@@ -220,14 +294,23 @@ export class BeakerSession {
         })
     }
 
+    /**
+     * A reference to the underlying Jupyter SessionContext for this Beaker Session.
+     */
     get session(): SessionContext {
         return this._sessionContext;
     }
 
+    /**
+     * A reference to the Jupyter KernelConnection object for this session.
+     */
     get kernel(): IKernelConnection {
         return this._sessionContext?.session?.kernel;
     }
 
+    /**
+     * A reference to the Jupyter ServiceManager which contains all of the services for this session.
+     */
     get services(): ServiceManager {
         return this._services;
     }

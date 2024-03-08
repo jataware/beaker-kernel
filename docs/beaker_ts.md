@@ -1,7 +1,15 @@
+---
+layout: default
+title: beaker-ts
+nav_order: 8
+has_toc: false
+has_children: true
+---
+
 # beaker-ts typescript library
 
-Beaker-ts is a typescript library that simplifies working with Beaker in the
-browser. Highlights of what beaker-ts provides include:
+Beaker comes with a typescript library that simplifies working with Beaker
+in the browser. Highlights of what beaker-ts provides include:
 
 * Easy creation of Beaker sessions
   * Connecting to an existing Beaker kernel or spinning up a new one
@@ -21,4 +29,4 @@ browser. Highlights of what beaker-ts provides include:
 It is recommended to use the beaker-ts library to create and edit your Beaker
 sessions and notebooks.
 
-
+[Full Beaker-ts API documentation](/beaker-kernel/beaker-ts/)
