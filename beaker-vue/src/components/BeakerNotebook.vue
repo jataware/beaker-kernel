@@ -94,7 +94,7 @@
                                 ref="cellsContainerRef"
                             >
                                 <BeakerCell
-                                    v-for="(cell, index) in renderCellList"
+                                    v-for="(cell, index) in session.notebook.cells"
                                     :key="cell.id"
                                     :class="{
                                         selected: (index === selectedCellIndex),
@@ -111,15 +111,21 @@
                                     :cell="cell"
                                     @keyboard-nav="handleNavAction"
                                     @dragstart="handleDragStart($event, cell, index)"
-                                    @drop="handleDrop($event, cell, index)"
+                                    @drop="handleDrop($event, index)"
                                     @dragover="handleDragOver($event, cell, index)"
                                     @dragend="handleDragEnd"
                                 />
-                                <transition name="fade">
-                                    <div class="welcome-placeholder" v-if="cellCount < 3">
-                                        <SvgPlaceholder />
-                                    </div>
-                                </transition>
+                                <div
+                                    class="drop-overflow-catcher"
+                                    @dragover="dragOverIndex = session.notebook.cells.length-1; $event.preventDefault();"
+                                    @drop="handleDrop($event, session.notebook.cells.length-1)"
+                                >
+                                    <transition name="fade">
+                                        <div class="welcome-placeholder" v-if="cellCount < 3">
+                                            <SvgPlaceholder />
+                                        </div>
+                                    </transition>
+                                </div>
                             </div>
                         </div>
 
@@ -332,11 +338,6 @@ const showToast = inject('show_toast');
 
 provide('theme', selectedTheme);
 provide('active_context', activeContext);
-
-const renderCellList: IBeakerCell[] = computed(() => {
-    // No drag, normal flow
-    return session.notebook.cells as IBeakerCell[];
-});
 
 const cellCount = computed(() => session.notebook?.cells?.length || 0);
 
@@ -654,7 +655,7 @@ const selectAction = (actionName: string) => {
 /**
  * Handles reordering of cells if dropped within the sort-enabled cells area.
  **/
-function handleDrop(event: DragEvent, beakerCell: IBeakerCell, index: number) {
+function handleDrop(event: DragEvent, index: number) {
 
     const target = (event.target as HTMLElement);
     const allowedDropArea = target.closest('.drag-sort-enable');
@@ -669,8 +670,6 @@ function handleDrop(event: DragEvent, beakerCell: IBeakerCell, index: number) {
 
     if (sourceId !== targetId){
         arrayMove(session.notebook.cells, sourceIndex, index);
-        // const draggedCell = session.notebook.cells.splice(sourceIndex, 1)[0];
-        // session.notebook.cells.splice(index, 0, draggedCell);
     }
 }
 
@@ -816,6 +815,8 @@ footer {
 
 
 .cell-container {
+    display: flex;
+    flex-direction: column;
     position: absolute;
     top: 0;
     overflow-y: auto;
@@ -950,6 +951,10 @@ footer {
     background-color: var(--surface-a);
     display: flex;
     flex-direction: column;
+}
+
+.drop-overflow-catcher {
+    flex: 1;
 }
 
 </style>
