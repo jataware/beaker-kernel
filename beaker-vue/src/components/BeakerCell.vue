@@ -1,14 +1,6 @@
 <template>
   <div
     class="beaker-cell"
-    :draggable="dragEnabled"
-    :class="{
-        'drag-target': isCurrentTarget
-    }"
-    :onDragstart="handleDragStart"
-    :onDrop="handleDrop"
-    :onDragover="handleDragOver"
-    :onDragleave="handleDragLeave"
     tabindex="0"
     @keyup.enter.exact="focusEditor"
     @keydown.ctrl.enter.prevent="execute"
@@ -20,10 +12,12 @@
       <div
         class="drag-handle"
         :class="{
-            'drag-disabled': !dragEnabled,
+            'drag-disabled': !props.dragEnabled,
         }"
       >
-        <DraggableMarker />
+        <DraggableMarker
+            :draggable="props.dragEnabled"
+        />
       </div>
 
       <div class="cell-contents">
@@ -38,8 +32,8 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, defineEmits, Component } from "vue";
-import DraggableMarker from './DraggableMarker';
+import { defineProps, ref, computed, defineEmits, Component, nextTick } from "vue";
+import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
@@ -47,7 +41,7 @@ import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 const props = defineProps([
     'index',
     'cell',
-    'cellCount',
+    'dragEnabled',
 ]);
 
 const emit = defineEmits([
@@ -55,10 +49,10 @@ const emit = defineEmits([
     'keyboard-nav'
 ]);
 
-const isCurrentTarget = ref(false);
-const beakerCellRef = ref(null);
-const typedCellRef = ref(null);
-const dragEnabled = computed(() => props.cellCount > 1);
+type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
+
+const beakerCellRef = ref<HTMLDivElement|null>(null);
+const typedCellRef = ref<BeakerCellType|null>(null);
 
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
@@ -68,7 +62,7 @@ const componentMap: {[key: string]: Component} = {
 
 function focusEditor() {
     if (beakerCellRef.value) {
-        const editor = beakerCellRef.value.querySelector('.cm-content');
+        const editor: HTMLElement|null = beakerCellRef.value.querySelector('.cm-content');
         if (editor) {
             editor.focus();
         }
@@ -96,75 +90,6 @@ const executeAndMove = () => {
         emit('keyboard-nav', 'select-next-cell');
     }
 };
-
-/**
- * Handles reordering of cells if dropped within the sort-enabled cells area.
- **/
-function handleDrop(item) {
-
-    isCurrentTarget.value = false;
-    const allowedDropArea = event.target.closest('.drag-sort-enable');
-
-    if (!allowedDropArea) {
-        return;
-    }
-
-    const movedIndex = event.dataTransfer.getData('cellIndex');
-    const droppedIndex = props.index;
-
-    if (movedIndex !== droppedIndex) {
-        // Modify array in place so that refs can track changes (change by reference)
-        // (Don't reassign cells in notebook!)
-        emit('move-cell', movedIndex, droppedIndex);
-    }
-}
-
-/**
- * Sets call to item being moved
- * As well as dataTransfer so that drop target knows which one was dropped
- * TODO This handler is aware of some special Beaker app classes, since
-     * it needs to disable dragging when using the cursor to select text.
-     * Could accept props of disallowed classes if we want to make it generic.
- **/
-function handleDragStart(event, item) {
-
-    const selectingText = event.target.nodeName === '#text';
-    if (selectingText) {
-        event.preventDefault();
-        return;
-    }
-
-    const className = event?.target?.className;
-    const isTextArea = className && className.includes('resizeable-textarea')
-    const isEditorLine = className && className.includes('cm-line');
-    const containsTextArea = event.target.querySelector('.resizeable-textarea');
-
-    if (isTextArea || isEditorLine || containsTextArea) {
-        event.preventDefault();
-        return;
-    }
-
-    event.dataTransfer.dropEffect = 'move';
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('cellID', props.cell.id);
-    event.dataTransfer.setData('cellIndex', props.index);
-}
-
-/**
- * Handles when dragging over a valid drop target
- * Both appends class to cell to mark placement of dragged cell if dropped there.,
- * as well as preventing the animation where the dragged cell animates back to
- * its place when dropped into a proper target.
- **/
-function handleDragOver(event) {
-    isCurrentTarget.value = true;
-    event.preventDefault(); // necessary
-}
-
-/* Ensure to remove class to cell being dragged over */
-function handleDragLeave(event) {
-    isCurrentTarget.value = false;
-}
 
 </script>
 
@@ -222,11 +147,30 @@ function handleDragLeave(event) {
     opacity: 0.2;
 }
 
-.drag-target {
-    outline: 1px solid var(--purple-200);
-    outline-offset: -1px;
-    * {
-        visibility: hidden;
+.drag-source {
+    background-color: #222;
+    > * {
+        opacity: 0.5;
+        background-color: #222;
     }
+}
+
+.drag-above {
+    box-shadow: 0px -5px 1px var(--purple-200);
+
+    &:first-child {
+        margin-top: 5px;
+        padding-top: calc(1rem - 5px);
+    }
+}
+
+.drag-itself, .drag-itself.selected {
+    background-color: var(--purple-200);
+}
+
+.drag-below {
+    box-shadow: 0px 5px 0px var(--purple-200);
+    margin-bottom: 5px;
+    padding-bottom: calc(1rem - 5px);
 }
 </style>
