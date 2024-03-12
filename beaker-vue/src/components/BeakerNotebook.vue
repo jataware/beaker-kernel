@@ -150,7 +150,7 @@
                                 <Button tabindex="-1" label="Preview" text icon="pi pi-eye" />
                             </template>
                             <div class="scroller-area">
-                                <PreviewPane />
+                                <PreviewPane :previewData="previewData"/>
                             </div>
                         </TabPanel>
 
@@ -281,6 +281,7 @@ const props = defineProps([
     "connectionStatus",
     "debugLogs",
     "rawMessages",
+    "previewData",
 ]);
 
 
@@ -328,6 +329,7 @@ const isDragEnabled = computed(() => session.notebook?.cells.length > 1);
 const isDragActive = ref(false);
 const dragSourceIndex = ref(-1);
 const dragOverIndex = ref(-1);
+
 
 const themeIcon = computed(() => {
     return `pi pi-${selectedTheme.value == 'dark' ? 'sun' : 'moon'}`;

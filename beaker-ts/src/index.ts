@@ -26,3 +26,13 @@ export {
     type IBeakerHistoryExecutionEvent,
     type IBeakerHistoryQueryEvent,
 } from './history';
+
+export {
+    BeakerRenderer,
+    MimeRenderer,
+    JupyterMimeRenderer,
+    type IBeakerRendererOptions,
+    type IMimeBundle,
+    type IMimeRenderer,
+    type MimetypeString,
+} from './render';

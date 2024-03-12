@@ -3,16 +3,19 @@
       :connectionStatus="connectionStatus"
       :debugLogs="debugLogs"
       :rawMessages="rawMessages"
+      :previewData="previewData"
     />
     <Toast position="bottom-right" />
 </template>
 
 <script setup lang="ts">
 import { defineProps, reactive, ref, onBeforeMount, provide } from 'vue';
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
+import { JSONRenderer, LatexRenderer, wrapJupyterRenderer } from './renderers';
+import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 
 const toast = useToast();
@@ -33,18 +36,24 @@ const props = defineProps([
   "config"
 ]);
 
+const renderers = [...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer), JSONRenderer, LatexRenderer]
+
 const rawSession = new BeakerSession(
   {
     settings: props.config,
     name: "MyKernel",
     kernelName: "beaker_kernel",
     sessionId: "dev_session",
+    rendererOptions: {
+      renderers
+    }
   }
 );
 
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
+const previewData = ref<any>();
 
 provide('show_toast', showToast);
 
@@ -57,6 +66,8 @@ rawSession.sessionReady.then(() => {
             const newStatus = msg?.content?.execution_state || 'connecting';
             connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
           }, 1000);
+        } else if (msg.header.msg_type === "preview") {
+          previewData.value = msg.content;
         } else if (msg.header.msg_type === "debug_event") {
             debugLogs.value.push({
               type: msg.content.event,
