@@ -4,6 +4,7 @@
       :debugLogs="debugLogs"
       :rawMessages="rawMessages"
       :previewData="previewData"
+      @clear-preview="previewData = undefined"
     />
     <Toast position="bottom-right" />
 </template>
