@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="mime-select-container">
+        <div class="mime-select-container" v-if="!(props.collapse && sortedMimetypes.length === 1)">
               <SelectButton
                   :allowEmpty="false"
                   v-model="selectedMimeType"
@@ -25,6 +25,7 @@ import SelectButton from "primevue/selectbutton";
 
 const props = defineProps([
     "mimeBundle",
+    "collapse",
 ]);
 
 const session = inject('session');

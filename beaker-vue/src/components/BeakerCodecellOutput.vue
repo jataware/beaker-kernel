@@ -6,7 +6,9 @@
                 v-else-if="['display_data', 'execute_result'].includes(output.output_type)"
                 :mime-bundle="output.data"
             />
-            <div v-else-if="output.output_type == 'error'" :class="output.output_type" v-html="renderError(output)"></div>
+            <div v-else-if="output.output_type == 'error'" :class="output.output_type">
+                <BeakerMimeBundle :mime-bundle="rebundleError(output)" collapse="true" />
+            </div>
             <div v-else>{{ output }}</div>
         </div>
     </div>
@@ -25,26 +27,13 @@ const props = defineProps([
     "busy"
 ]);
 
-const renderResult = (resultOutput) => {
-    var output = [];
-    const mimeBundle: IMimeBundle = resultOutput.data;
-    const renderedBundle = session.renderer.renderMimeBundle(mimeBundle);
-    const sortedMimetypes = session.renderer.rankedMimetypesInBundle(mimeBundle);
-
-    for (const m of sortedMimetypes) {
-        output.push(renderedBundle[m].outerHTML);
-    }
-
-    return output.join("\n");
-}
-
-const renderError = (errorOutput) => {
+const rebundleError = (errorOutput) => {
     const traceback = errorOutput.traceback?.join('\n');
     const bundle = {
         'application/vnd.jupyter.error':  errorOutput,
         'application/vnd.jupyter.stderr': traceback || `${errorOutput.ename}: ${errorOutput.evalue}`,
     }
-    return renderResult({data: bundle});
+    return bundle;
 }
 </script>
 

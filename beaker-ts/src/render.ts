@@ -115,7 +115,7 @@ export class BeakerRenderer {
     }
 
     public rankedMimetypesInBundle(bundle: IMimeBundle): MimetypeString[] {
-        const result = this.rankedMimetypes.filter((mime) => Object.keys(bundle).includes(mime))
+        const result = this.rankedMimetypes.filter((mime) => bundle && Object.keys(bundle).includes(mime))
         return result;
     }
 
