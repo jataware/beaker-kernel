@@ -1,6 +1,6 @@
 import { Component, VueElement, defineComponent, h } from 'vue';
 
-import type { IBeakerRendererOptions, IMimeRenderer, MimetypeString } from 'beaker-kernel';
+import { IBeakerRendererOptions, IMimeRenderer, MimetypeString } from 'beaker-kernel';
 import { PartialJSONObject } from '@lumino/coreutils';
 import VueJsonPretty from 'vue-json-pretty';
 import katex from 'katex';

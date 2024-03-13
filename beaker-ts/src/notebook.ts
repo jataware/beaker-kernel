@@ -83,10 +83,10 @@ export interface IQueryCell extends nbformat.IBaseCell {
 }
 
 export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
-    cell_type: 'raw';
+    declare cell_type: 'raw';
     id?: string;
     attachments?: nbformat.IAttachments;
-    metadata: Partial<nbformat.IRawCellMetadata>;
+    declare metadata: Partial<nbformat.IRawCellMetadata>;
 
     constructor(content: nbformat.ICell) {
         super();
@@ -102,11 +102,11 @@ export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
 }
 
 export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell {
-    cell_type: 'code';
+    declare cell_type: 'code';
     id?: string;
     outputs: nbformat.IOutput[];
     execution_count: nbformat.ExecutionCount;
-    metadata: Partial<nbformat.ICodeCellMetadata>;
+    declare metadata: Partial<nbformat.ICodeCellMetadata>;
 
     constructor(content: nbformat.ICell) {
         super();
@@ -198,7 +198,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
 }
 
 export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMarkdownCell {
-    cell_type: 'markdown';
+    declare cell_type: 'markdown';
     id?: string;
     attachments?: nbformat.IAttachments;
 
@@ -217,7 +217,7 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 }
 
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
-    cell_type: 'query';
+    declare cell_type: 'query';
     id?: string;
     events: IBeakerQueryEvent[];
 

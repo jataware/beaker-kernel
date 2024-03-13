@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
-    "strict": true,
+    "strict": false,
     "jsx": "preserve",
     "moduleResolution": "node",
     "skipLibCheck": true,
@@ -20,7 +20,7 @@
         "src/*"
       ],
       "beaker-kernel": [
-        "../../beaker-ts/src/*"
+        "../beaker-ts/src"
       ]
     },
     "lib": [
