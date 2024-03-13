@@ -1,55 +1,30 @@
 <template>
     <Accordion v-if="props.previewData" multiple :activeIndex="[0]">
-        <AccordionTab v-for="itemMap, previewType of props.previewData" :key="previewType" :header="previewType">
-            <div v-for="item, name of itemMap" :key="name">
-                <h3>{{ name }}</h3>
+        <AccordionTab v-for="(itemMap, previewType) in props.previewData" :key="previewType" :header="previewType as string">
+            <Fieldset
+                class="preview-container"
+                v-for="(item, name) in itemMap"
+                :key="name"
+                :legend="name as string"
+                :toggleable="true"
+            >
                 <BeakerMimeBundle :mimeBundle="item"/>
-            </div>
+            </Fieldset>
         </AccordionTab>
     </Accordion>
     <div v-else>No preview yet</div>
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps } from "vue";
+import { defineProps } from "vue";
 import Accordion from 'primevue/accordion';
 import AccordionTab from 'primevue/accordiontab';
+import Fieldset from "primevue/fieldset";
 import BeakerMimeBundle from "./BeakerMimeBundle.vue";
 
-const props = defineProps([
-    "previewData"
-]);
-
-// import DataTable from 'primevue/datatable';
-// import Column from 'primevue/column';
-// import SelectButton from 'primevue/selectbutton';
-// import Card from 'primevue/card';
-
-// const previewOneMockValue = ref('PNG');
-// const previewOneMimeTypes = ref(['PNG', 'LATEX']);
-
-
-// const products = [
-// {
-//     id: '1000',
-//     name: 'Bamboo Watch',
-//     description: 'Product Description',
-//     price: 65,
-//     category: 'Accessories',
-//     quantity: 24,
-//     inventoryStatus: 'INSTOCK',
-//     rating: 5
-// },
-// {
-//     id: '1000',
-//     name: 'Bamboo Watch',
-//     description: 'Product Description',
-//     price: 65,
-//     category: 'Accessories',
-//     quantity: 24,
-//     inventoryStatus: 'INSTOCK',
-//     rating: 5
-// }];
+const props = defineProps<{
+    previewData: {[key: string]: {[key: string]: {[key: string]: any}}}
+}>();
 </script>
 
 
@@ -86,5 +61,14 @@ const props = defineProps([
 
 .preview-image {
     width: 100%;
+}
+
+.preview-container {
+    margin-bottom: 1rlh;
+    word-wrap: break-word;
+
+    pre {
+        white-space: pre-wrap;
+    }
 }
 </style>
