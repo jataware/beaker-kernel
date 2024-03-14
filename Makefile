@@ -37,11 +37,12 @@ dev:
 
 beaker-vue/node_modules:beaker-vue/package*.json
 	export `cat .env` && \
-	(cd beaker-vue && npm install) && \
+	(cd beaker-vue && npm install --dev) && \
 	touch beaker-vue/node_modules
 
 beaker_kernel/server/ui/index.html:beaker-vue/node_modules beaker-vue/**
 	rm -r beaker_kernel/server/ui/* ; \
+	(cd beaker-ts/ && npm install && npm run build) && \
 	(cd beaker-vue/ && npm run build) && \
 	cp -r beaker-vue/dist/* beaker_kernel/server/ui/
 
