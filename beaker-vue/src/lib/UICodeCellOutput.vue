@@ -2,13 +2,13 @@
     <div class="code-cell-output jp-RenderedText">
         <div v-for="output of props.outputs" :key="output">
             <div v-if="output.output_type == 'stream'" :class="output.output_type">{{ output.text }}</div>
-            <BeakerMimeBundle
+            <MimeBundle
                 v-else-if="['display_data', 'execute_result'].includes(output.output_type)"
                 :mime-bundle="output.data"
                 collapse="true"
             />
             <div v-else-if="output.output_type == 'error'" :class="output.output_type">
-                <BeakerMimeBundle :mime-bundle="rebundleError(output)" collapse="true" />
+                <MimeBundle :mime-bundle="rebundleError(output)" collapse="true" />
             </div>
             <div v-else>{{ output }}</div>
         </div>
@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import { defineProps, inject } from "vue";
-import BeakerMimeBundle from "./BeakerMimeBundle.vue";
+import MimeBundle from "./UIMimeBundle.vue";
 import { IMimeBundle } from 'beaker-kernel/render';
 
 const session = inject('session');

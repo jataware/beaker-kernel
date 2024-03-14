@@ -13,11 +13,12 @@
 import { defineProps, reactive, ref, onBeforeMount, provide } from 'vue';
 import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
+import BeakerPlayground from './BeakerPlayground.vue';
+import SingleCellPlayground from './SingleCellPlayground.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { JSONRenderer, LatexRenderer, wrapJupyterRenderer } from './renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
-
 
 const toast = useToast();
 
@@ -56,8 +57,6 @@ const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
 
-provide('show_toast', showToast);
-
 rawSession.sessionReady.then(() => {
 
     rawSession.session.iopubMessage.connect((session, msg) => {
@@ -93,8 +92,9 @@ onBeforeMount(() => {
 });
 
 const beakerSession = reactive(rawSession);
-provide('session', beakerSession);
 
+provide('session', beakerSession);
+provide('show_toast', showToast);
 
 </script>
 

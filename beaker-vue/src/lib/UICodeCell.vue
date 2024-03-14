@@ -14,7 +14,7 @@
                     @change="handleCodeChange"
                     @ready="handleReady"
                 />
-                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
+                <CodeCellOutput v-if="props.renderOutput" :outputs="cell.outputs" :busy="isBusy" />
             </div>
             <div class="state-info">
                 <div class="execution-count-badge">
@@ -34,16 +34,23 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject } from "vue";
-import CodeCellOutput from "./BeakerCodecellOutput.vue";
+import { defineProps, defineExpose, ref, shallowRef, computed, inject } from "vue";
+import CodeCellOutput from "./UICodeCellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
 
-const props = defineProps([
-    "cell",
-]);
+const props = defineProps({
+    cell: {
+        type: Object,
+        required: true
+    },
+    renderOutput: {
+        type: Boolean,
+        default: true
+    }
+});
 
 const cell = ref(props.cell);
 const isBusy = ref(false);

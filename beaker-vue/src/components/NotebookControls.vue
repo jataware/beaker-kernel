@@ -1,60 +1,30 @@
 <template>
-  <div class="notebook-controls">
-      <InputGroup>
-          <Button
-              @click="emit('add-cell')"
-              v-tooltip.bottom="{value: 'Add New Cell', showDelay: 300}"
-              icon="pi pi-plus"
-              size="small"
-              severity="info"
-              text
-          />
-          <Button
-              @click="emit('remove-cell')"
-              v-tooltip.bottom="{value: 'Remove Selected Cell', showDelay: 300}"
-              icon="pi pi-minus"
-              size="small"
-              severity="info"
-              text
-          />
-          <Button
-              @click="emit('run-cell')"
-              v-tooltip.bottom="{value: 'Run Selected Cell', showDelay: 300}"
-              icon="pi pi-play"
-              size="small"
-              severity="info"
-              text
-          />
-          <!-- TODO implement Stop-->
-          <Button
-              @click="identity"
-              v-tooltip.bottom="{value: 'Stop Execution', showDelay: 300}"
-              icon="pi pi-stop"
-              size="small"
-              severity="info"
-              text
-          />
-      </InputGroup>
-      <InputGroup style="margin-right: 1rem;">
-          <Button
-              @click="resetNotebook"
-              v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
-              icon="pi pi-refresh"
-              size="small"
-              severity="info"
-              text
-          />
-          <Button
-              @click="downloadNotebook"
-              v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
-              icon="pi pi-download"
-              size="small"
-              severity="info"
-              text
-          />
-          <OpenNotebookButton @open-file="loadNotebook"/>
-      </InputGroup>
-  </div>
+    <NotebookControls
+        :selectCell="selectCell"
+        :selectedCellIndex="selectedCellIndex"
+    >
+        <template #additional-controls>
+            <InputGroup style="margin-right: 1rem;">
+                <Button
+                    @click="resetNotebook"
+                    v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
+                    icon="pi pi-refresh"
+                    size="small"
+                    severity="info"
+                    text
+                />
+                <Button
+                    @click="downloadNotebook"
+                    v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
+                    icon="pi pi-download"
+                    size="small"
+                    severity="info"
+                    text
+                />
+              <OpenNotebookButton @open-file="loadNotebook"/>
+          </InputGroup>
+        </template>
+    </NotebookControls>
 </template>
 
 <script setup>
@@ -62,12 +32,12 @@ import { defineEmits, inject } from 'vue';
 import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import OpenNotebookButton from './OpenNotebookButton.vue';
+import NotebookControls from '../lib/UINotebookControls.vue';
 import { downloadFileDOM, getDateTime } from '../util';
 
 const emit = defineEmits([
-  "run-cell",
-  "remove-cell",
-  "add-cell",
+  "selectCell",
+  "selectedCellindex",
   "set-context"
 ]);
 
