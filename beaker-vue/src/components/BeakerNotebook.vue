@@ -150,7 +150,7 @@
                                 <Button tabindex="-1" label="Preview" text icon="pi pi-eye" />
                             </template>
                             <div class="scroller-area">
-                                <PreviewPane />
+                                <PreviewPane :previewData="previewData"/>
                             </div>
                         </TabPanel>
 
@@ -253,7 +253,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, VNodeRef } from "vue";
+import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits } from "vue";
 import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 
 import Card from 'primevue/card';
@@ -281,8 +281,12 @@ const props = defineProps([
     "connectionStatus",
     "debugLogs",
     "rawMessages",
+    "previewData",
 ]);
 
+const emit = defineEmits([
+    'clear-preview',
+]);
 
 // TODO export/import from ts-lib utils.ts
 enum KernelState {
@@ -588,6 +592,9 @@ function toggleContextSelection() {
 const setContext = (contextPayload: any) => {
 
     contextProcessing.value = true;
+
+    // Clear preview data upon changing contexts.
+    emit("clear-preview");
 
     const future = session.sendBeakerMessage(
         "context_setup_request",

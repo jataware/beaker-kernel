@@ -86,6 +86,9 @@ class LLMKernel(KernelProxyManager):
         Adds intercepts used by the Beaker kernel
         """
         self.server.intercept_message(
+            "shell", "kernel_info_reply", self.kernel_info_reply
+        )
+        self.server.intercept_message(
             "shell", "context_info_request", self.context_info_request
         )
         self.server.intercept_message(
@@ -171,6 +174,13 @@ class LLMKernel(KernelProxyManager):
             return
         socket = get_socket(stream)
         self.server.filters.remove(InterceptionFilter(socket, msg_type, func))
+
+    async def send_preview(self, parent_header=None):
+        generate_preview = getattr(self.context, "generate_preview", None)
+        if generate_preview and (callable(generate_preview) or inspect.iscoroutinefunction(generate_preview)):
+            preview_payload = await generate_preview()
+            if preview_payload:
+                self.send_response("iopub", "preview", preview_payload, parent_header=parent_header)
 
     async def execute(self, command, response_handler=None, parent_header={}):
         self.debug("execution_start", {"command": command}, parent_header=parent_header)
@@ -330,6 +340,7 @@ class LLMKernel(KernelProxyManager):
         await self.context.cleanup()
         self.context = context_cls(beaker_kernel=self, subkernel=self.subkernel, config=context_info)
         await self.context.setup(config=context_info, parent_header=parent_header)
+        await self.send_preview(parent_header=parent_header)
 
     async def post_execute(self, queue, message_id, data):
         message = JupyterMessage.parse(data)
@@ -344,11 +355,22 @@ class LLMKernel(KernelProxyManager):
 
         # Fetch event loop and ensure it's valid
         loop = asyncio.get_event_loop()
-        callback = getattr(self.context, "post_execute", None)
-        if loop and callback and (callable(callback) or inspect.iscoroutinefunction(callback)):
-            # If we have a callback function, then add it as a task to the execution loop so it runs
-            loop.create_task(callback(message))
-            self.debug("post_execute", {}, parent_header=message.header)
+        post_execute = getattr(self.context, "post_execute", None)
+        async def task():
+            """
+            Task that runs post_execute and then preview in the background as a async task.
+            This allows the normal execution flow to respond quickly in case these tasks are slow
+            or resource intensive.
+            """
+            if post_execute and (callable(post_execute) or inspect.iscoroutinefunction(post_execute)):
+                # If we have a callback function, then add it as a task to the execution loop so it runs
+                await post_execute(message)
+            # Always only generate and send preview after post_execute completes in case state changes or setup is
+            # performed in the post_execute function
+            await self.send_preview(parent_header=message.parent_header)
+
+        if loop:
+            loop.create_task(task())
         return data
 
     def send_response(
@@ -479,6 +501,10 @@ class LLMKernel(KernelProxyManager):
         finally:
             # When done, put thought handler back to default to not potentially cause confused thoughts.
             self.context.agent.thought_handler = self.handle_thoughts
+
+    async def kernel_info_reply(self, server, target_stream, data):
+        await self.send_preview(parent_header={})
+        return data
 
     @message_handler
     async def context_info_request(self, message):

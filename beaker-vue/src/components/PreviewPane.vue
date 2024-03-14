@@ -1,62 +1,30 @@
 <template>
-  <Accordion multiple :activeIndex="[0]">
-      <AccordionTab header="Coming soon...">
-          <!-- <div class="mime-select-container">
-              <SelectButton
-                  :allowEmpty="false"
-                  v-model="previewOneMockValue"
-                  :options="previewOneMimeTypes"
-              />
-          </div>
-          <img
-            class="preview-image"
-            src="https://assets-global.website-files.com/6308b9e1771b56be92fe7491/636416a672f13fa441c4e7e6_petri-nets-preview.jpg"
-          > -->
-          <span style="color: var(--text-color-secondary);">Coming soon...</span>
-      </AccordionTab>
-
-      <!-- <AccordionTab header="df_2">
-          <DataTable :value="products">
-              <Column field="price" header="x"></Column>
-              <Column field="quantity" header="y"></Column>
-          </DataTable>
-      </AccordionTab> -->
-  </Accordion>
+    <Accordion v-if="props.previewData" multiple :activeIndex="[0]">
+        <AccordionTab v-for="(itemMap, previewType) in props.previewData" :key="previewType" :header="previewType.toString()">
+            <Fieldset
+                class="preview-container"
+                v-for="(item, name) in itemMap"
+                :key="name"
+                :legend="name.toString()"
+                :toggleable="true"
+            >
+                <BeakerMimeBundle :mimeBundle="item"/>
+            </Fieldset>
+        </AccordionTab>
+    </Accordion>
+    <div v-else>No preview yet</div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue";
+import { defineProps } from "vue";
 import Accordion from 'primevue/accordion';
 import AccordionTab from 'primevue/accordiontab';
-// import DataTable from 'primevue/datatable';
-// import Column from 'primevue/column';
-// import SelectButton from 'primevue/selectbutton';
-// import Card from 'primevue/card';
+import Fieldset from "primevue/fieldset";
+import BeakerMimeBundle from "./BeakerMimeBundle.vue";
 
-const previewOneMockValue = ref('PNG');
-const previewOneMimeTypes = ref(['PNG', 'LATEX']);
-
-// const products = [
-// {
-//     id: '1000',
-//     name: 'Bamboo Watch',
-//     description: 'Product Description',
-//     price: 65,
-//     category: 'Accessories',
-//     quantity: 24,
-//     inventoryStatus: 'INSTOCK',
-//     rating: 5
-// },
-// {
-//     id: '1000',
-//     name: 'Bamboo Watch',
-//     description: 'Product Description',
-//     price: 65,
-//     category: 'Accessories',
-//     quantity: 24,
-//     inventoryStatus: 'INSTOCK',
-//     rating: 5
-// }];
+const props = defineProps<{
+    previewData: {[key: string]: {[key: string]: {[key: string]: any}}}
+}>();
 </script>
 
 
@@ -93,5 +61,14 @@ const previewOneMimeTypes = ref(['PNG', 'LATEX']);
 
 .preview-image {
     width: 100%;
+}
+
+.preview-container {
+    margin-bottom: 1rlh;
+    word-wrap: break-word;
+
+    pre {
+        white-space: pre-wrap;
+    }
 }
 </style>

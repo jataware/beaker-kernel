@@ -34,3 +34,19 @@ class DefaultContext(BaseContext):
         If you need to generate code, you should write it in the '{self.subkernel.DISPLAY_NAME}' language for execution
         in a Jupyter notebook using the '{self.subkernel.KERNEL_NAME}' kernel.
         """.strip()
+
+    async def generate_preview(self):
+        """
+        Preview what exists in the subkernel.
+        """
+        fetch_state_code = self.subkernel.FETCH_STATE_CODE
+        result = await self.beaker_kernel.evaluate(fetch_state_code)
+        state = result.get("return", None)
+        if state:
+            return {
+                "x-application/beaker-subkernel-state": {
+                    "state": {
+                        "application/json": state
+                    }
+                },
+            }

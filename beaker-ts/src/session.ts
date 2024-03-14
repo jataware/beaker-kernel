@@ -11,12 +11,14 @@ import { Slot } from '@lumino/signaling';
 import { createMessageId, IBeakerAvailableContexts, IBeakerFuture, IActiveContextInfo } from './util';
 import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage } from './notebook';
 import { BeakerHistory } from './history';
+import { BeakerRenderer, IBeakerRendererOptions } from './render';
 
 export interface IBeakerSessionOptions {
     settings: any;
     name: string;
     kernelName: string;
     sessionId?: string;
+    rendererOptions?: IBeakerRendererOptions;
     messageHandler?: Slot<any, any>;
 };
 
@@ -32,6 +34,7 @@ export class BeakerSession {
         this._services = new ServiceManager({
             serverSettings: this._serverSettings,
         });
+        this._renderer = new BeakerRenderer(options.rendererOptions);
         this._history = new BeakerHistory(this._sessionId);
 
         this.notebook = new BeakerNotebook();
@@ -315,6 +318,10 @@ export class BeakerSession {
         return this._services;
     }
 
+    get renderer(): BeakerRenderer {
+        return this._renderer;
+    }
+
     private _sessionId: string;
     private _sessionOptions: IBeakerSessionOptions;
     private _services: ServiceManager;
@@ -323,6 +330,7 @@ export class BeakerSession {
     private _messageHandler: Slot<any, any>; // TODO: fix any typing here
     private _history: BeakerHistory;
     private _sessionInfo: any;
+    private _renderer: BeakerRenderer;
 
     public notebook: BeakerNotebook;
 
