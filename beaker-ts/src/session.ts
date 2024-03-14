@@ -176,9 +176,19 @@ export class BeakerSession {
             payload,
             messageId,
         )
-        const responseHandler = async (msg: messages.IIOPubMessage<messages.IOPubMessageType>): Promise<boolean> => {
+        const responseHandler = async (msg: IBeakerIOPubMessage): Promise<boolean> => {
             if (msg.header.msg_type === responseType && messageFuture.onResponse) {
                 await messageFuture.onResponse(msg);
+            }
+            else if (msg.header.msg_type === "code_cell") {
+                const nb = this.notebook;
+                const codeCell = new BeakerCodeCell({
+                    cell_type: "code",
+                    source: msg.content.code,
+                    metadata: {},
+                    outputs: [],
+                });
+                nb.addCell(codeCell);
             }
             return true;
         }
