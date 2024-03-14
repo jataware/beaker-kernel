@@ -13,14 +13,13 @@
                 :is="renderedBundle[selectedMimeType].component"
                 v-bind="renderedBundle[selectedMimeType].bindMapping"
             />
-            <!-- <div v-else v-html="renderedBundle[selectedMimeType]?.outerHTML"/> -->
         </div>
     </div>
 
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, inject } from "vue";
+import { ref, defineProps, inject, computed } from "vue";
 import SelectButton from "primevue/selectbutton";
 
 const props = defineProps([
@@ -30,8 +29,9 @@ const props = defineProps([
 
 const session = inject('session');
 
-const renderedBundle = ref(session.renderer.renderMimeBundle(props.mimeBundle));
-const sortedMimetypes = ref(session.renderer.rankedMimetypesInBundle(props.mimeBundle));
+const renderedBundle = computed(() => {return session.renderer.renderMimeBundle(props.mimeBundle)});
+const sortedMimetypes = computed(() => {return session.renderer.rankedMimetypesInBundle(props.mimeBundle)});
+
 const selectedMimeType = ref<string>(sortedMimetypes.value[0]);
 
 </script>

@@ -5,6 +5,7 @@
             <BeakerMimeBundle
                 v-else-if="['display_data', 'execute_result'].includes(output.output_type)"
                 :mime-bundle="output.data"
+                collapse="true"
             />
             <div v-else-if="output.output_type == 'error'" :class="output.output_type">
                 <BeakerMimeBundle :mime-bundle="rebundleError(output)" collapse="true" />

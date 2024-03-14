@@ -1,11 +1,11 @@
 <template>
     <Accordion v-if="props.previewData" multiple :activeIndex="[0]">
-        <AccordionTab v-for="(itemMap, previewType) in props.previewData" :key="previewType" :header="previewType as string">
+        <AccordionTab v-for="(itemMap, previewType) in props.previewData" :key="previewType" :header="previewType.toString()">
             <Fieldset
                 class="preview-container"
                 v-for="(item, name) in itemMap"
                 :key="name"
-                :legend="name as string"
+                :legend="name.toString()"
                 :toggleable="true"
             >
                 <BeakerMimeBundle :mimeBundle="item"/>
