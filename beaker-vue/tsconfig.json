@@ -18,9 +18,6 @@
     "paths": {
       "@/*": [
         "src/*"
-      ],
-      "beaker-kernel": [
-        "../beaker-ts/src"
       ]
     },
     "lib": [
