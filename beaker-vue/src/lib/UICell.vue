@@ -27,6 +27,7 @@
         <Component
             :is="componentMap[props.cell.cell_type || 'raw']"
             :cell="props.cell"
+            :renderOutput="renderOutput"
             ref="typedCellRef"
         />
       </div>
@@ -49,6 +50,10 @@ const props = defineProps({
     dragEnabled: {
         type: Boolean,
         default: false
+    },
+    renderOutput: {
+        type: Boolean,
+        default: true
     }
 });
 

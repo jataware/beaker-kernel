@@ -16,7 +16,11 @@
         :cell="cell"
         ref="cellRef"
         class="selected"
+        :renderOutput="false"
       />
+
+      <h3>Output</h3>
+      <CodeOutput :outputs="cell.outputs" />
 
       <br />
 
@@ -37,6 +41,7 @@
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, VNodeRef } from "vue";
 
 import Cell from './lib/UICell.vue';
+import CodeOutput from './lib/UICodeCellOutput.vue';
 import NotebookControls from './lib/UINotebookControls.vue';
 // import ContextSelection from './lib/UIContextSelection.vue';
 

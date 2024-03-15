@@ -20,12 +20,8 @@ import { defineProps, inject } from "vue";
 import MimeBundle from "./UIMimeBundle.vue";
 import { IMimeBundle } from 'beaker-kernel/render';
 
-const session = inject('session');
-
-
 const props = defineProps([
-    "outputs",
-    "busy"
+    "outputs"
 ]);
 
 const rebundleError = (errorOutput) => {
