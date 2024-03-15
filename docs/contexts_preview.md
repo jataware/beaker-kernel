@@ -112,15 +112,11 @@ indicator the determines how the preview should be rendered.
 
 You can provide your own mimetype if you also create a renderer for it.
 
-#### The following MIME Types have renderers built in:
+#### The following MIME Types have renderers built in provide by Jupyter:
 
 * text/plain
 * text/html
 * text/markdown
-* text/latex
-* application/latex
-* text/json
-* application/json
 * image/bmp
 * image/png
 * image/jpeg
@@ -131,3 +127,14 @@ You can provide your own mimetype if you also create a renderer for it.
 * application/javascript
 * application/vnd.jupyter.stdout  ( Custom Jupyter type )
 * application/vnd.jupyter.stderr  ( Custom Jupyter type )
+
+#### These MIME Types have renderers defined in the Beaker-vue library
+
+* text/latex
+* application/latex
+* text/json
+* application/json
+
+<br/>
+
+## Adding a new renderer
