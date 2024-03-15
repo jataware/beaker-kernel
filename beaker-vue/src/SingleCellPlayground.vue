@@ -22,7 +22,9 @@
       <br />
 
       <div style="width: 50%; margin: auto;">
+      <!--
         <ContextSelection />
+        -->
       </div>
 
       <br />
@@ -37,7 +39,7 @@ import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide
 
 import Cell from './lib/UICell.vue';
 import NotebookControls from './lib/UINotebookControls.vue';
-import ContextSelection from './lib/UIContextSelection.vue';
+// import ContextSelection from './lib/UIContextSelection.vue';
 
 const session = inject('session');
 

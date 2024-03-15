@@ -24,7 +24,9 @@
         </main>
 
         <aside>
+        <!--
             <ContextSelection />
+            -->
         </aside>
     </div>
 
@@ -37,7 +39,7 @@ import Button from 'primevue/button';
 
 import Notebook from './lib/UINotebook.vue';
 import NotebookControls from './lib/UINotebookControls.vue';
-import ContextSelection from './lib/UIContextSelection.vue';
+// import ContextSelection from './lib/UIContextSelection.vue';
 
 const session: BeakerSession = inject('session');
 
