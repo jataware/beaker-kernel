@@ -15,10 +15,9 @@
         'drag-itself': (index === dragOverIndex && index === dragSourceIndex ),
         'drag-active': isDragActive
       }"
-      :index="index"
       :cell="cell"
       :selected="(index === props.selectedCellIndex)"
-      :selectCell="props.selectCell"
+      @click="props.selectCell(index)"
       @move-cell="handleMoveCell"
       @keyboard-nav="handleNavAction"
       :drag-enabled="isDragEnabled"
@@ -312,31 +311,6 @@ defineExpose({handleKeyboardShortcut, scrollBottomCellContainer});
     // flex: 1;
     flex-direction: column;
     background-color: var(--surface-a);
-}
-
-.drag-source {
-      background-color: #222;
-    > * {
-        opacity: 0.5;
-        background-color: #222;
-    }
-}
-.drag-above {
-      box-shadow: 0px -5px 1px var(--purple-200);
-
-    &:first-child {
-        margin-top: 5px;
-        padding-top: calc(1rem - 5px);
-    }
-}
-.drag-below {
-    box-shadow: 0px 5px 0px var(--purple-200);
-    margin-bottom: 5px;
-    padding-bottom: calc(1rem - 5px);
-}
-
-.drag-itself, .drag-itself.selected {
-    background-color: var(--purple-200);
 }
 
 </style>

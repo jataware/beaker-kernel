@@ -9,7 +9,7 @@
     @keydown.ctrl.enter.prevent="execute"
     @keydown.shift.enter.prevent="executeAndMove"
     @keyup.esc="unfocusEditor"
-    @click="props.selectCell(props.index || 0)"
+    @click="handleClick"
     ref="beakerCellRef"
   >
     <div class="cell-grid">
@@ -45,9 +45,6 @@ import MarkdownCell from './UIMarkdownCell.vue';
 import AgentCell from './UIAgentCell.vue';
 
 const props = defineProps({
-    index: {
-        type: Number,
-    },
     cell: {
         type: Object,
         required: true
@@ -59,17 +56,13 @@ const props = defineProps({
     selected: {
         type: Boolean,
         default: false
-    },
-    selectCell: {
-      type: Function,
-      required: true
     }
 });
 
 const emit = defineEmits([
-    'keyboard-nav'
+    'keyboard-nav',
+    'click'
 ]);
-
 
 type BeakerCellType = typeof CodeCell | typeof AgentCell | typeof MarkdownCell;
 
@@ -80,6 +73,10 @@ const componentMap: {[key: string]: Component} = {
     'code': CodeCell,
     'query': AgentCell,
     'markdown': MarkdownCell
+}
+
+function handleClick() {
+    emit('click');
 }
 
 // Both for code and markdown cells
@@ -117,7 +114,6 @@ const executeAndMove = () => {
 </script>
 
 <style lang="scss">
-
 .beaker-cell {
     padding: 1rem 0 1rem 0.2rem;
     border-right: 5px solid transparent;
@@ -168,6 +164,31 @@ const executeAndMove = () => {
 .drag-disabled {
     pointer-events: none;
     opacity: 0.2;
+}
+
+.drag-source {
+      background-color: #222;
+    > * {
+        opacity: 0.5;
+        background-color: #222;
+    }
+}
+.drag-above {
+      box-shadow: 0px -5px 1px var(--purple-200);
+
+    &:first-child {
+        margin-top: 5px;
+        padding-top: calc(1rem - 5px);
+    }
+}
+.drag-below {
+    box-shadow: 0px 5px 0px var(--purple-200);
+    margin-bottom: 5px;
+    padding-bottom: calc(1rem - 5px);
+}
+
+.drag-itself, .drag-itself.selected {
+    background-color: var(--purple-200);
 }
 
 </style>
