@@ -39,6 +39,7 @@
 <script setup>
 import { ref, inject, computed, nextTick, defineProps, defineExpose } from 'vue';
 import Cell from './UICell.vue';
+import { focusSelectedCell } from './common.ts';
 
 const session = inject('session');
 
@@ -61,6 +62,10 @@ function setSelectedRef(el, selected) {
     if (selected) {
         selectedCellRef.value = el;
     }
+}
+
+function executeSelectedCell() {
+    selectedCellRef.value.execute();
 }
 
 /**
@@ -228,16 +233,6 @@ function handleDragEnd() {
 }
 
 
-function focusSelectedCell() {
-    if (!cellsContainerRef.value){
-        return;
-    }
-    const elem = cellsContainerRef.value.querySelector('.beaker-cell.selected');
-    if (elem) {
-        elem.focus();
-    }
-}
-
 /**
  * Parses emits by other child components to follow commands that the notebook
  * controls.
@@ -296,9 +291,6 @@ function scrollBottomCellContainer(event) {
     }
 }
 
-function executeSelectedCell() {
-    selectedCellRef.value.execute();
-}
 
 defineExpose({handleKeyboardShortcut, scrollBottomCellContainer, executeSelectedCell});
 

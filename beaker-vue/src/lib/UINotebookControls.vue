@@ -33,6 +33,7 @@
 import { inject, computed, defineProps, nextTick } from 'vue';
 import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
+import { focusSelectedCell } from './common.ts';
 
 const session = inject('session');
 
@@ -64,13 +65,6 @@ function selectCellByObj(cellObj) {
   props.selectCell(index);
 }
 
-
-function focusSelectedCell() {
-    const elem = document.querySelector('.beaker-cell.selected');
-    if (elem) {
-        elem.focus();
-    }
-}
 
 const addCell = (toIndex) => {
     const newCell = session.addCodeCell("");
