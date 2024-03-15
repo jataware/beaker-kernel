@@ -1,7 +1,8 @@
 <template>
     <NotebookControls
-        :selectCell="selectCell"
-        :selectedCellIndex="selectedCellIndex"
+        :selectCell="props.selectCell"
+        :selectedCellIndex="props.selectedCellIndex"
+        :runCell="props.runCell"
     >
         <template #additional-controls>
             <InputGroup style="margin-right: 1rem;">
@@ -28,19 +29,20 @@
 </template>
 
 <script setup>
-import { defineEmits, inject } from 'vue';
+import { defineProps, defineEmits, inject } from 'vue';
 import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import OpenNotebookButton from './OpenNotebookButton.vue';
 import NotebookControls from '../lib/UINotebookControls.vue';
 import { downloadFileDOM, getDateTime } from '../util';
 
-const emit = defineEmits([
+const props = defineProps([
   "selectCell",
   "selectedCellindex",
-  "set-context"
+  "runCell"
 ]);
 
+const emit = defineEmits(['set-context']);
 const session = inject("session");
 
 const identity = () => {console.log('identity func called');};

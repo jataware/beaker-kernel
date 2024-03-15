@@ -8,11 +8,13 @@
 
       <NotebookControls 
         single-cell 
+        :runCell="runCell"
         :selectedCellIndex="selectedCellIndex"
       />
 
       <Cell 
         :cell="cell"
+        ref="cellRef"
         class="selected"
       />
 
@@ -42,12 +44,17 @@ const session = inject('session');
 
 const activeContext = ref(undefined);
 const selectedCellIndex = ref(0);
+const cellRef = ref(null);
 
 provide('active_context', activeContext);
 provide('theme', 'light');
 
 const selectCell = (index) => {
     selectedCellIndex.value = index;
+}
+
+function runCell() {
+    cellRef.value.execute();
 }
 
 const cell = computed(() => {

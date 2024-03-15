@@ -18,7 +18,7 @@
               text
           />
           <Button
-              @click="runCell"
+              @click="props.runCell"
               icon="pi pi-play"
               size="small"
               severity="info"
@@ -47,6 +47,10 @@ const props = defineProps({
   },
   selectedCellIndex: {
     type: Number,
+    required: true
+  },
+    runCell: {
+    type: Function,
     required: true
   }
 });
@@ -89,13 +93,6 @@ const removeCell = () => {
         props.selectCell(cellCount.value - 1);
     }
 };
-
-const runCell = () => {
-    const cell = selectedCell.value;
-    if (cell !== undefined) {
-        cell.execute(session);
-    }
-}
 
 </script>
 

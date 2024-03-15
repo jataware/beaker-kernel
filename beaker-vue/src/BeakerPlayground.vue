@@ -14,6 +14,7 @@
             <NotebookControls 
                 :selectCell="selectCell"
                 :selectedCellIndex="selectedCellIndex"
+                :runCell="runCell"
             />
 
             <Button text size="small" label="debug" @click="debug" />
@@ -61,6 +62,10 @@ const selectCell = (index) => {
 
 function debug() {
     console.log('selectedCellIndex', selectedCellIndex.value);
+}
+
+function runCell() {
+    notebookRef.value.executeSelectedCell();
 }
 
 function handleKeyboardShortcut(event) {

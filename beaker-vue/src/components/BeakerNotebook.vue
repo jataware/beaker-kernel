@@ -27,6 +27,7 @@
                         :selectCell="selectCell"
                         :selectedCellIndex="selectedCellIndex"
                         :set-context="reapplyContext"
+                        :run-cell="runCell"
                     />
 
                     <div class="ide-cells">
@@ -299,17 +300,8 @@ const selectCell = (cell: number | IBeakerCell) => {
     selectedCellIndex.value = index;
 }
 
-
-const runCell = (cell?: number | IBeakerCell) => {
-    if (cell === undefined) {
-        cell = selectedCell.value;
-    }
-    else {
-        cell = _getCell(cell);
-    }
-    if (cell !== undefined) {
-        cell.execute(session);
-    }
+const runCell = () => {
+    beakerNotebookRef.value.executeSelectedCell();
 }
 
 function toggleContextSelection() {

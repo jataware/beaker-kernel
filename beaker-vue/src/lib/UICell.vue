@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, defineEmits, Component } from "vue";
+import { defineProps, ref, defineEmits, Component, defineExpose } from "vue";
 import DraggableMarker from './UIDraggableMarker.vue';
 import CodeCell from './UICodeCell.vue';
 import MarkdownCell from './UIMarkdownCell.vue';
@@ -103,6 +103,8 @@ const executeAndMove = () => {
         emit('keyboard-nav', 'select-next-cell');
     }
 };
+
+defineExpose({execute});
 
 </script>
 

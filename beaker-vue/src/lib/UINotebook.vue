@@ -24,6 +24,7 @@
       @dragover="handleDragOver($event, cell, index)"
       @drop="handleDrop($event, index)"
       @dragend="handleDragEnd"
+      :ref="(el) => {setSelectedRef(el, index === props.selectedCellIndex)}"
     />
     <div
       class="drop-overflow-catcher"
@@ -47,6 +48,7 @@ const props = defineProps([
 ]);
 
 const cellsContainerRef = ref(null);
+const selectedCellRef = ref(null);
 const isDragActive = ref(false);
 const dragSourceIndex = ref(-1);
 const dragOverIndex = ref(-1);
@@ -55,6 +57,11 @@ const isDeleteprefixActive = ref(false);
 const isDragEnabled = computed(() => session.notebook?.cells.length > 1);
 const cellCount = computed(() => session.notebook?.cells?.length || 0);
 
+function setSelectedRef(el, selected) {
+    if (selected) {
+        selectedCellRef.value = el;
+    }
+}
 
 /**
  * Modifies array in place to move a cell to a new location (or any other elem)
@@ -261,9 +268,9 @@ function handleKeyboardShortcut(event) {
         selectPreviousCell();
     }
 
-    if (['b', 'B'].includes(event.key)){
+    if (['b', 'B'].includes(event.key)) {
         addCell(props.selectedCellIndex + 1);
-    } else if (['a', 'A'].includes(event.key)){
+    } else if (['a', 'A'].includes(event.key)) {
         let prevIndex = props.selectedCellIndex;
         addCell(prevIndex);
     }
@@ -289,7 +296,11 @@ function scrollBottomCellContainer(event) {
     }
 }
 
-defineExpose({handleKeyboardShortcut, scrollBottomCellContainer});
+function executeSelectedCell() {
+    selectedCellRef.value.execute();
+}
+
+defineExpose({handleKeyboardShortcut, scrollBottomCellContainer, executeSelectedCell});
 
 </script>
 
