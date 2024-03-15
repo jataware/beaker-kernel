@@ -516,8 +516,6 @@ footer {
         flex: 1;
         position: relative;
     }
-
-
 }
 
 .scroller-area {

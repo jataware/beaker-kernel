@@ -8,7 +8,9 @@
             </nav>
         </header>
 
-        <main>
+        <main
+            @keydown="handleKeyboardShortcut"
+        >
             <NotebookControls 
                 :selectCell="selectCell"
                 :selectedCellIndex="selectedCellIndex"
@@ -17,8 +19,9 @@
             <Button text size="small" label="debug" @click="debug" />
 
             <Notebook 
-                 :selectCell="selectCell"
-                 :selectedCellIndex="selectedCellIndex"
+                :selectCell="selectCell"
+                :selectedCellIndex="selectedCellIndex"
+                ref="notebookRef"
             />
 
         </main>
@@ -47,6 +50,7 @@ const cellCount = computed(() => session.notebook?.cells?.length || 0);
 
 const selectedCellIndex = ref(0);
 const activeContext = ref(undefined);
+const notebookRef = ref(null);
 
 provide('active_context', activeContext);
 provide('theme', 'light');
@@ -57,6 +61,22 @@ const selectCell = (index) => {
 
 function debug() {
     console.log('selectedCellIndex', selectedCellIndex.value);
+}
+
+function handleKeyboardShortcut(event) {
+
+    const { target } = event;
+
+    // TODO is there a better way to encapsulate cancelling events
+    // when writing on textarea/input/code elements ?
+    const isEditingCode = target.className === 'cm-content'; // codemirror
+    // const isTextArea = target.className.includes('resizeable-textarea');
+
+    if (isEditingCode) {
+        return;
+    }
+
+    notebookRef.value.handleKeyboardShortcut(event);
 }
 
 onBeforeMount(() => {
