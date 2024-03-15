@@ -14,9 +14,6 @@
       <Cell 
         :cell="cell"
         class="selected"
-        :selectCell="selectCell"
-        :selectedCellIndex="selectedCellIndex"
-        :index="0"
       />
 
       <br />

@@ -1,9 +1,6 @@
 <template>
   <div
     class="beaker-cell"
-    :class="{
-        selected: props.selected
-    }"
     tabindex="0"
     @keyup.enter.exact="focusEditor"
     @keydown.ctrl.enter.prevent="execute"
@@ -50,10 +47,6 @@ const props = defineProps({
         required: true
     },
     dragEnabled: {
-        type: Boolean,
-        default: false
-    },
-    selected: {
         type: Boolean,
         default: false
     }

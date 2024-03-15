@@ -4,7 +4,6 @@
             <BeakerHeader 
                 :connectionStatus="props.connectionStatus"
                 :toggleDarkMode="toggleDarkMode"
-                :isDarkMode="selectedTheme === 'dark'"
                 :loading="!activeContext?.slug"
                 :kernel="selectedKernel"
                 @select-kernel="toggleContextSelection"
@@ -21,6 +20,7 @@
                     :size="70"
                     :minSize="30"
                     class="main-panel"
+                    @keydown="handleKeyboardShortcut"
                 >
 
                     <NotebookControls
@@ -30,7 +30,9 @@
                     />
 
                     <div class="ide-cells">
-                        <div style="flex: 1; position: relative;">
+                        <div 
+                            style="flex: 1; position: relative;"
+                        >
                              <Notebook
                                  :selectCell="selectCell"
                                  :selectedCellIndex="selectedCellIndex"
@@ -248,6 +250,22 @@ function handleSplitterResized({sizes}) {
     if (rightPaneSize < 15) {
         showDebugPane.value = false
     }
+}
+
+function handleKeyboardShortcut(event) {
+
+    const { target } = event;
+
+    // TODO is there a better way to encapsulate cancelling events
+    // when writing on textarea/input/code elements ?
+    const isEditingCode = target.className === 'cm-content'; // codemirror
+    const isTextArea = target.className.includes('resizeable-textarea');
+
+    if (isEditingCode || isTextArea) {
+        return;
+    }
+
+    beakerNotebookRef.value.handleKeyboardShortcut(event);
 }
 
 const selectedCell = computed(() => {

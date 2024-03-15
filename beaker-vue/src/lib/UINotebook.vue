@@ -2,7 +2,6 @@
   <div
     class="cell-container drag-sort-enable"
     ref="cellsContainerRef"
-    @keydown="handleKeyboardShortcut"
   >
     <Cell
       v-for="(cell, index) in session.notebook.cells"
@@ -13,10 +12,10 @@
         'drag-above': (index === dragOverIndex && index < dragSourceIndex),
         'drag-below': (index === dragOverIndex && index > dragSourceIndex),
         'drag-itself': (index === dragOverIndex && index === dragSourceIndex ),
-        'drag-active': isDragActive
+        'drag-active': isDragActive,
+        'selected': index === props.selectedCellIndex
       }"
       :cell="cell"
-      :selected="(index === props.selectedCellIndex)"
       @click="props.selectCell(index)"
       @move-cell="handleMoveCell"
       @keyboard-nav="handleNavAction"
@@ -250,17 +249,6 @@ function handleNavAction(action) {
 }
 
 function handleKeyboardShortcut(event) {
-
-    const { target } = event;
-
-    // TODO is there a better way to encapsulate cancelling events
-    // when writing on textarea/input/code elements ?
-    const isEditingCode = target.className === 'cm-content'; // codemirror
-    const isTextArea = target.className.includes('resizeable-textarea');
-
-    if (isEditingCode || isTextArea) {
-        return;
-    }
 
     if ('Enter' === event.key && !event.shiftKey && !event.ctrlKey) {
         focusSelectedCell();

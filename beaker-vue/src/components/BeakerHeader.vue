@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed } from "vue";
+import { defineProps, defineEmits, computed, inject } from "vue";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { capitalize } from '../util';
@@ -72,19 +72,20 @@ import { capitalize } from '../util';
 const props = defineProps([
     "connectionStatus",
     "toggleDarkMode",
-    "isDarkMode",
     "loading",
     "kernel"
 ]);
 
 const emit = defineEmits(["selectKernel"]);
 
+const theme = inject('theme');
+
 function selectKernel() {
     emit('select-kernel');
 }
 
 const themeIcon = computed(() => {
-    return `pi pi-${props.isDarkMode ? 'sun' : 'moon'}`;
+    return `pi pi-${theme === 'dark' ? 'sun' : 'moon'}`;
 });
 
 
