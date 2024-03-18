@@ -22,14 +22,26 @@ const nodes = computed(() => props.data.graph.V.map(e => {return {group: 'nodes'
 const edges = computed(() => props.data.graph.E.map(e => {return {group: 'edges', data: {id: `${e.src}-${e.tgt}`, source: e.src, target: e.tgt, ...e.eprops}}}));
 
 var resizingTimeout = null;
+var lastWidth = null;
+var lastHeight = null;
+
+// Fairly complex logic to ensure that nodes are properly sized and layed out based on the dynamic size of the side panel.
 const resize = () => {
-  // Since this is somewhat resource intensive, only actually relayout at most every 150ms.
-  if (resizingTimeout === null) {
+  const el = document.getElementById(divId.value);
+  const width = el.clientWidth;
+  const height = el.clientHeight;
+  if (resizingTimeout === null && !(width === 0 && height === 0) && !(width === lastWidth && height === lastHeight)) {
+    cy.value.layout(layoutConfig).run();
+    cy.value.fit();
     resizingTimeout = setTimeout(() => {
+      resizingTimeout = null;
       cy.value.layout(layoutConfig).run();
       cy.value.fit();
-      resizingTimeout = null;
+      lastWidth = width;
+      lastHeight = height;
     }, 150);
+    lastWidth = width;
+    lastHeight = height;
   }
 }
 
@@ -64,14 +76,10 @@ onMounted(() => {
     wheelSensitivity: 0.1,
   });
   resizeObserver.observe(el);
-  cy.value.layout(layoutConfig).run();
-  cy.value.fit();
 })
 
 onBeforeUnmount(() => {
-  console.log("unmounting");
   const el = document.getElementById(divId.value);
-  console.log(el);
   if (el) {
     resizeObserver.unobserve(el);
   }
