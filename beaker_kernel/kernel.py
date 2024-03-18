@@ -347,7 +347,7 @@ class LLMKernel(KernelProxyManager):
 
         # Only run if there is an active context
         if self.context is None:
-            return
+            return data
 
         # Don't run for internal executions
         if message.parent_header.get("msg_id") in self.internal_executions:
