@@ -4,12 +4,14 @@ import logging
 import os
 from typing import Dict
 
+from jupyter_core.utils import ensure_async
+from jupyter_server.auth.decorator import authorized
 from jupyter_server.base.handlers import JupyterHandler
-from jupyter_server.extension.handler import (
-    ExtensionHandlerMixin,
-)
-from jupyter_server.utils import url_path_join as ujoin
+from jupyter_server.extension.handler import ExtensionHandlerMixin
+from jupyter_server.services.kernels.handlers import MainKernelHandler, json_default
+from jupyter_server.utils import url_escape, url_path_join
 from jupyterlab_server import LabServerApp
+from tornado import web
 from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTPError
 
 from beaker_kernel.lib.autodiscovery import autodiscover
@@ -27,6 +29,45 @@ def _jupyter_server_extension_points():
     return [{"module": "beaker_kernel.server.main", "app": BeakerJupyterApp}]
 
 
+def secure_env(env: dict) -> dict:
+        UNSAFE_WORDS = ["KEY", "SECRET", "TOKEN"]
+        safe_env = {}
+        for key, value in env.items():
+            for unsafe_word in UNSAFE_WORDS:
+                if unsafe_word in key.upper():
+                    break
+            else:
+                safe_env[key] = value
+        return safe_env
+
+
+class SafeKernelHandler(MainKernelHandler):
+
+    @web.authenticated
+    @authorized
+    async def post(self):
+        km = self.kernel_manager
+        model = self.get_json_body()
+        if model is None:
+            model = {"name": km.default_kernel_name}
+        else:
+            model.setdefault("name", km.default_kernel_name)
+
+        env = self.session_manager.get_kernel_env(path=model.get("path"), name=model["name"])
+        env = secure_env(env)
+
+        kernel_id = await ensure_async(
+            km.start_kernel(  # type:ignore[has-type]
+                kernel_name=model["name"], path=model.get("path"), env=env
+            )
+        )
+        model = await ensure_async(km.kernel_model(kernel_id))
+        location = url_path_join(self.base_url, "api", "kernels", url_escape(kernel_id))
+        self.set_header("Location", location)
+        self.set_status(201)
+        self.finish(json.dumps(model, default=json_default))
+
+
 class NotebookHandler(ExtensionHandlerMixin, JupyterHandler):
 
     def get(self):
@@ -37,7 +78,6 @@ class NotebookHandler(ExtensionHandlerMixin, JupyterHandler):
         notebook_content = self.get_json_body()
         notebook_content["lastSaved"] = datetime.datetime.utcnow().isoformat()
         return self.write(json.dumps(notebook_content))
-
 
 
 class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
@@ -152,6 +192,7 @@ class BeakerJupyterApp(LabServerApp):
 
     def initialize_handlers(self):
         """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""
+        self.handlers.append((r"/api/kernels", SafeKernelHandler))
         self.handlers.append(("/contexts", ContextHandler))
         self.handlers.append(("/config", ConfigHandler))
         self.handlers.append(("/notebook", NotebookHandler))
@@ -163,6 +204,7 @@ class BeakerJupyterApp(LabServerApp):
         self.handlers.append((r"/static/(.*)", StaticFileHandler, {"path": os.path.join(HERE, "ui", "static")}))
         self.handlers.append((r"/themes/(.*)", StaticFileHandler, {"path": os.path.join(HERE, "ui", "themes")}))
         self.handlers.append((r"/dev_ui/?(.*)", RedirectHandler, {"url": r"/{0}"}))
+        super().initialize_handlers()
 
     def initialize_settings(self):
         # Override to allow cross domain websockets
