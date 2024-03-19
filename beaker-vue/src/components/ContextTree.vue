@@ -1,85 +1,63 @@
 <template>
     <div class="context-sidebar">
-        <h4
-            class="context-heading"
-            :class="{hidden: !contextPanelOpen}"
+        <Tree
+            :value="contextNodes"
+            :loading="!props.context"
+            v-model:expandedKeys="contextExpandedKeys"
         >
-            Context
-        </h4>
-
-        <Button
-            class="context-toggle-button"
-            icon="pi pi-angle-right"
-            size="small"
-            outlined
-            aria-label="Toggle Context Pane"
-            :class="{ 'button-rotate': contextPanelOpen }"
-            @click="toggleContextPanel"
-        />
-
-        <div
-            v-if="contextPanelOpen"
-            class="context-tree"
-        >
-            <Tree
-                :value="contextNodes"
-                :loading="!props.context"
-                v-model:expandedKeys="contextExpandedKeys"
-            >
-                <template v-slot:loadingicon>
-                    <div class="loading-area">
-                        No Context Loaded.
-                    </div>
-                </template>
-                <template #action="slotProps">
-                    <div
-                        @mousedown="($event.detail > 1) && $event.preventDefault();"
-                        @dblclick.stop.prevent="selectAction(slotProps.node.label)"
-                        style="cursor: pointer; border-bottom: 1px dotted var(--text-color-secondary);"
-                        v-tooltip="{
-                            value: `${slotProps.node.data}`,
-                            pt: {
-                                text: {
-                                    style: {
-                                        width: '20rem'
-                                    }
-                                },
-                                root: {
-                                    style: {
-                                        marginLeft: '1rem'
-                                    }
+            <template v-slot:loadingicon>
+                <div class="loading-area">
+                    No Context Loaded.
+                </div>
+            </template>
+            <template #action="slotProps">
+                <div
+                    @mousedown="($event.detail > 1) && $event.preventDefault();"
+                    @dblclick.stop.prevent="selectAction(slotProps.node.label)"
+                    style="cursor: pointer; border-bottom: 1px dotted var(--text-color-secondary);"
+                    v-tooltip="{
+                        value: `${slotProps.node.data}`,
+                        pt: {
+                            text: {
+                                style: {
+                                    width: '20rem'
+                                }
+                            },
+                            root: {
+                                style: {
+                                    marginLeft: '1rem'
                                 }
                             }
-                            }"
-                        >
-                        {{ slotProps.node.label }}
-                    </div>
-                </template>
-                <template #tool="slotProps">
-                    <span
-                        style="cursor: help; border-bottom: 1px dotted var(--text-color-secondary);"
-                        v-tooltip="{
-                            value: `${slotProps.node.data}`,
-                            pt: {
-                                text: {
-                                    style: {
-                                        width: '20rem'
-                                    }
-                                },
-                                root: {
-                                    style: {
-                                        marginLeft: '1rem'
-                                    }
+                        }
+                        }"
+                    >
+                    {{ slotProps.node.label }}
+                </div>
+            </template>
+            <template #tool="slotProps">
+                <span
+                    style="cursor: help; border-bottom: 1px dotted var(--text-color-secondary);"
+                    v-tooltip="{
+                        value: `${slotProps.node.data}`,
+                        pt: {
+                            text: {
+                                style: {
+                                    width: '20rem'
+                                }
+                            },
+                            root: {
+                                style: {
+                                    marginLeft: '1rem'
                                 }
                             }
-                            }"
-                        >
-                        {{ slotProps.node.label }}
-                    </span>
-                </template>
-            </Tree>
-        </div>
-  </div>
+                        }
+                        }"
+                    >
+                    {{ slotProps.node.label }}
+                </span>
+            </template>
+        </Tree>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -202,6 +180,7 @@ const selectAction = (actionName: string) => {
   @media(max-width: 750px) {
     display: none;
   }
+  flex: 1;
 }
 
 .context-heading {

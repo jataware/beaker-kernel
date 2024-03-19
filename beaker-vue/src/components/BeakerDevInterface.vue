@@ -1,6 +1,6 @@
 <template>
     <div class="beaker-notebook">
-        <!-- <slot name="header">
+        <header>
             <BeakerHeader
                 :connectionStatus="props.connectionStatus"
                 :toggleDarkMode="toggleDarkMode"
@@ -8,7 +8,22 @@
                 :kernel="selectedKernel"
                 @select-kernel="toggleContextSelection"
             />
-        </slot> -->
+        </header>
+
+        <main style="display: flex;">
+
+            <SideMenu left>
+                <SideMenuPanel label="Context" icon="pi pi-home">
+                    <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
+                </SideMenuPanel>
+            </SideMenu>
+
+                <div
+                    class="main-panel"
+                    style="flex: 100"
+                    @keydown="handleKeyboardShortcut"
+                >
+
 
                     <NotebookControls
                         :selectCell="selectCell"
@@ -18,9 +33,9 @@
                     />
 
                     <div class="ide-cells">
-                        <!-- <div
+                        <div
                             style="flex: 1; position: relative;"
-                        > -->
+                        >
                              <Notebook
                                  :selectCell="selectCell"
                                  :selectedCellIndex="selectedCellIndex"
@@ -43,7 +58,54 @@
                             :run-cell-callback="scrollBottomCellContainer"
                         />
                     </div>
-            <!-- </div> -->
+                </div>
+                    <SideMenu right>
+                        <SideMenuPanel tabId="preview" label="Preview" icon="pi pi-eye">
+                            <PreviewPane :previewData="previewData"/>
+                        </SideMenuPanel>
+
+                        <SideMenuPanel tabId="action" label="Actions" icon="pi pi-send">
+                                <Card class="debug-card">
+                                    <template #title>Execute an Action</template>
+                                    <template #content>
+                                        <BeakerExecuteAction
+                                            :selectedAction="selectedAction"
+                                            :actions="activeContext?.info?.actions"
+                                            :rawMessages="props.rawMessages"
+                                            @clear-selection="selectedAction = undefined"
+                                        />
+                                    </template>
+                                </Card>
+                        </SideMenuPanel>
+
+                        <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
+                            <LoggingPane :entries="props.debugLogs" />
+                        </SideMenuPanel>
+
+                        <SideMenuPanel label="Messages" icon="pi pi-comments">
+                            <LoggingPane :entries="props.rawMessages" />
+                        </SideMenuPanel>
+
+                        <SideMenuPanel label="Files" icon="pi pi-file-export">
+                            <BeakerFilePane />
+                        </SideMenuPanel>
+
+                    </SideMenu>
+        </main>
+
+        <!-- TODO may use HTML comments to hide footer -->
+        <footer>
+            <FooterDrawer />
+         </footer>
+    </div>
+
+    <BeakerContextSelection
+        :isOpen="contextSelectionOpen"
+        :toggleOpen="toggleContextSelection"
+        @update-context-info="setContext"
+        :contextProcessing="contextProcessing"
+    />
+
 </template>
 
 <script setup lang="tsx">
@@ -68,6 +130,8 @@ import BeakerFilePane from './BeakerFilePane.vue';
 import ContextTree from './ContextTree.vue';
 import PreviewPane from './PreviewPane.vue';
 import SvgPlaceholder from './SvgPlaceholder.vue';
+import SideMenu from "./SideMenu.vue";
+import SideMenuPanel from "./SideMenuPanel.vue";
 
 
 const props = defineProps([
@@ -82,16 +146,13 @@ const emit = defineEmits([
 ]);
 
 // TODO info object map type
-const notebookCellsRef = ref<typeof BeakerCell|null>(null);
 const activeContext = ref<{slug: string, class: string, context: any, info: any} | undefined>(undefined);
 const selectedCellIndex = ref(0);
 const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
-const showDebugPane = ref (true);
 const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
-const rightPaneTabIndex = ref(0);
-const isDeleteprefixActive = ref(false);
+const rightPaneTabIndex = ref(1);
 const selectedTheme = ref(localStorage.getItem('theme') || 'light');
 const debugTabView = ref<{tabs: any[]}|null>(null);
 const selectedAction = ref<string|undefined>(undefined);
@@ -116,18 +177,6 @@ const toggleDarkMode = () => {
     localStorage.setItem('theme', selectedTheme.value);
     applyTheme();
 };
-
-function handleRightPaneIconClick(index) {
-    rightPaneTabIndex.value = index;
-    showDebugPane.value = true;
-}
-
-function handleSplitterResized({sizes}) {
-    const [_, rightPaneSize] = sizes;
-    if (rightPaneSize < 15) {
-        showDebugPane.value = false
-    }
-}
 
 function handleKeyboardShortcut(event) {
 
@@ -162,7 +211,7 @@ const _cellIndex = (cell: IBeakerCell): number => {
 
 const _getCell = (cell: number | IBeakerCell) => {
     const index = _cellIndex(cell);
-    return notebookCellsRef.value[index];
+    return session.notebook.cells[index];
 }
 
 const selectCell = (cell: number | IBeakerCell) => {
@@ -179,154 +228,6 @@ const selectCell = (cell: number | IBeakerCell) => {
 const runCell = () => {
     beakerNotebookRef.value.executeSelectedCell();
 }
-
-const selectNextCell = (event) => {
-    if (event && !commonSelectAction(event)) {
-        return;
-    }
-
-    const currentIndex = selectedCellIndex.value;
-    // TODO should we wrap around? Should we auto-add a new cell?
-    if (currentIndex === cellCount.value - 1) {
-        return;
-    }
-    selectCell(currentIndex + 1);
-
-    nextTick(() => {
-        focusSelectedCell();
-    });
-
-    if (event) {
-        event.preventDefault();
-    }
-};
-
-const selectPreviousCell = (event) => {
-
-    if (event && !commonSelectAction(event)) {
-        return;
-    }
-
-    const currentIndex = selectedCellIndex.value;
-    if (currentIndex === 0) {
-        return;
-    }
-    selectCell(currentIndex - 1);
-
-    nextTick(() => {
-        focusSelectedCell();
-    });
-
-    if (event) {
-        event.preventDefault();
-    }
-};
-
-
-function handleKeyboardShortcut(event) {
-
-    const { target } = event;
-
-    // TODO is there a better way to encapsulate cancelling events
-    // when writing on textarea/input/code elements ?
-    const isEditingCode = target.className.includes('cm-content'); // codemirror
-    const isTextArea = target.className.includes('resizeable-textarea');
-
-    if (isEditingCode || isTextArea) {
-        return;
-    }
-
-    if ('Enter' === event.key && !event.shiftKey && !event.ctrlKey) {
-        const cell = selectedCell.value;
-        if (cell.enter !== undefined) {
-            cell.enter(event);
-        }
-        else {
-            focusSelectedCell();
-        }
-        return;
-    }
-
-    if (['ArrowDown', 'j', 'J'].includes(event.key)) {
-        selectNextCell();
-    } else if (['ArrowUp', 'k', 'K'].includes(event.key)) {
-        selectPreviousCell();
-    }
-
-    if (['b', 'B'].includes(event.key)){
-        addCell(selectedCellIndex.value + 1);
-    } else if (['a', 'A'].includes(event.key)){
-        let prevIndex = selectedCellIndex.value;
-        addCell(prevIndex);
-    }
-
-    if (['d', 'D'].includes(event.key)) {
-        if (isDeleteprefixActive.value) {
-            isDeleteprefixActive.value = false;
-            removeCell();
-            nextTick(() => {
-                focusSelectedCell();
-            })
-        } else {
-            isDeleteprefixActive.value = true;
-         }
-    } else {
-        isDeleteprefixActive.value = false;
-    }
-}
-
-function scrollBottomCellContainer(event) {
-    if (cellsContainerRef.value) {
-        cellsContainerRef.value.scrollTop = cellsContainerRef.value.scrollHeight;
-    }
-}
-
-const addCell = (toIndex) => {
-    const newCell = session.addCodeCell("");
-
-    if (typeof toIndex !== 'number') {
-        toIndex = selectedCellIndex.value + 1;
-    }
-    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
-
-    selectCell(newCell);
-
-    nextTick(() => {
-        focusSelectedCell();
-    });
-}
-
-const runCell = (cell?: number | IBeakerCell) => {
-    if (cell === undefined) {
-        cell = selectedCell.value;
-    }
-    else {
-        cell = _getCell(cell);
-    }
-    if (cell !== undefined) {
-        cell.execute(session);
-    }
-}
-
-const removeCell = () => {
-    session.notebook.removeCell(selectedCellIndex.value);
-
-    // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
-    if (cellCount.value === 0) {
-        session.addCodeCell("");
-    }
-    // Fixup the selection if we remove the last item.
-    if (selectedCellIndex.value >= cellCount.value) {
-        selectedCellIndex.value = cellCount.value - 1;
-    }
-};
-
-const resetNB = async () => {
-    await session.reset();
-    if (cellCount.value === 0) {
-        session.addCodeCell("");
-    }
-};
 
 function toggleContextSelection() {
     contextSelectionOpen.value = !contextSelectionOpen.value;
@@ -398,7 +299,6 @@ const selectAction = (actionName: string) => {
     }
     const index = debugTabView.value.tabs.findIndex((tab) => (tab.props?.tabId === "action"));
     rightPaneTabIndex.value = index;
-    showDebugPane.value = true;
     selectedAction.value = actionName;
 };
 
@@ -424,21 +324,18 @@ onMounted(() => {
 
 <style lang="scss">
 .beaker-notebook {
-    // height: 80%;
-    // width: 100vw;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    // display: grid;
-    // grid-gap: 1px;
+    height: 100vh;
+    width: 100vw;
+    display: grid;
+    grid-gap: 1px;
 
-    // grid-template-areas:
-    //     "header header header header"
-    //     "main main main main"
-    //     "footer footer footer footer";
+    grid-template-areas:
+        "header header header header"
+        "main main main main"
+        "footer footer footer footer";
 
-    // grid-template-columns: 1fr 1fr 1fr 1fr;
-    // grid-template-rows: auto 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
 }
 
 .notebook-json {
@@ -538,11 +435,11 @@ footer {
 }
 
 .scroller-area {
-    position: absolute;
-    top:0;
-    bottom: 0;
-    right: 0;
-    left: 0;
+    // position: absolute;
+    // top:0;
+    // bottom: 0;
+    // right: 0;
+    // left: 0;
     overflow-y: auto;
 }
 
@@ -599,5 +496,8 @@ footer {
     flex-direction: column;
 }
 
+.drop-overflow-catcher {
+    flex: 1;
+}
 
 </style>

@@ -3,6 +3,10 @@ const path = require('path');
 
 module.exports = defineConfig({
   // publicPath: "/dev_ui/",
+  pages: {
+    index: 'src/dev-interface.ts',
+    notebook: 'src/notebook.ts',
+  },
   assetsDir: "static/",
   transpileDependencies: true,
   configureWebpack: {

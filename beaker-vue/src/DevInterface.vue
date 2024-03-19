@@ -1,5 +1,5 @@
 <template>
-    <BeakerNotebook
+    <BeakerDevInterface
       :connectionStatus="connectionStatus"
       :debugLogs="debugLogs"
       :rawMessages="rawMessages"
@@ -13,11 +13,13 @@
 import { defineProps, reactive, ref, onBeforeMount, provide, onBeforeUnmount } from 'vue';
 import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
+import BeakerDevInterface from './components/BeakerDevInterface.vue';
+// import BeakerPlayground from './BeakerPlayground.vue';
+// import SingleCellPlayground from './SingleCellPlayground.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from './renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
-
 
 const toast = useToast();
 
@@ -73,8 +75,6 @@ const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
 const saveInterval = ref();
 
-provide('show_toast', showToast);
-
 rawSession.sessionReady.then(() => {
 
     rawSession.session.iopubMessage.connect((session, msg) => {
@@ -126,8 +126,9 @@ onBeforeUnmount(() => {
 });
 
 const beakerSession = reactive(rawSession);
-provide('session', beakerSession);
 
+provide('session', beakerSession);
+provide('show_toast', showToast);
 
 const snapshot = () => {
   var notebookData: {[key: string]: any};
