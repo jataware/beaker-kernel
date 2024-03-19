@@ -15,7 +15,7 @@ import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
-import { JSONRenderer, LatexRenderer, wrapJupyterRenderer } from './renderers';
+import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from './renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 
@@ -37,7 +37,12 @@ const props = defineProps([
   "config"
 ]);
 
-const renderers = [...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer), JSONRenderer, LatexRenderer]
+const renderers = [
+  ...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
+  JSONRenderer,
+  LatexRenderer,
+  DecapodeRenderer,
+]
 
 const rawSession = new BeakerSession(
   {

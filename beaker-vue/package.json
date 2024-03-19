@@ -34,6 +34,7 @@
     "codemirror": "^6.0.1",
     "cookie": "^0.6.0",
     "core-js": "^3.8.3",
+    "cytoscape": "^3.28.1",
     "katex": "^0.16.9",
     "node-fetch": "^2.6.6",
     "primeicons": "^6.0.1",

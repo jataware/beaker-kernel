@@ -4,10 +4,24 @@ import { IBeakerRendererOptions, IMimeRenderer, MimetypeString } from 'beaker-ke
 import { PartialJSONObject } from '@lumino/coreutils';
 import VueJsonPretty from 'vue-json-pretty';
 import katex from 'katex';
+import DecapodePreview from '@/components/DecapodePreview.vue';
 
 export interface BeakerRenderOutput {
     component: Component;
     bindMapping: {[key: string]: any};
+}
+
+export const DecapodeRenderer: IMimeRenderer<BeakerRenderOutput> = {
+    rank: 20,
+    mimetypes: ["application/x-askem-decapode-json-graph"],
+    render: (mimeType: MimetypeString, data: PartialJSONObject, metadata: PartialJSONObject) => {
+        return {
+            component: DecapodePreview,
+            bindMapping: {
+                data: data,
+            },
+        }
+    }
 }
 
 export const JSONRenderer: IMimeRenderer<BeakerRenderOutput> = {
