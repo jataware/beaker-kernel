@@ -30,14 +30,14 @@ def _jupyter_server_extension_points():
 
 
 def secure_env(env: dict) -> dict:
-        UNSAFE_WORDS = ["KEY", "SECRET", "TOKEN"]
+        UNSAFE_WORDS = ["KEY", "SECRET", "TOKEN", "PASSWORD"]
         safe_env = {}
-        for key, value in env.items():
+        for env_name, env_value in env.items():
             for unsafe_word in UNSAFE_WORDS:
-                if unsafe_word in key.upper():
+                if unsafe_word in env_name.upper():
                     break
             else:
-                safe_env[key] = value
+                safe_env[env_name] = env_value
         return safe_env
 
 
