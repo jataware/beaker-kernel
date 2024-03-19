@@ -85,7 +85,7 @@
 <script setup lang="ts">
 import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
 import Button from "primevue/button";
-import ContainedTextArea from './ContainedTextArea.vue';
+import ContainedTextArea from './UIContainedTextArea.vue';
 import { IIOPubMessage } from "@jupyterlab/services/lib/kernel/messages";
 import { BeakerSession } from 'beaker-kernel';
 

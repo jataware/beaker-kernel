@@ -5,7 +5,7 @@ import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
 
-import 'primeicons/primeicons.css'
+import 'primeicons/primeicons.css';
 import './index.scss';
 
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';

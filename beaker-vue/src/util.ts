@@ -1,11 +1,3 @@
-
-/**
- * Modifies array in place to move a cell to a new location (or any other elem)
- **/
-export function arrayMove(arr: [any], old_index: number, new_index: number) {
-    arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
-}
-
 /**
  *
  **/
