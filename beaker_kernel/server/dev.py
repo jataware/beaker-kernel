@@ -28,6 +28,7 @@ def _jupyter_server_extension_points():
 class DevBeakerJupyterApp(BeakerJupyterApp):
     pass
 
+
 class BeakerHandler(watchdog_events.FileSystemEventHandler):
     def __init__(self, observer, modules) -> None:
         super().__init__()
