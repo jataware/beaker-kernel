@@ -1,12 +1,13 @@
 <template>
     <div class="code-cell">
         <div class="code-cell-grid">
-            <div 
+            <div
                 class="code-data"
                 :class="{'dark-mode': theme === 'dark'}"
             >
                 <Codemirror
                     v-model="cell.source"
+                    ref="codemirrorRef"
                     placeholder="Your code..."
                     :extensions="codeExtensions"
                     :disabled="isBusy"
@@ -51,6 +52,7 @@ const editorView = shallowRef();
 const theme = inject('theme');
 const session = inject('session');
 const activeContext = inject('active_context');
+const codemirrorRef = ref<typeof Codemirror|null>(null);
 
 const handleReady = (payload) => {
     // TODO unused, but very useful for future operations.
@@ -129,8 +131,15 @@ const execute = (evt: any) => {
     executeState.value = ExecuteStatus.Pending;
 }
 
+const enter = () => {
+    if(codemirrorRef.value?.focus) {
+        codemirrorRef.value?.focus();
+    }
+}
+
 defineExpose({
-    execute
+    execute,
+    enter,
 });
 
 

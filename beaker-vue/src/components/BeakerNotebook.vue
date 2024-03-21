@@ -104,6 +104,7 @@
                                         'drag-itself': (index === dragOverIndex && index === dragSourceIndex ),
                                         'drag-active': isDragActive,
                                     }"
+                                    ref="notebookCellsRef"
                                     :index="index"
                                     :drag-enabled="isDragEnabled"
                                     @move-cell="handleMoveCell"
@@ -315,6 +316,7 @@ const connectionColor = computed(() => {
 });
 
 // TODO info object map type
+const notebookCellsRef = ref<typeof BeakerCell|null>(null);
 const activeContext = ref<{slug: string, class: string, context: any, info: any} | undefined>(undefined);
 const selectedCellIndex = ref(0);
 const selectedKernel = ref();
@@ -408,7 +410,7 @@ const _cellIndex = (cell: IBeakerCell): number => {
 
 const _getCell = (cell: number | IBeakerCell) => {
     const index = _cellIndex(cell);
-    return session.notebook.cells[index];
+    return notebookCellsRef.value[index];
 }
 
 const selectCell = (cell: number | IBeakerCell) => {
@@ -492,7 +494,7 @@ function handleKeyboardShortcut(event) {
 
     // TODO is there a better way to encapsulate cancelling events
     // when writing on textarea/input/code elements ?
-    const isEditingCode = target.className === 'cm-content'; // codemirror
+    const isEditingCode = target.className.includes('cm-content'); // codemirror
     const isTextArea = target.className.includes('resizeable-textarea');
 
     if (isEditingCode || isTextArea) {
@@ -500,7 +502,13 @@ function handleKeyboardShortcut(event) {
     }
 
     if ('Enter' === event.key && !event.shiftKey && !event.ctrlKey) {
-        focusSelectedCell();
+        const cell = selectedCell.value;
+        if (cell.enter !== undefined) {
+            cell.enter(event);
+        }
+        else {
+            focusSelectedCell();
+        }
         return;
     }
 

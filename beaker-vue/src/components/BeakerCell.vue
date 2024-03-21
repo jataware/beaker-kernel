@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, defineEmits, Component, nextTick } from "vue";
+import { defineProps, ref, computed, defineEmits, defineExpose, Component, nextTick } from "vue";
 import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
@@ -90,6 +90,17 @@ const executeAndMove = () => {
         emit('keyboard-nav', 'select-next-cell');
     }
 };
+
+const enter = (event) => {
+    if (typedCellRef?.value?.enter) {
+        typedCellRef.value.enter(event);
+    }
+};
+
+defineExpose({
+    execute,
+    enter,
+});
 
 </script>
 
