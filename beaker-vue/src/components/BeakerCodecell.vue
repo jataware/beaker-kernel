@@ -162,6 +162,7 @@ defineExpose({
 
 .code-data {
     grid-area: code;
+    background-color: var(--surface-a);
 
     .cm-editor {
         border: 1px solid var(--surface-d);
@@ -169,9 +170,6 @@ defineExpose({
     .cm-focused {
         outline: none;
         border: 1px solid var(--purple-200);
-        .cm-content {
-            background-color: var(--surface-a);
-        }
     }
     &.dark-mode {
         .cm-focused {

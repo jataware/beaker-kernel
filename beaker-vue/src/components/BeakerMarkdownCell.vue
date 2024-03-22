@@ -104,6 +104,7 @@ onBeforeMount(() => {
 
 .markdown-edit-data {
     grid-area: code;
+    background-color: var(--surface-a);
     // white-space: pre-wrap;
 
     .cm-editor {
@@ -113,9 +114,6 @@ onBeforeMount(() => {
     .cm-focused {
         outline: none;
         border: 1px solid var(--purple-200);
-        .cm-content {
-            background-color: var(--surface-a);
-        }
     }
     &.dark-mode {
         .cm-focused {
