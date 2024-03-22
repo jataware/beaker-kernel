@@ -12,7 +12,11 @@
 
         <main style="display: flex;">
 
-            <SideMenu left>
+            <SideMenu
+                position="left"
+                :show-label="true"
+                highlight="line"
+            >
                 <SideMenuPanel label="Context" icon="pi pi-home">
                     <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
                 </SideMenuPanel>
@@ -59,23 +63,29 @@
                         />
                     </div>
                 </div>
-                    <SideMenu right>
+                    <SideMenu
+                        position="right"
+                        ref="rightMenu"
+                        highlight="line"
+                        :show-label="true"
+                    >
                         <SideMenuPanel tabId="preview" label="Preview" icon="pi pi-eye">
                             <PreviewPane :previewData="previewData"/>
                         </SideMenuPanel>
 
                         <SideMenuPanel tabId="action" label="Actions" icon="pi pi-send">
-                                <Card class="debug-card">
-                                    <template #title>Execute an Action</template>
-                                    <template #content>
-                                        <BeakerExecuteAction
-                                            :selectedAction="selectedAction"
-                                            :actions="activeContext?.info?.actions"
-                                            :rawMessages="props.rawMessages"
-                                            @clear-selection="selectedAction = undefined"
-                                        />
-                                    </template>
-                                </Card>
+                            <Card class="debug-card">
+                                <template #title>Execute an Action</template>
+                                <template #content>
+                                    <BeakerExecuteAction
+                                        ref="executeActionRef"
+                                        :selectedAction="selectedAction"
+                                        :actions="activeContext?.info?.actions"
+                                        :rawMessages="props.rawMessages"
+                                        @clear-selection="selectedAction = undefined"
+                                    />
+                                </template>
+                            </Card>
                         </SideMenuPanel>
 
                         <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
@@ -94,9 +104,9 @@
         </main>
 
         <!-- TODO may use HTML comments to hide footer -->
-        <footer>
+        <!-- <footer>
             <FooterDrawer />
-         </footer>
+         </footer> -->
     </div>
 
     <BeakerContextSelection
@@ -113,18 +123,12 @@ import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide
 import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 
 import Card from 'primevue/card';
-import Button from 'primevue/button';
-import Splitter from 'primevue/splitter';
-import SplitterPanel from 'primevue/splitterpanel';
-import TabView from 'primevue/tabview';
-import TabPanel from 'primevue/tabpanel';
 import Notebook from '../lib/UINotebook.vue';
 import BeakerHeader from './BeakerHeader.vue';
 import NotebookControls from './NotebookControls.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
 import BeakerContextSelection from "./BeakerContextSelection.vue";
 import BeakerExecuteAction from "./BeakerExecuteAction.vue";
-import FooterDrawer from './FooterDrawer.vue';
 import LoggingPane from './LoggingPane.vue';
 import BeakerFilePane from './BeakerFilePane.vue';
 import ContextTree from './ContextTree.vue';
@@ -152,9 +156,11 @@ const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
-const rightPaneTabIndex = ref(1);
+const rightMenu = ref<typeof SideMenuPanel>();
+const executeActionRef = ref<typeof BeakerExecuteAction>();
 const selectedTheme = ref(localStorage.getItem('theme') || 'light');
-const debugTabView = ref<{tabs: any[]}|null>(null);
+// const debugTabView = ref<{tabs: any[]}|null>(null);
+
 const selectedAction = ref<string|undefined>(undefined);
 const beakerNotebookRef = ref(null);
 
@@ -294,12 +300,8 @@ const updateContextInfo = async () => {
 }
 
 const selectAction = (actionName: string) => {
-    if (debugTabView.value === null) {
-        return;
-    }
-    const index = debugTabView.value.tabs.findIndex((tab) => (tab.props?.tabId === "action"));
-    rightPaneTabIndex.value = index;
-    selectedAction.value = actionName;
+    rightMenu.value?.selectPanel("action");
+    nextTick(() => { selectedAction.value = actionName; });
 };
 
 function scrollBottomCellContainer() {
@@ -324,6 +326,7 @@ onMounted(() => {
 
 <style lang="scss">
 .beaker-notebook {
+    padding-bottom: 1rem;
     height: 100vh;
     width: 100vw;
     display: grid;

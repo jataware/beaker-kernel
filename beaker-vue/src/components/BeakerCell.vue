@@ -22,7 +22,7 @@
 
       <div class="cell-contents">
         <Component
-            :is="componentMap[props.cell.cell_type || 'raw']"
+            :is="props.cellTypeWidgets[props.cell.cell_type || 'raw']"
             :cell="props.cell"
             ref="typedCellRef"
         />
@@ -37,28 +37,36 @@ import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
+import { IBeakerCell } from "beaker-kernel/dist/notebook";
 
-const props = defineProps([
-    'index',
-    'cell',
-    'dragEnabled',
-]);
+
+export interface Props {
+    cell: IBeakerCell;
+    cellTypeWidgets: {[key: string]: Component};
+    index?: number;
+    dragEnabled?: boolean;
+}
+
+export interface IBeakerCellComponent {
+    focus?: () => null;
+    execute?: () => null;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    cellTypeWidgets: () => {return {
+        'code': BeakerCodeCell,
+        'markdown': BeakerMarkdownCell,
+        'query': BeakerLLMQueryCell,
+    }}
+});
 
 const emit = defineEmits([
-    'move-cell',
-    'keyboard-nav'
+    'skipBackward',
+    'skipForward',
 ]);
 
-type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
-
 const beakerCellRef = ref<HTMLDivElement|null>(null);
-const typedCellRef = ref<BeakerCellType|null>(null);
-
-const componentMap: {[key: string]: Component} = {
-    'code': BeakerCodeCell,
-    'query': BeakerLLMQueryCell,
-    'markdown': BeakerMarkdownCell
-}
+const typedCellRef = ref<IBeakerCellComponent|null>(null);
 
 function focusEditor() {
     if (beakerCellRef.value) {
@@ -87,7 +95,7 @@ function execute() {
 
 const executeAndMove = () => {
     if (execute()) {
-        emit('keyboard-nav', 'select-next-cell');
+        emit('skipForward');
     }
 };
 

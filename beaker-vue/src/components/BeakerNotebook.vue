@@ -111,24 +111,6 @@ const applyTheme = () => {
     themeLink.href = `/themes/soho-${selectedTheme.value}/theme.css`;
 }
 
-const toggleDarkMode = () => {
-    selectedTheme.value = selectedTheme.value === 'light' ? 'dark' : 'light'
-    localStorage.setItem('theme', selectedTheme.value);
-    applyTheme();
-};
-
-function handleRightPaneIconClick(index) {
-    rightPaneTabIndex.value = index;
-    showDebugPane.value = true;
-}
-
-function handleSplitterResized({sizes}) {
-    const [_, rightPaneSize] = sizes;
-    if (rightPaneSize < 15) {
-        showDebugPane.value = false
-    }
-}
-
 function handleKeyboardShortcut(event) {
 
     const { target } = event;
