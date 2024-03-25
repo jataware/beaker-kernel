@@ -47,6 +47,13 @@ const renderers = [
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
 
+if (sessionId !== "dev_session") {
+  window.addEventListener("beforeunload", (evt) => {
+    evt.returnValue = true;
+    evt.preventDefault();
+  });
+}
+
 const rawSession = new BeakerSession(
   {
     settings: props.config,
