@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+import uuid
 from typing import Dict
 
 from jupyter_core.utils import ensure_async
@@ -11,7 +12,7 @@ from jupyter_server.extension.handler import ExtensionHandlerMixin
 from jupyter_server.services.kernels.handlers import MainKernelHandler, json_default
 from jupyter_server.utils import url_escape, url_path_join
 from jupyterlab_server import LabServerApp
-from tornado import web
+from tornado import web, httputil
 from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTPError
 
 from beaker_kernel.lib.autodiscovery import autodiscover
@@ -78,6 +79,25 @@ class NotebookHandler(ExtensionHandlerMixin, JupyterHandler):
         notebook_content = self.get_json_body()
         notebook_content["lastSaved"] = datetime.datetime.utcnow().isoformat()
         return self.write(json.dumps(notebook_content))
+
+
+class MainHandler(StaticFileHandler):
+    """
+    Handle the main interface to properly set a session
+    """
+    async def get(self, path: str, include_body: bool = True) -> None:
+        # If no session is provided on a root request, generate a session uuid and redirect to it
+        if path == "":
+            session_id = self.get_query_argument("session", None)
+            if not session_id:
+                session_id = str(uuid.uuid4())
+                to_url = httputil.url_concat(
+                    path,
+                    {"session": session_id},
+                )
+                return self.redirect(to_url, permanent=False)
+        # Otherwise, serve files as normal
+        return await super().get(path, include_body=include_body)
 
 
 class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
@@ -198,7 +218,7 @@ class BeakerJupyterApp(LabServerApp):
         self.handlers.append(("/notebook", NotebookHandler))
         self.handlers.append((r"/upload", UploadHandler))
         self.handlers.append((r"/download/(.*)", DownloadHandler))
-        self.handlers.append((r"(/?)", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
+        self.handlers.append((r"(/?)", MainHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
         self.handlers.append((r"/index.html", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
         self.handlers.append((r"/(favicon.ico)", StaticFileHandler, {"path": os.path.join(HERE, "ui")}))
         self.handlers.append((r"/static/(.*)", StaticFileHandler, {"path": os.path.join(HERE, "ui", "static")}))

@@ -44,12 +44,15 @@ const renderers = [
   DecapodeRenderer,
 ]
 
+const urlParams = new URLSearchParams(window.location.search);
+const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
+
 const rawSession = new BeakerSession(
   {
     settings: props.config,
     name: "MyKernel",
     kernelName: "beaker_kernel",
-    sessionId: "dev_session",
+    sessionId: sessionId,
     rendererOptions: {
       renderers
     }
