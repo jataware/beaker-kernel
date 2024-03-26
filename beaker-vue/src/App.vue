@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, reactive, ref, onBeforeMount, provide } from 'vue';
+import { defineProps, reactive, ref, onBeforeMount, provide, onBeforeUnmount } from 'vue';
 import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from './components/BeakerNotebook.vue';
 import Toast from 'primevue/toast';
@@ -49,6 +49,7 @@ const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_ses
 
 if (sessionId !== "dev_session") {
   window.addEventListener("beforeunload", (evt) => {
+    snapshot();
     evt.returnValue = true;
     evt.preventDefault();
   });
@@ -70,6 +71,7 @@ const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
+const saveInterval = ref();
 
 provide('show_toast', showToast);
 
@@ -105,12 +107,39 @@ rawSession.sessionReady.then(() => {
 
 onBeforeMount(() => {
   document.title = "Beaker Development Interface"
+  var notebookData: {[key: string]: any};
+  try {
+    notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
+  }
+  catch (e) {
+    notebookData = {};
+  }
+  if (notebookData[sessionId]) {
+    rawSession.notebook.loadFromIPynb(notebookData[sessionId]);
+  }
+  saveInterval.value = setInterval(snapshot, 30000);
+});
+
+
+onBeforeUnmount(() => {
+  clearInterval(saveInterval.value);
 });
 
 const beakerSession = reactive(rawSession);
 provide('session', beakerSession);
 
 
+const snapshot = () => {
+  var notebookData: {[key: string]: any};
+  try {
+    notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
+  }
+  catch (e) {
+    notebookData = {};
+  }
+  notebookData[sessionId] = rawSession.notebook.toIPynb();
+  localStorage.setItem("notebookData", JSON.stringify(notebookData));
+};
 </script>
 
 <style lang="scss">
