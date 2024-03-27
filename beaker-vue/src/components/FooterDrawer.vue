@@ -9,12 +9,7 @@
   <transition name="slide">
     <div class="footer-pane" v-if="isAboutOpen">
 
-      <div class="pane-contents">
-        <div class="actions">
-          <span></span>
-        </div>
-
-        <div class="data-container">
+        <div v-if="contentSlug === about" class="data-container">
           <div class="scroller-area">
           <pre>
           ##     Built by:
@@ -33,8 +28,12 @@
       ###                            (TODO)
           </pre>
 
-          </div>
         </div>
+      </div>
+      <div v-else-if="contentSlug === shortcuts">
+        <pre>
+
+        </pre>
       </div>
     </div>
   </transition>
@@ -60,6 +59,7 @@ import Menubar from 'primevue/menubar';
 // the button goes back to looking "unpress".
 
 const isAboutOpen = ref(false);
+const contentSlug = ref<string>()
 
 
 // TODO should probably add handlers for Help|Terms|Contact
@@ -77,6 +77,15 @@ const footerMenuItems = ref([
         label: 'About',
         icon: 'pi pi-question',
         command: () => {
+            contentSlug.value = 'about';
+            isAboutOpen.value = !isAboutOpen.value;
+        }
+    },
+    {
+        label: 'Shortcuts',
+        icon: 'pi pi-compass',
+        command: () => {
+            contentSlug.value = 'shortcuts';
             isAboutOpen.value = !isAboutOpen.value;
         }
     },
