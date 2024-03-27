@@ -549,10 +549,10 @@ function scrollBottomCellContainer(event) {
 const addCell = (toIndex) => {
     const newCell = session.addCodeCell("");
 
-    if (typeof toIndex === 'number') {
-        // Move cell to indicated index
-        arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
+    if (typeof toIndex !== 'number') {
+        toIndex = selectedCellIndex.value + 1;
     }
+    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
 
     selectCell(newCell);
 
