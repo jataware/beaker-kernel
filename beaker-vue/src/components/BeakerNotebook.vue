@@ -67,26 +67,23 @@
 
         <main style="display: flex;">
 
-            <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
-
-            <Splitter @resizeend="handleSplitterResized" class="splitter">
-
-                <SplitterPanel
-                    :size="70"
-                    :minSize="30"
-                    class="main-panel"
-                    @keydown="handleKeyboardShortcut"
-                >
-
-                    <NotebookControls
-                        @run-cell="runCell()"
-                        @remove-cell="removeCell"
-                        @add-cell="addCell"
-                        @set-context="reapplyContext"
-                    />
-
-                    <div class="ide-cells">
-                        <div style="flex: 1; position: relative;">
+            <SideMenu
+                position="left"
+                :show-label="true"
+                highlight="line"
+            >
+                <SideMenuPanel  label="Context" icon="pi pi-home">
+                    <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
+                </SideMenuPanel>
+            </SideMenu>
+                    <div class="ide-cells" style="flex: 100;">
+                            <NotebookControls
+                                @run-cell="runCell()"
+                                @remove-cell="removeCell"
+                                @add-cell="addCell"
+                                @set-context="reapplyContext"
+                            />
+                        <div style="flex: 1; display: flex; position: relative;">
                             <!-- Added drag-sort-enable to BeakerCell parent to
                                  allow BeakerCell grab/drag to sort.-->
                             <div
@@ -137,105 +134,44 @@
                             :run-cell-callback="scrollBottomCellContainer"
                         />
                     </div>
-                </SplitterPanel>
+                <SideMenu
+                        position="right"
+                        ref="rightMenu"
+                        highlight="line"
+                        :show-label="true"
+                    >
+                        <SideMenuPanel tabId="preview" label="Preview" icon="pi pi-eye">
+                            <PreviewPane :previewData="previewData"/>
+                        </SideMenuPanel>
 
-                <SplitterPanel
-                    v-if="showDebugPane"
-                    :minSize="5"
-                    :size="30"
-                    class="right-splitter"
-                >
-                    <TabView v-model:activeIndex="rightPaneTabIndex" ref="debugTabView">
-                        <TabPanel tabId="preview">
-                            <template #header>
-                                <Button tabindex="-1" label="Preview" text icon="pi pi-eye" />
-                            </template>
-                            <div class="scroller-area">
-                                <PreviewPane :previewData="previewData"/>
-                            </div>
-                        </TabPanel>
+                        <SideMenuPanel tabId="action" label="Actions" icon="pi pi-send">
+                            <Card class="debug-card">
+                                <template #title>Execute an Action</template>
+                                <template #content>
+                                    <BeakerExecuteAction
+                                        ref="executeActionRef"
+                                        :selectedAction="selectedAction"
+                                        :actions="activeContext?.info?.actions"
+                                        :rawMessages="props.rawMessages"
+                                        @clear-selection="selectedAction = undefined"
+                                    />
+                                </template>
+                            </Card>
+                        </SideMenuPanel>
 
-                        <TabPanel tabId="action">
-                            <template #header>
-                                <Button tabindex="-1" label="Action" text icon="pi pi-send" />
-                            </template>
-                            <div class="scroller-area">
-                                <Card class="debug-card">
-                                    <template #title>Execute an Action</template>
-                                    <template #content>
-                                        <BeakerExecuteAction
-                                            :selectedAction="selectedAction"
-                                            :actions="activeContext?.info?.actions"
-                                            :rawMessages="props.rawMessages"
-                                            @clear-selection="selectedAction = undefined"
-                                        />
-                                    </template>
-                                </Card>
-                            </div>
-                        </TabPanel>
-
-                        <TabPanel tabId="logging">
-                            <template #header>
-                                <Button tabindex="-1" label="Logging" text icon="pi pi-list" />
-                            </template>
+                        <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
                             <LoggingPane :entries="props.debugLogs" />
-                        </TabPanel>
+                        </SideMenuPanel>
 
-                        <TabPanel>
-                            <template #header>
-                                <Button tabindex="-1" label="Messages" text icon="pi pi-comments" />
-                            </template>
+                        <SideMenuPanel label="Messages" icon="pi pi-comments">
                             <LoggingPane :entries="props.rawMessages" />
-                        </TabPanel>
+                        </SideMenuPanel>
 
-                        <TabPanel>
-                            <template #header>
-                                <Button tabindex="-1" label="Files" text icon="pi pi-file-export" />
-                            </template>
+                        <SideMenuPanel label="Files" icon="pi pi-file-export">
                             <BeakerFilePane />
-                        </TabPanel>
+                        </SideMenuPanel>
 
-                    </TabView>
-                </SplitterPanel>
-
-            </Splitter>
-
-            <div
-                v-if="!showDebugPane"
-                class="debug-pane-toggler"
-            >
-                <Button text
-                    icon="pi pi-eye"
-                    size="small"
-                    v-tooltip.left="'Preview'"
-                    @click="handleRightPaneIconClick(0)"
-                />
-                <Button text
-                    icon="pi pi-send"
-                    size="small"
-                    v-tooltip.left="'Debug'"
-                    @click="handleRightPaneIconClick(1)"
-                />
-                <Button text
-                    icon="pi pi-list"
-                    size="small"
-                    v-tooltip.left="'Logs'"
-                    @click="handleRightPaneIconClick(2)"
-                />
-                <Button text
-                    icon="pi pi-comments"
-                    size="small"
-                    v-tooltip.left="'Messages'"
-                    @click="handleRightPaneIconClick(3)"
-                />
-                <Button text
-                    icon="pi pi-file-export"
-                    size="small"
-                    v-tooltip.left="'Files'"
-                    @click="handleRightPaneIconClick(4)"
-                />
-            </div>
-
+                    </SideMenu>
         </main>
 
         <!-- TODO may use HTML comments to hide footer -->
@@ -259,10 +195,6 @@ import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 
 import Card from 'primevue/card';
 import Button from 'primevue/button';
-import Splitter from 'primevue/splitter';
-import SplitterPanel from 'primevue/splitterpanel';
-import TabView from 'primevue/tabview';
-import TabPanel from 'primevue/tabpanel';
 import Toolbar from 'primevue/toolbar';
 import BeakerCell from './BeakerCell.vue';
 import NotebookControls from './NotebookControls.vue';
@@ -275,6 +207,8 @@ import BeakerFilePane from "./BeakerFilePane.vue";
 import ContextTree from "./ContextTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 import SvgPlaceholder from './SvgPlaceholder.vue';
+import SideMenu from "./SideMenu.vue";
+import SideMenuPanel from "./SideMenuPanel.vue";
 import { arrayMove, capitalize } from '../util';
 
 
@@ -748,6 +682,7 @@ onMounted(() => {
 
 <style lang="scss">
 .beaker-notebook {
+    padding-bottom: 1rem;
     height: 100vh;
     width: 100vw;
     display: grid;
@@ -796,15 +731,10 @@ footer {
 .ide-cells {
     display: flex;
     flex-direction: column;
-    height: 100%;
     z-index: 3;
     background-color: var(--surface-a);
 }
 
-.splitter {
-    height: 100%;
-    flex: 1;
-}
 
 .agent-query-container {
     flex: 0 1 8rem;
