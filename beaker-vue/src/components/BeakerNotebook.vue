@@ -76,102 +76,106 @@
                     <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
                 </SideMenuPanel>
             </SideMenu>
-                    <div class="ide-cells" style="flex: 100;">
-                            <NotebookControls
-                                @run-cell="runCell()"
-                                @remove-cell="removeCell"
-                                @add-cell="addCell"
-                                @set-context="reapplyContext"
-                            />
-                        <div style="flex: 1; display: flex; position: relative;">
-                            <!-- Added drag-sort-enable to BeakerCell parent to
-                                 allow BeakerCell grab/drag to sort.-->
-                            <div
-                                class="cell-container drag-sort-enable"
-                                ref="cellsContainerRef"
-                            >
-                                <BeakerCell
-                                    v-for="(cell, index) in session.notebook.cells"
-                                    :key="cell.id"
-                                    :class="{
-                                        selected: (index === selectedCellIndex),
-                                        'drag-source': (index == dragSourceIndex),
-                                        'drag-above': (index === dragOverIndex && index < dragSourceIndex),
-                                        'drag-below': (index === dragOverIndex && index > dragSourceIndex),
-                                        'drag-itself': (index === dragOverIndex && index === dragSourceIndex ),
-                                        'drag-active': isDragActive,
-                                    }"
-                                    ref="notebookCellsRef"
-                                    :index="index"
-                                    :drag-enabled="isDragEnabled"
-                                    @move-cell="handleMoveCell"
-                                    @click="selectCell(index)"
-                                    :cell="cell"
-                                    @keyboard-nav="handleNavAction"
-                                    @dragstart="handleDragStart($event, cell, index)"
-                                    @drop="handleDrop($event, index)"
-                                    @dragover="handleDragOver($event, cell, index)"
-                                    @dragend="handleDragEnd"
-                                />
-                                <div
-                                    class="drop-overflow-catcher"
-                                    @dragover="dragOverIndex = session.notebook.cells.length-1; $event.preventDefault();"
-                                    @drop="handleDrop($event, session.notebook.cells.length-1)"
-                                >
-                                    <transition name="fade">
-                                        <div class="welcome-placeholder" v-if="cellCount < 3">
-                                            <SvgPlaceholder />
-                                        </div>
-                                    </transition>
-                                </div>
-                            </div>
-                        </div>
-
-                        <BeakerAgentQuery
-                            class="agent-query-container"
-                            @select-cell="selectCell"
-                            @run-cell="runCell"
-                            :run-cell-callback="scrollBottomCellContainer"
-                        />
-                    </div>
-                <SideMenu
-                        position="right"
-                        ref="rightMenu"
-                        highlight="line"
-                        :show-label="true"
+            <div
+                class="ide-cells"
+                style="flex: 100;"
+                @keydown="handleKeyboardShortcut"
+            >
+                    <NotebookControls
+                        @run-cell="runCell()"
+                        @remove-cell="removeCell"
+                        @add-cell="addCell"
+                        @set-context="reapplyContext"
+                    />
+                <div style="flex: 1; display: flex; position: relative;">
+                    <!-- Added drag-sort-enable to BeakerCell parent to
+                            allow BeakerCell grab/drag to sort.-->
+                    <div
+                        class="cell-container drag-sort-enable"
+                        ref="cellsContainerRef"
                     >
-                        <SideMenuPanel tabId="preview" label="Preview" icon="pi pi-eye">
-                            <PreviewPane :previewData="previewData"/>
-                        </SideMenuPanel>
+                        <BeakerCell
+                            v-for="(cell, index) in session.notebook.cells"
+                            :key="cell.id"
+                            :class="{
+                                selected: (index === selectedCellIndex),
+                                'drag-source': (index == dragSourceIndex),
+                                'drag-above': (index === dragOverIndex && index < dragSourceIndex),
+                                'drag-below': (index === dragOverIndex && index > dragSourceIndex),
+                                'drag-itself': (index === dragOverIndex && index === dragSourceIndex ),
+                                'drag-active': isDragActive,
+                            }"
+                            ref="notebookCellsRef"
+                            :index="index"
+                            :drag-enabled="isDragEnabled"
+                            @move-cell="handleMoveCell"
+                            @click="selectCell(index)"
+                            :cell="cell"
+                            @keyboard-nav="handleNavAction"
+                            @dragstart="handleDragStart($event, cell, index)"
+                            @drop="handleDrop($event, index)"
+                            @dragover="handleDragOver($event, cell, index)"
+                            @dragend="handleDragEnd"
+                        />
+                        <div
+                            class="drop-overflow-catcher"
+                            @dragover="dragOverIndex = session.notebook.cells.length-1; $event.preventDefault();"
+                            @drop="handleDrop($event, session.notebook.cells.length-1)"
+                        >
+                            <transition name="fade">
+                                <div class="welcome-placeholder" v-if="cellCount < 3">
+                                    <SvgPlaceholder />
+                                </div>
+                            </transition>
+                        </div>
+                    </div>
+                </div>
 
-                        <SideMenuPanel tabId="action" label="Actions" icon="pi pi-send">
-                            <Card class="debug-card">
-                                <template #title>Execute an Action</template>
-                                <template #content>
-                                    <BeakerExecuteAction
-                                        ref="executeActionRef"
-                                        :selectedAction="selectedAction"
-                                        :actions="activeContext?.info?.actions"
-                                        :rawMessages="props.rawMessages"
-                                        @clear-selection="selectedAction = undefined"
-                                    />
-                                </template>
-                            </Card>
-                        </SideMenuPanel>
+                <BeakerAgentQuery
+                    class="agent-query-container"
+                    @select-cell="selectCell"
+                    @run-cell="runCell"
+                    :run-cell-callback="scrollBottomCellContainer"
+                />
+            </div>
+            <SideMenu
+                position="right"
+                ref="rightMenu"
+                highlight="line"
+                :show-label="true"
+            >
+                <SideMenuPanel tabId="preview" label="Preview" icon="pi pi-eye">
+                    <PreviewPane :previewData="previewData"/>
+                </SideMenuPanel>
 
-                        <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
-                            <LoggingPane :entries="props.debugLogs" />
-                        </SideMenuPanel>
+                <SideMenuPanel tabId="action" label="Actions" icon="pi pi-send">
+                    <Card class="debug-card">
+                        <template #title>Execute an Action</template>
+                        <template #content>
+                            <BeakerExecuteAction
+                                ref="executeActionRef"
+                                :selectedAction="selectedAction"
+                                :actions="activeContext?.info?.actions"
+                                :rawMessages="props.rawMessages"
+                                @clear-selection="selectedAction = undefined"
+                            />
+                        </template>
+                    </Card>
+                </SideMenuPanel>
 
-                        <SideMenuPanel label="Messages" icon="pi pi-comments">
-                            <LoggingPane :entries="props.rawMessages" />
-                        </SideMenuPanel>
+                <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
+                    <LoggingPane :entries="props.debugLogs" />
+                </SideMenuPanel>
 
-                        <SideMenuPanel label="Files" icon="pi pi-file-export">
-                            <BeakerFilePane />
-                        </SideMenuPanel>
+                <SideMenuPanel label="Messages" icon="pi pi-comments">
+                    <LoggingPane :entries="props.rawMessages" />
+                </SideMenuPanel>
 
-                    </SideMenu>
+                <SideMenuPanel label="Files" icon="pi pi-file-export">
+                    <BeakerFilePane />
+                </SideMenuPanel>
+
+            </SideMenu>
         </main>
 
         <!-- TODO may use HTML comments to hide footer -->
@@ -261,6 +265,7 @@ const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
 const rightPaneTabIndex = ref(0);
 const isDeleteprefixActive = ref(false);
+const rightMenu = ref<typeof SideMenu>()
 const selectedTheme = ref(localStorage.getItem('theme') || 'light');
 const debugTabView = ref<{tabs: any[]}|null>(null);
 const selectedAction = ref<string|undefined>(undefined);
@@ -592,13 +597,8 @@ const updateContextInfo = async () => {
 }
 
 const selectAction = (actionName: string) => {
-    if (debugTabView.value === null) {
-        return;
-    }
-    const index = debugTabView.value.tabs.findIndex((tab) => (tab.props?.tabId === "action"));
-    rightPaneTabIndex.value = index;
-    showDebugPane.value = true;
-    selectedAction.value = actionName;
+    rightMenu.value?.selectPanel("action");
+    nextTick(() => { selectedAction.value = actionName; });
 };
 
 /**
