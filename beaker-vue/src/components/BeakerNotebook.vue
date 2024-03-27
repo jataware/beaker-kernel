@@ -50,24 +50,13 @@
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits } from "vue";
 import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 
-import Card from 'primevue/card';
-import Button from 'primevue/button';
-import Splitter from 'primevue/splitter';
-import SplitterPanel from 'primevue/splitterpanel';
-import TabView from 'primevue/tabview';
-import TabPanel from 'primevue/tabpanel';
 import Notebook from '../lib/UINotebook.vue';
-import BeakerHeader from './BeakerHeader.vue';
 import NotebookControls from './NotebookControls.vue';
 import BeakerAgentQuery from './BeakerAgentQuery.vue';
-import BeakerContextSelection from "./BeakerContextSelection.vue";
-import BeakerExecuteAction from "./BeakerExecuteAction.vue";
-import FooterDrawer from './FooterDrawer.vue';
-import LoggingPane from './LoggingPane.vue';
-import BeakerFilePane from './BeakerFilePane.vue';
-import ContextTree from './ContextTree.vue';
-import PreviewPane from './PreviewPane.vue';
 import SvgPlaceholder from './SvgPlaceholder.vue';
+import BeakerCell from './BeakerCell.vue';
+
+import { arrayMove, focusSelectedCell, commonSelectAction} from '../lib/UINotebook.vue';
 
 
 const props = defineProps([
@@ -158,9 +147,21 @@ const selectCell = (cell: number | IBeakerCell) => {
     selectedCellIndex.value = index;
 }
 
-const runCell = () => {
-    beakerNotebookRef.value.executeSelectedCell();
+const addCell = (toIndex) => {
+    const newCell = session.addCodeCell("");
+
+    if (typeof toIndex !== 'number') {
+        toIndex = selectedCellIndex.value + 1;
+    }
+    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
+
+    selectCell(newCell);
+
+    nextTick(() => {
+        focusSelectedCell();
+    });
 }
+
 
 const selectNextCell = (event) => {
     if (event && !commonSelectAction(event)) {
@@ -203,80 +204,6 @@ const selectPreviousCell = (event) => {
         event.preventDefault();
     }
 };
-
-
-function handleKeyboardShortcut(event) {
-
-    const { target } = event;
-
-    // TODO is there a better way to encapsulate cancelling events
-    // when writing on textarea/input/code elements ?
-    const isEditingCode = target.className.includes('cm-content'); // codemirror
-    const isTextArea = target.className.includes('resizeable-textarea');
-
-    if (isEditingCode || isTextArea) {
-        return;
-    }
-
-    if ('Enter' === event.key && !event.shiftKey && !event.ctrlKey) {
-        const cell = selectedCell.value;
-        if (cell.enter !== undefined) {
-            cell.enter(event);
-        }
-        else {
-            focusSelectedCell();
-        }
-        return;
-    }
-
-    if (['ArrowDown', 'j', 'J'].includes(event.key)) {
-        selectNextCell();
-    } else if (['ArrowUp', 'k', 'K'].includes(event.key)) {
-        selectPreviousCell();
-    }
-
-    if (['b', 'B'].includes(event.key)){
-        addCell(selectedCellIndex.value + 1);
-    } else if (['a', 'A'].includes(event.key)){
-        let prevIndex = selectedCellIndex.value;
-        addCell(prevIndex);
-    }
-
-    if (['d', 'D'].includes(event.key)) {
-        if (isDeleteprefixActive.value) {
-            isDeleteprefixActive.value = false;
-            removeCell();
-            nextTick(() => {
-                focusSelectedCell();
-            })
-        } else {
-            isDeleteprefixActive.value = true;
-         }
-    } else {
-        isDeleteprefixActive.value = false;
-    }
-}
-
-function scrollBottomCellContainer(event) {
-    if (cellsContainerRef.value) {
-        cellsContainerRef.value.scrollTop = cellsContainerRef.value.scrollHeight;
-    }
-}
-
-const addCell = (toIndex) => {
-    const newCell = session.addCodeCell("");
-
-    if (typeof toIndex !== 'number') {
-        toIndex = selectedCellIndex.value + 1;
-    }
-    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
-
-    selectCell(newCell);
-
-    nextTick(() => {
-        focusSelectedCell();
-    });
-}
 
 const runCell = (cell?: number | IBeakerCell) => {
     if (cell === undefined) {

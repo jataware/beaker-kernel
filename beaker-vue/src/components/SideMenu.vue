@@ -103,11 +103,11 @@ const startDrag = (evt: MouseEvent) => {
 
 const moveDrag = (evt: MouseEvent) => {
     dragDistance.value = evt.x - dragStartPos.value;
-    if (!props.position === "left") {
-        panelWidth.value = dragStartWidth.value - dragDistance.value;
+    if (props.position === "left") {
+        panelWidth.value = dragStartWidth.value + dragDistance.value;
     }
     else {
-        panelWidth.value = dragStartWidth.value + dragDistance.value;
+        panelWidth.value = dragStartWidth.value - dragDistance.value;
     }
 }
 
