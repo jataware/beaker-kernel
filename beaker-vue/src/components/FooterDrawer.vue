@@ -7,34 +7,18 @@
    />
 
   <transition name="slide">
-    <div class="footer-pane" v-if="isAboutOpen">
-
-        <div v-if="contentSlug === about" class="data-container">
-          <div class="scroller-area">
-          <pre>
-          ##     Built by:
-         ####                ###
-         #  #      ##        # ##          ##                                ##                      ##
-         #  #    ########   ## #  ##    ########    ###     ###     ###   ########     #######   ########
-         #  #      ##   ##     #           #   ##     ##    # ##   ##        ##  ##   # #       ##   #  ###
-         #  #    -    #  #  ## ## ##     #   ## ##  #  #   #   ##  #  #   ##   -  ##  #  ####  ## #       #
-         #  #   ####     #   # ##      #####  # ##  ## ## ##    # ## #    ####  # ##  #  #     #  #      ##
-         #  #  ##      # #   # ##     ###     # ##   ## # # ### # # ##   ##     # ##  # ##     #  # ######
-         #  # ##      #  #   #  #     #      ## ##    #    ## #   # #   ##     ## ##  # ##     ## ##
-         #  # ###  ##    #   ##  ###  ##  ##    ##    ##   #   #   ##   ##  ##     #  # .#      ##  ####
-        ## ##  ####  #####    ###  #   ###  ######     ####    #####     ###  #####-  ####       ####  ###
-      ##  ##      ###           ####     ###             #       #         ####                     ####
-     #  ###
-      ###                            (TODO)
-          </pre>
-
-        </div>
-      </div>
-      <div v-else-if="contentSlug === shortcuts">
-        <pre>
-
-        </pre>
-      </div>
+    <div class="footer-pane" v-if="isHelpOpen">
+      <pre>
+Select cell above                           - ArrowUp | j | J
+Select cell below                           - ArrowDown | k | K
+Edit selected cell                          - Enter
+Stop editing selected cell                  - Esc
+Insert cell above selected cell             - a | A
+Insert cell below selected cell             - b | B
+Delete selected cell                        - d | D * twice *
+Execute selected cell and step to next cell - Shift-Enter
+Execute selected cell                       - Ctrl-Enter
+      </pre>
     </div>
   </transition>
 
@@ -58,8 +42,7 @@ import Menubar from 'primevue/menubar';
 // while the logging drawer is open. Right now the pane remains open when
 // the button goes back to looking "unpress".
 
-const isAboutOpen = ref(false);
-const contentSlug = ref<string>()
+const isHelpOpen = ref(false);
 
 
 // TODO should probably add handlers for Help|Terms|Contact
@@ -73,20 +56,19 @@ const footerMenuItems = ref([
     //         isAboutOpen.value = !isAboutOpen.value;
     //     }
     // },
-    {
-        label: 'About',
-        icon: 'pi pi-question',
-        command: () => {
-            contentSlug.value = 'about';
-            isAboutOpen.value = !isAboutOpen.value;
-        }
-    },
+    // {
+    //     label: 'About',
+    //     icon: 'pi pi-question',
+    //     command: () => {
+    //         contentSlug.value = 'about';
+    //         isAboutOpen.value = !isAboutOpen.value;
+    //     }
+    // },
     {
         label: 'Shortcuts',
         icon: 'pi pi-compass',
         command: () => {
-            contentSlug.value = 'shortcuts';
-            isAboutOpen.value = !isAboutOpen.value;
+            isHelpOpen.value = !isHelpOpen.value;
         }
     },
     // {
@@ -112,7 +94,7 @@ const footerMenuItems = ref([
 
 .footer-pane {
   width: 100%;
-  height: 19rem;
+  height: 12rem;
   padding: 0.5rem;
   margin: 0;
 }
@@ -150,7 +132,7 @@ const footerMenuItems = ref([
   height: 0;
 }
 .slide-enter-to {
-  height: 19rem;
+  height: 12rem;
 }
 .slide-leave-to {
   height: 0;

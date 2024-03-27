@@ -682,7 +682,6 @@ onMounted(() => {
 
 <style lang="scss">
 .beaker-notebook {
-    padding-bottom: 1rem;
     height: 100vh;
     width: 100vw;
     display: grid;
