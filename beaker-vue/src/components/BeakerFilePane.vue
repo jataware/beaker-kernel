@@ -1,61 +1,59 @@
 <template>
   <div class="file-container">
-    <div class="scroller-area">
-      <div style="padding: 0.5rem;">
-        <div class="button-header">
-          <Button
-              @click="openFileSelection"
-              v-tooltip.bottom="{value: 'Files to upload', showDelay: 300}"
-              icon="pi pi-folder"
-              size="small"
-              severity="info"
-              label="Upload file(s)"
+    <div style="padding: 0.5rem;">
+      <div class="button-header">
+        <Button
+            @click="openFileSelection"
+            v-tooltip.bottom="{value: 'Files to upload', showDelay: 300}"
+            icon="pi pi-folder"
+            size="small"
+            severity="info"
+            label="Upload file(s)"
+        />
+        <form ref="uploadForm">
+          <input
+            @change="onSelectFile"
+            ref="fileInput"
+            type="file"
+            multiple
+            style="display:none;"
+            name="uploadfiles"
           />
-          <form ref="uploadForm">
-            <input
-              @change="onSelectFile"
-              ref="fileInput"
-              type="file"
-              multiple
-              style="display:none;"
-              name="uploadfiles"
-            />
-            <input
-              type="hidden"
-              name="_xsrf"
-              :value="xsrfCookie"
-            />
-          </form>
-          <Button
-              @click="refreshFiles"
-              v-tooltip.bottom="{value: 'Refresh files ', showDelay: 300}"
-              icon="pi pi-refresh"
-              size="small"
-              severity="info"
-              label="Refresh"
+          <input
+            type="hidden"
+            name="_xsrf"
+            :value="xsrfCookie"
           />
-        </div>
+        </form>
+        <Button
+            @click="refreshFiles"
+            v-tooltip.bottom="{value: 'Refresh files ', showDelay: 300}"
+            icon="pi pi-refresh"
+            size="small"
+            severity="info"
+            label="Refresh"
+        />
+      </div>
 
-        <div v-if="files !== undefined">
-          <DataTable :value="files">
-            <Column field="name" header="Name" class="filename-column">
-              <template #body="slotProps">
-                <Button
-                  @click="downloadFile(slotProps.data)"
-                  icon="pi pi-file"
-                  text
-                  :label="slotProps.data.name"
-                  class="download-button"
-                ></Button>
-              </template>
-            </Column>
-            <Column field="size" header="Size (bytes)"></Column>
-            <Column field="last_modified" header="Last Modified"></Column>
-          </DataTable>
-        </div>
-        <div v-else>
-          Fetching files...
-        </div>
+      <div v-if="files !== undefined">
+        <DataTable :value="files">
+          <Column field="name" header="Name" class="filename-column">
+            <template #body="slotProps">
+              <Button
+                @click="downloadFile(slotProps.data)"
+                icon="pi pi-file"
+                text
+                :label="slotProps.data.name"
+                class="download-button"
+              ></Button>
+            </template>
+          </Column>
+          <Column field="size" header="Size (bytes)"></Column>
+          <Column field="last_modified" header="Last Modified"></Column>
+        </DataTable>
+      </div>
+      <div v-else>
+        Fetching files...
       </div>
     </div>
   </div>

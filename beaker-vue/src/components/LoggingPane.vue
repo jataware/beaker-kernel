@@ -1,81 +1,78 @@
 <template>
   <div class="data-container">
-    <div class="scroller-area">
+    <div style="padding: 0.5rem;">
 
-      <div style="padding: 0.5rem;">
+      <!-- Some dev options to format json body display
+      <div style="padding-bottom: 0.5rem; display: none;">
+        <Checkbox
+          v-model="options"
+          id="quotes"
+          name="quotes"
+          value="quotes"
+        />
+        <label for="quotes" class="ml-2">quotes</label>
 
-        <!-- Some dev options to format json body display
-        <div style="padding-bottom: 0.5rem; display: none;">
-          <Checkbox
-            v-model="options"
-            id="quotes"
-            name="quotes"
-            value="quotes"
-          />
-          <label for="quotes" class="ml-2">quotes</label>
+        <Checkbox
+          class="ml-2"
+          v-model="options"
+          id="linenum"
+          name="linenum"
+          value="linenum"
+        />
+        <label for="linenum" class="ml-2">linenum</label>
+      </div>
+      -->
 
-          <Checkbox
-            class="ml-2"
-            v-model="options"
-            id="linenum"
-            name="linenum"
-            value="linenum"
-          />
-          <label for="linenum" class="ml-2">linenum</label>
-        </div>
-        -->
-
-        <div class="flex-container">
-          <div
-            class="p-input-icon-left"
-            style="padding: 0; margin: 0;"
-          >
-            <i class="pi pi-search" />
-            <InputText
-              v-model="filterValue"
-              size="small"
-              placeholder="Type"
-            />
-          </div>
-
-          <div class="sort-actions p-buttonset">
-            <Button @click="sortDirection = 'asc'" v-tooltip.bottom="'Sort Asc'" outlined size="small" icon="pi pi-sort-numeric-down" aria-label="Sort Time Asc" />
-            <Button @click="sortDirection = 'desc'" v-tooltip.bottom="'Sort Desc'" outlined size="small" icon="pi pi-sort-numeric-up-alt" aria-label="Sort Time Desc" />
-          </div>
-
-        </div>
-
-        <Panel
-          class="log-panel"
-          :class="{odd: index % 2 !== 0}"
-          :data-index="logEntry.timestamp"
-          v-for="(logEntry,index) in filteredLogs" :key="`${logEntry.type}-${logEntry.timestamp}`"
-          :header="logEntry.type"
-        >
-          <vue-json-pretty
-            :data="logEntry.body"
-            :deep="2"
-            showLength
-            showIcon
-            :showDoubleQuotes="isQuotes"
-            :showLineNumber="linenum"
-          />
-        </Panel>
-
+      <div class="flex-container">
         <div
-          class="bottom-actions"
+          class="p-input-icon-left"
+          style="padding: 0; margin: 0;"
         >
-          <Button
-            v-if="filteredLogs.length"
-            label="Clear Logs"
-            severity="warning"
+          <i class="pi pi-search" />
+          <InputText
+            v-model="filterValue"
             size="small"
+            placeholder="Type"
           />
-          <p v-else>
-          <!-- We could detect if context debug is disabled and add a button here-->
-            No logs. Ensure debug is enabled on context configuration.
-          </p>
         </div>
+
+        <div class="sort-actions p-buttonset">
+          <Button @click="sortDirection = 'asc'" v-tooltip.bottom="'Sort Asc'" outlined size="small" icon="pi pi-sort-numeric-down" aria-label="Sort Time Asc" />
+          <Button @click="sortDirection = 'desc'" v-tooltip.bottom="'Sort Desc'" outlined size="small" icon="pi pi-sort-numeric-up-alt" aria-label="Sort Time Desc" />
+        </div>
+
+      </div>
+
+      <Panel
+        class="log-panel"
+        :class="{odd: index % 2 !== 0}"
+        :data-index="logEntry.timestamp"
+        v-for="(logEntry,index) in filteredLogs" :key="`${logEntry.type}-${logEntry.timestamp}`"
+        :header="logEntry.type"
+      >
+        <vue-json-pretty
+          :data="logEntry.body"
+          :deep="2"
+          showLength
+          showIcon
+          :showDoubleQuotes="isQuotes"
+          :showLineNumber="linenum"
+        />
+      </Panel>
+
+      <div
+        class="bottom-actions"
+      >
+        <Button
+          v-if="filteredLogs.length"
+          label="Clear Logs"
+          severity="warning"
+          size="small"
+        />
+        <p v-else>
+        <!-- We could detect if context debug is disabled and add a button here-->
+          No logs. Ensure debug is enabled on context configuration.
+        </p>
       </div>
     </div>
   </div>

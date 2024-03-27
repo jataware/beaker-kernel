@@ -385,15 +385,10 @@ footer {
     position: relative;
     display: flex;
     flex-direction: column;
-    height: 100%;
     z-index: 3;
     background-color: var(--surface-a);
 }
 
-.splitter {
-    height: 100%;
-    flex: 1;
-}
 
 .agent-query-container {
     flex: 0 1 8rem;
