@@ -1,6 +1,6 @@
 {
   "name": "beaker-kernel",
-  "version": "1.4.9",
+  "version": "1.4.10",
   "description": "Beaker kernel library",
   "scripts": {
     "build": "tsc"
