@@ -3,6 +3,10 @@ const path = require('path');
 
 module.exports = defineConfig({
   // publicPath: "/dev_ui/",
+  pages: {
+    index: 'src/main.ts',
+    admin: 'src/admin.ts',
+  },
   assetsDir: "static/",
   transpileDependencies: true,
   configureWebpack: {
@@ -14,6 +18,10 @@ module.exports = defineConfig({
   },
   devServer: {
     proxy: {
+      '^/stats': {
+        target: 'http://jupyter:8888',
+        changeOrigin: true,
+      },
       '^/api': {
         target: 'http://jupyter:8888',
         ws: true,

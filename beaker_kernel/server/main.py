@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+import subprocess
 import uuid
 from typing import Dict
 
@@ -200,6 +201,54 @@ class DownloadHandler(RequestHandler):
         else:
             raise HTTPError(404)
 
+class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
+    """
+    """
+
+    async def get(self):
+        """
+        """
+        with open("/proc/sys/fs/file-nr") as filehandles:
+            file_handle_details = filehandles.read().strip()
+        fh_open, _, fh_total = map(int, file_handle_details.split())
+        fh_usage = fh_open / fh_total * 100
+
+        load_1, load_5, load_15 = [f"{avg:2f}" for avg in os.getloadavg()]
+        mem_total, mem_used, mem_free = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+        disk_total, disk_used, disk_free, disk_usage, mount = list(os.popen('df -h .').readlines()[-1].split()[1:])
+
+        sessions = await self.session_manager.list_sessions()
+        kernels = self.kernel_manager.list_kernels()
+
+        output = {
+            "file_handles": {
+                "open": fh_open,
+                "total": fh_total,
+                "usage": f"{fh_usage:2f}"
+            },
+            "load": {
+                "1_min": load_1,
+                "5_min": load_5,
+                "15_min": load_15,
+            },
+            "memory": {
+                "total": mem_total,
+                "used": mem_used,
+                "free": mem_free,
+                "usage": f"{int(mem_used/mem_total*100)}%",
+            },
+            "disk": {
+                "total": disk_total,
+                "used": disk_used,
+                "free": disk_free,
+                "usage": disk_usage,
+                "mount": mount,
+            },
+            "sessions": sessions,
+            "kernels": kernels,
+            "token": os.environ.get("JUPYTER_TOKEN", "89f73481102c46c0bc13b2998f9a4fce"),
+        }
+        return self.write(json.dumps(output))
 
 class BeakerJupyterApp(LabServerApp):
     name = "beaker_kernel"
@@ -215,6 +264,8 @@ class BeakerJupyterApp(LabServerApp):
         self.handlers.append((r"/api/kernels", SafeKernelHandler))
         self.handlers.append(("/contexts", ContextHandler))
         self.handlers.append(("/config", ConfigHandler))
+        self.handlers.append(("/stats", StatsHandler))
+        self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "admin.html"}))
         self.handlers.append(("/notebook", NotebookHandler))
         self.handlers.append((r"/upload", UploadHandler))
         self.handlers.append((r"/download/(.*)", DownloadHandler))
