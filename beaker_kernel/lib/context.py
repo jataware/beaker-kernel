@@ -149,7 +149,6 @@ class BaseContext:
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
         }
-        logger.error(payload)
         return payload
 
 
