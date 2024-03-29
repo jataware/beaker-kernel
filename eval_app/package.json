@@ -1,0 +1,19 @@
+{
+  "name": "beaker-benchmarking",
+  "version": "1.0.0",
+  "description": "Evaluation framework for Beaker contexts",
+  "main": "index.ts",
+  "scripts": {
+    "test": "npx tsc; node js/index.js"
+  },
+  "author": "Five Grant <five@jataware.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3"
+  },
+  "dependencies": {
+    "beaker-ts": "^0.1.2"
+  }
+}
