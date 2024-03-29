@@ -1,6 +1,6 @@
 <template>
   <ConfirmDialog></ConfirmDialog>
-  <div id="app">
+  <div id="admin">
     <div>
       <h1 style="text-align: center;">Beaker admin</h1>
       <div style="margin-right: 3rem; display: flex; justify-content: right; justify-items: center;">
@@ -60,7 +60,7 @@
       </div>
     </div>
     <div>
-      <h2>Stats</h2>
+      <h2>Sessions</h2>
       <DataTable :value="sessionData">
         <template #header>
           <div class="header">

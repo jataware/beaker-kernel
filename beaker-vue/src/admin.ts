@@ -7,7 +7,6 @@ import FocusTrap from 'primevue/focustrap';
 import ConfirmationService from 'primevue/confirmationservice';
 
 import 'primeicons/primeicons.css'
-import './index.scss';
 
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';
 
