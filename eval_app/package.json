@@ -14,6 +14,6 @@
     "typescript": "^5.4.3"
   },
   "dependencies": {
-    "beaker-ts": "^0.1.2"
+    "beaker-kernel": "^1.4.0"
   }
 }
