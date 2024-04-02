@@ -1,7 +1,6 @@
 import { promises as fs, Dirent } from 'fs';
 import path from 'path';
 import { BeakerSession } from 'beaker-kernel';
-
 import { baseUrl, token } from './settings.json'
 
 
@@ -23,22 +22,26 @@ async function evalNotebook(contextName: string, benchmark: any) {
   );
 
   session.notebook.loadFromIPynb(benchmark);
-  const contextInfo = JSON.parse(session.notebook.cells[0].source.join("\n"));
-  const setupResult = session.sendBeakerMessage(
+  const rawContextInfo = session.notebook.cells[0].source; 
+  const contextInfo = JSON.parse(
+    typeof rawContextInfo === "string" ? rawContextInfo : rawContextInfo.join("\n")
+  );
+  const startMsg = session.sendBeakerMessage(
       "context_setup_request",
       {
         contextName,
         contextInfo: contextInfo
       }
   );
-  const startSuccess = ['error', 'abort'].indexOf(setupResult?.content?.status) === -1;
+  const setupResult = await startMsg.done
+  const startSuccess = 'status' in setupResult.content && ['error', 'abort'].indexOf(setupResult.content.status) === -1;
   if (!startSuccess) {
-    throw new Error("Failed to start session");
+      throw new Error("Failed to start session");
   };
 
   for (let cell of session.notebook.cells){
-    if (cell != null){
-      await cell.execute(session);
+    if ('execute' in cell && typeof cell.execute === 'function'){
+      cell.execute(session);
     }
   }
 
