@@ -106,7 +106,7 @@ rawSession.sessionReady.then(() => {
 });
 
 onBeforeMount(() => {
-  document.title = "Beaker Development Interface"
+  // document.title = "Beaker Development Interface"
   var notebookData: {[key: string]: any};
   try {
     notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};

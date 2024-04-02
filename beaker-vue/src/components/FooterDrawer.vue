@@ -89,6 +89,9 @@ const footerMenuItems = ref([
 .footer-menu-bar {
   &.p-menubar {
     padding: 0 0.5rem;
+    background: var(--primary-50);
+    border-top: 1px solid var(--gray-300);
+    border-radius: 0;
   }
 }
 
@@ -116,7 +119,7 @@ const footerMenuItems = ref([
   overflow: auto;
   padding: 0.5rem;
   margin-top: 0.5rem;
-  border: 1px solid lightgray;
+  border: 1px solid drakgray;
   border-radius: 3px;
   color: var(--text-color-secondary);
 }

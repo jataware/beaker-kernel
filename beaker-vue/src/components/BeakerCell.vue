@@ -113,9 +113,9 @@ defineExpose({
     border-bottom: 4px solid var(--surface-c);
 
     &.selected {
-      border-right: 5px solid var(--purple-400);
+      border-right: 5px solid var(--blue-400);
       border-top: unset;
-      background-color: var(--surface-ground);
+      background-color: var(--surface-100);
     }
 
     &:focus {
@@ -167,7 +167,7 @@ defineExpose({
 }
 
 .drag-above {
-    box-shadow: 0px -5px 1px var(--purple-200);
+    box-shadow: 0px -5px 1px var(--primary-200);
 
     &:first-child {
         margin-top: 5px;
@@ -176,11 +176,11 @@ defineExpose({
 }
 
 .drag-itself, .drag-itself.selected {
-    background-color: var(--purple-200);
+    background-color: var(--primary-200);
 }
 
 .drag-below {
-    box-shadow: 0px 5px 0px var(--purple-200);
+    box-shadow: 0px 5px 0px var(--primary-200);
     margin-bottom: 5px;
     padding-bottom: calc(1rem - 5px);
 }

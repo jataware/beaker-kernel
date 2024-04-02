@@ -4,9 +4,9 @@ import App from './App.vue';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
-
-import 'primeicons/primeicons.css'
 import './index.scss';
+import 'primeicons/primeicons.css'
+import 'primevue/resources/themes/bootstrap4-light-blue/theme.css';
 
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';
 

@@ -1,15 +1,14 @@
 <template>
-    <Card class="agent-input-card">
-        <template #title>
-            How can the agent help?
-        </template>
+    <div class="agent-input-card">
+        <h3>
+            What Would You Like To Do?
+        </h3>
 
-        <template #content>
             <div class="query-input-container">
                 <ContainedTextArea
                     @submit="handleQuery"
                     v-model="query"
-                    style="flex: 1; margin-right: 0.75rem"
+                    style="flex: 1; margin-right: 0.75rem; max-width: 40rem;"
                     placeholder="Ask the AI or request an operation."
                 />
 
@@ -20,8 +19,7 @@
                     label="enter"
                 />
             </div>
-        </template>
-    </Card>
+    </div>
 </template>
 
 
@@ -66,9 +64,8 @@ const handleQuery = (e: any) => {
 
 <style lang="scss">
 .agent-input-card {
-    .p-card-body .p-card-content {
-        padding: 0.75rem 0;
-    }
+  padding: 0 0.75rem 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--surface-c);
 }
 
 .query-input-container {

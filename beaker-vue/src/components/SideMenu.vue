@@ -16,7 +16,7 @@
                 :icon="panel.props.icon"
                 :label="props.showLabel ? panel.props.label : undefined"
                 icon-pos="top"
-                v-tooltip.left="props.showTooltip ? panel.props.label : undefined"
+                v-tooltip.right="props.showTooltip ? panel.props.label : undefined"
                 @click="handleButtonClick(index)"
             ></Button>
         </div>
@@ -213,7 +213,8 @@ button.menu-button {
 }
 
 .sidemenu-menu-selection {
-    background-color: var(--surface-b);
+    // background-color: var(--surface-b);
+    border: 1px solid var(--surface-b);
     display: flex;
     flex-direction: column;
     &.right {

@@ -8,7 +8,7 @@
                 <Codemirror
                     v-model="cell.source"
                     ref="codemirrorRef"
-                    placeholder="Your code..."
+                    placeholder=""
                     :extensions="codeExtensions"
                     :disabled="isBusy"
                     :autofocus="true"

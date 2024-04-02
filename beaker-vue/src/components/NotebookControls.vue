@@ -6,7 +6,7 @@
               v-tooltip.bottom="{value: 'Add New Cell', showDelay: 300}"
               icon="pi pi-plus"
               size="small"
-              severity="info"
+              severity="primary"
               text
           />
           <Button
@@ -14,7 +14,7 @@
               v-tooltip.bottom="{value: 'Remove Selected Cell', showDelay: 300}"
               icon="pi pi-minus"
               size="small"
-              severity="info"
+              severity="primary"
               text
           />
           <Button
@@ -22,7 +22,7 @@
               v-tooltip.bottom="{value: 'Run Selected Cell', showDelay: 300}"
               icon="pi pi-play"
               size="small"
-              severity="info"
+              severity="primary"
               text
           />
           <!-- TODO implement Stop-->
@@ -31,7 +31,7 @@
               v-tooltip.bottom="{value: 'Stop Execution', showDelay: 300}"
               icon="pi pi-stop"
               size="small"
-              severity="info"
+              severity="primary"
               text
           />
       </InputGroup>
@@ -41,7 +41,7 @@
               v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
               icon="pi pi-refresh"
               size="small"
-              severity="info"
+              severity="primary"
               text
           />
           <Button
@@ -49,7 +49,7 @@
               v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
               icon="pi pi-download"
               size="small"
-              severity="info"
+              severity="primary"
               text
           />
           <OpenNotebookButton @open-file="loadNotebook"/>
@@ -101,6 +101,9 @@ function downloadNotebook() {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--surface-c);
 
     .p-inputgroup {
         width: unset;

@@ -7,8 +7,8 @@
             v-tooltip.bottom="{value: 'Files to upload', showDelay: 300}"
             icon="pi pi-folder"
             size="small"
-            severity="info"
             label="Upload file(s)"
+            style="margin-bottom: 1rem;"
         />
         <form ref="uploadForm">
           <input
@@ -30,8 +30,8 @@
             v-tooltip.bottom="{value: 'Refresh files ', showDelay: 300}"
             icon="pi pi-refresh"
             size="small"
-            severity="info"
             label="Refresh"
+            style="margin-bottom: 1rem;"
         />
       </div>
 
@@ -48,7 +48,6 @@
               ></Button>
             </template>
           </Column>
-          <Column field="size" header="Size (bytes)"></Column>
           <Column field="last_modified" header="Last Modified"></Column>
         </DataTable>
       </div>
@@ -140,7 +139,7 @@ onMounted(async () => {
   }
 
   .download-button {
-    word-break: break-all;
+    // word-break: break-all;
     text-align: left;
   }
 

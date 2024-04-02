@@ -38,7 +38,7 @@
     "katex": "^0.16.9",
     "node-fetch": "^2.6.6",
     "primeicons": "^6.0.1",
-    "primevue": "^3.46.0",
+    "primevue": "^3.50.0",
     "vue": "^3.2.13",
     "vue-codemirror": "^6.1.1",
     "vue-json-pretty": "^2.3.0"
