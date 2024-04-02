@@ -1,17 +1,18 @@
-import fs = require("fs");
-import path = require('path');
-import beaker = require('beaker-kernel');
-import settings =  require('./settings.json');
+const { promises, Dirent} = require("fs");
+const fs = promises;
+const path = require('path');
+const { BeakerSession } = require('beaker-kernel');
+const { baseUrl, token } =  require('./settings.json');
 
 
 async function evalNotebook(contextName: string, benchmark: any) {
   const config = {
-    baseUrl: settings.baseUrl,
-    appUrl: settings.baseUrl,
-    wsUrl: settings.baseUrl.replace("http", "ws"),
-    token: settings.token,
+    baseUrl,
+    appUrl: baseUrl,
+    wsUrl: baseUrl.replace("http", "ws"),
+    token,
   };  
-  const session = new beaker.BeakerSession(
+  const session = new BeakerSession(
     {
       settings: config,
       name: "Benchmarking",
@@ -53,23 +54,23 @@ async function evalNotebook(contextName: string, benchmark: any) {
 
 
 async function getBenchmarks(evalDir: string, resultDir: string) {
-  const items = await fs.promises.readdir(evalDir, { withFileTypes: true });
-  const contexts = items.filter((item: fs.Dirent) => item.isDirectory());
-  await fs.promises.mkdir(resultDir);
-  contexts.map(async (context:fs.Dirent)=>{
+  const items = await fs.readdir(evalDir, { withFileTypes: true });
+  const contexts = items.filter((item: typeof Dirent) => item.isDirectory());
+  await fs.mkdir(resultDir);
+  contexts.map(async (context: typeof Dirent)=>{
     const resultPath = path.join(resultDir, context.name);
-    await fs.promises.mkdir(resultPath);
+    await fs.mkdir(resultPath);
 
     const contextPath = path.join(evalDir, context.name);
-    const unfilterFiles = await fs.promises.readdir(contextPath, { withFileTypes: true });
-    const files = unfilterFiles.filter(file => file.name.length <= 6 || file.name.slice(0, file.name.length - 6) !== ".ipynb")
+    const unfilterFiles = await fs.readdir(contextPath, { withFileTypes: true });
+    const files = unfilterFiles.filter((file: typeof Dirent)  => file.name.length <= 6 || file.name.slice(0, file.name.length - 6) !== ".ipynb")
 
-    files.map( async (file) => {
+    files.map( async (file: typeof Dirent) => {
       const filePath = path.join(contextPath, file.name);
-      const notebook = JSON.parse(await fs.promises.readFile(filePath, 'utf-8'));
+      const notebook = JSON.parse(await fs.readFile(filePath, 'utf-8'));
       const result = evalNotebook(context.name, notebook)
       const fileContents = JSON.stringify(result);
-      await fs.promises.writeFile(path.join(resultPath, file.name), fileContents);
+      await fs.writeFile(path.join(resultPath, file.name), fileContents);
     })
     
   });

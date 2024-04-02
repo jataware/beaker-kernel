@@ -4,7 +4,7 @@
   "description": "Evaluation framework for Beaker contexts",
   "main": "index.ts",
   "scripts": {
-    "test": "npx tsc; node js/index.js"
+    "test": "npx tsc --module commonjs; node js/index.js"
   },
   "author": "Five Grant <five@jataware.com>",
   "license": "ISC",
