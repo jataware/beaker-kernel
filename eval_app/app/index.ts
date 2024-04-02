@@ -1,19 +1,19 @@
-import { promises as fs, Dirent } from 'fs';
-import path from 'path';
-import { BeakerSession } from 'beaker-kernel';
-import { baseUrl, token } from './settings.json'
+import fs = require("fs");
+import path = require('path');
+import beaker = require('beaker-kernel');
+import settings =  require('./settings.json');
 
 
 async function evalNotebook(contextName: string, benchmark: any) {
-  const settings = {
-    baseUrl,
-    appUrl: baseUrl,
-    wsUrl: baseUrl.replace("http", "ws"),
-    token,
+  const config = {
+    baseUrl: settings.baseUrl,
+    appUrl: settings.baseUrl,
+    wsUrl: settings.baseUrl.replace("http", "ws"),
+    token: settings.token,
   };  
-  const session = new BeakerSession(
+  const session = new beaker.BeakerSession(
     {
-      settings,
+      settings: config,
       name: "Benchmarking",
       kernelName: "beaker_kernel",
       sessionId: "dev_session",
@@ -53,23 +53,23 @@ async function evalNotebook(contextName: string, benchmark: any) {
 
 
 async function getBenchmarks(evalDir: string, resultDir: string) {
-  const items = await fs.readdir(evalDir, { withFileTypes: true });
-  const contexts = items.filter((item: Dirent) => item.isDirectory());
-  await fs.mkdir(resultDir);
-  contexts.map(async (context:Dirent)=>{
+  const items = await fs.promises.readdir(evalDir, { withFileTypes: true });
+  const contexts = items.filter((item: fs.Dirent) => item.isDirectory());
+  await fs.promises.mkdir(resultDir);
+  contexts.map(async (context:fs.Dirent)=>{
     const resultPath = path.join(resultDir, context.name);
-    await fs.mkdir(resultPath);
+    await fs.promises.mkdir(resultPath);
 
     const contextPath = path.join(evalDir, context.name);
-    const unfilterFiles = await fs.readdir(contextPath, { withFileTypes: true });
+    const unfilterFiles = await fs.promises.readdir(contextPath, { withFileTypes: true });
     const files = unfilterFiles.filter(file => file.name.length <= 6 || file.name.slice(0, file.name.length - 6) !== ".ipynb")
 
     files.map( async (file) => {
       const filePath = path.join(contextPath, file.name);
-      const notebook = JSON.parse(await fs.readFile(filePath, 'utf-8'));
+      const notebook = JSON.parse(await fs.promises.readFile(filePath, 'utf-8'));
       const result = evalNotebook(context.name, notebook)
       const fileContents = JSON.stringify(result);
-      await fs.writeFile(path.join(resultPath, file.name), fileContents);
+      await fs.promises.writeFile(path.join(resultPath, file.name), fileContents);
     })
     
   });
