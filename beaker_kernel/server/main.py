@@ -97,7 +97,17 @@ class MainHandler(StaticFileHandler):
                     {"session": session_id},
                 )
                 return self.redirect(to_url, permanent=False)
+
         # Otherwise, serve files as normal
+
+        # Ensure a proper xsrf cookie value is set.
+        cookie_name = self.settings.get("xsrf_cookie_name", "_xsrf")
+        xsrf_token=self.xsrf_token.decode("utf8")
+        xsrf_cookie = self.request.cookies.get(cookie_name, None)
+        if not xsrf_cookie or xsrf_cookie.value != xsrf_token:
+            kwargs = self.settings.get("xsrf_cookie_kwargs", {})
+            self.set_cookie(cookie_name, xsrf_token, **kwargs)
+
         return await super().get(path, include_body=include_body)
 
 
