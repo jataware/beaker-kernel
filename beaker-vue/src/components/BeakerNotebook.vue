@@ -21,13 +21,13 @@
 
         <template #end>
           <nav>
-            <Button disabled text @click="toggleDarkMode" style="margin: 0; color: var(--gray-500);" :icon="themeIcon" />
+            <Button disabled text @click="toggleDarkMode" style="margin: 0; color: var(--gray-600);" :icon="themeIcon" />
             <a href="https://jataware.github.io/beaker-kernel" rel="noopener" target="_blank">
-              <Button text style="margin: 0; color: var(--gray-500);" aria-label="Beaker Documentation"
+              <Button text style="margin: 0; color: var(--gray-600);" aria-label="Beaker Documentation"
                 icon="pi pi-book" />
             </a>
             <a href="https://github.com/jataware/beaker-kernel" rel="noopener" target="_blank">
-              <Button text style="margin: 0; color: var(--gray-500);" aria-label="Github Repository Link Icon"
+              <Button text style="margin: 0; color: var(--gray-600);" aria-label="Github Repository Link Icon"
                 icon="pi pi-github" />
             </a>
           </nav>
@@ -43,17 +43,17 @@
         <SideMenuPanel label="Data" icon="pi pi-database">
           <DataSourceBrowser />
         </SideMenuPanel>
-
+        <!--
         <SideMenuPanel label="Context" icon="pi pi-home">
           <ContextTree :context="activeContext?.info" @action-selected="selectAction" />
+        </SideMenuPanel>
+        -->
+        <SideMenuPanel label="Files" icon="pi pi-file-export">
+          <BeakerFilePane />
         </SideMenuPanel>
 
         <SideMenuPanel label="Messages" icon="pi pi-comments">
           <LoggingPane :entries="props.rawMessages" />
-        </SideMenuPanel>
-
-        <SideMenuPanel label="Files" icon="pi pi-file-export">
-          <BeakerFilePane />
         </SideMenuPanel>
       </SideMenu>
       <div class="ide-cells" style="flex: 100;" @keydown="handleKeyboardShortcut">
@@ -90,7 +90,11 @@
           </div>
         </div>
 
-      </div>
+      <!--
+        <BeakerAgentQuery class="agent-query-container" @select-cell="selectCell" @run-cell="runCell"
+          :run-cell-callback="scrollBottomCellContainer" />
+      -->
+      </div><!--ide-cells-->
     </main>
 
     <!-- TODO may use HTML comments to hide footer -->
@@ -726,7 +730,7 @@ footer {
 }
 
 .connection-button {
-  color: var(--surface-500);
+  color: var(--green-400);
 }
 
 .debug-card {
@@ -766,7 +770,7 @@ footer {
     height: 1rem;
     background: linear-gradient(to right, var(--red-400), var(--indigo-200), var(--indigo-500) 100%);
     background-position: 1px 100%;
-    background-size: 100% 2px;
+    background-size: 100% 1px;
     background-repeat: repeat-x;
   }
 
@@ -842,6 +846,5 @@ footer {
 .drop-overflow-catcher {
   flex: 1;
 }
-
 </style>
 

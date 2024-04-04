@@ -64,7 +64,7 @@ const handleQuery = (e: any) => {
 
 <style lang="scss">
 .agent-input-card {
-  padding: 0 0.75rem 0.5rem 0.75rem;
+  padding: 0.5rem 0.75rem 0.5rem 0.75rem;
   border-bottom: 1px solid var(--surface-c);
 }
 
