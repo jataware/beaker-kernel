@@ -14,7 +14,7 @@
         <template #center>
           <div class="logo">
             <h4>
-              Multimodal <span class="longer-title">Notebook Environment</span>
+              Notebook <span class="longer-title">Environment</span>
             </h4>
           </div>
         </template>
@@ -788,7 +788,8 @@ footer {
       margin: 0;
       padding: 0;
       font-weight: 400;
-      color: var(--primary-200);
+      // color: var(--primary-200);
+      color: var(--text-color-secondary);
 
       @media(max-width: 885px) {
         .longer-title {
