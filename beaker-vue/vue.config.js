@@ -12,7 +12,7 @@ module.exports = defineConfig({
   configureWebpack: {
     resolve: {
       alias: {
-        "beaker-kernel": path.resolve(__dirname, "../beaker-ts/src/")
+        // "beaker-kernel": path.resolve(__dirname, "../beaker-ts/src/")
       }
     }
   },

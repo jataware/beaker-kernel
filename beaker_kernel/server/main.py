@@ -1,8 +1,8 @@
+import asyncio
 import datetime
 import json
 import logging
 import os
-import subprocess
 import uuid
 from typing import Dict
 
@@ -19,6 +19,7 @@ from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTP
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BaseContext
 from beaker_kernel.lib.subkernels.base import BaseSubkernel
+from beaker_kernel.server import admin_utils
 
 logger = logging.getLogger(__file__)
 
@@ -227,8 +228,42 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
         mem_total, mem_used, mem_free = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
         disk_total, disk_used, disk_free, disk_usage, mount = list(os.popen('df -h .').readlines()[-1].split()[1:])
 
-        sessions = await self.session_manager.list_sessions()
-        kernels = self.kernel_manager.list_kernels()
+
+        # Fetch remote resources asynchronously
+        (
+            system_stats,
+            sessions,
+            kernels
+        ) = await asyncio.gather(
+            admin_utils.fetch_system_stats(),
+            self.session_manager.list_sessions(),
+            admin_utils.fetch_kernel_info(self.kernel_manager),
+        )
+        ps_response, fh_response, lsof_response = system_stats
+
+        proc_info = await admin_utils.build_proc_info(ps_response, fh_response)
+        edges, kernel_by_pid_index = await admin_utils.build_edges_map(lsof_response, kernels)
+
+        # Update each session with collected information
+        for session in sessions:
+            kernel = session.get("kernel", {})
+            kernel_id = kernel.get('id', None)
+            session["kernel"].update(kernel)
+            beaker_kernel_pid = kernels[kernel_id].get("pid", None)
+            if beaker_kernel_pid is not None:
+                potential_subkernel_pids = [child for parent, child in edges if parent == beaker_kernel_pid]
+                for psp in potential_subkernel_pids:
+                    if psp in kernel_by_pid_index:
+                        session["subkernel"] = kernel_by_pid_index[psp]
+                        break
+            session["process_info"] = []
+            pids_to_add = [beaker_kernel_pid, psp]
+            while len(pids_to_add) > 0:
+                pid = pids_to_add.pop()
+                session["process_info"].append(proc_info[pid])
+                for proc in proc_info.values():
+                    if proc["ppid"] == pid:
+                        pids_to_add.append(proc["pid"])
 
         output = {
             "file_handles": {

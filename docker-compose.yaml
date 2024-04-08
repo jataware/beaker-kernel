@@ -15,6 +15,7 @@ services:
       - JUPYTER_TOKEN=89f73481102c46c0bc13b2998f9a4fce
       - ENABLE_USER_PROMPT=true
       - OPENAI_API_KEY
+      - PYTHONPATH=/jupyter
     volumes:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
