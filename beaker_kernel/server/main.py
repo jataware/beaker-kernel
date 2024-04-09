@@ -233,7 +233,7 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
         (
             system_stats,
             sessions,
-            kernels
+            kernels,
         ) = await asyncio.gather(
             admin_utils.fetch_system_stats(),
             self.session_manager.list_sessions(),
@@ -246,18 +246,24 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
 
         # Update each session with collected information
         for session in sessions:
-            kernel = session.get("kernel", {})
-            kernel_id = kernel.get('id', None)
+            kernel_id = session.get("kernel", {}).get('id', None)
+            kernel = kernels.get(kernel_id)
             session["kernel"].update(kernel)
             beaker_kernel_pid = kernels[kernel_id].get("pid", None)
+            subkernel_pid = None
             if beaker_kernel_pid is not None:
                 potential_subkernel_pids = [child for parent, child in edges if parent == beaker_kernel_pid]
                 for psp in potential_subkernel_pids:
                     if psp in kernel_by_pid_index:
+                        subkernel_pid = psp
                         session["subkernel"] = kernel_by_pid_index[psp]
                         break
             session["process_info"] = []
-            pids_to_add = [beaker_kernel_pid, psp]
+            pids_to_add = []
+            if beaker_kernel_pid is not None:
+                pids_to_add.append(beaker_kernel_pid)
+            if subkernel_pid is not None:
+                pids_to_add.append(subkernel_pid)
             while len(pids_to_add) > 0:
                 pid = pids_to_add.pop()
                 session["process_info"].append(proc_info[pid])

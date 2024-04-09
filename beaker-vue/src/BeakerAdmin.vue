@@ -72,17 +72,42 @@
               <Button severity="success" raised @click="groupSessionAction">Go</Button>
           </div>
         </template>
-        <Column selection-mode="multiple"></Column>
-        <Column expander style="width: 5rem" />
-        <Column field="beaker_id" header="Beaker ID" sortable></Column>
-        <Column field="raw_id" header="Raw ID" sortable></Column>
-        <Column field="beaker_kernel" header="Beaker Kernel" sortable></Column>
+        <Column class="selection-column" selection-mode="multiple"></Column>
+        <Column class="expansion-column" expander></Column>
+        <Column field="kernel.id" header="Beaker Kernel" sortable>
+          <template #body="{ data }">
+            <div>{{ data.session_id }}</div>
+            <template v-if="expandedSessionIds.includes(data.session_id)">
+              <br/>
+              <div><span style="font-weight: bold;">Kernel ID:</span> {{ data.kernel.id }}</div>
+            </template>
+          </template>
+        </Column>
+        <Column header="Subkernel" field="subkernel.id" sortable>
+          <template #body="{ data }">
+            <div>{{ data.subkernel.id }}</div>
+            <template v-if="expandedSessionIds.includes(data.session_id)">
+              <br/>
+              <div><span style="font-weight: bold;">Type:</span> {{ data.subkernel.name }}</div>
+            </template>
+          </template>
+        </Column>
+        <Column header="Current Context" field="context" sortable>
+          <template #body="{ data }">
+            <div>{{ data.context }}</div>
+            <template v-if="expandedSessionIds.includes(data.session_id)">
+              <br/>
+              <span style="font-weight: bold;">Config:</span><br/>
+              <div class="context-config">{{ data.context_config }}</div>
+            </template>
+          </template>
+        </Column>
         <Column field="last_active" header="Last Active" sortable></Column>
-        <Column field="idle" header="Idle Duration (minutes)" sortable></Column>
+        <Column field="idle" header="Idle Duration (min)" sortable></Column>
         <Column field="connected" header="User connected" sortable></Column>
         <Column header="Destroy">
           <template #body="{ data }">
-            <Button icon="pi pi-times" severity="danger" raised @click="terminateSessions([{beaker_id: data.beaker_id, raw_id: data.raw_id}])"/>
+            <Button style="height: 2rem; width: 2rem; text-align: center;" icon="pi pi-times" severity="danger" raised @click="terminateSessions([{session_id: data.session_id, raw_id: data.raw_id}])"/>
           </template>
         </Column>
 
@@ -114,7 +139,6 @@ import { PageConfig, URLExt } from '@jupyterlab/coreutils';
 import { defineProps, reactive, ref, onBeforeMount, provide, onBeforeUnmount, computed } from 'vue';
 import DataTable from 'primevue/datatable';
 import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Dropdown from 'primevue/dropdown';
@@ -134,22 +158,29 @@ const adminStats = ref({});
 const intervalRef = ref();
 const lastUpdated = ref("never");
 const sessionAction = ref<string>("---");
-const selectedSessions = ref<{beaker_id: string, raw_id: string}[]>([]);
+const selectedSessions = ref<{session_id: string, raw_id: string}[]>([]);
 const expandedRows = ref([])
 
 const sessionData = computed(() => {
   const result = adminStats.value.sessions?.map((session) => {
     return {
-      "beaker_id": session.path,
-      "raw_id": session.id,
-      "beaker_kernel": session.kernel.id,
-      "last_active": session.kernel.last_activity,
-      "idle": ((Date.now() - Date.parse(session.kernel.last_activity)) / 60000).toFixed(2),
-      "connected": session.kernel.connections > 0,
-      "process_info": session.process_info,
+      session_id: session.path,
+      raw_id: session.id,
+      kernel: session.kernel,
+      subkernel: session.subkernel,
+      last_active: session.kernel.last_activity,
+      idle: ((Date.now() - Date.parse(session.kernel.last_activity)) / 60000).toFixed(2),
+      connected: session.kernel.connections > 0,
+      process_info: session.process_info,
+      context: session.kernel.context?.name,
+      context_config: session.kernel.context?.config,
     }
   });
   return result;
+});
+
+const expandedSessionIds = computed(() => {
+  return expandedRows.value.map((i) => i.session_id);
 });
 
 const updateStats = async () => {
@@ -181,9 +212,9 @@ const groupSessionAction = () => {
   }
 };
 
-const terminateSessions = (sessions: {beaker_id: string, raw_id: string}[]) => {
+const terminateSessions = (sessions: {session_id: string, raw_id: string}[]) => {
   confirm.require({
-        message: `Are you sure you want to proceed? This will destroy session(s): ${sessions.map((e) => e.beaker_id).join(", ")}`,
+        message: `Are you sure you want to proceed? This will destroy session(s): ${sessions.map((e) => e.session_id).join(", ")}`,
         header: 'Confirmation',
         icon: 'pi pi-exclamation-triangle',
         rejectClass: 'p-button-secondary p-button-outlined',
@@ -242,9 +273,40 @@ onBeforeUnmount(() => {
 
 }
 
-.session-select {
-  width: 1.2rem;
-  height: 1.2rem;
+.selection-column {
+  text-align: center;
+
+
+  .p-column-header-content {
+    justify-content: center;
+  }
+}
+
+.expansion-column {
+  padding: 0;
+  padding-left: 0.5rem;
+  text-align: center;
+}
+
+.context-config {
+  white-space: pre;
+  font-family: monospace;
+  font-size: 90%;
+  background-color: #e1e1e1;
+  border-radius: 6px;
+  border: 1px solid #AAAAAA;
+  color: inherit;
+  padding: 0.5rem;
+  overflow: auto;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  vertical-align: top;
+  padding-top: 1.25rem;
+
+  &.expansion-column {
+    padding-top: 1rem;
+  }
 }
 
 tr.p-highlight {
