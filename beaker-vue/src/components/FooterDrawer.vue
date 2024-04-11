@@ -8,7 +8,9 @@
 
   <transition name="slide">
     <div class="footer-pane" v-if="isHelpOpen">
-      <pre>
+      <div>
+        <h3>Keyboard Shortcuts</h3>
+        <pre>
 Select cell above                           - ArrowUp | j | J
 Select cell below                           - ArrowDown | k | K
 Edit selected cell                          - Enter
@@ -18,7 +20,16 @@ Insert cell below selected cell             - b | B
 Delete selected cell                        - d | D * twice *
 Execute selected cell and step to next cell - Shift-Enter
 Execute selected cell                       - Ctrl-Enter
-      </pre>
+        </pre>
+      </div>
+      <div>
+        <h3>Magic commands</h3>
+        <pre>
+%set_context {context_slug} {language} {context_confg (json object)}
+
+%run_action {action_name} {payload (json object)}
+        </pre>
+      </div>
     </div>
   </transition>
 
@@ -65,7 +76,7 @@ const footerMenuItems = ref([
     //     }
     // },
     {
-        label: 'Shortcuts',
+        label: 'Shortcuts & help',
         icon: 'pi pi-compass',
         command: () => {
             isHelpOpen.value = !isHelpOpen.value;
@@ -93,10 +104,28 @@ const footerMenuItems = ref([
 }
 
 .footer-pane {
+  display: flex;
+  flex-direction: row;
+  gap: 4rem;
   width: 100%;
-  height: 12rem;
+  height: 15rem;
   padding: 0.5rem;
   margin: 0;
+
+   & > div {
+    position: relative;
+   }
+
+   & > div:not(:first-child)::before {
+    content: ' ';
+    width: 0.2rem;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -2.1rem;
+    background-color: var(--surface-b);
+    box-shadow: var(--surface-b) 0px 0px 4px;
+  }
 }
 
 .data-container {
@@ -132,7 +161,7 @@ const footerMenuItems = ref([
   height: 0;
 }
 .slide-enter-to {
-  height: 12rem;
+  height: 15rem;
 }
 .slide-leave-to {
   height: 0;

@@ -1,16 +1,74 @@
 import os
 import json
 import logging
+import sys
 import traceback
+from contextlib import AbstractAsyncContextManager
 from functools import wraps, update_wrapper
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from archytas.tool_utils import tool
 
-from .jupyter_kernel_proxy import JupyterMessage
+from .jupyter_kernel_proxy import JupyterMessage, JupyterMessageTuple
+
+if TYPE_CHECKING:
+    from beaker_kernel.kernel import LLMKernel
 
 
 logger = logging.getLogger(__name__)
+
+
+class handle_message(AbstractAsyncContextManager):
+    def __init__(self, kernel: 'LLMKernel', server, target_stream, msg_data: JupyterMessageTuple, send_status_updates=True) -> None:
+        super().__init__()
+        self.kernel = kernel
+        self.send_status_updates = send_status_updates
+        message = JupyterMessage.parse(msg_data)
+        self.server = server
+        self.target_stream = target_stream
+        self.msg_data = msg_data
+        self.message = message
+        self.message_type = message.header["msg_type"]
+        self.reply_type = self.message_type.replace("_request", "") + "_reply"
+        self.return_val = None
+        if self.send_status_updates:
+            self.kernel.send_response(
+                "iopub", "status", {"execution_state": "busy"}, parent_header=message.header
+            )
+
+    async def __aenter__(self):
+        """Return `self` upon entering the runtime context."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback_value):
+        """Raise any exception triggered within the runtime context."""
+        if exc_type:
+            formatted_tb = traceback.format_exception(exc_type, exc_value, traceback_value)
+            sys.stderr.write("\n".join(formatted_tb))
+            sys.stderr.flush()
+            reply_content = {
+                "status": "error",
+                "execution_count": None,
+                "ename": exc_type.__name__,
+                "evalue": str(exc_value),
+                "traceback": formatted_tb,
+            }
+
+        else:
+            reply_content = {
+                "status": "ok",
+                "execution_count": None,
+                "return": self.return_val,
+            }
+
+        self.kernel.send_response(
+            "shell", self.reply_type, reply_content, parent_header=self.message.header, parent_identities=self.message.identities
+        )
+        if self.send_status_updates:
+            self.kernel.send_response(
+                "iopub", "status", {"execution_state": "idle"}, parent_header=self.message.header, parent_identities=self.message.identities
+            )
+        return None
 
 
 def message_handler(fn):
@@ -18,38 +76,11 @@ def message_handler(fn):
     Method decorator that handles the parsing and responding to of messages.
     """
     @wraps(fn)
-    async def wrapper(self, server, target_stream, data):
-        message = JupyterMessage.parse(data)
-        message_type = message.header["msg_type"]
-        reply_type = message_type.replace("_request", "") + "_reply"
-        self.send_response(
-            "iopub", "status", {"execution_state": "busy"}, parent_header=message.header
-        )
-
-        reply_content = {
-            "status": "ok",
-            "execution_count": None,
-        }
-        try:
-            result = await fn(self, message)
-            reply_content["return"] = result
-        except Exception as e:
-            logger.error(f"Error while handling message {message_type} in function {fn.__name__}", exc_info=True)
-            # send an error message back!
-            reply_content["status"] = "error"
-            reply_content["ename"] = e.__class__.__name__
-            reply_content["evalue"] = str(e)
-            reply_content["traceback"] = traceback.format_tb(e.__traceback__)
-
-        if reply_content["status"] == "ok":
-            reply_content["return"] = result
-
-        self.send_response(
-            "shell", reply_type, reply_content, parent_header=message.header, parent_identities=message.identities
-        )
-        self.send_response(
-            "iopub", "status", {"execution_state": "idle"}, parent_header=message.header, parent_identities=message.identities
-        )
+    async def wrapper(self, server, target_stream, data: JupyterMessageTuple):
+        async with handle_message(self, server, target_stream, data) as ctx:
+            result = await fn(self, ctx.message)
+            ctx.return_val = result
+            return result
     return wrapper
 
 
@@ -101,6 +132,18 @@ def action(action_name: str|None=None, docs: str|None=None, default_payload=None
         update_wrapper(register_method, intercept_fn)
         return intercept_fn
     return register_method
+
+
+def magic(magic_word: str|None):
+    """
+    Method decorator to identify magic word action methods
+    """
+    def register_magic(fn):
+        magic_prefix = "%" + (magic_word or fn.__name__)
+        setattr(fn, "_magic_prefix", magic_prefix)
+        update_wrapper(register_magic, fn)
+        return fn
+    return register_magic
 
 
 def togglable_tool(env_var, *, name: str | None = None):

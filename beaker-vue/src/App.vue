@@ -1,5 +1,6 @@
 <template>
     <BeakerNotebook
+      ref="notebookRef"
       :connectionStatus="connectionStatus"
       :debugLogs="debugLogs"
       :rawMessages="rawMessages"
@@ -72,6 +73,7 @@ const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
 const saveInterval = ref();
+const notebookRef = ref<typeof BeakerNotebook>();
 
 provide('show_toast', showToast);
 
@@ -84,14 +86,19 @@ rawSession.sessionReady.then(() => {
             const newStatus = msg?.content?.execution_state || 'connecting';
             connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
           }, 1000);
-        } else if (msg.header.msg_type === "preview") {
+        }
+        else if (msg.header.msg_type === "preview") {
           previewData.value = msg.content;
-        } else if (msg.header.msg_type === "debug_event") {
+        }
+        else if (msg.header.msg_type === "debug_event") {
             debugLogs.value.push({
               type: msg.content.event,
               body: msg.content.body,
               timestamp: msg.header.date,
             });
+        }
+        else if (msg.header.msg_type === "context_info_update") {
+          notebookRef.value.updateContextInfo();
         }
 
     });
