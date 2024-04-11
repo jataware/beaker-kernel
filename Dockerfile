@@ -2,6 +2,8 @@ FROM python:3.10
 RUN useradd -m jupyter
 EXPOSE 8888
 
+RUN apt update && apt install -y lsof
+
 # Install Python requirements
 RUN pip install --upgrade --no-cache-dir hatch pip
 

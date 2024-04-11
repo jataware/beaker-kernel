@@ -65,7 +65,7 @@ class BeakerHandler(watchdog_events.FileSystemEventHandler):
                 logger.error("Error reloading")
 
             if app_subprocess:
-                app_subprocess.kill()
+                app_subprocess.terminate()
 
 
 def create_observer():

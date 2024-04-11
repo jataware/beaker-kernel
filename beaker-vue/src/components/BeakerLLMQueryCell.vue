@@ -131,13 +131,6 @@ const respond = () => {
 
 function execute() {
     const future = props.cell.execute(session);
-    future.registerMessageHook((msg: any) => {
-        if (msg.header.msg_type === "code_cell") {
-            session.addCodeCell(msg.content.code, {
-                parentCell: props.cell.id,
-            });
-        }
-    });
 }
 
 defineExpose({execute});

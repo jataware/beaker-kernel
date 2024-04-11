@@ -60,6 +60,8 @@ class LLMKernel(KernelProxyManager):
         "file_extension": ".txt",
     }
 
+    kernel_id: Optional[str]
+    connection_file: Optional[str]
     context: Optional[BaseContext]
     internal_executions: set[str]
     subkernel: "BaseSubkernel"
@@ -67,19 +69,22 @@ class LLMKernel(KernelProxyManager):
     user_responses: dict[str, str]
     debug_enabled: bool
 
-    def __init__(self, server):
+    def __init__(self, session_config, kernel_id=None, connection_file=None):
+        self.kernel_id = kernel_id
+        self.connection_file = connection_file
         self.debug_enabled = False
         self.verbose = False
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.subkernel_id = None
-        super().__init__(server)
-        self.new_kernel(language="python3")
-        self.context = DefaultContext(beaker_kernel=self, subkernel=self.subkernel, config={})
-        self.user_responses = dict()
-        event_loop = asyncio.get_event_loop()
-        event_loop.run_until_complete(self.context.setup())
+        super().__init__(session_config)
         self.add_base_intercepts()
+        self.subkernel = None
+        self.context = None
+        self.user_responses = dict()
+        # Initialize context (Using the event loop to simulate `await`ing the async func in non-async setup)
+        event_loop = asyncio.get_event_loop()
+        event_loop.run_until_complete(self.set_context("default", {}))
 
     def add_base_intercepts(self):
         """
@@ -323,6 +328,16 @@ class LLMKernel(KernelProxyManager):
             logger.debug("Subkernel: %s\nResult:\n%s", self.subkernel, result)
         return result
 
+    async def update_connection_file(self, **kwargs):
+        try:
+            with open(self.connection_file, "r") as connection_file:
+                run_info: dict = json.load(connection_file)
+        except IOError:
+            run_info = {}
+        run_info.update(kwargs)
+        with open(self.connection_file, "w") as connection_file:
+                json.dump(run_info, connection_file, indent=2)
+
     async def set_context(self, context_name, context_info, language="python3", parent_header={}):
 
         context_cls = AVAILABLE_CONTEXTS.get(context_name, None)
@@ -337,10 +352,12 @@ class LLMKernel(KernelProxyManager):
         self.new_kernel(language=language)
 
         # Cleanup the old context, then create and setup the new context
-        await self.context.cleanup()
+        if self.context:
+            await self.context.cleanup()
         self.context = context_cls(beaker_kernel=self, subkernel=self.subkernel, config=context_info)
         await self.context.setup(config=context_info, parent_header=parent_header)
         await self.send_preview(parent_header=parent_header)
+        await self.update_connection_file(context={"name": context_name, "config": context_info})
 
     async def post_execute(self, queue, message_id, data):
         message = JupyterMessage.parse(data)
@@ -568,7 +585,7 @@ class LLMKernel(KernelProxyManager):
         self.user_responses[parent_id] = content["value"]
 
 
-def cleanup(kernel):
+def cleanup(kernel: LLMKernel):
     try:
         kernel.shutdown_subkernel()
     except requests.exceptions.ConnectionError:
@@ -583,7 +600,9 @@ def start(connection_file):
     with open(connection_file) as f:
         notebook_config = json.load(f)
 
-    kernel = LLMKernel(notebook_config)
+    _, kernel_file = os.path.split(connection_file)
+    kernel_id = os.path.basename(kernel_file)[7:-5]  # Remove 'kernel-' and '.json' from the beginning and end of the filename.
+    kernel = LLMKernel(notebook_config, kernel_id=kernel_id, connection_file=connection_file)
 
     try:
         loop.start()
