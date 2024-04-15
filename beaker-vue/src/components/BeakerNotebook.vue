@@ -194,7 +194,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits } from "vue";
+import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
 import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 
 import Card from 'primevue/card';
@@ -676,6 +676,10 @@ onBeforeMount(() => {
 onMounted(() => {
     updateContextInfo();
 });
+
+defineExpose({
+    updateContextInfo,
+})
 
 </script>
 

@@ -19,7 +19,7 @@ from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
 from .lib.subkernels import autodiscover_subkernels
-from .lib.utils import message_handler, LogMessageEncoder
+from .lib.utils import message_handler, LogMessageEncoder, magic, handle_message
 
 if TYPE_CHECKING:
     from .lib.agent import BaseAgent
@@ -68,16 +68,19 @@ class LLMKernel(KernelProxyManager):
     subkernel_execution_tracking: dict[str, str]
     user_responses: dict[str, str]
     debug_enabled: bool
+    magic_commands: dict[str, callable]
 
     def __init__(self, session_config, kernel_id=None, connection_file=None):
         self.kernel_id = kernel_id
         self.connection_file = connection_file
         self.debug_enabled = False
         self.verbose = False
+        self.magic_commands = {}
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.subkernel_id = None
         super().__init__(session_config)
+        self.register_magic_commands()
         self.add_base_intercepts()
         self.subkernel = None
         self.context = None
@@ -108,6 +111,82 @@ class LLMKernel(KernelProxyManager):
         )
         self.server.intercept_message("shell", "execute_reply", self.post_execute)
         self.server.intercept_message("stdin", "input_reply", self.input_reply)
+
+    def register_magic_commands(self):
+        for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_magic_prefix")):
+            prefix = getattr(method, "_magic_prefix")
+            self.magic_commands[prefix] = method
+
+        self.server.intercept_message(
+            "shell", "execute_request", self.handle_magic_word
+        )
+
+    async def handle_magic_word(self, server, target_stream, data):
+        message = JupyterMessage.parse(data)
+        cell_content: str = message.content.get("code", "").strip()
+        if not cell_content.startswith("%"):
+            return data
+        parts = cell_content.split(maxsplit=1)
+        if len(parts) == 1:
+            head, tail = parts[0], None
+        else:
+            head, tail = parts
+        for prefix, fn in self.magic_commands.items():
+            if head == prefix:
+                self.debug(event_type="magic_word", content={"magic_word": head, "fn": fn.__name__})
+                async with handle_message(self, server, target_stream, data) as ctx:
+                    result = await fn(tail, magic_word=head, parent_header=message.header)
+                    ctx.return_val = result
+                return None
+        return data
+
+    @magic("set_context")
+    async def set_context_magic(self, cell_content: str, magic_word=None, parent_header=None):
+        context_name, language, context_config = cell_content.split(maxsplit=2)
+        context_info = json.loads(context_config)
+        self.stdout(f"Switching from context {self.context.slug} to {context_name}...", parent_header=parent_header)
+        await self.set_context(context_name=context_name, language=language, context_info=context_info, parent_header=parent_header)
+
+        # Send message to trigger updating the context info
+        self.send_response(
+            stream="iopub",
+            msg_or_type="context_info_update",
+            content={},
+            parent_header=parent_header,
+        )
+        self.stdout(f"Context switch complete.", parent_header=parent_header)
+        return None
+
+    @magic("run_action")
+    async def run_action_magic(self, cell_content: str, magic_word=None, parent_header=None):
+        action_name, payload = cell_content.split(maxsplit=1)
+        request_name = f"{action_name}_request"
+        content = json.loads(payload)
+        self.stdout(f"Running action `{action_name}`...", parent_header=parent_header)
+
+        for intercept in self.server.filters:
+            if intercept.stream_type.name == "shell" and intercept.msg_type == request_name:
+                action_func = intercept.callback
+                data = self.connected_kernel.make_multipart_message(msg_type=request_name, content=content, parent_header=parent_header)
+                response = await action_func(self.server, self.connected_kernel.streams.shell, data)
+                self.stdout(f"Action `{action_name}` execution complete.", parent_header=parent_header)
+                result_data = {}
+                try:
+                    result_data["text/plain"] = json.dumps(response, cls=LogMessageEncoder, indent=2)
+                    result_data["application/json"] = response
+                except TypeError:
+                    result_data["text/plain"] = str(response)
+
+                self.send_response(
+                    stream="iopub",
+                    msg_or_type=parent_header.get('msg_type').replace("_request", "") + "_result",
+                    content={"execution_count": -1, "data": result_data, "metadata": {}},
+                    parent_header=parent_header,
+                )
+                break
+        else:
+            self.stderr(f"Unable to find an action with name `{action_name}`.")
+        return result_data
 
     def new_kernel(self, language: str):
         self.debug("new_kernel", f"Setting new kernel of `{language}`")
@@ -443,9 +522,7 @@ class LLMKernel(KernelProxyManager):
 
         raise Exception("Query timed out. User took too long to respond.")
 
-    def debug(self, event_type: str, content, parent_header=None):
-        if not self.debug_enabled:
-            return
+    def log(self, event_type: str, content, parent_header=None):
         # Re-encode data to fix issues with un-json-encodable elements in the debug output
         content = json.loads(json.dumps(content, cls=LogMessageEncoder))
         message_content = {
@@ -462,6 +539,32 @@ class LLMKernel(KernelProxyManager):
         stream = self.server.streams.iopub
         stream.send_multipart(message)
         stream.flush()
+
+    def debug(self, event_type: str, content, parent_header=None):
+        if not self.debug_enabled:
+            return
+        self.log(event_type=event_type, content=content, parent_header=parent_header)
+
+    def send_stream_message(self, stream_type, text, parent_header=None):
+        if isinstance(text, bytes):
+            text = text.decode()
+        message = self.server.make_multipart_message(
+            msg_type="stream",
+            content={
+                'name': stream_type,
+                'text': text,
+            },
+            parent_header=parent_header,
+        )
+        stream = self.server.streams.iopub
+        stream.send_multipart(message)
+        stream.flush()
+
+    def stdout(self, text, parent_header=None):
+        self.send_stream_message(stream_type="stdout", text=text, parent_header=parent_header)
+
+    def stderr(self, text, parent_header=None):
+        self.send_stream_message(stream_type="stderr", text=text, parent_header=parent_header)
 
     @message_handler
     async def llm_request(self, message):

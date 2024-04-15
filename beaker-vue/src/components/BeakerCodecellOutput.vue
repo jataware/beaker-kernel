@@ -29,7 +29,7 @@ const props = defineProps([
 ]);
 
 const rebundleError = (errorOutput) => {
-    const traceback = errorOutput.traceback?.join('\n');
+    const traceback = (Array.isArray(errorOutput.traceback) ? errorOutput.traceback?.join('\n') : errorOutput.traceback?.toString());
     const bundle = {
         'application/vnd.jupyter.error':  errorOutput,
         'application/vnd.jupyter.stderr': traceback || `${errorOutput.ename}: ${errorOutput.evalue}`,
