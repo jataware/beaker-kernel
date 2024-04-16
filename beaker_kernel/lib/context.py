@@ -191,15 +191,12 @@ class BaseContext:
         """
         Suggest what the user should ask next.
         """
-        suggestion = await self.agent.suggest()
-        logger.error(suggestion)
-        self.send_response(
-            stream="iopub",
-            msg_or_type="get_suggestion_response",
-            content= { "suggestion": suggestion },
-            parent_header=message.header,
+        suggestion_query = (
+            "Suggest the next question the user should ask based on their user history. " 
+            "Your response should be a single sentence containing the suggestion and nothing else. "
         )
-        return suggestion
+        raw_response = await self.agent.inspect(suggestion_query)        
+        return raw_response
     get_suggestion._default_payload = '{}'
 
 
