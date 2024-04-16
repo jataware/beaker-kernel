@@ -72,6 +72,13 @@ class BaseAgent(ReActAgent):
         )
         return super().display_observation(observation)
 
+    def suggest(self):
+        suggestion_query = (
+            "Suggest the next question the user should ask based on their user history. " 
+            "Your response should be a single sentence containing the suggestion and nothing else."
+        )
+        return self.inspect(suggestion_query)
+
     @togglable_tool("ENABLE_USER_PROMPT")
     async def ask_user(
         self, query: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef,

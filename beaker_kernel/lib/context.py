@@ -185,6 +185,23 @@ class BaseContext:
         return agent_messages
     get_agent_history._default_payload = '{}'
 
+    
+    @action()
+    async def get_suggestion(self, message):
+        """
+        Suggest what the user should ask next.
+        """
+        suggestion = await self.agent.suggest()
+        logger.error(suggestion)
+        self.send_response(
+            stream="iopub",
+            msg_or_type="get_suggestion_response",
+            content= { "suggestion": suggestion },
+            parent_header=message.header,
+        )
+        return suggestion
+    get_suggestion._default_payload = '{}'
+
 
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
         return self.beaker_kernel.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)
