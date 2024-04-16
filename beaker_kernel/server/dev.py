@@ -94,18 +94,28 @@ def create_observer():
     return observer
 
 def main():
-    serverapp = DevBeakerJupyterApp.initialize_server(argv=["--ip", "0.0.0.0"])
+    # Fix up arguments
+    args = sys.argv[:]
+    debug = os.environ.get("DEBUG", False)
+    if "--ip" not in args:
+        args.extend(["--ip", "0.0.0.0"])
+    if debug and debug.lower() not in ("0", "false", "f", "off") and "--debug" not in args:
+        args.append("--debug")
+    serverapp = DevBeakerJupyterApp.initialize_server(argv=args)
     serverapp.start()
 
 
 if __name__ == "__main__":
     if "watch" in sys.argv:
         observer = create_observer()
+        args = sys.argv[:]
+        args.remove("watch")
         try:
             while True:
                 app_subprocess = subprocess.Popen([
-                    sys.executable,
-                    sys.argv[0]],
+                        sys.executable,
+                        *args,
+                    ],
                     env=os.environ
                 )
                 app_subprocess.wait()
