@@ -10,7 +10,7 @@
                     @submit="handleQuery"
                     v-model="query"
                     style="flex: 1; margin-right: 0.75rem"
-                    placeholder="Ask the AI or request an operation."
+                    :placeholder="currentSuggestion"
                 />
 
                 <Button
@@ -27,6 +27,7 @@
 
 <script setup lang="ts">
 import { defineProps, defineEmits, ref, nextTick, inject } from "vue";
+import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import ContainedTextArea from './ContainedTextArea.vue';
@@ -60,6 +61,28 @@ const handleQuery = (e: any) => {
         }, 1000);
     });
 }
+
+const suggestNum = ref(1);
+const currentSuggestion = ref<string>("Ask the AI or request an operation.");
+
+const suggest = () => {
+    const messageId = `beaker-suggestion-${suggestNum.value}`;
+    suggestNum.value += 1;
+    const future = session.executeAction(
+        "get_suggestion",
+        {},
+        messageId,
+    );
+    future.onResponse = async (msg: messages.IIOPubMessage) => {
+        console.log("A suggestion response was returned but not expected", msg);
+    };
+    future.onReply = async (msg: messages.IExecuteReply) => {
+        currentSuggestion.value = `Ask the AI or request an operation. E.g. '${msg.content.return}''`;
+    }
+    future.done.then(() => {
+        console.log(`${messageId} completed`);
+    });
+};
 
 </script>
 

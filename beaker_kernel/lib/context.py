@@ -192,7 +192,7 @@ class BaseContext:
         Suggest what the user should ask next.
         """
         suggestion_query = (
-            "Suggest the next question the user should ask based on their user history. " 
+            "Suggest the next question the user should ask. If possible, base it on their user history. " 
             "Your response should be a single sentence containing the suggestion and nothing else. "
         )
         raw_response = await self.agent.inspect(suggestion_query)        
