@@ -41,8 +41,8 @@ class BaseSubkernel(abc.ABC):
         self.storage_prefix = f"/tmp/{self.beaker_kernel.subkernel_id}"
         makedirs(self.storage_prefix, exist_ok=True)
 
-    def generate_handle(self, identifier) -> str:
-        return f"/tmp/{self.session_id}/{identifier}.{self.SERIALIZATION_EXTENSION}"
+    def generate_handle(self, identifier: str) -> str:
+        return f"{self.storage_prefix}/{identifier}.{self.SERIALIZATION_EXTENSION}"
 
     def store_serialization(cls, varname: str, filename: str) -> str:
         with open(filename, "rb") as file:
@@ -75,6 +75,7 @@ class BaseSubkernel(abc.ABC):
         if not self.active:
             raise CheckpointError("Checkpointer is not active")
         self.load_checkpoint(self.checkpoints[checkpoint_index])
+        self.checkpoints = self.checkpoints[:checkpoint_index]
 
     def cleanup(self):
         self.active = False 
