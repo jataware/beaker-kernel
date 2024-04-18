@@ -39,3 +39,6 @@ class Checkpointer(abc.ABC):
             varname, filename in current_checkpoint.items()
         }
         self.checkpoints.append(checkpoint)
+    
+    def rollback(self, checkpoint_index: int):
+        self.load_checkpoint(self.checkpoints[checkpoint_index])
