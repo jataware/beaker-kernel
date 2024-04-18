@@ -207,7 +207,7 @@ class LLMKernel(KernelProxyManager):
         self.update_running_kernels()
         self.subkernel_id = kernel_info["id"]
         self.connect_to(self.subkernel_id)
-        self.subkernel = kernel_opts[language]()
+        self.subkernel = kernel_opts[language](self)
 
     def shutdown_subkernel(self):
         self.subkernel.cleanup()
