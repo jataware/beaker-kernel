@@ -37,7 +37,7 @@ class BaseContext:
         self.jinja_env = None
         self.templates = {}
         self.beaker_kernel = beaker_kernel
-        self.subkernel = subkernel
+        self.subkernel = subkernel()
         self.agent = agent_cls(
             context=self,
             tools=[],

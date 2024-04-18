@@ -1,5 +1,7 @@
 import abc
-import subprocess
+import hashlib
+import shutil
+from os import makedirs
 from typing import Any
 
 
@@ -9,18 +11,22 @@ Checkpoint = dict[str, str]
 class Checkpointer(abc.ABC):
     SERIALIZATION_EXTENSION: str = "storage"
 
-    def __init__(self):
-        checkpoints = list[Checkpoint]
+    def __init__(self, session_id: str):
+        self.checkpoints = list[Checkpoint]
+        self.storage_prefix = f"/tmp/{self.session_id}"
+        makedirs(self.storage_prefix, exist_ok=True)
 
-    @classmethod
-    def generate_handle(cls, varname: str, identifier: str = "current") -> str:
-        return f"/tmp/{varname}-{identifier}.{cls.SERIALIZATION_EXTENSION}"
+    def generate_handle(self, identifier) -> str:
+        return f"/tmp/{self.session_id}/{identifier}.{self.SERIALIZATION_EXTENSION}"
 
-    @classmethod
     def store_serialization(cls, varname: str, filename: str) -> str:
-        hash = subprocess.run(f"cat {filename} | sha256sum")
-        new_filename = cls.generate_handle(varname, hash)
-        subprocess.run(["mv", filename, new_filename])
+        with open(filename, "rb") as file:
+            chunksize = 4 * 1024 * 1024
+            hash = hashlib.new("sha256")
+            while chunk := file.read(chunksize):
+                hash.update(chunk)
+            new_filename = cls.generate_handle(hash.hexdigest())
+        shutil.copy(filename, new_filename)
         return new_filename
 
     @abc.abstractmethod
@@ -35,10 +41,14 @@ class Checkpointer(abc.ABC):
         current_checkpoint = self.get_current_checkpoint()
 
         checkpoint = {
-            varname: self.__class__.store_serialization(varname, filename) for
+            varname: self.store_serialization(filename) for
             varname, filename in current_checkpoint.items()
         }
         self.checkpoints.append(checkpoint)
     
     def rollback(self, checkpoint_index: int):
         self.load_checkpoint(self.checkpoints[checkpoint_index])
+
+    def cleanup(self):
+        shutil.rmtree(f"/tmp/{self.session_id}")
+        self.checkpoints = []
