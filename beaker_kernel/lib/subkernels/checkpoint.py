@@ -7,11 +7,16 @@ from typing import Any
 
 Checkpoint = dict[str, str]
 
+class CheckpointError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
 
 class Checkpointer(abc.ABC):
     SERIALIZATION_EXTENSION: str = "storage"
 
     def __init__(self, session_id: str):
+        self.active = True
         self.checkpoints = list[Checkpoint]
         self.storage_prefix = f"/tmp/{self.session_id}"
         makedirs(self.storage_prefix, exist_ok=True)
@@ -38,6 +43,8 @@ class Checkpointer(abc.ABC):
         ...
 
     def add_checkpoint(self):
+        if not self.active:
+            raise CheckpointError("Checkpointer is not active")
         current_checkpoint = self.get_current_checkpoint()
 
         checkpoint = {
@@ -47,8 +54,11 @@ class Checkpointer(abc.ABC):
         self.checkpoints.append(checkpoint)
     
     def rollback(self, checkpoint_index: int):
+        if not self.active:
+            raise CheckpointError("Checkpointer is not active")
         self.load_checkpoint(self.checkpoints[checkpoint_index])
 
     def cleanup(self):
-        shutil.rmtree(f"/tmp/{self.session_id}")
+        self.active = False 
+        shutil.rmtree(f"/tmp/{self.session_id}", ignore_errors=True)
         self.checkpoints = []

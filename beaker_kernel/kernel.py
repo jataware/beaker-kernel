@@ -210,6 +210,7 @@ class LLMKernel(KernelProxyManager):
         self.subkernel = kernel_opts[language]()
 
     def shutdown_subkernel(self):
+        self.subkernel.cleanup()
         if self.subkernel_id is not None:
             try:
                 print(f"Shutting down connected subkernel {self.subkernel_id}")
@@ -428,12 +429,13 @@ class LLMKernel(KernelProxyManager):
             logger.info("Subkernel changed: %s != %s", getattr(self.subkernel, "KERNEL_NAME", "unknown"), language)
 
         # Always create a new subkernel so changing context results in a clean runtime
+        self.subkernel.cleanup()
         self.new_kernel(language=language)
 
         # Cleanup the old context, then create and setup the new context
         if self.context:
             await self.context.cleanup()
-        self.context = context_cls(beaker_kernel=self, subkernel=self.subkernel, config=context_info)
+        self.context = context_cls(beaker_kernel=self, config=context_info)
         await self.context.setup(config=context_info, parent_header=parent_header)
         await self.send_preview(parent_header=parent_header)
         await self.update_connection_file(context={"name": context_name, "config": context_info})

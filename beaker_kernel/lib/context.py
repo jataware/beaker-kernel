@@ -32,12 +32,11 @@ class BaseContext:
 
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
-    def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", agent_cls: "BaseAgent", config: Dict[str, Any]) -> None:
+    def __init__(self, beaker_kernel: "LLMKernel", agent_cls: "BaseAgent", config: Dict[str, Any]) -> None:
         self.intercepts = []
         self.jinja_env = None
         self.templates = {}
         self.beaker_kernel = beaker_kernel
-        self.subkernel = subkernel()
         self.agent = agent_cls(
             context=self,
             tools=[],
@@ -72,6 +71,10 @@ class BaseContext:
                 except UnicodeDecodeError:
                     # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
                     logger.warn(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
+
+    @property
+    def subkernel(self) -> "BaseSubkernel":
+        return self.beaker_kernel.subkernel
 
     async def setup(self, config=None, parent_header=None):
         if config:
