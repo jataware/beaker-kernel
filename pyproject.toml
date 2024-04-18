@@ -22,6 +22,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
+  "dill",
   "jupyterlab~=4.0",
   "jupyterlab-server>=2.22.1,<3",
   "requests>=2.24,<3",
