@@ -33,6 +33,7 @@ class CustomHook(BuildHookInterface):
         context_classes = {}
         context_src = os.path.join(here, "beaker_kernel", "contexts")
         if os.path.exists(context_src):
+            from beaker_kernel.lib.jupyter_kernel_proxy import ProxyKernelClient
             for fpath in os.listdir(context_src):
                 if fpath.startswith("_"):
                     continue
@@ -59,7 +60,10 @@ class CustomHook(BuildHookInterface):
                     continue
                 package_name = f"beaker_kernel.lib.subkernels.{os.path.splitext(fpath)[0]}"
                 module = importlib.import_module(package_name)
-                subkernel_list = inspect.getmembers(module, lambda member: inspect.isclass(member) and not member.__name__.startswith("Base"))
+                def subkernel_criteria(member):
+                    return inspect.isclass(member) and issubclass(member, ProxyKernelClient) \
+                        and not member.__name__.startswith("Base")
+                subkernel_list = inspect.getmembers(module, subkernel_criteria)
                 for class_name, class_instance in subkernel_list:
                     slug = getattr(class_instance, "SLUG")
                     if slug in context_classes:

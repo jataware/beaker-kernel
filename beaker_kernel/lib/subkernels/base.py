@@ -3,11 +3,10 @@ import json
 from typing import Any
 import hashlib
 import shutil
+import uuid
 from os import makedirs
 
-if TYPE_CHECKING:
-    from beaker_kernel.kernel import LLMKernel
-
+from ..jupyter_kernel_proxy import ProxyKernelClient
 
 Checkpoint = dict[str, str]
 
@@ -18,7 +17,7 @@ class CheckpointError(Exception):
 class JsonStateEncoder(json.JSONEncoder):
     pass
 
-class BaseSubkernel(abc.ABC):
+class BaseSubkernel(ProxyKernelClient, abc.ABC):
     DISPLAY_NAME: str
     SLUG: str
     KERNEL_NAME: str
@@ -34,12 +33,17 @@ class BaseSubkernel(abc.ABC):
     def parse_subkernel_return(cls, execution_result) -> Any:
         ...
 
-    def __init__(self, beaker_kernel: "LLMKernel"):
+    def __init__(self, subkernel_configuration: dict, session_id: str = None):
         self.active = True
-        self.beaker_kernel = beaker_kernel
         self.checkpoints = list[Checkpoint]
-        self.storage_prefix = f"/tmp/{self.beaker_kernel.subkernel_id}"
+        self.storage_prefix = f"/tmp/{session_id if session_id else uuid.uuid4()}"
         makedirs(self.storage_prefix, exist_ok=True)
+        super().__init__(subkernel_configuration)
+    
+    def update_storage_prefix(self, session_id: str):
+        previous_prefix = self.storage_prefix
+        self.storage_prefix = f"/tmp/{session_id}"
+        shutil.move(previous_prefix, self.storage_prefix)
 
     def generate_handle(self, identifier: str) -> str:
         return f"{self.storage_prefix}/{identifier}.{self.SERIALIZATION_EXTENSION}"
@@ -51,7 +55,7 @@ class BaseSubkernel(abc.ABC):
             while chunk := file.read(chunksize):
                 hash.update(chunk)
             new_filename = cls.generate_handle(hash.hexdigest())
-        shutil.copy(filename, new_filename)
+        shutil.move(filename, new_filename)
         return new_filename
 
     def get_current_checkpoint(self) -> Checkpoint:

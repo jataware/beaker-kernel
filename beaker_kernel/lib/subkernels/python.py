@@ -56,45 +56,45 @@ _result
             python_obj = ast.literal_eval(return_str)
             return python_obj
 
-    def get_current_checkpoint(self) -> Checkpoint:
-        save_state_code = """
-import inspect as _inspect
-import json as _json
-import dill as _dill
-class _SubkernelStateEncoder(_json.JSONEncoder):
-    def default(self, o):
-        # if callable(o):
-            # return f"Function named"
-            # return super().default(o)
-        try:
-            return super().default(o)
-        except:
-            return str(o)
+#     def get_current_checkpoint(self) -> Checkpoint:
+#         save_state_code = """
+# import inspect as _inspect
+# import json as _json
+# import dill as _dill
+# class _SubkernelStateEncoder(_json.JSONEncoder):
+#     def default(self, o):
+#         # if callable(o):
+#             # return f"Function named"
+#             # return super().default(o)
+#         try:
+#             return super().default(o)
+#         except:
+#             return str(o)
 
-_result = {}
-for _name, _value in dict(locals()).items():
-    if _name.startswith('_') or _name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open'):
-        continue
-    _path = f"%s/{_name}.pkl"
-    with open(_path, "wb") as f:
-       _dill.dump(_value, f)
-       _result[_name] = _path
+# _result = {}
+# for _name, _value in dict(locals()).items():
+#     if _name.startswith('_') or _name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open'):
+#         continue
+#     _path = f"%s/{_name}.pkl"
+#     with open(_path, "wb") as f:
+#        _dill.dump(_value, f)
+#        _result[_name] = _path
 
-_result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
-del _inspect, _json, _dill
-_result
-""" % self.storage_prefix
-        return self.beaker_kernel.evaluate(save_state_code)
+# _result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
+# del _inspect, _json, _dill
+# _result
+# """ % self.storage_prefix
+#         return self.beaker_kernel.evaluate(save_state_code)
         
 
-    def load_checkpoint(self, checkpoint: Checkpoint):
-        self.beaker_kernel.evaluate("import dill as _dill")
-        for varname, filename in checkpoint.items():
-            load_state_code = f"""
-import dill as _dill
-with open({filename}, "rb") as file:
-    {varname} = _dill.load(file))
-""" 
-            self.beaker_kernel.evaluate(load_state_code)
-        self.beaker_kernel.evaluate("del _dill")
+#     def load_checkpoint(self, checkpoint: Checkpoint):
+#         self.beaker_kernel.evaluate("import dill as _dill")
+#         for varname, filename in checkpoint.items():
+#             load_state_code = f"""
+# import dill as _dill
+# with open({filename}, "rb") as file:
+#     {varname} = _dill.load(file))
+# """ 
+#             self.beaker_kernel.evaluate(load_state_code)
+#         self.beaker_kernel.evaluate("del _dill")
         

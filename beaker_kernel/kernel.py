@@ -167,8 +167,8 @@ class LLMKernel(KernelProxyManager):
         for intercept in self.server.filters:
             if intercept.stream_type.name == "shell" and intercept.msg_type == request_name:
                 action_func = intercept.callback
-                data = self.connected_kernel.make_multipart_message(msg_type=request_name, content=content, parent_header=parent_header)
-                response = await action_func(self.server, self.connected_kernel.streams.shell, data)
+                data = self.subkernel.make_multipart_message(msg_type=request_name, content=content, parent_header=parent_header)
+                response = await action_func(self.server, self.subkernel.streams.shell, data)
                 self.stdout(f"Action `{action_name}` execution complete.", parent_header=parent_header)
                 result_data = {}
                 try:
@@ -206,11 +206,20 @@ class LLMKernel(KernelProxyManager):
         kernel_info = res.json()
         self.update_running_kernels()
         self.subkernel_id = kernel_info["id"]
-        self.connect_to(self.subkernel_id)
-        self.subkernel = kernel_opts[language](self)
+
+        # NOTE: MODIFIED `connect_to`
+        # TODO: Refactor this into `lib/kernel_proxy_manager.py`
+        matching = next((n for n in self.kernels if self.subkernel_id in n), None)
+        if matching is None:
+            raise ValueError("Unknown kernel " + self.subkernel_id)
+        if self.kernels[matching] == self.server.config:
+            raise ValueError("Refusing loopback connection")
+        self.subkernel = kernel_opts[language](self.kernels[matching])
+        self.server.set_proxy_target(self.subkernel)
 
     def shutdown_subkernel(self):
-        self.subkernel.cleanup()
+        if self.subkernel:
+            self.subkernel.cleanup()
         if self.subkernel_id is not None:
             try:
                 print(f"Shutting down connected subkernel {self.subkernel_id}")
@@ -269,8 +278,8 @@ class LLMKernel(KernelProxyManager):
 
     async def execute(self, command, response_handler=None, parent_header={}):
         self.debug("execution_start", {"command": command}, parent_header=parent_header)
-        stream = self.connected_kernel.streams.shell
-        execution_message = self.connected_kernel.make_multipart_message(
+        stream = self.subkernel.streams.shell
+        execution_message = self.subkernel.make_multipart_message(
             msg_type="execute_request",
             content={
                 "silent": False,
@@ -429,7 +438,8 @@ class LLMKernel(KernelProxyManager):
             logger.info("Subkernel changed: %s != %s", getattr(self.subkernel, "KERNEL_NAME", "unknown"), language)
 
         # Always create a new subkernel so changing context results in a clean runtime
-        self.subkernel.cleanup()
+        if self.subkernel:
+            self.subkernel.cleanup()
         self.new_kernel(language=language)
 
         # Cleanup the old context, then create and setup the new context
