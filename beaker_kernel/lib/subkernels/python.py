@@ -56,7 +56,7 @@ _result
             python_obj = ast.literal_eval(return_str)
             return python_obj
 
-#     def get_current_checkpoint(self) -> Checkpoint:
+#     def generate_checkpoint_from_state(self) -> Checkpoint:
 #         save_state_code = """
 # import inspect as _inspect
 # import json as _json

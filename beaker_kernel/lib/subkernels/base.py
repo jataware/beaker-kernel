@@ -59,7 +59,7 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         return new_filename
 
     @abc.abstractmethod
-    def get_current_checkpoint(self) -> Checkpoint:
+    def generate_checkpoint_from_state(self) -> Checkpoint:
         ...
 
     @abc.abstractmethod
@@ -69,11 +69,11 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
     def add_checkpoint(self):
         if not self.active:
             raise CheckpointError("Checkpointer is not active")
-        current_checkpoint = self.get_current_checkpoint()
+        fetched_checkpoint = self.generate_checkpoint_from_state()
 
         checkpoint = {
             varname: self.store_serialization(filename) for
-            varname, filename in current_checkpoint.items()
+            varname, filename in fetch_checkpoint.items()
         }
         self.checkpoints.append(checkpoint)
     
