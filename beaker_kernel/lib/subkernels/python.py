@@ -88,10 +88,14 @@ _result
         
 
 #     def load_checkpoint(self, checkpoint: Checkpoint):
-#         self.beaker_kernel.evaluate("import dill as _dill")
+#         vars = self.beaker_kernel.evaluate("""
+# import dill as _dill
+# exclusion_critieria = lambda name: name.startswith('_') or name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open')
+# [ name for name, value in dict(locals()).items() if not _exclusion_critieria(name) ]
+# """)
+#         self.beaker_kernel.evaluate(f"del {', '.join(vars)}")
 #         for varname, filename in checkpoint.items():
 #             load_state_code = f"""
-# import dill as _dill
 # with open({filename}, "rb") as file:
 #     {varname} = _dill.load(file))
 # """ 

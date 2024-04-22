@@ -167,8 +167,8 @@ class LLMKernel(KernelProxyManager):
         for intercept in self.server.filters:
             if intercept.stream_type.name == "shell" and intercept.msg_type == request_name:
                 action_func = intercept.callback
-                data = self.subkernel.make_multipart_message(msg_type=request_name, content=content, parent_header=parent_header)
-                response = await action_func(self.server, self.subkernel.streams.shell, data)
+                data = self.subkernel.connected_kernel.make_multipart_message(msg_type=request_name, content=content, parent_header=parent_header)
+                response = await action_func(self.server, self.subkernel.connected_kernel.streams.shell, data)
                 self.stdout(f"Action `{action_name}` execution complete.", parent_header=parent_header)
                 result_data = {}
                 try:
@@ -215,7 +215,7 @@ class LLMKernel(KernelProxyManager):
         if self.kernels[matching] == self.server.config:
             raise ValueError("Refusing loopback connection")
         self.subkernel = kernel_opts[language](self.kernels[matching])
-        self.server.set_proxy_target(self.subkernel)
+        self.server.set_proxy_target(self.subkernel.connected_kernel) # TODO: Do not access `connected_kernel` directly
 
     def shutdown_subkernel(self):
         if self.subkernel:
@@ -278,8 +278,8 @@ class LLMKernel(KernelProxyManager):
 
     async def execute(self, command, response_handler=None, parent_header={}):
         self.debug("execution_start", {"command": command}, parent_header=parent_header)
-        stream = self.subkernel.streams.shell
-        execution_message = self.subkernel.make_multipart_message(
+        stream = self.subkernel.connected_kernel.streams.shell
+        execution_message = self.subkernel.connected_kernel.make_multipart_message(
             msg_type="execute_request",
             content={
                 "silent": False,

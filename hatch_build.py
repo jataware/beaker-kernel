@@ -8,6 +8,7 @@ import shutil
 import sys
 from pathlib import Path
 from typing import Any
+from types import GenericAlias
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
@@ -33,7 +34,6 @@ class CustomHook(BuildHookInterface):
         context_classes = {}
         context_src = os.path.join(here, "beaker_kernel", "contexts")
         if os.path.exists(context_src):
-            from beaker_kernel.lib.jupyter_kernel_proxy import ProxyKernelClient
             for fpath in os.listdir(context_src):
                 if fpath.startswith("_"):
                     continue
@@ -55,14 +55,17 @@ class CustomHook(BuildHookInterface):
         subkernel_classes = {}
         subkernel_src = os.path.join(here, "beaker_kernel", "lib", "subkernels")
         if os.path.exists(subkernel_src):
+            from beaker_kernel.lib.subkernels.base import BaseSubkernel
             for fpath in os.listdir(subkernel_src):
                 if fpath.startswith("_") or fpath.startswith("base"):
                     continue
                 package_name = f"beaker_kernel.lib.subkernels.{os.path.splitext(fpath)[0]}"
                 module = importlib.import_module(package_name)
                 def subkernel_criteria(member):
-                    return inspect.isclass(member) and issubclass(member, ProxyKernelClient) \
-                        and not member.__name__.startswith("Base")
+                    return inspect.isclass(member) \
+                        and not member.__name__.startswith("Base") \
+                        and not isinstance(member, GenericAlias) \
+                        and issubclass(member, BaseSubkernel)
                 subkernel_list = inspect.getmembers(module, subkernel_criteria)
                 for class_name, class_instance in subkernel_list:
                     slug = getattr(class_instance, "SLUG")

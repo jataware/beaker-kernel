@@ -3,7 +3,7 @@ import json
 from typing import Any
 import hashlib
 import shutil
-import uuid
+from tempfile import mkdtemp
 from os import makedirs
 
 from ..jupyter_kernel_proxy import ProxyKernelClient
@@ -17,14 +17,13 @@ class CheckpointError(Exception):
 class JsonStateEncoder(json.JSONEncoder):
     pass
 
-class BaseSubkernel(ProxyKernelClient, abc.ABC):
+class BaseSubkernel(abc.ABC):
     DISPLAY_NAME: str
     SLUG: str
     KERNEL_NAME: str
 
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
-    SERIALIZATION_EXTENSION: str = "storage"
 
     FETCH_STATE_CODE: str = ""
 
@@ -33,18 +32,19 @@ class BaseSubkernel(ProxyKernelClient, abc.ABC):
     def parse_subkernel_return(cls, execution_result) -> Any:
         ...
 
-    def __init__(self, subkernel_configuration: dict, session_id: str = None):
+    def __init__(self, subkernel_configuration: dict):
         self.active = True
-        self.checkpoints = list[Checkpoint]
-        self.storage_prefix = f"/tmp/{session_id if session_id else uuid.uuid4()}"
-        makedirs(self.storage_prefix, exist_ok=True)
-        super().__init__(subkernel_configuration)
-    
-    def update_storage_prefix(self, session_id: str):
-        previous_prefix = self.storage_prefix
-        self.storage_prefix = f"/tmp/{session_id}"
-        shutil.move(previous_prefix, self.storage_prefix)
+        self.connected_kernel = ProxyKernelClient(subkernel_configuration)
 
+class BaseCheckpointableSubkernel(BaseSubkernel):
+    SERIALIZATION_EXTENSION: str = "storage"
+
+    def __init__(self, subkernel_configuration: dict):
+        super().__init__(subkernel_configuration)
+        self.checkpoints = list[Checkpoint]
+        self.storage_prefix = mkdtemp()
+        makedirs(self.storage_prefix, exist_ok=True)
+    
     def generate_handle(self, identifier: str) -> str:
         return f"{self.storage_prefix}/{identifier}.{self.SERIALIZATION_EXTENSION}"
 
@@ -58,11 +58,13 @@ class BaseSubkernel(ProxyKernelClient, abc.ABC):
         shutil.move(filename, new_filename)
         return new_filename
 
+    @abc.abstractmethod
     def get_current_checkpoint(self) -> Checkpoint:
-        raise NotImplementedError
-        
+        ...
+
+    @abc.abstractmethod
     def load_checkpoint(self, checkpoint: Checkpoint):
-        raise NotImplementedError
+        ...
 
     def add_checkpoint(self):
         if not self.active:
