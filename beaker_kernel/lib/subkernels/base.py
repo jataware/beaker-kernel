@@ -80,16 +80,15 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         self.storage_prefix = mkdtemp()
         makedirs(self.storage_prefix, exist_ok=True)
     
-    def generate_handle(self, identifier: str) -> str:
-        return f"{self.storage_prefix}/{identifier}.{self.SERIALIZATION_EXTENSION}"
-
-    def store_serialization(cls, filename: str) -> str:
+    def store_serialization(self, filename: str) -> str:
         with open(filename, "rb") as file:
             chunksize = 4 * 1024 * 1024
             hash = hashlib.new("sha256")
             while chunk := file.read(chunksize):
                 hash.update(chunk)
-            new_filename = cls.generate_handle(hash.hexdigest())
+            identifier = hash.hexdigest()
+            new_filename = f"{self.storage_prefix}/{identifier}.{self.SERIALIZATION_EXTENSION}"
+
         shutil.move(filename, new_filename)
         return new_filename
 

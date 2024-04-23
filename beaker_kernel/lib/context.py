@@ -51,16 +51,11 @@ class BaseContext:
 
 
         # Add intercepts, by inspecting the instance and extracting matching methods
-        for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_intercept")):
-            msg_type, stream = getattr(method, "_intercept")
-            self.intercepts.append((msg_type, method, stream))
-            self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
-            
-        # Add intercepts from subkernel
-        for _, method in inspect.getmembers(self.subkernel, lambda member: inspect.ismethod(member) and hasattr(member, "_intercept")):#getattr(member, "_expose_action", False)):
-            msg_type, stream = getattr(method, "_intercept")
-            self.intercepts.append((msg_type, method, stream))
-            self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
+        for target in [self, self.subkernel]:
+            for _, method in inspect.getmembers(target, lambda member: inspect.ismethod(member) and hasattr(member, "_intercept")):
+                msg_type, stream = getattr(method, "_intercept")
+                self.intercepts.append((msg_type, method, stream))
+                self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
 
         # Set auto-context from agent
         if getattr(self, "auto_context", None) is not None:
