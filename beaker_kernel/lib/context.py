@@ -25,9 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 class BaseContext:
-    # TODO: Delete below
-    #beaker_kernel: "LLMKernel"
-    #subkernel: "BaseSubkernel"
+    beaker_kernel: "LLMKernel"
+    subkernel: "BaseSubkernel"
     config: Dict[str, Any]
     agent: "ReActAgent"
 
