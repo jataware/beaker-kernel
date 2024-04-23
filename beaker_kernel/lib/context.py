@@ -46,7 +46,7 @@ class BaseContext:
             tools=[],
         )
         self.config = config
-        self._init_subkernel()
+        self.subkernel = self.get_subkernel()
 
 
         # Add intercepts, by inspecting the instance and extracting matching methods
@@ -95,7 +95,7 @@ class BaseContext:
             self.intercepts.append((msg_type, method, stream))
             self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
 
-    def _init_subkernel(self):
+    def get_subkernel(self):
         language = self.config.get("language", "python3")
         self.beaker_kernel.debug("new_kernel", f"Setting new kernel of `{language}`")
         kernel_opts = {
@@ -118,8 +118,9 @@ class BaseContext:
             raise ValueError("Unknown kernel " + subkernel_id)
         if kernels[matching] == self.beaker_kernel.server.config:
             raise ValueError("Refusing loopback connection")
-        self.subkernel = kernel_opts[language](subkernel_id, kernels[matching], self)
-        self.beaker_kernel.server.set_proxy_target(self.subkernel.connected_kernel)
+        subkernel = kernel_opts[language](subkernel_id, kernels[matching], self)
+        self.beaker_kernel.server.set_proxy_target(subkernel.connected_kernel)
+        return subkernel
 
 
     @classmethod
