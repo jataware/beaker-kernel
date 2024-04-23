@@ -129,7 +129,7 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
     rollback._default_payload = "{\n\t\"checkpoint_index\": 0\n}"
 
     def cleanup(self):
+        super().cleanup()
         if self.checkpoints_enabled:
             shutil.rmtree(self.storage_prefix, ignore_errors=True)
             self.checkpoints = []
-        super().cleanup()
