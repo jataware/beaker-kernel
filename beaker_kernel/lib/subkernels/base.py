@@ -1,11 +1,13 @@
 import abc
 import json
-from typing import Any
+from typing import Any, Callable
 import hashlib
 import shutil
 from tempfile import mkdtemp
 from os import makedirs
+import requests
 
+from ..utils import server_url, server_token, action
 from ..jupyter_kernel_proxy import ProxyKernelClient
 
 Checkpoint = dict[str, str]
@@ -32,14 +34,22 @@ class BaseSubkernel(abc.ABC):
     def parse_subkernel_return(cls, execution_result) -> Any:
         ...
 
-    def __init__(self, jupyter_id: str, subkernel_configuration: dict):
-        self.active = True
+    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         self.jupyter_id = jupyter_id
         self.connected_kernel = ProxyKernelClient(subkernel_configuration)
+        self.context = context
     
+    def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
+        return self.context.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)
+
+    async def execute(self, command, response_handler=None, parent_header={}):
+        return await self.context.execute(command, response_handler, parent_header)
+
+    async def evaluate(self, expression, parent_header={}):
+        return await self.context.evaluate(expression, parent_header)
+
+
     def cleanup(self):
-        import requests
-        from ..utils import server_url, server_token
         if self.jupyter_id is not None:
             try:
                 print(f"Shutting down connected subkernel {self.jupyter_id}")
@@ -56,16 +66,24 @@ class BaseSubkernel(abc.ABC):
 class BaseCheckpointableSubkernel(BaseSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"
 
-    def __init__(self, jupyter_id: str, subkernel_configuration: dict):
-        super().__init__(jupyter_id, subkernel_configuration)
-        self.checkpoints = list[Checkpoint]
+    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
+        super().__init__(jupyter_id, subkernel_configuration, context)
+        self.checkpoints = None
+        self.storage_prefix = None
+
+    @property
+    def checkpoints_enabled(self):
+        return self.checkpoints is not None
+
+    def start_checkpointing(self):
+        self.checkpoints : list[Checkpoint] = []
         self.storage_prefix = mkdtemp()
         makedirs(self.storage_prefix, exist_ok=True)
     
     def generate_handle(self, identifier: str) -> str:
         return f"{self.storage_prefix}/{identifier}.{self.SERIALIZATION_EXTENSION}"
 
-    def store_serialization(cls, varname: str, filename: str) -> str:
+    def store_serialization(cls, filename: str) -> str:
         with open(filename, "rb") as file:
             chunksize = 4 * 1024 * 1024
             hash = hashlib.new("sha256")
@@ -76,32 +94,43 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         return new_filename
 
     @abc.abstractmethod
-    def generate_checkpoint_from_state(self) -> Checkpoint:
+    async def generate_checkpoint_from_state(self) -> Checkpoint:
         ...
 
     @abc.abstractmethod
-    def load_checkpoint(self, checkpoint: Checkpoint):
+    async def load_checkpoint(self, checkpoint: Checkpoint):
         ...
 
-    def add_checkpoint(self):
-        if not self.active:
-            raise CheckpointError("Checkpointer is not active")
-        fetched_checkpoint = self.generate_checkpoint_from_state()
-
+    @action()
+    async def add_checkpoint(self, message):
+        if not self.checkpoints_enabled:
+            self.start_checkpointing()
+        fetched_checkpoint = await self.generate_checkpoint_from_state()
         checkpoint = {
             varname: self.store_serialization(filename) for
-            varname, filename in fetch_checkpoint.items()
+            varname, filename in fetched_checkpoint.items()
         }
         self.checkpoints.append(checkpoint)
+        return len(self.checkpoints)
+    add_checkpoint._default_payload = "{}"
+   
+    @action()
+    async def rollback(self, message):
+        if not self.checkpoints_enabled:
+            self.start_checkpointing()
+        checkpoint_index = message.content.get("checkpoint_index", None)
+        if checkpoint_index is None:
+            raise RuntimeError("No checkpoint index provided")
+        if checkpoint_index >= len(self.checkpoints):
+            raise IndexError(f"Checkpoint at index {checkpoint_index} does not exist")
+        checkpoint = self.checkpoints[checkpoint_index]
+        await self.load_checkpoint(checkpoint)
+        self.checkpoints = self.checkpoints[:checkpoint_index + 1]
     
-    def rollback(self, checkpoint_index: int):
-        if not self.active:
-            raise CheckpointError("Checkpointer is not active")
-        self.load_checkpoint(self.checkpoints[checkpoint_index])
-        self.checkpoints = self.checkpoints[:checkpoint_index]
+    rollback._default_payload = "{\n\t\"checkpoint_index\": 0\n}"
 
     def cleanup(self):
-        self.active = False 
-        shutil.rmtree(self.storage_prefix, ignore_errors=True)
-        self.checkpoints = []
+        if self.checkpoints_enabled:
+            shutil.rmtree(self.storage_prefix, ignore_errors=True)
+            self.checkpoints = []
         super().cleanup()

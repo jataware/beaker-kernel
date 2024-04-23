@@ -155,7 +155,7 @@ class LLMKernel(KernelProxyManager):
         for intercept in self.server.filters:
             if intercept.stream_type.name == "shell" and intercept.msg_type == request_name:
                 action_func = intercept.callback
-                data = self.subkernel.connected_kernel.make_multipart_message(msg_type=request_name, content=content, parent_header=parent_header)
+                data = self.context.subkernel.connected_kernel.make_multipart_message(msg_type=request_name, content=content, parent_header=parent_header)
                 response = await action_func(self.server, self.context.subkernel.connected_kernel.streams.shell, data)
                 self.stdout(f"Action `{action_name}` execution complete.", parent_header=parent_header)
                 result_data = {}

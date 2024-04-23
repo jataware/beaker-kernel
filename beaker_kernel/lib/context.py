@@ -55,6 +55,12 @@ class BaseContext:
             msg_type, stream = getattr(method, "_intercept")
             self.intercepts.append((msg_type, method, stream))
             self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
+            
+        # Add intercepts from subkernel
+        for _, method in inspect.getmembers(self.subkernel, lambda member: inspect.ismethod(member) and hasattr(member, "_intercept")):#getattr(member, "_expose_action", False)):
+            msg_type, stream = getattr(method, "_intercept")
+            self.intercepts.append((msg_type, method, stream))
+            self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
 
         # Set auto-context from agent
         if getattr(self, "auto_context", None) is not None:
@@ -115,7 +121,7 @@ class BaseContext:
             raise ValueError("Unknown kernel " + subkernel_id)
         if kernels[matching] == self.beaker_kernel.server.config:
             raise ValueError("Refusing loopback connection")
-        self.subkernel = kernel_opts[language](subkernel_id, kernels[matching])
+        self.subkernel = kernel_opts[language](subkernel_id, kernels[matching], self)
         self.beaker_kernel.server.set_proxy_target(self.subkernel.connected_kernel)
 
 
