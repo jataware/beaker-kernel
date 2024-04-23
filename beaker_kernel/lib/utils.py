@@ -9,13 +9,23 @@ from typing import Any, TYPE_CHECKING
 
 from archytas.tool_utils import tool
 
-from .jupyter_kernel_proxy import JupyterMessage, JupyterMessageTuple
+from .jupyter_kernel_proxy import ( KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
+                                   JupyterMessage, JupyterMessageTuple)
 
 if TYPE_CHECKING:
     from beaker_kernel.kernel import LLMKernel
 
 
 logger = logging.getLogger(__name__)
+
+
+server_url = os.environ.get("JUPYTER_SERVER", None)
+server_token = os.environ.get("JUPYTER_TOKEN", None)
+
+
+def get_socket(stream_name: str):
+    socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_name)]
+    return socket
 
 
 class handle_message(AbstractAsyncContextManager):

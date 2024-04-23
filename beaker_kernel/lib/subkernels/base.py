@@ -32,15 +32,32 @@ class BaseSubkernel(abc.ABC):
     def parse_subkernel_return(cls, execution_result) -> Any:
         ...
 
-    def __init__(self, subkernel_configuration: dict):
+    def __init__(self, jupyter_id: str, subkernel_configuration: dict):
         self.active = True
+        self.jupyter_id = jupyter_id
         self.connected_kernel = ProxyKernelClient(subkernel_configuration)
+    
+    def cleanup(self):
+        import requests
+        from ..utils import server_url, server_token
+        if self.jupyter_id is not None:
+            try:
+                print(f"Shutting down connected subkernel {self.jupyter_id}")
+                res = requests.delete(
+                    f"{server_url}/api/kernels/{self.jupyter_id}",
+                    headers={"Authorization": f"token {server_token}"},
+                )
+                if res.status_code == 204:
+                    self.jupyter_id = None
+            except requests.exceptions.HTTPError as err:
+                print(err)
+
 
 class BaseCheckpointableSubkernel(BaseSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"
 
-    def __init__(self, subkernel_configuration: dict):
-        super().__init__(subkernel_configuration)
+    def __init__(self, jupyter_id: str, subkernel_configuration: dict):
+        super().__init__(jupyter_id, subkernel_configuration)
         self.checkpoints = list[Checkpoint]
         self.storage_prefix = mkdtemp()
         makedirs(self.storage_prefix, exist_ok=True)
@@ -87,3 +104,4 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         self.active = False 
         shutil.rmtree(self.storage_prefix, ignore_errors=True)
         self.checkpoints = []
+        super().cleanup()

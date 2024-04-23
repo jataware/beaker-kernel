@@ -40,7 +40,7 @@ class DefaultContext(BaseContext):
         Preview what exists in the subkernel.
         """
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
-        result = await self.beaker_kernel.evaluate(fetch_state_code)
+        result = await self.evaluate(fetch_state_code)
         state = result.get("return", None)
         if state:
             return {
