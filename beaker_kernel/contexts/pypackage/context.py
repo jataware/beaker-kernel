@@ -14,7 +14,7 @@ class PyPackageContext(BaseContext):
 
     agent_cls: "BaseAgent" = PyPackageAgent
 
-    def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]) -> None:
+    def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]):
         super().__init__(beaker_kernel, self.agent_cls, config)
         if not isinstance(self.subkernel, PythonSubkernel):
             raise ValueError("This context is only valid for Python.")

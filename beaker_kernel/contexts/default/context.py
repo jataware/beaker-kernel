@@ -19,7 +19,7 @@ class DefaultContext(BaseContext):
 
     WEIGHT: 10
 
-    def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]) -> None:
+    def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]):
         super().__init__(beaker_kernel, self.agent_cls, config)
 
     @classmethod

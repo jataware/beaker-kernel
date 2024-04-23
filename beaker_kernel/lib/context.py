@@ -37,7 +37,7 @@ class BaseContext:
 
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
-    def __init__(self, beaker_kernel: "LLMKernel", agent_cls: "BaseAgent", config: Dict[str, Any]) -> None:
+    def __init__(self, beaker_kernel: "LLMKernel", agent_cls: "BaseAgent", config: Dict[str, Any]):
         self.intercepts = []
         self.jinja_env = None
         self.templates = {}
@@ -51,11 +51,8 @@ class BaseContext:
 
 
         # Add intercepts, by inspecting the instance and extracting matching methods
-        for target in [self, self.subkernel]:
-            for _, method in inspect.getmembers(target, lambda member: inspect.ismethod(member) and hasattr(member, "_intercept")):
-                msg_type, stream = getattr(method, "_intercept")
-                self.intercepts.append((msg_type, method, stream))
-                self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
+        self._collect_and_register_intercepts(self)
+        self._collect_and_register_intercepts(self.subkernel)
 
         # Set auto-context from agent
         if getattr(self, "auto_context", None) is not None:
@@ -92,6 +89,12 @@ class BaseContext:
         for msg_type, intercept_func, stream in self.intercepts:
             self.beaker_kernel.remove_intercept(msg_type=msg_type, func=intercept_func, stream=stream)
         del self.agent
+
+    def _collect_and_register_intercepts(self, target):
+        for _, method in inspect.getmembers(target, lambda member: inspect.ismethod(member) and hasattr(member, "_intercept")):
+            msg_type, stream = getattr(method, "_intercept")
+            self.intercepts.append((msg_type, method, stream))
+            self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
 
     def _init_subkernel(self):
         language = self.config.get("language", "python3")
