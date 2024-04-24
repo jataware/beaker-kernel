@@ -7,7 +7,7 @@ from tempfile import mkdtemp
 from os import makedirs, environ
 import requests
 
-from ..utils import server_url, server_token, action
+from ..utils import server_url, server_token, env_enabled, action
 from ..jupyter_kernel_proxy import ProxyKernelClient
 
 Checkpoint = dict[str, str]
@@ -64,14 +64,11 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
 
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         super().__init__(jupyter_id, subkernel_configuration, context)
+        self.checkpoints_enabled = env_enabled("ENABLE_CHECKPOINTS")
         if self.checkpoints_enabled:
             self.checkpoints : list[Checkpoint] = []
             self.storage_prefix = mkdtemp()
             makedirs(self.storage_prefix, exist_ok=True)
-
-    @property
-    def checkpoints_enabled(self):
-        return environ.get("ENABLE_CHECKPOINTS", "false").lower() == "true"
 
     def store_serialization(self, filename: str) -> str:
         with open(filename, "rb") as file:
@@ -114,13 +111,13 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         await self.load_checkpoint(checkpoint)
         self.checkpoints = self.checkpoints[:checkpoint_index + 1]
     
-    @action(action_name="rollback")
+    @action(action_name="rollback", enabled=env_enabled("ENABLE_CHECKPOINTS"))
     async def rollback_action(self, message):
         checkpoint_index = message.content.get("checkpoint_index", None)
         await self.rollback(checkpoint_index)
     rollback_action._default_payload = "{\n\t\"checkpoint_index\": 0\n}"
 
-    @action(action_name="add_checkpoint")
+    @action(action_name="add_checkpoint", enabled=env_enabled("ENABLE_CHECKPOINTS"))
     async def add_checkpoint_action(self, message):
         return await self.add_checkpoint()
     add_checkpoint_action._default_payload = "{}"
