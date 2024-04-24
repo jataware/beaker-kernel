@@ -94,12 +94,15 @@ import dill as _dill
 _exclusion_critieria = lambda name: name.startswith('_') or name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open')
 [ name for name, value in dict(locals()).items() if not _exclusion_critieria(name) ]
 """)
-        await self.context.evaluate(f"del {', '.join(vars['return'])}")
+        await self.context.execute(f"del {', '.join(vars['return'])}")
+        deserialization_code = ""
         for varname, filename in checkpoint.items():
-            load_state_code = f"""
+            deserialization_code += f"""
+
 with open("{filename}", "rb") as _file:
     {varname} = _dill.load(_file)
+    
 """ 
-            await self.evaluate(load_state_code)
-        await self.evaluate("del _dill")
+        deserialization_code += "del _dill"
+        await self.execute(deserialization_code)
         

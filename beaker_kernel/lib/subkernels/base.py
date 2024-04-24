@@ -4,17 +4,13 @@ from typing import Any, Callable
 import hashlib
 import shutil
 from tempfile import mkdtemp
-from os import makedirs
+from os import makedirs, environ
 import requests
 
 from ..utils import server_url, server_token, action
 from ..jupyter_kernel_proxy import ProxyKernelClient
 
 Checkpoint = dict[str, str]
-
-class CheckpointError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
 
 class JsonStateEncoder(json.JSONEncoder):
     pass
@@ -68,18 +64,15 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
 
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         super().__init__(jupyter_id, subkernel_configuration, context)
-        self.checkpoints = None
-        self.storage_prefix = None
+        if self.checkpoints_enabled:
+            self.checkpoints : list[Checkpoint] = []
+            self.storage_prefix = mkdtemp()
+            makedirs(self.storage_prefix, exist_ok=True)
 
     @property
     def checkpoints_enabled(self):
-        return self.checkpoints is not None
+        return environ.get("ENABLE_CHECKPOINTS", "false").lower() == "true"
 
-    def start_checkpointing(self):
-        self.checkpoints : list[Checkpoint] = []
-        self.storage_prefix = mkdtemp()
-        makedirs(self.storage_prefix, exist_ok=True)
-    
     def store_serialization(self, filename: str) -> str:
         with open(filename, "rb") as file:
             chunksize = 4 * 1024 * 1024
@@ -100,10 +93,9 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
     async def load_checkpoint(self, checkpoint: Checkpoint):
         ...
 
-    @action()
-    async def add_checkpoint(self, message):
+    async def add_checkpoint(self) :
         if not self.checkpoints_enabled:
-            self.start_checkpointing()
+            raise RuntimeError("Checkpoints are not enabled")
         fetched_checkpoint = await self.generate_checkpoint_from_state()
         checkpoint = {
             varname: self.store_serialization(filename) for
@@ -111,22 +103,28 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         }
         self.checkpoints.append(checkpoint)
         return len(self.checkpoints)
-    add_checkpoint._default_payload = "{}"
+
    
-    @action()
-    async def rollback(self, message):
+    async def rollback(self, checkpoint_index: int):
         if not self.checkpoints_enabled:
-            self.start_checkpointing()
-        checkpoint_index = message.content.get("checkpoint_index", None)
-        if checkpoint_index is None:
-            raise RuntimeError("No checkpoint index provided")
+            raise RuntimeError("Checkpoints are not enabled")
         if checkpoint_index >= len(self.checkpoints):
             raise IndexError(f"Checkpoint at index {checkpoint_index} does not exist")
         checkpoint = self.checkpoints[checkpoint_index]
         await self.load_checkpoint(checkpoint)
         self.checkpoints = self.checkpoints[:checkpoint_index + 1]
     
-    rollback._default_payload = "{\n\t\"checkpoint_index\": 0\n}"
+    @action()
+    async def undo(self, message):
+        checkpoint_index = message.content.get("checkpoint_index", None)
+        await self.rollback(checkpoint_index)
+    undo._default_payload = "{\n\t\"checkpoint_index\": 0\n}"
+
+    @action()
+    async def save(self, message):
+        return await self.add_checkpoint()
+    save._default_payload = "{}"
+
 
     def cleanup(self):
         super().cleanup()
