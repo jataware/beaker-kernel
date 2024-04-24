@@ -19,8 +19,8 @@ class DefaultContext(BaseContext):
 
     WEIGHT: 10
 
-    def __init__(self, beaker_kernel: "LLMKernel", subkernel: "BaseSubkernel", config: Dict[str, Any]) -> None:
-        super().__init__(beaker_kernel, subkernel, self.agent_cls, config)
+    def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]):
+        super().__init__(beaker_kernel, self.agent_cls, config)
 
     @classmethod
     def available_subkernels(cls) -> List["BaseSubkernel"]:
@@ -40,7 +40,7 @@ class DefaultContext(BaseContext):
         Preview what exists in the subkernel.
         """
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
-        result = await self.beaker_kernel.evaluate(fetch_state_code)
+        result = await self.evaluate(fetch_state_code)
         state = result.get("return", None)
         if state:
             return {

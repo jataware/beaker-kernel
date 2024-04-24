@@ -9,13 +9,25 @@ from typing import Any, TYPE_CHECKING
 
 from archytas.tool_utils import tool
 
-from .jupyter_kernel_proxy import JupyterMessage, JupyterMessageTuple
+from .jupyter_kernel_proxy import ( KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
+                                   JupyterMessage, JupyterMessageTuple)
 
 if TYPE_CHECKING:
     from beaker_kernel.kernel import LLMKernel
 
 
 logger = logging.getLogger(__name__)
+
+
+server_url = os.environ.get("JUPYTER_SERVER", None)
+server_token = os.environ.get("JUPYTER_TOKEN", None)
+
+def env_enabled(env_var: str):
+    return os.environ.get(env_var, "false").lower() == "true"
+
+def get_socket(stream_name: str):
+    socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_name)]
+    return socket
 
 
 class handle_message(AbstractAsyncContextManager):
@@ -112,10 +124,16 @@ def intercept(msg_type=None, stream="shell", docs: str|None=None, default_payloa
     return register_intercept
 
 
-def action(action_name: str|None=None, docs: str|None=None, default_payload=None):
+def action(action_name: str|None=None, docs: str|None=None, default_payload=None, enabled: bool=True):
     """
     Method decorator to identify and register context actions.
     """
+    if not enabled:
+        def disable(_fn):
+            def disabled_message(*args, **kwargs):
+                raise RuntimeError("This action is disabled.")
+            return disabled_message
+        return disable
     def register_method(fn):
 
         action_nm = action_name or fn.__name__  # Default msg_type value to be the name of the function if undefined/falsey

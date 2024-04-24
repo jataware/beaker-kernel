@@ -1,15 +1,17 @@
 import ast
 from typing import Any
 
-from .base import BaseSubkernel
+from .base import BaseCheckpointableSubkernel, Checkpoint
 
-
-class PythonSubkernel(BaseSubkernel):
+class PythonSubkernel(BaseCheckpointableSubkernel):
     DISPLAY_NAME = "Python 3"
     SLUG = "python3"
     KERNEL_NAME = "python3"
 
     WEIGHT = 20
+
+    SERIALIZATION_EXTENSION = "pickle"
+
 
     import json
     json.JSONEncoder
@@ -17,6 +19,7 @@ class PythonSubkernel(BaseSubkernel):
     FETCH_STATE_CODE: str = """
 import inspect as _inspect
 import json as _json
+import dill as _dill
 class _SubkernelStateEncoder(_json.JSONEncoder):
     def default(self, o):
         # if callable(o):
@@ -52,3 +55,54 @@ _result
         if return_str:
             python_obj = ast.literal_eval(return_str)
             return python_obj
+
+    async def generate_checkpoint_from_state(self) -> Checkpoint:
+        save_state_code = """
+import inspect as _inspect
+import json as _json
+import dill as _dill
+class _SubkernelStateEncoder(_json.JSONEncoder):
+    def default(self, o):
+        # if callable(o):
+            # return f"Function named"
+            # return super().default(o)
+        try:
+            return super().default(o)
+        except:
+            return str(o)
+
+_result = {}
+for _name, _value in dict(locals()).items():
+    if _name.startswith('_') or _name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open'):
+        continue
+    _path = f"%s/{_name}.pkl"
+    with open(_path, "wb") as _f:
+       _dill.dump(_value, _f)
+       _result[_name] = _path
+
+_result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
+del _inspect, _json, _dill
+_result
+""" % self.storage_prefix
+        response = await self.evaluate(save_state_code)
+        return response["return"]
+        
+
+    async def load_checkpoint(self, checkpoint: Checkpoint):
+        vars = await self.evaluate("""
+import dill as _dill
+_exclusion_critieria = lambda name: name.startswith('_') or name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open')
+[ name for name, value in dict(locals()).items() if not _exclusion_critieria(name) ]
+""")
+        await self.context.execute(f"del {', '.join(vars['return'])}")
+        deserialization_code = ""
+        for varname, filename in checkpoint.items():
+            deserialization_code += f"""
+
+with open("{filename}", "rb") as _file:
+    {varname} = _dill.load(_file)
+    
+""" 
+        deserialization_code += "del _dill"
+        await self.execute(deserialization_code)
+        

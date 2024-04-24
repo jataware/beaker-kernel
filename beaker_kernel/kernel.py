@@ -18,8 +18,8 @@ from .lib.context import BaseContext, autodiscover_contexts
 from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
-from .lib.subkernels import autodiscover_subkernels
-from .lib.utils import message_handler, LogMessageEncoder, magic, handle_message
+from .lib.utils import (message_handler, LogMessageEncoder, magic,
+                        handle_message, get_socket, server_url, server_token)
 
 if TYPE_CHECKING:
     from .lib.agent import BaseAgent
@@ -28,10 +28,6 @@ if TYPE_CHECKING:
 USER_RESPONSE_WAIT_TIME = 100
 
 logger = logging.getLogger(__name__)
-
-server_url = os.environ.get("JUPYTER_SERVER", None)
-server_token = os.environ.get("JUPYTER_TOKEN", None)
-
 
 MESSAGE_STREAMS = {
     "execute_input": "iopub",
@@ -42,11 +38,6 @@ MESSAGE_STREAMS = {
 }
 
 AVAILABLE_CONTEXTS = autodiscover_contexts()
-AVAILABLE_SUBKERNELS = autodiscover_subkernels()
-
-def get_socket(stream_name: str):
-    socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_name)]
-    return socket
 
 
 class LLMKernel(KernelProxyManager):
@@ -64,7 +55,6 @@ class LLMKernel(KernelProxyManager):
     connection_file: Optional[str]
     context: Optional[BaseContext]
     internal_executions: set[str]
-    subkernel: "BaseSubkernel"
     subkernel_execution_tracking: dict[str, str]
     user_responses: dict[str, str]
     debug_enabled: bool
@@ -78,11 +68,9 @@ class LLMKernel(KernelProxyManager):
         self.magic_commands = {}
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
-        self.subkernel_id = None
         super().__init__(session_config)
         self.register_magic_commands()
         self.add_base_intercepts()
-        self.subkernel = None
         self.context = None
         self.user_responses = dict()
         # Initialize context (Using the event loop to simulate `await`ing the async func in non-async setup)
@@ -167,8 +155,8 @@ class LLMKernel(KernelProxyManager):
         for intercept in self.server.filters:
             if intercept.stream_type.name == "shell" and intercept.msg_type == request_name:
                 action_func = intercept.callback
-                data = self.connected_kernel.make_multipart_message(msg_type=request_name, content=content, parent_header=parent_header)
-                response = await action_func(self.server, self.connected_kernel.streams.shell, data)
+                data = self.context.subkernel.connected_kernel.make_multipart_message(msg_type=request_name, content=content, parent_header=parent_header)
+                response = await action_func(self.server, self.context.subkernel.connected_kernel.streams.shell, data)
                 self.stdout(f"Action `{action_name}` execution complete.", parent_header=parent_header)
                 result_data = {}
                 try:
@@ -187,40 +175,6 @@ class LLMKernel(KernelProxyManager):
         else:
             self.stderr(f"Unable to find an action with name `{action_name}`.")
         return result_data
-
-    def new_kernel(self, language: str):
-        self.debug("new_kernel", f"Setting new kernel of `{language}`")
-        kernel_opts = {
-            subkernel.KERNEL_NAME: subkernel
-            for subkernel in AVAILABLE_SUBKERNELS.values()
-        }
-
-        # Shutdown any existing subkernel (if it exists) before spinnup up a new kernel
-        self.shutdown_subkernel()
-
-        res = requests.post(
-            f"{server_url}/api/kernels",
-            json={"name": language, "path": ""},
-            headers={"Authorization": f"token {server_token}"},
-        )
-        kernel_info = res.json()
-        self.update_running_kernels()
-        self.subkernel_id = kernel_info["id"]
-        self.connect_to(self.subkernel_id)
-        self.subkernel = kernel_opts[language]()
-
-    def shutdown_subkernel(self):
-        if self.subkernel_id is not None:
-            try:
-                print(f"Shutting down connected subkernel {self.subkernel_id}")
-                res = requests.delete(
-                    f"{server_url}/api/kernels/{self.subkernel_id}",
-                    headers={"Authorization": f"token {server_token}"},
-                )
-                if res.status_code == 204:
-                    self.subkernel_id = None
-            except requests.exceptions.HTTPError as err:
-                print(err)
 
     def handle_thoughts(
         self, thought: str, tool_name: str, tool_input: str, parent_header: dict = {}
@@ -266,147 +220,6 @@ class LLMKernel(KernelProxyManager):
             if preview_payload:
                 self.send_response("iopub", "preview", preview_payload, parent_header=parent_header)
 
-    async def execute(self, command, response_handler=None, parent_header={}):
-        self.debug("execution_start", {"command": command}, parent_header=parent_header)
-        stream = self.connected_kernel.streams.shell
-        execution_message = self.connected_kernel.make_multipart_message(
-            msg_type="execute_request",
-            content={
-                "silent": False,
-                "store_history": False,
-                "user_expressions": {},
-                "allow_stdin": True,
-                "stop_on_error": False,
-                "code": command,
-            },
-            parent_header=parent_header,
-            metadata={
-                "trusted": True,
-            },
-        )
-        stream.send_multipart(execution_message)
-        original_message = JupyterMessage.parse(execution_message)
-        message_id = original_message.header.get("msg_id")
-        self.internal_executions.add(message_id)
-
-        message_context = {
-            "id": message_id,
-            "stdout_list": [],
-            "stderr_list": [],
-            "return": None,
-            "error": None,
-            "done": False,
-            "result": None,
-            "parent": original_message,
-        }
-        message_metadata = {}
-
-        filter_list = self.server.filters
-
-        shell_socket = get_socket("shell")
-        iopub_socket = get_socket("iopub")
-
-        # Generate a handler to catch and silence the output
-        async def silence_message(server, target_stream, data):
-            message = JupyterMessage.parse(data)
-
-            if message.parent_header.get("msg_id", None) != message_id:
-                return data
-            return None
-
-        async def collect_result(server, target_stream, data):
-            message = JupyterMessage.parse(data)
-            # Ensure we are only working on handlers for this message response
-            if message.parent_header.get("msg_id", None) != message_id:
-                return data
-
-            data = message.content["data"].get("text/plain", None)
-            message_context["return"] = data
-            filter_list.remove(
-                InterceptionFilter(iopub_socket, "execute_result", collect_result)
-            )
-
-        async def collect_stream(server, target_stream, data):
-            message = JupyterMessage.parse(data)
-            # Ensure we are only working on handlers for this message response
-            if message.parent_header.get("msg_id", None) != message_id:
-                return data
-            stream = message.content["name"]
-            message_context[f"{stream}_list"].append(message.content["text"])
-
-        async def handle_error(server, target_stream, data):
-            message = JupyterMessage.parse(data)
-            content = message.content
-            message_context["error"] = content
-            logger.error(
-                "Error: %s %s\nTraceback:\n%s",
-                content["ename"],
-                content["evalue"],
-                "\n".join(content["traceback"]),
-            )
-
-        async def cleanup(server, target_stream, data):
-            message = JupyterMessage.parse(data)
-            # Ensure we are only working on handlers for this message response
-            if message.parent_header.get("msg_id", None) != message_id:
-                return data
-            if response_handler:
-                filter_list.remove(
-                    InterceptionFilter(iopub_socket, "stream", response_handler)
-                )
-            filter_list.remove(
-                InterceptionFilter(iopub_socket, "stream", collect_stream)
-            )
-            filter_list.remove(
-                InterceptionFilter(iopub_socket, "execute_input", silence_message)
-            )
-            filter_list.remove(
-                InterceptionFilter(iopub_socket, "execute_request", silence_message)
-            )
-            filter_list.remove(InterceptionFilter(iopub_socket, "error", handle_error))
-            filter_list.remove(
-                InterceptionFilter(shell_socket, "execute_reply", cleanup)
-            )
-            message_context["result"] = message
-            message_context["done"] = True
-
-        filter_list.append(
-            InterceptionFilter(iopub_socket, "execute_input", silence_message)
-        )
-        filter_list.append(
-            InterceptionFilter(iopub_socket, "execute_request", silence_message)
-        )
-        filter_list.append(
-            InterceptionFilter(iopub_socket, "execute_result", collect_result)
-        )
-        filter_list.append(InterceptionFilter(shell_socket, "execute_reply", cleanup))
-        filter_list.append(InterceptionFilter(iopub_socket, "stream", collect_stream))
-        filter_list.append(InterceptionFilter(iopub_socket, "error", handle_error))
-
-        if response_handler:
-            filter_list.append(
-                InterceptionFilter(iopub_socket, "stream", response_handler)
-            )
-
-        await asyncio.sleep(0.1)
-        while not message_context["done"]:
-            await asyncio.sleep(0.2)
-        # Wait for any straggling messages
-        await asyncio.sleep(0.2)
-        self.internal_executions.remove(message_id)
-        self.debug("execution_end", message_context, parent_header=parent_header)
-        return message_context
-
-    async def evaluate(self, expression, parent_header={}):
-        result = await self.execute(expression, parent_header=parent_header)
-        try:
-            parsed_result = self.subkernel.parse_subkernel_return(result)
-            result["return"] = parsed_result
-        except Exception:
-            logger.error("Unable to parse result.")
-            logger.debug("Subkernel: %s\nResult:\n%s", self.subkernel, result)
-        return result
-
     async def update_connection_file(self, **kwargs):
         try:
             with open(self.connection_file, "r") as connection_file:
@@ -424,16 +237,10 @@ class LLMKernel(KernelProxyManager):
             # TODO: Should we return an error if the requested context isn't available?
             return False
 
-        if (not self.subkernel) or self.subkernel.KERNEL_NAME != language:
-            logger.info("Subkernel changed: %s != %s", getattr(self.subkernel, "KERNEL_NAME", "unknown"), language)
-
-        # Always create a new subkernel so changing context results in a clean runtime
-        self.new_kernel(language=language)
-
         # Cleanup the old context, then create and setup the new context
         if self.context:
             await self.context.cleanup()
-        self.context = context_cls(beaker_kernel=self, subkernel=self.subkernel, config=context_info)
+        self.context = context_cls(beaker_kernel=self, config=context_info)
         await self.context.setup(config=context_info, parent_header=parent_header)
         await self.send_preview(parent_header=parent_header)
         await self.update_connection_file(context={"name": context_name, "config": context_info})
@@ -690,7 +497,7 @@ class LLMKernel(KernelProxyManager):
 
 def cleanup(kernel: LLMKernel):
     try:
-        kernel.shutdown_subkernel()
+        kernel.context.cleanup()
     except requests.exceptions.ConnectionError:
         print("Unable to connect to server. Possible server shutdown.")
     except Exception as err:
