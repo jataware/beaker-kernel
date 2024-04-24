@@ -118,12 +118,12 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
     async def rollback_action(self, message):
         checkpoint_index = message.content.get("checkpoint_index", None)
         await self.rollback(checkpoint_index)
-    undo._default_payload = "{\n\t\"checkpoint_index\": 0\n}"
+    rollback_action._default_payload = "{\n\t\"checkpoint_index\": 0\n}"
 
     @action(action_name="add_checkpoint")
     async def add_checkpoint_action(self, message):
         return await self.add_checkpoint()
-    save._default_payload = "{}"
+    add_checkpoint_action._default_payload = "{}"
 
 
     def cleanup(self):
