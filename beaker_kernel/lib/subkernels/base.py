@@ -102,7 +102,7 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
             varname, filename in fetched_checkpoint.items()
         }
         self.checkpoints.append(checkpoint)
-        return len(self.checkpoints)
+        return len(self.checkpoints) - 1
 
    
     async def rollback(self, checkpoint_index: int):
