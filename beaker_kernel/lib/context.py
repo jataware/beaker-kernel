@@ -84,7 +84,7 @@ class BaseContext:
             await self.agent.setup(self.config, parent_header=parent_header)
 
     async def cleanup(self):
-        self.subkernel.cleanup()
+        await self.subkernel.cleanup()
         for msg_type, intercept_func, stream in self.intercepts:
             self.beaker_kernel.remove_intercept(msg_type=msg_type, func=intercept_func, stream=stream)
         del self.agent

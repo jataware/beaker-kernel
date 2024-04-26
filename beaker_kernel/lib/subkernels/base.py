@@ -45,7 +45,7 @@ class BaseSubkernel(abc.ABC):
         return await self.context.evaluate(expression, parent_header)
 
 
-    def cleanup(self):
+    async def cleanup(self):
         if self.jupyter_id is not None:
             try:
                 print(f"Shutting down connected subkernel {self.jupyter_id}")
@@ -123,8 +123,8 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
     add_checkpoint_action._default_payload = "{}"
 
 
-    def cleanup(self):
-        super().cleanup()
+    async def cleanup(self):
+        await super().cleanup()
         if self.checkpoints_enabled:
             shutil.rmtree(self.storage_prefix, ignore_errors=True)
             self.checkpoints = []
