@@ -1,11 +1,27 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from enum import Enum
 import asyncio
 
 from archytas.agent import Agent
 
 OUTPUT_CHAR_LIMIT = 1000
+
+class SummarizationLevel(int, Enum):
+    SENTENCE = 1
+    PARAGRAPH = 2
+    LONG = 3 
+
+    @classmethod
+    def get_prompt(cls, level: "SummarizationLevel") -> str:
+        if level == cls.SENTENCE:
+            return "The summary should be a single sentence"
+        if level == cls.SENTENCE:
+            return "The summary should be a single paragraph"
+        else:
+            return "If needed, the summary may be multiple paragraphs long"
+
 
 @dataclass
 class IBeakerHistoryEvent:
@@ -42,34 +58,49 @@ BeakerHistoryEvent = IBeakerHistoryExecutionEvent | IBeakerHistoryQueryEvent;
 class IBeakerHistory:
     session_id: str = ""
     events: list[BeakerHistoryEvent] = []
+    original_notebook: dict | None = None # TODO: Remove
 
-    async def summarize(self) -> str:
+    async def summarize(self, level: SummarizationLevel = SummarizationLevel.SENTENCE, use_notebook: bool = False) -> str:
         agent = Agent()
         prompt = "Here is the history of a user's interaction with an LLM-powered notebook: \n\n"
         mark_na = lambda x: x if x is not None else "N/A"
-        for event in self.events:
-            if isinstance(event, IBeakerHistoryExecutionEvent):
-                prompt += f"Code Execution Event: \n"
-                prompt += f"\tSource Code: {event.source} \n"
-                prompt += f"\tResult: {str(event.result)[:OUTPUT_CHAR_LIMIT]} \n"
-                prompt += f"\tExecution Time: {mark_na(event.execution_time)} \n"
-                prompt += f"\tExecution Duration: {mark_na(event.execution_duration)} \n"
-            elif isinstance(event, IBeakerHistoryQueryEvent):
-                prompt += f"Query Event: {event.cell_id} \n"
-                prompt += f"\tPrompt: {event.prompt} \n"
-                prompt += f"\tThoughts: {event.thoughts} \n"
-                prompt += f"\tResult: {event.result} \n"
-                prompt += f"\tExecution Time: {mark_na(event.execution_time)} \n"
-                prompt += f"\tExecution Duration: {mark_na(event.execution_duration)} \n"
-            else: # TODO: Add support for `raw` and `markdown` cells once they exist
-                continue
-        query = "Please summarize the events in this history"
+        if not use_notebook:
+            for event in self.events:
+                if isinstance(event, IBeakerHistoryExecutionEvent):
+                    prompt += f"Code Execution Event: \n"
+                    prompt += f"\tSource Code: {event.source} \n"
+                    prompt += f"\tResult: {str(event.result)[:OUTPUT_CHAR_LIMIT]} \n"
+                    prompt += f"\tExecution Time: {mark_na(event.execution_time)} \n"
+                    prompt += f"\tExecution Duration: {mark_na(event.execution_duration)} \n"
+                elif isinstance(event, IBeakerHistoryQueryEvent):
+                    prompt += f"Query Event: {event.cell_id} \n"
+                    prompt += f"\tPrompt: {event.prompt} \n"
+                    prompt += f"\tThoughts: {event.thoughts} \n"
+                    prompt += f"\tResult: {event.result} \n"
+                    prompt += f"\tExecution Time: {mark_na(event.execution_time)} \n"
+                    prompt += f"\tExecution Duration: {mark_na(event.execution_duration)} \n"
+                else: # TODO: Add support for `raw` and `markdown` cells once they exist
+                    continue
+        else:
+            prompt += f"The histroy is this notebook: {self.original_notebook} \n"
+        query = ( "Please summarize the events in this history. "
+                  "The summary doesn't need to include detail that this was done in an LLM-powered notebook. " 
+                  f"{SummarizationLevel.get_prompt(level)}")
         response = await agent.oneshot(prompt, query)
         return response
     
     @classmethod
     def from_notebook(cls, notebook: dict) -> "IBeakerHistory":
+        # Trim notebook. This may be removed in the future since we will likely stop saving the notebook to the history
+        for cell in notebook["cells"]:
+            if "outputs" in cell and len(cell["outputs"]) > 0:
+                for output in cell["outputs"]:
+                    if "data" in output:
+                        for data_type in output["data"]:
+                            output["data"][data_type] = output["data"][data_type][:OUTPUT_CHAR_LIMIT]
+        
         history = cls()
+        history.original_notebook = notebook
         for cell in notebook["cells"]:
             general_args = {
                 "kernel_id" : None,

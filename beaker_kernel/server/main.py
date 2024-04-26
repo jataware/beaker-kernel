@@ -19,7 +19,7 @@ from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTP
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BaseContext
 from beaker_kernel.lib.subkernels.base import BaseSubkernel
-from beaker_kernel.lib.history import IBeakerHistory
+from beaker_kernel.lib.history import IBeakerHistory, SummarizationLevel
 from beaker_kernel.server import admin_utils
 
 logger = logging.getLogger(__file__)
@@ -217,10 +217,12 @@ class DownloadHandler(RequestHandler):
 class SummaryHandler(RequestHandler):
     async def post(self):
         self.set_header("Content-Type", "application/json")
+        level = SummarizationLevel(int(self.get_query_argument("level", 2)))
         notebook_content = json.loads(self.request.body)
         history = IBeakerHistory.from_notebook(notebook_content)
-        summary = await history.summarize()
-        return self.write({ "summary": summary })
+        summary = await history.summarize(level)
+        notebook_summary = await history.summarize(level, use_notebook=True)
+        return self.write({ "summary": summary, "notebook_summary": notebook_summary})
 
 
 class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
