@@ -495,9 +495,9 @@ class LLMKernel(KernelProxyManager):
         self.user_responses[parent_id] = content["value"]
 
 
-async def cleanup(kernel: LLMKernel):
+def cleanup(kernel: LLMKernel):
     try:
-        await kernel.context.cleanup()
+        kernel.context.cleanup()
     except requests.exceptions.ConnectionError:
         print("Unable to connect to server. Possible server shutdown.")
     except Exception as err:
@@ -518,7 +518,7 @@ def start(connection_file):
         loop.start()
     except KeyboardInterrupt:
         # Perform shutdown cleanup here
-        asyncio.run(cleanup(kernel))
+        cleanup(kernel)
         sys.exit(0)
 
 
