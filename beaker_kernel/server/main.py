@@ -19,7 +19,7 @@ from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTP
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BaseContext
 from beaker_kernel.lib.subkernels.base import BaseSubkernel
-from beaker_kernel.lib.llm_tasks import summarize
+from beaker_kernel.lib.agent_tasks import summarize
 from beaker_kernel.server import admin_utils
 
 logger = logging.getLogger(__file__)
@@ -214,9 +214,8 @@ class DownloadHandler(RequestHandler):
             raise HTTPError(404)
 
 
-class SummaryHandler(RequestHandler):
+class SummaryHandler(ExtensionHandlerMixin, JupyterHandler):
     async def post(self):
-        self.set_header("Content-Type", "application/json")
         notebook_content = json.loads(self.request.body)
         summary = await summarize(notebook_content)
         return self.write(summary)

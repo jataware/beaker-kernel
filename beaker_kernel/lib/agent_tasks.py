@@ -1,7 +1,3 @@
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Any
-from enum import Enum
 import asyncio
 import json
 
@@ -10,11 +6,11 @@ from archytas.agent import Agent
 OUTPUT_CHAR_LIMIT = 1000
 
 async def summarize(notebook: dict,
-    summary_types=[
-        "a single sentence BLUF in past tense imperative",
-        "a three sentence summary",
-        "a paragraph summary",
-    ]
+    summary_types: tuple[str, ...] = (
+        "a single sentence BLUF that must be in past tense",
+        "a three sentence summary in active voice",
+        "a third-person paragraph summary where the first sentence describes overall what was accomplished",
+    )
 ):
     for cell in notebook["cells"]:
         if "outputs" in cell and len(cell["outputs"]) > 0:
@@ -37,8 +33,8 @@ Only respond with a JSON array. Do not include backticks '`' or extra text.
 """
 
     history_query = """
-Generate a list where each element is a summary of each event in an imperative mood, 
-e.g. "Load dataset of Indonesian population from 2003 to 2006".
+Generate a list where each element summarizes a cell in the notebook provided above. Each summary must be in imperative
+mood and past tense, e.g. "Loaded dataset of Indonesian population from 2003 to 2006".
     """
     history_response = await agent.oneshot(history_prompt, history_query)
     history = json.loads(history_response)
@@ -47,11 +43,11 @@ e.g. "Load dataset of Indonesian population from 2003 to 2006".
         "history": history
     }
     for summary_type in summary_types:
-        prompt = "Here's a list of events that happened in a LLM-powered notebook:\n"
+        prompt = "You are going to write about this list of actions taken in order:\n"
         for event in history:
             prompt += f"\t- {event}\n"
         prompt += "\n"
-        query = f"Produce a {summary_type} of the list of events above." 
+        query = f"Produce a {summary_type}." 
         response = await agent.oneshot(prompt, query)
         summaries[summary_type] = response
     return summaries

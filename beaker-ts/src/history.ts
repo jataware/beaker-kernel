@@ -27,7 +27,6 @@ export interface IBeakerHistoryQueryEvent extends IBeakerHistoryEvent {
     execution_time: Date;
     execution_duration: number;
 
-    prompt: string;
     source: nbformat.MultilineString;
     thoughts: string[];
     result: nbformat.MultilineString;
