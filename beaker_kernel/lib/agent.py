@@ -6,8 +6,6 @@ import typing
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
-from beaker_kernel.lib.utils import togglable_tool
-
 if typing.TYPE_CHECKING:
     from .context import BaseContext
 
@@ -29,10 +27,12 @@ class BaseAgent(ReActAgent):
             "debug": self.context.beaker_kernel.debug_enabled,
             "verbose": self.context.beaker_kernel.verbose,
         })
+
+        complete_tools = tools + [self.context.subkernel]
         super().__init__(
             model="gpt-4-turbo-preview",  # Use default
             # api_key=api_key,  # TODO: get this from configuration
-            tools=tools,
+            tools=complete_tools,
             verbose=self.context.beaker_kernel.verbose,
             spinner=None,
             rich_print=False,
@@ -72,7 +72,7 @@ class BaseAgent(ReActAgent):
         )
         return super().display_observation(observation)
 
-    @togglable_tool("ENABLE_USER_PROMPT")
+    @tool()
     async def ask_user(
         self, query: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef,
     ) -> str:

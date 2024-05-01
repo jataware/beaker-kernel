@@ -164,18 +164,6 @@ def magic(magic_word: str|None):
     return register_magic
 
 
-def togglable_tool(env_var, *, name: str | None = None):
-    """
-    Register tool if it is enabled in environment
-    """
-    ENABLE = os.environ.get(env_var, "false").lower() == "true"
-    if not ENABLE:
-        def disable(_fn):
-            return
-        return disable
-    else:
-        return tool(name=name)
-
 class LogMessageEncoder(json.JSONEncoder):
     def default(self, o: Any) -> Any:
         try:
