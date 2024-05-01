@@ -6,8 +6,6 @@ from archytas.react import ReActAgent
 OUTPUT_CHAR_LIMIT = 1000
 
 class Summarizer(ReActAgent):
-    """
-    """
 
     def __init__(
         self,
@@ -43,8 +41,7 @@ in the parent query cell.
 async def summarize(notebook: dict,
     summary_types: tuple[str, ...] = (
         "a single sentence BLUF that must be in past tense",
-        "a three sentence summary",
-        "a third-person paragraph summary where the first sentence does not start with a prepositional phrase.",
+        "a summary",
     )
 ):
     for cell in notebook["cells"]:
