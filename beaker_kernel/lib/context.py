@@ -9,7 +9,7 @@ import requests
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import action, get_socket, server_token, server_url
+from beaker_kernel.lib.utils import action, get_socket, env_enabled, server_token, server_url
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
