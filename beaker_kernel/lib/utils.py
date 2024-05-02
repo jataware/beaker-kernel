@@ -7,8 +7,6 @@ from contextlib import AbstractAsyncContextManager
 from functools import wraps, update_wrapper
 from typing import Any, TYPE_CHECKING
 
-from archytas.tool_utils import tool
-
 from .jupyter_kernel_proxy import ( KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                    JupyterMessage, JupyterMessageTuple)
 

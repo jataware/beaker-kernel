@@ -7,6 +7,8 @@ from tempfile import mkdtemp
 from os import makedirs, environ
 import requests
 
+from archytas.tool_utils import tool
+
 from ..utils import server_url, server_token, env_enabled, action
 from ..jupyter_kernel_proxy import ProxyKernelClient
 
@@ -101,7 +103,6 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         self.checkpoints.append(checkpoint)
         return len(self.checkpoints) - 1
 
-   
     async def rollback(self, checkpoint_index: int):
         if not self.checkpoints_enabled:
             raise RuntimeError("Checkpoints are not enabled")
@@ -122,6 +123,34 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         return await self.add_checkpoint()
     add_checkpoint_action._default_payload = "{}"
 
+    @tool()
+    async def run_code(self, code: str) -> str:
+        """
+        Execute code in the user's session. After the execution,
+        the state of the kernel will be rolled back to before this tool
+        was used.
+
+        This tool can be help answer questions about the kernel state. For
+        example, a user may ask something about a dictionary `d` and using 
+        run code with the `code` of `d.keys()`.
+
+        This tool can also be used to double check if code will work before 
+        returning it as a final answer.
+
+        Note that this tool does not capture `stdout` AND only returns the
+        results of the last expression evaluated.
+
+        Args:
+            code (str): Code to run directly in Jupyter.
+
+        Returns:
+            str: Result of the `expr`
+        
+        """
+        checkpoint_index = await self.add_checkpoint()
+        result = await self.evaluate(code)
+        await self.rollback(checkpoint_index)
+        return result
 
     def cleanup(self):
         super().cleanup()

@@ -6,6 +6,8 @@ import typing
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
+from beaker_kernel.lib.utils import env_enabled
+
 if typing.TYPE_CHECKING:
     from .context import BaseContext
 
@@ -29,6 +31,11 @@ class BaseAgent(ReActAgent):
         })
 
         complete_tools = tools + [self.context.subkernel]
+        disabled_tools = [] 
+        if not env_enabled("ENABLE_USER_PROMPT"):
+            disabled_tools += [self.ask_user]
+        if not env_enabled("ENABLE_AGENT_EXECUTION"):
+            disabled_tools += ["run_code"]
         super().__init__(
             model="gpt-4-turbo-preview",  # Use default
             # api_key=api_key,  # TODO: get this from configuration
@@ -38,6 +45,7 @@ class BaseAgent(ReActAgent):
             rich_print=False,
             allow_ask_user=False,
             thought_handler=context.beaker_kernel.handle_thoughts,
+            disabled_tools=disabled_tools,
             **kwargs
         )
 
