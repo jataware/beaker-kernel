@@ -216,8 +216,8 @@ class DownloadHandler(RequestHandler):
 
 class SummaryHandler(ExtensionHandlerMixin, JupyterHandler):
     async def post(self):
-        notebook_content = json.loads(self.request.body)
-        summary = await summarize(notebook_content)
+        payload = json.loads(self.request.body)
+        summary = await summarize(**payload)
         return self.write(summary)
 
 
