@@ -39,9 +39,9 @@ in the parent query cell.
         
 
 async def summarize(notebook: dict,
-    summary_types: tuple[str, ...] = (
-        "a single sentence BLUF that must be in past tense",
-        "a summary",
+    summary_prompts: tuple[str, ...] = (
+        "a sentence of no more than 10 words that explains the central theme of the notebook",
+        "a ~400 character summary",
     )
 ):
     for cell in notebook["cells"]:
@@ -78,7 +78,7 @@ Step 3: Return a JSON Array containing strings as a final answer. Only respond w
     summaries = {
         "history": history
     }
-    for summary_type in summary_types:
+    for summary_type in summary_prompts:
         query = f"""
 Produce a {summary_type} by following these steps:
 
