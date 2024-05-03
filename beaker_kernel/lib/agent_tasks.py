@@ -38,12 +38,11 @@ in the parent query cell.
         self.add_context(context)
         
 
-async def summarize(notebook: dict,
-    summary_prompts: tuple[str, ...] = (
-        "a sentence of no more than 10 words that explains the central theme of the notebook",
-        "a ~400 character summary",
-    )
-):
+async def summarize(notebook: dict, summary_prompts: dict[str, str] | None = None):
+    summary_prompts = summary_prompts or {
+        "title": "a sentence of no more than 10 words that explains the central theme of the notebook",
+        "summary": "a ~400 character summary in passive voice",
+    }
     for cell in notebook["cells"]:
         if "outputs" in cell and len(cell["outputs"]) > 0:
             for output in cell["outputs"]:
@@ -78,7 +77,7 @@ Step 3: Return a JSON Array containing strings as a final answer. Only respond w
     summaries = {
         "history": history
     }
-    for summary_type in summary_prompts:
+    for name, summary_type in summary_prompts.items():
         query = f"""
 Produce a {summary_type} by following these steps:
 
@@ -88,15 +87,17 @@ Step 2: Rewrite the draft by reviewing details from the original notebook.
 
 Step 3: Make the draft more concise by removing information the audience will already know. The information the audience
 will already know is that this was a process done in a notebook and there was an interaction between a user and an agent.
-Therefore, there is no reason to mention "the notebook" or "the process".
+Therefore, do NOT include phrases like "the notebook" or "the process".
 Additionally, don't refer to a subject like "the team". The draft should strictly focus on the content of the notebook
-and not infer an author.
+and not infer an author. Remove fluff and self-referential words like "this summary".
 
-Step 4: Rewrite the draft as needed to ensure that the grammatical mood, tense, etc is respected from the original
+Step 4: Repeat Step 3
+
+Step 5: Rewrite the draft as needed to ensure that the grammatical mood, tense, etc is respected from the original
 request.
 
-Step 5: Return the final draft as the final answer.
+Step 6: Return the final draft as the final answer.
 """ 
         response = await agent.react_async(query)
-        summaries[summary_type] = response
+        summaries[name] = response
     return summaries
