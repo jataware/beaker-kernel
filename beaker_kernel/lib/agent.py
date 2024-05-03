@@ -20,7 +20,7 @@ class BaseAgent(ReActAgent):
     def __init__(
         self,
         context: "BaseContext" = None,
-        tools: list = None,
+        tools: list | None = None,
         **kwargs,
     ):
         self.context = context
@@ -30,7 +30,6 @@ class BaseAgent(ReActAgent):
             "verbose": self.context.beaker_kernel.verbose,
         })
 
-        complete_tools = tools + [self.context.subkernel]
         disabled_tools = [] 
         if not env_enabled("ENABLE_USER_PROMPT"):
             disabled_tools += [self.ask_user]
@@ -39,11 +38,10 @@ class BaseAgent(ReActAgent):
         super().__init__(
             model="gpt-4-turbo-preview",  # Use default
             # api_key=api_key,  # TODO: get this from configuration
-            tools=complete_tools,
+            tools=tools or [],
             verbose=self.context.beaker_kernel.verbose,
             spinner=None,
             rich_print=False,
-            allow_ask_user=False,
             thought_handler=context.beaker_kernel.handle_thoughts,
             disabled_tools=disabled_tools,
             **kwargs
