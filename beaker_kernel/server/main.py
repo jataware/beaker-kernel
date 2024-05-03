@@ -19,6 +19,7 @@ from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTP
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BaseContext
 from beaker_kernel.lib.subkernels.base import BaseSubkernel
+from beaker_kernel.lib.agent_tasks import summarize
 from beaker_kernel.server import admin_utils
 
 logger = logging.getLogger(__file__)
@@ -212,6 +213,14 @@ class DownloadHandler(RequestHandler):
         else:
             raise HTTPError(404)
 
+
+class SummaryHandler(ExtensionHandlerMixin, JupyterHandler):
+    async def post(self):
+        payload = json.loads(self.request.body)
+        summary = await summarize(**payload)
+        return self.write(summary)
+
+
 class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
     """
     """
@@ -320,6 +329,7 @@ class BeakerJupyterApp(LabServerApp):
         self.handlers.append(("/notebook", NotebookHandler))
         self.handlers.append((r"/upload", UploadHandler))
         self.handlers.append((r"/download/(.*)", DownloadHandler))
+        self.handlers.append((r"/summary", SummaryHandler))
         self.handlers.append((r"(/?)", MainHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
         self.handlers.append((r"/index.html", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
         self.handlers.append((r"/(favicon.ico)", StaticFileHandler, {"path": os.path.join(HERE, "ui")}))

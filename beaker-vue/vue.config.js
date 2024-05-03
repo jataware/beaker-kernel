@@ -43,6 +43,10 @@ module.exports = defineConfig({
         target: 'http://jupyter:8888',
         changeOrigin: true,
       },
+      '^/summary': {
+        target: 'http://jupyter:8888',
+        changeOrigin: true,
+      }
     },
   }
 })
