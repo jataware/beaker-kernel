@@ -240,7 +240,7 @@ class LLMKernel(KernelProxyManager):
         # Cleanup the old context, then create and setup the new context
         if self.context:
             self.context.cleanup()
-        self.context = context_cls(beaker_kernel=self, config=context_info)
+        self.context = context_cls(beaker_kernel=self, language=language, config=context_info)
         await self.context.setup(config=context_info, parent_header=parent_header)
         await self.send_preview(parent_header=parent_header)
         await self.update_connection_file(context={"name": context_name, "config": context_info})

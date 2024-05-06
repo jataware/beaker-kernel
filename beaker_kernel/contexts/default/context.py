@@ -19,8 +19,8 @@ class DefaultContext(BaseContext):
 
     WEIGHT: 10
 
-    def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]):
-        super().__init__(beaker_kernel, self.agent_cls, config)
+    def __init__(self, beaker_kernel: "LLMKernel", language, config: Dict[str, Any]):
+        super().__init__(beaker_kernel, language, self.agent_cls, config)
 
     @classmethod
     def available_subkernels(cls) -> List["BaseSubkernel"]:
