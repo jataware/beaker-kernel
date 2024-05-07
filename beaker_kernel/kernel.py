@@ -133,7 +133,7 @@ class LLMKernel(KernelProxyManager):
         context_name, language, context_config = cell_content.split(maxsplit=2)
         context_info = json.loads(context_config)
         self.stdout(f"Switching from context {self.context.slug} to {context_name}...", parent_header=parent_header)
-        await self.set_context(context_name=context_name, language=language, context_info=context_info, parent_header=parent_header)
+        await self.set_context(context_name=context_name, context_info=context_info, parent_header=parent_header)
 
         # Send message to trigger updating the context info
         self.send_response(
@@ -240,7 +240,10 @@ class LLMKernel(KernelProxyManager):
         # Cleanup the old context, then create and setup the new context
         if self.context:
             self.context.cleanup()
-        self.context = context_cls(beaker_kernel=self, language=language, config=context_info)
+
+        if "language" not in context_info:
+            context_info["language"] = language
+        self.context = context_cls(beaker_kernel=self, config=context_info)
         await self.context.setup(config=context_info, parent_header=parent_header)
         await self.send_preview(parent_header=parent_header)
         await self.update_connection_file(context={"name": context_name, "config": context_info})

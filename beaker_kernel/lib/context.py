@@ -36,7 +36,7 @@ class BaseContext:
 
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
-    def __init__(self, beaker_kernel: "LLMKernel", language: str,  agent_cls: "BaseAgent", config: Dict[str, Any]):
+    def __init__(self, beaker_kernel: "LLMKernel", agent_cls: "BaseAgent", config: Dict[str, Any]):
         self.intercepts = []
         self.jinja_env = None
         self.templates = {}
@@ -46,7 +46,7 @@ class BaseContext:
             tools=[],
         )
         self.config = config
-        self.subkernel = self.get_subkernel(language)
+        self.subkernel = self.get_subkernel()
 
 
         # Add intercepts, by inspecting the instance and extracting matching methods
@@ -95,7 +95,8 @@ class BaseContext:
             self.intercepts.append((msg_type, method, stream))
             self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
 
-    def get_subkernel(self, language):
+    def get_subkernel(self):
+        language = self.config.get("language", "python3")
         self.beaker_kernel.debug("new_kernel", f"Setting new kernel of `{language}`")
         kernel_opts = {
             subkernel.KERNEL_NAME: subkernel
