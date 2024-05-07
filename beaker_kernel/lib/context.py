@@ -76,12 +76,12 @@ class BaseContext:
                     # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
                     logger.warn(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
 
-    async def setup(self, config=None, parent_header=None):
-        if config:
-            self.config = config
+    async def setup(self, context_info=None, parent_header=None):
+        if context_info:
+            self.config["context_info"] = context_info
 
         if callable(getattr(self.agent, 'setup', None)):
-            await self.agent.setup(self.config, parent_header=parent_header)
+            await self.agent.setup(self.config["context_info"], parent_header=parent_header)
 
     def cleanup(self):
         self.subkernel.cleanup()

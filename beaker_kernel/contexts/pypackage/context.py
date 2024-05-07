@@ -19,6 +19,6 @@ class PyPackageContext(BaseContext):
         if not isinstance(self.subkernel, PythonSubkernel):
             raise ValueError("This context is only valid for Python.")
 
-    async def setup(self, config=None, parent_header=None):
+    async def setup(self, context_info=None, parent_header=None):
         await self.execute(self.get_code("setup", {}))
-        return await super().setup(config, parent_header)
+        return await super().setup(config["context_info"], parent_header)
