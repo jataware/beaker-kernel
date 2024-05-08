@@ -7,6 +7,8 @@ from tempfile import mkdtemp
 from os import makedirs, environ
 import requests
 
+from archytas.tool_utils import tool
+
 from ..utils import server_url, server_token, env_enabled, action
 from ..jupyter_kernel_proxy import ProxyKernelClient
 
@@ -128,3 +130,32 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         if self.checkpoints_enabled:
             shutil.rmtree(self.storage_prefix, ignore_errors=True)
             self.checkpoints = []
+
+
+    @tool()
+    async def run_code(self, code: str) -> str:
+        """
+        Execute code in the user's session. After the execution,
+        the state of the kernel will be rolled back to before this tool
+        was used.
+
+        This tool can be help answer questions about the kernel state. For
+        example, a user may ask something about a dictionary `d` and using 
+        run code with the `code` of `d.keys()`.
+
+        This tool can also be used to double check if code will work before 
+        returning it as a final answer.
+
+        Note that this tool does not capture `stdout` AND only returns the
+        results of the last expression evaluated.
+
+        Args:
+            code (str): Code to run directly in Jupyter.
+        Returns:
+            str: Result of the `expr`
+        
+        """
+        checkpoint_index = await self.add_checkpoint()
+        result = await self.evaluate(code)
+        await self.rollback(checkpoint_index)
+        return result

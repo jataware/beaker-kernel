@@ -41,12 +41,12 @@ class BaseContext:
         self.jinja_env = None
         self.templates = {}
         self.beaker_kernel = beaker_kernel
-        self.agent = agent_cls(
-            context=self,
-            tools=[],
-        )
         self.config = config
         self.subkernel = self.get_subkernel()
+        self.agent = agent_cls(
+            context=self,
+            tools=[self.subkernel],
+        )
 
 
         # Add intercepts, by inspecting the instance and extracting matching methods

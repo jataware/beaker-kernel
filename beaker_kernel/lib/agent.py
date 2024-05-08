@@ -6,7 +6,7 @@ import typing
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
-from beaker_kernel.lib.utils import togglable_tool
+from beaker_kernel.lib.utils import env_enabled
 
 if typing.TYPE_CHECKING:
     from .context import BaseContext
@@ -40,6 +40,11 @@ class BaseAgent(ReActAgent):
             thought_handler=context.beaker_kernel.handle_thoughts,
             **kwargs
         )
+        if not env_enabled("ENABLE_USER_PROMPT"):
+            self.disable("ask_user")
+        if not env_enabled("ENABLE_AGENT_EXECUTION"):
+            self.disable("run_code")
+        
 
     def get_info(self):
         """
@@ -72,7 +77,7 @@ class BaseAgent(ReActAgent):
         )
         return super().display_observation(observation)
 
-    @togglable_tool("ENABLE_USER_PROMPT")
+    @tool()
     async def ask_user(
         self, query: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef,
     ) -> str:
