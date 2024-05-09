@@ -158,4 +158,4 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         checkpoint_index = await self.add_checkpoint()
         result = await self.evaluate(code)
         await self.rollback(checkpoint_index)
-        return result
+        return str(result["return"])

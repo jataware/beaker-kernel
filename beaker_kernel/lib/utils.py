@@ -3,6 +3,7 @@ import json
 import logging
 import sys
 import traceback
+import warnings
 from contextlib import AbstractAsyncContextManager
 from functools import wraps, update_wrapper
 from typing import Any, TYPE_CHECKING
@@ -181,3 +182,10 @@ class SubkernelStateEncoder(json.JSONEncoder):
             return super().default(o)
         except:
             return str(o)
+
+
+def togglable_tool(env_var, *, name: str | None = None):
+    warnings.warn("This decorator is deprecated and will be removed in version 1.6.0")
+    def noop(fn):
+        return fn
+    return noop

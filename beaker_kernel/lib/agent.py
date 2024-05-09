@@ -40,10 +40,6 @@ class BaseAgent(ReActAgent):
             thought_handler=context.beaker_kernel.handle_thoughts,
             **kwargs
         )
-        if not env_enabled("ENABLE_USER_PROMPT"):
-            self.disable("ask_user")
-        if not env_enabled("ENABLE_AGENT_EXECUTION"):
-            self.disable("run_code")
         
 
     def get_info(self):
