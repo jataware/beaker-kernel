@@ -30,7 +30,7 @@ dependencies = [
   "matplotlib~=3.7.1",
   "xarray==0.19.0",
   "numpy~=1.24.3",
-  "archytas @ git+https://github.com/jataware/archytas.git@98e4ed87cc0b08a9b506151f1966f4117811f008",
+  "archytas @ git+https://github.com/jataware/archytas.git@8c0283f428b051c67efad5c5d98527d8158252ef",
   "pyzmq~=26.0.2",
   "six~=1.16.0",
   "tornado~=6.4.0",
