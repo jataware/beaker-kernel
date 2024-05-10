@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+TOOL_TOGGLE_PREFIX = "TOOL_ENABLE_"
+
 
 class BaseContext:
     beaker_kernel: "LLMKernel"
@@ -49,9 +51,20 @@ class BaseContext:
         subkernel_tools = collect_tools_from_object(self.subkernel)
         self.agent = agent_cls(
             context=self,
-            tools=[*subkernel_tools],
+            tools=subkernel_tools,
         )
 
+        # Remove tools
+        # NOTE: Identical toolnames don't work
+        enabled_tools = [tool.split(".")[-1] for tool in self.agent.tools.keys()]
+        toggles = [attr[len(TOOL_TOGGLE_PREFIX):].lower() for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)]
+        disabled_tools = []
+        for tool in enabled_tools:
+            if not getattr(self, TOOL_TOGGLE_PREFIX + tool.upper(), True):
+                disabled_tools.append(tool)
+            elif tool not in toggles:
+                setattr(self, TOOL_TOGGLE_PREFIX + tool.upper(), True)
+        self.agent.disable(*disabled_tools)
 
         # Add intercepts, by inspecting the instance and extracting matching methods
         self._collect_and_register_intercepts(self)
