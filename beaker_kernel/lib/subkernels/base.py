@@ -135,7 +135,7 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
     @tool()
     async def run_code(self, code: str) -> str:
         """
-        Execute code in the user's session. After the execution,
+        Execute code in the user's session. After execution,
         the state of the kernel will be rolled back to before this tool
         was used.
 

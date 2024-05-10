@@ -6,12 +6,15 @@ import os.path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 import requests
 
-from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
+from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
+
+from archytas.tool_utils import collect_tools_from_object
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, server_token, server_url
 
-from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
+
+from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
 
 if TYPE_CHECKING:
     from archytas.react import ReActAgent
@@ -43,9 +46,10 @@ class BaseContext:
         self.beaker_kernel = beaker_kernel
         self.config = config
         self.subkernel = self.get_subkernel()
+        subkernel_tools = collect_tools_from_object(self.subkernel)
         self.agent = agent_cls(
             context=self,
-            tools=[self.subkernel],
+            tools=[*subkernel_tools],
         )
 
 
