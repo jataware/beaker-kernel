@@ -68,15 +68,23 @@ class BeakerHandler(watchdog_events.FileSystemEventHandler):
                 app_subprocess.terminate()
 
 
-def create_observer():
+def create_observer(extra_dirs=None):
     contexts = autodiscover("contexts")
     subkernels = autodiscover("subkernels")
     modules = set([inspect.getmodule(beaker_kernel)])
     modules.update([inspect.getmodule(cls) for _, cls in contexts.items()])
     modules.update([inspect.getmodule(cls) for _, cls in subkernels.items()])
-    all_paths = sorted([os.path.dirname(inspect.getabsfile(mod)) for mod in modules], key=lambda f: len(f))
+    mod_paths = [os.path.dirname(inspect.getabsfile(mod)) for mod in modules]
+    all_paths: list[str] = mod_paths[:]
+    if extra_dirs:
+        all_paths.extend([
+            extra_dir for extra_dir in extra_dirs
+            if os.path.exists(extra_dir)
+        ])
+    # Sort by length so we add more general paths before more specific/subpaths
+    sorted_paths = sorted(all_paths, key=lambda f: len(f))
     paths = set()
-    for path in all_paths:
+    for path in sorted_paths:
         is_subpath = False
         for saved_path in paths:
             if path.startswith(saved_path):
@@ -107,9 +115,17 @@ def main():
 
 if __name__ == "__main__":
     if "watch" in sys.argv:
-        observer = create_observer()
         args = sys.argv[:]
         args.remove("watch")
+        extra_dirs = []
+        while "--extra_watch_dir" in args:
+            idx = args.index("--extra_watch_dir")
+            args.pop(idx)  # Pop the flag
+            extra_dir = args.pop(idx)  # Value is now in the index where the flag was
+            logger.warn(f"Adding extra watch dir {extra_dir}")
+            extra_dirs.append(extra_dir)
+
+        observer = create_observer(extra_dirs)
         try:
             while True:
                 app_subprocess = subprocess.Popen([

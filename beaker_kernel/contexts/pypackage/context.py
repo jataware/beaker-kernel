@@ -8,7 +8,6 @@ from .agent import PyPackageAgent
 if TYPE_CHECKING:
     from beaker_kernel.kernel import LLMKernel
     from beaker_kernel.lib.agent import BaseAgent
-    from beaker_kernel.lib.subkernels.base import BaseSubkernel
 
 class PyPackageContext(BaseContext):
 
@@ -21,4 +20,4 @@ class PyPackageContext(BaseContext):
 
     async def setup(self, context_info=None, parent_header=None):
         await self.execute(self.get_code("setup", {}))
-        return await super().setup(config["context_info"], parent_header)
+        return await super().setup(context_info, parent_header)
