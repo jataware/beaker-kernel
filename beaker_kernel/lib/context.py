@@ -190,23 +190,25 @@ class BaseContext:
         }
         return payload
 
+    async def get_subkernel_state(self):
+        fetch_state_code = self.subkernel.FETCH_STATE_CODE
+        state = await self.evaluate(fetch_state_code)
+        return state["return"]
 
-    @action()
-    async def get_subkernel_state(self, message):
+    @action(action_name="get_subkernel_state")
+    async def get_subkernel_state_action(self, message):
         """
         Fetches the state of the subkernel, including all defined variables, imports, and functions.
         """
-        fetch_state_code = self.subkernel.FETCH_STATE_CODE
-        state = await self.beaker_kernel.evaluate(fetch_state_code)
-        result = state["return"]
+        state = await self.get_subkernel_state()
         self.send_response(
             stream="iopub",
             msg_or_type="get_subkernel_state_response",
-            content=result,
+            content=state,
             parent_header=message.header,
         )
-        return result
-    get_subkernel_state._default_payload = "{}"
+        return state
+    get_subkernel_state_action._default_payload = "{}"
 
 
     @action()
