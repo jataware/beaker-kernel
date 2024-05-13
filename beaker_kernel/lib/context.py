@@ -55,9 +55,9 @@ class BaseContext:
         )
 
         # Remove tools
-        # NOTE: Identical toolnames don't work
+        # TODO: Identical toolnames don't work
         enabled_tools = [tool.split(".")[-1] for tool in self.agent.tools.keys()]
-        toggles = [attr[len(TOOL_TOGGLE_PREFIX):].lower() for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)]
+        toggles = [attr.removeprefix(TOOL_TOGGLE_PREFIX).lower() for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)]
         disabled_tools = []
         for tool in enabled_tools:
             if not getattr(self, TOOL_TOGGLE_PREFIX + tool.upper(), True):
