@@ -18,6 +18,7 @@ class DefaultContext(BaseContext):
     agent_cls: "BaseAgent" = DefaultAgent
 
     WEIGHT: 10
+    TOOL_ENABLE_RUN_CODE = False
 
     def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]):
         super().__init__(beaker_kernel, self.agent_cls, config)
