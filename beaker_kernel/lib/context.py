@@ -84,16 +84,19 @@ class BaseContext:
                     logger.warn(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
 
     def disable_tools(self):
-        # Remove tools
         # TODO: Identical toolnames don't work
-        enabled_tools = [tool.split(".")[-1] for tool in self.agent.tools.keys()]
-        toggles = {attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): value for attr, value in os.environ.items() if attr.startswith(TOOL_TOGGLE_PREFIX)}
-        toggles.update( {attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): getattr(self, attr) for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)})
-        disabled_tools = []
-        for tool in enabled_tools:
-            tool_enabled = toggles.get(tool.lower(), True)
-            if not tool_enabled:
-                disabled_tools.append(tool)
+        toggles = {
+            attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): value == "true"
+            for attr, value in os.environ.items() if attr.startswith(TOOL_TOGGLE_PREFIX)
+        }
+        toggles.update({
+            attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): getattr(self, attr) 
+            for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)}
+        )
+        disabled_tools = [
+            tool
+            for tool, enabled in toggles.items() if not enabled
+        ]
         self.agent.disable(*disabled_tools)
 
     async def setup(self, context_info=None, parent_header=None):
