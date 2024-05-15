@@ -16,8 +16,8 @@ services:
       - OPENAI_API_KEY
       - PYTHONPATH=/jupyter
       - ENABLE_CHECKPOINTS=true
-      - TOOL_ENABLED_ASK_USER=false
-      - TOOL_ENABLED_RUN_CODE=false
+      - TOOL_ENABLED_ASK_USER=true
+      - TOOL_ENABLED_RUN_CODE=true
     volumes:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter

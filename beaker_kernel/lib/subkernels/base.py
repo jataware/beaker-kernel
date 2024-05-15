@@ -24,6 +24,7 @@ class BaseSubkernel(abc.ABC):
 
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
+    TOOLS: list[tuple[Callable, bool]]  = []
 
     FETCH_STATE_CODE: str = ""
 
@@ -32,14 +33,9 @@ class BaseSubkernel(abc.ABC):
     def parse_subkernel_return(cls, execution_result) -> Any:
         ...
 
-    @classmethod
-    def register_tool(cls, tool):
-        current_tools = getattr(cls, "_tools", ())
-        cls._tools = current_tools + (tool,)
-
     @property
     def tools(self):
-        return list(getattr(self, "_tools", ()))
+        return [tool for tool, condition in self.TOOLS if condition]
 
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         self.jupyter_id = jupyter_id
@@ -70,8 +66,39 @@ class BaseSubkernel(abc.ABC):
                 print(err)
 
 
+@tool()
+async def run_code(code: str, agent: AgentRef) -> str:
+    """
+    Execute code in the user's session. After execution,
+    the state of the kernel will be rolled back to before this tool
+    was used.
+
+    This tool can be help answer questions about the kernel state. For
+    example, a user may ask something about a dictionary `d` and using 
+    run code with the `code` of `d.keys()`.
+
+    This tool can also be used to double check if code will work before 
+    returning it as a final answer.
+
+    Note that this tool does not capture `stdout` AND only returns the
+    results of the last expression evaluated.
+
+    Args:
+        code (str): Code to run directly in Jupyter.
+    Returns:
+        str: Result of the `expr`
+    
+    """
+    result = await agent.context.subkernel.execute_and_rollback(code)
+    return result
+
+
 class BaseCheckpointableSubkernel(BaseSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"
+
+    TOOLS = [
+        (run_code, env_enabled("ENABLE_CHECKPOINTS"))
+    ]
 
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         super().__init__(jupyter_id, subkernel_configuration, context)
@@ -148,31 +175,3 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         return str(result["return"])
 
 
-@tool()
-async def run_code(code: str, agent: AgentRef) -> str:
-    """
-    Execute code in the user's session. After execution,
-    the state of the kernel will be rolled back to before this tool
-    was used.
-
-    This tool can be help answer questions about the kernel state. For
-    example, a user may ask something about a dictionary `d` and using 
-    run code with the `code` of `d.keys()`.
-
-    This tool can also be used to double check if code will work before 
-    returning it as a final answer.
-
-    Note that this tool does not capture `stdout` AND only returns the
-    results of the last expression evaluated.
-
-    Args:
-        code (str): Code to run directly in Jupyter.
-    Returns:
-        str: Result of the `expr`
-    
-    """
-    result = await agent.context.subkernel.execute_and_rollback(code)
-    return result
-
-if env_enabled("ENABLE_CHECKPOINTS"):
-    BaseCheckpointableSubkernel.register_tool(run_code)
