@@ -39,7 +39,7 @@ class BaseSubkernel(abc.ABC):
 
     @property
     def tools(self):
-        return list(self._tools)
+        return list(getattr(self, "_tools", ()))
 
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         self.jupyter_id = jupyter_id
