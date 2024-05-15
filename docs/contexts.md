@@ -155,7 +155,7 @@ Tools on the agent can be toggled individually using both environment and
 class variables. To toggle a tool, create an attribute on your context class or
 a variable in your environment named `TOOL_ENABLED_{YOUR_TOOL_NAME_IN_UPPER_CASE}`.
 'True' enables the tool and 'False' disables it. If the variable is set in
-the environment and class, the value will be taken form the class. For example,
+the environment and class, the value will be taken from the class. For example,
 the environment variable `TOOL_ENABLED_ASK_USER=false`
 is overriden by 
 ```
