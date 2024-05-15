@@ -48,10 +48,9 @@ class BaseContext:
         self.beaker_kernel = beaker_kernel
         self.config = config
         self.subkernel = self.get_subkernel()
-        subkernel_tools = collect_tools_from_object(self.subkernel)
         self.agent = agent_cls(
             context=self,
-            tools=subkernel_tools,
+            tools=self.subkernel.tools,
         )
 
         self.disable_tools()
@@ -91,8 +90,8 @@ class BaseContext:
         }
         toggles.update({
             attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): getattr(self, attr) 
-            for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)}
-        )
+            for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)
+        })
         disabled_tools = [
             tool
             for tool, enabled in toggles.items() if not enabled
