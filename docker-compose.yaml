@@ -13,10 +13,11 @@ services:
       - DEBUG=1
       - JUPYTER_SERVER=http://jupyter:8888
       - JUPYTER_TOKEN=89f73481102c46c0bc13b2998f9a4fce
-      - ENABLE_USER_PROMPT=true
       - OPENAI_API_KEY
       - PYTHONPATH=/jupyter
       - ENABLE_CHECKPOINTS=true
+      - TOOL_ENABLED_ASK_USER=true
+      - TOOL_ENABLED_RUN_CODE=true
     volumes:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter

@@ -6,12 +6,15 @@ import os.path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 import requests
 
-from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
+from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
+
+from archytas.tool_utils import collect_tools_from_object
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, server_token, server_url
 
-from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
+
+from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
 
 if TYPE_CHECKING:
     from archytas.react import ReActAgent
@@ -22,6 +25,8 @@ if TYPE_CHECKING:
     from .subkernels.base import BaseSubkernel
 
 logger = logging.getLogger(__name__)
+
+TOOL_TOGGLE_PREFIX = "TOOL_ENABLED_"
 
 
 class BaseContext:
@@ -41,13 +46,14 @@ class BaseContext:
         self.jinja_env = None
         self.templates = {}
         self.beaker_kernel = beaker_kernel
-        self.agent = agent_cls(
-            context=self,
-            tools=[],
-        )
         self.config = config
         self.subkernel = self.get_subkernel()
+        self.agent = agent_cls(
+            context=self,
+            tools=self.subkernel.tools,
+        )
 
+        self.disable_tools()
 
         # Add intercepts, by inspecting the instance and extracting matching methods
         self._collect_and_register_intercepts(self)
@@ -75,6 +81,22 @@ class BaseContext:
                 except UnicodeDecodeError:
                     # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
                     logger.warn(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
+
+    def disable_tools(self):
+        # TODO: Identical toolnames don't work
+        toggles = {
+            attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): value == "true"
+            for attr, value in os.environ.items() if attr.startswith(TOOL_TOGGLE_PREFIX)
+        }
+        toggles.update({
+            attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): getattr(self, attr) 
+            for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)
+        })
+        disabled_tools = [
+            tool
+            for tool, enabled in toggles.items() if not enabled
+        ]
+        self.agent.disable(*disabled_tools)
 
     async def setup(self, context_info=None, parent_header=None):
         if context_info:
