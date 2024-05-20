@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class BaseAgent(ReActAgent):
 
     context: "BaseContext"
-    MODEL: str = "gpt-4o"
+    MODEL: str = "gpt-4-turbo-preview"
 
     def __init__(
         self,
