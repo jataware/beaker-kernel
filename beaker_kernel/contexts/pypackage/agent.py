@@ -10,6 +10,25 @@ from beaker_kernel.lib.context import BaseContext
 
 logger = logging.getLogger(__name__)
 
+class Thing:
+  @tool()
+  def generate_random_number(self, upper_bound: int) -> int:
+    """
+    Generate a random number.
+
+    Args:
+      upper_bound (int): The maximum allowable random number
+
+    Returns:
+      int: A random number
+      
+    """
+    logger.error("\n\n\nABAVAVAVAVAVAVAVAVAV\n\n\n")
+    import random
+    return random.randint(0, upper_bound)
+    
+
+
 
 class PyPackageAgent(BaseAgent):
     """
@@ -28,7 +47,9 @@ class PyPackageAgent(BaseAgent):
     def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
         libraries = {
         }
-        super().__init__(context, tools, **kwargs)
+        the_tools = tools or []
+        logger.error("DOES THIS RUN FIRST?")
+        super().__init__(context, tools =  the_tools + [Thing()], **kwargs)
 
     @tool(autosummarize=True)
     async def get_package_structure(self, target: str, agent:AgentRef, loop: LoopControllerRef) -> str:

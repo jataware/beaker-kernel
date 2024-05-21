@@ -18,6 +18,7 @@ services:
       - ENABLE_CHECKPOINTS=true
       - TOOL_ENABLED_ASK_USER=true
       - TOOL_ENABLED_RUN_CODE=true
+      - TOOL_ENABLED_GENERATE_RANDOM_NUMBER=false
     volumes:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
