@@ -461,7 +461,7 @@ class LLMKernel(KernelProxyManager):
             },
             parent_header=message.header,
         )
-        return False
+        return None
 
     @message_handler
     async def context_setup_request(self, message):
