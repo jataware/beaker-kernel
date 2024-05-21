@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 class BaseAgent(ReActAgent):
 
     context: "BaseContext"
+    MODEL: str = "gpt-4-turbo-preview"
 
     def __init__(
         self,
@@ -30,7 +31,7 @@ class BaseAgent(ReActAgent):
             "verbose": self.context.beaker_kernel.verbose,
         })
         super().__init__(
-            model="gpt-4-turbo-preview",  # Use default
+            model=self.MODEL,  # Use default
             # api_key=api_key,  # TODO: get this from configuration
             tools=tools,
             verbose=self.context.beaker_kernel.verbose,
