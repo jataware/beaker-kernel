@@ -349,7 +349,7 @@ const _cellIndex = (cell: IBeakerCell): number => {
 
 const _getCell = (cell: number | IBeakerCell) => {
     const index = _cellIndex(cell);
-    return notebookCellsRef.value[index];
+    return session.notebook.cells[index];
 }
 
 const selectCell = (cell: number | IBeakerCell) => {
