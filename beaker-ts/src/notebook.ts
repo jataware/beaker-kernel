@@ -38,6 +38,7 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     metadata: Partial<nbformat.ICellMetadata>;
     source: nbformat.MultilineString;
     status: BeakerCellStatus;
+    children?: BeakerBaseCell[]
 
     constructor() {
         this.status = "idle";
@@ -227,6 +228,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         super();
         Object.keys(content).forEach((key) => {this[key] = content[key] });
         this.events = this.events || [];
+        this.children = this.children || [];
         if (this.id === undefined) {
             this.id = uuidv4();
         }
@@ -266,10 +268,11 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
 
                 const queryCellIndex = nb.cells.findIndex((cell) => (cell.id === this.id));
                 if (queryCellIndex >= 0) {
-                    session.notebook.cells.splice(queryCellIndex + 1, 0, codeCell);
+                    this.children.push(codeCell);
+                    //session.notebook.cells.splice(queryCellIndex + 1, 0, codeCell);
                 }
                 else {
-                    nb.addCell(codeCell);
+                    this.children.push(codeCell);
                 }
             }
         };
@@ -395,9 +398,12 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     }
 
     public toIPynb() {
-        return this.toMarkdownCell().toIPynb();
+        const taggedChildren = this.children?.map((cell) => {
+            cell.metadata.beaker_child_of = this?.id;
+            return cell.toIPynb();
+        });
+        return [this.toMarkdownCell().toIPynb(), ...taggedChildren];
     }
-
 }
 
 export type IBeakerCell = BeakerCodeCell | BeakerMarkdownCell | BeakerRawCell | nbformat.IUnrecognizedCell;
@@ -466,10 +472,34 @@ export class BeakerNotebook {
                 return new BeakerMarkdownCell(cell);
             }
         });
+
+        // attach children to parents: partition before attaching in one pass
+        // such that there's no dangling indices while removing elements from a list by iteration
+        //
+        // this is entirely a no-op if no cells are tagged as children; legacy notebooks of all parent cells are uneffected
+        const [parentCells, childCells]: [IBeakerCell[], IBeakerCell[]] = cellList.reduce(
+            (partitions: IBeakerCell[][], cell: IBeakerCell) => {
+                const isChild = (cell: IBeakerCell) => typeof(cell.metadata.beaker_child_of) !== "undefined";
+                partitions[isChild(cell) ? 1 : 0].push(cell);
+                return partitions;
+            }, [[], []]
+        );
+        // avoid the need to search parents every iteration when attaching
+        const childMap: {[parent_uuid: string]: IBeakerCell[]} = childCells.reduce((mapping, cell) => {
+            const parent_uuid = String(cell.metadata.beaker_child_of);
+            return {
+                [parent_uuid]: [...(mapping[parent_uuid] || []) , cell]
+            };
+        }, {});
+        parentCells.forEach((parent) => {
+            parent.children = childMap[String(parent.id)] || [];
+        });
+
+
         this.cells.splice(
             0,
             this.cells.length,
-            ...cellList
+            ...parentCells
         );
 
         this.content.metadata = obj.metadata;
@@ -480,7 +510,7 @@ export class BeakerNotebook {
         return {
             nbformat: this.content.nbformat,
             nbformat_minor: this.content.nbformat_minor,
-            cells: this.content.cells.map((cell: BeakerBaseCell) => cell.toIPynb()),
+            cells: this.content.cells.flatMap((cell: BeakerBaseCell) => cell.toIPynb()),
             metadata: this.content.metadata,
         }
     }

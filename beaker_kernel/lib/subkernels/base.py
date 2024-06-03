@@ -7,7 +7,7 @@ from tempfile import mkdtemp
 from os import makedirs, environ
 import requests
 
-from archytas.tool_utils import AgentRef, tool
+from archytas.tool_utils import AgentRef, tool, LoopControllerRef
 
 from ..utils import server_url, server_token, env_enabled, action
 from ..jupyter_kernel_proxy import ProxyKernelClient
@@ -67,7 +67,7 @@ class BaseSubkernel(abc.ABC):
 
 
 @tool()
-async def run_code(code: str, agent: AgentRef) -> str:
+async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef) -> str:
     """
     Execute code in the user's session. After execution,
     the state of the kernel will be rolled back to before this tool
@@ -90,7 +90,18 @@ async def run_code(code: str, agent: AgentRef) -> str:
     
     """
     result = await agent.context.subkernel.execute_and_rollback(code)
-    return result
+    #if loop.state == loop.PROCEED:
+    #    print("proceed")
+    #    return json.dumps(result)
+    loop.set_state(loop.STOP_SUCCESS)
+    message = {
+        "action": "code_cell",
+        "language": agent.context.subkernel.SLUG,
+        "content": code,
+    }
+    return json.dumps(message)
+    return json.dumps(result)
+
 
 
 class BaseCheckpointableSubkernel(BaseSubkernel):

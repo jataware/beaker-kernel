@@ -26,6 +26,24 @@
             :cell="props.cell"
             ref="typedCellRef"
         />
+        <div class="cell-children">
+            <Component
+                v-for="(child, subindex) in props.cell?.children"
+                :key="child.id"
+                :is="componentMap[child.cell_type || 'raw']"
+                :cell="child"
+                :index="`${index}:${subindex}`"
+                :class="{
+                    selected: (index === selectedCellIndex)
+                }"
+                ref="childrenRef"
+                drag-enabled=false
+                @click.stop="childOnClickCallback(`${index}:${subindex}`)"
+                @keydown.ctrl.enter.prevent="execute"
+                @keydown.shift.enter.prevent="executeAndMove"
+                @keyup.esc="unfocusEditor"
+            />
+        </div>
       </div>
     </div>
   </div>
@@ -42,6 +60,8 @@ const props = defineProps([
     'index',
     'cell',
     'dragEnabled',
+    'selectedCellIndex',
+    'childOnClickCallback'
 ]);
 
 const emit = defineEmits([
@@ -53,6 +73,7 @@ type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
 const typedCellRef = ref<BeakerCellType|null>(null);
+const childrenRef = ref<BeakerCellType|null>(null);
 
 const componentMap: {[key: string]: Component} = {
     'code': BeakerCodeCell,
@@ -60,9 +81,16 @@ const componentMap: {[key: string]: Component} = {
     'markdown': BeakerMarkdownCell
 }
 
+const getSelectedChild = (): number | undefined => {
+    return props.selectedCellIndex.split(":").map((part: string) => Number(part))?.[1];
+}
+
 function focusEditor() {
-    if (beakerCellRef.value) {
-        const editor: HTMLElement|null = beakerCellRef.value.querySelector('.cm-content');
+    const child = getSelectedChild();
+    const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : beakerCellRef;
+    
+    if (targetRef.value) {
+        const editor: HTMLElement|null = targetRef.value.querySelector('.cm-content');
         if (editor) {
             editor.focus();
         }
@@ -76,8 +104,11 @@ const unfocusEditor = () => {
 };
 
 function execute() {
-    if (typedCellRef?.value?.execute) {
-        typedCellRef.value.execute();
+    const child = getSelectedChild();
+    const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
+    
+    if (targetRef?.value?.execute) {
+        targetRef.value.execute();
         // For code/markdown cells
         unfocusEditor();
         return true;
@@ -92,8 +123,11 @@ const executeAndMove = () => {
 };
 
 const enter = (event) => {
-    if (typedCellRef?.value?.enter) {
-        typedCellRef.value.enter(event);
+    const child = getSelectedChild();
+    const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
+    
+    if (targetRef?.value?.enter) {
+        targetRef.value.enter(event);
     }
 };
 
