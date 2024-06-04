@@ -34,6 +34,7 @@ class BaseContext:
     subkernel: "BaseSubkernel"
     config: Dict[str, Any]
     agent: "ReActAgent"
+    current_llm_query: str | None
 
     intercepts: List[Tuple[str, Callable, str]]
     jinja_env: Optional[Environment]
@@ -52,6 +53,7 @@ class BaseContext:
             context=self,
             tools=self.subkernel.tools,
         )
+        self.current_llm_query = None
 
         self.disable_tools()
 
@@ -89,7 +91,7 @@ class BaseContext:
             for attr, value in os.environ.items() if attr.startswith(TOOL_TOGGLE_PREFIX)
         }
         toggles.update({
-            attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): getattr(self, attr) 
+            attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): getattr(self, attr)
             for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)
         })
         disabled_tools = [
