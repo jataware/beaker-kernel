@@ -107,16 +107,10 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
 
     (checkpoint_index, execution_context) = await agent.context.subkernel.execute_and_checkpoint(code)
 
-    # ensure json serializable
-    stringified_execution_content = {
-        key: str(value) 
-        for key, value in execution_context.items()
-    }
     update_payload = {
         "execution_count": execution_context["result"].content["execution_count"],
         "execution_status": execution_context["result"].content["status"],
         "execution_id": str(execution_id),
-        "dump": stringified_execution_content,
         "checkpoint_index": checkpoint_index
     }
     agent.context.send_response(
