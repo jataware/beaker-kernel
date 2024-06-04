@@ -5,9 +5,10 @@ import hashlib
 import shutil
 from tempfile import mkdtemp
 from os import makedirs, environ
+from uuid import uuid4
 import requests
 
-from archytas.tool_utils import AgentRef, tool, LoopControllerRef
+from archytas.tool_utils import AgentRef, tool, LoopControllerRef, ReactContextRef
 
 from ..utils import server_url, server_token, env_enabled, action
 from ..jupyter_kernel_proxy import ProxyKernelClient
@@ -67,7 +68,7 @@ class BaseSubkernel(abc.ABC):
 
 
 @tool()
-async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef) -> str:
+async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
     """
     Execute code in the user's session. After execution,
     the state of the kernel will be rolled back to before this tool
@@ -87,20 +88,42 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef) -> str:
         code (str): Code to run directly in Jupyter.
     Returns:
         str: Result of the `expr`
-    
     """
-    result = await agent.context.subkernel.execute_and_rollback(code)
-    #if loop.state == loop.PROCEED:
-    #    print("proceed")
-    #    return json.dumps(result)
-    loop.set_state(loop.STOP_SUCCESS)
-    message = {
+
+    execution_id = uuid4()
+    message = react_context.get("message", None)
+    result = {
         "action": "code_cell",
         "language": agent.context.subkernel.SLUG,
-        "content": code,
+        "code": code.strip(),
+        # we don't know what cell uuid is going to be added at notebook creation time
+        # so the execution ID here tracks allows us to find it for update purposes.
+        "execution_id": str(execution_id)
     }
-    return json.dumps(message)
-    return json.dumps(result)
+
+    agent.context.subkernel.context.send_response(
+        "iopub", "add_notebook_cell", result, parent_header=message.header
+    )
+
+    (checkpoint_index, execution_context) = await agent.context.subkernel.execute_and_checkpoint(code)
+
+    # ensure json serializable
+    stringified_execution_content = {
+        key: str(value) 
+        for key, value in execution_context.items()
+    }
+    update_payload = {
+        "execution_count": execution_context["result"].content["execution_count"],
+        "execution_status": execution_context["result"].content["status"],
+        "execution_id": str(execution_id),
+        "dump": stringified_execution_content,
+        "checkpoint_index": checkpoint_index
+    }
+    agent.context.send_response(
+        "iopub", "update_notebook_cell", update_payload, parent_header=message.header
+    )
+
+    return execution_context
 
 
 
@@ -178,6 +201,10 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
             shutil.rmtree(self.storage_prefix, ignore_errors=True)
             self.checkpoints = []
 
+    async def execute_and_checkpoint(self, code: str) -> tuple[int, Any]:
+        checkpoint_index = await self.add_checkpoint()
+        result = await self.evaluate(code)
+        return checkpoint_index, result
 
     async def execute_and_rollback(self, code: str):
         checkpoint_index = await self.add_checkpoint()

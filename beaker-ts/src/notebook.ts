@@ -268,11 +268,31 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
 
                 const queryCellIndex = nb.cells.findIndex((cell) => (cell.id === this.id));
                 if (queryCellIndex >= 0) {
-                    this.children.push(codeCell);
-                    //session.notebook.cells.splice(queryCellIndex + 1, 0, codeCell);
+                    session.notebook.cells.splice(queryCellIndex + 1, 0, codeCell);
                 }
                 else {
-                    this.children.push(codeCell);
+                    nb.addCell(codeCell);
+                }
+            }
+            else if (msg_type == "add_notebook_cell") {
+                const codeCell = new BeakerCodeCell({
+                    cell_type: "code",
+                    source: content.code,
+                    metadata: {
+                        parent_cell: this.id,
+                        execution_id: content.execution_id
+                    },
+                    outputs: [],
+                });
+                this.children.push(codeCell);
+            }
+            else if (msg_type == "update_notebook_cell") {
+                for (const cell of this.children) {
+                    if (cell.metadata?.execution_id == content.execution_id) {
+                        cell.execution_count = content.execution_count;
+                        cell.execution_status = content.execution_status;
+                        break;
+                    }
                 }
             }
         };
@@ -476,7 +496,7 @@ export class BeakerNotebook {
         // attach children to parents: partition before attaching in one pass
         // such that there's no dangling indices while removing elements from a list by iteration
         //
-        // this is entirely a no-op if no cells are tagged as children; legacy notebooks of all parent cells are uneffected
+        // this is entirely a no-op if no cells are tagged as children; legacy notebooks of all parent cells are unaffected
         const [parentCells, childCells]: [IBeakerCell[], IBeakerCell[]] = cellList.reduce(
             (partitions: IBeakerCell[][], cell: IBeakerCell) => {
                 const isChild = (cell: IBeakerCell) => typeof(cell.metadata.beaker_child_of) !== "undefined";

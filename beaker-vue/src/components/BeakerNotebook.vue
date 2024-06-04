@@ -563,7 +563,6 @@ const addCell = (toIndex?: number) => {
 }
 
 const runCell = (cell?: string | IBeakerCell) => {
-    console.log("executing", cell);
     if (cell === undefined) {
         cell = selectedCell.value;
     }
@@ -571,13 +570,17 @@ const runCell = (cell?: string | IBeakerCell) => {
         cell = _getCell(cell);
     }
     if (cell !== undefined) {
-        cell.execute(session);
+                cell.execute(session);
     }
 }
 
 const removeCell = () => {
     const [parent, child] = splitCellIndex(selectedCellIndex.value);
-    session.notebook.removeCell(parent);
+    if (typeof(child) !== "undefined") {
+        session.notebook.cells[parent].children.splice(child, 1);
+    } else {
+        session.notebook.removeCell(parent);
+    }
 
     // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
     if (cellCount.value === 0) {
