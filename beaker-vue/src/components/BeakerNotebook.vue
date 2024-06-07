@@ -113,6 +113,7 @@
                             @click="selectCell(index)"
                             :childOnClickCallback="selectCell"
                             :cell="cell"
+                            :getCell="_getCell"
                             @keyboard-nav="handleNavAction"
                             @dragstart="handleDragStart($event, cell, index)"
                             @drop="handleDrop($event, index)"
@@ -348,7 +349,7 @@ const mergeCellIndex = (parent: number, child: number | undefined): string => {
 
 const getChildCount = (index: string): number => {
     const [parent, child] = splitCellIndex(index);
-    return session.notebook.cells[parent]?.children.length || 0
+    return session.notebook.cells[parent]?.children?.length || 0
 }
 
 function handleMoveCell(fromIndex: number, toIndex: number) {
@@ -419,7 +420,9 @@ function focusSelectedCell() {
         return;
     }
     const elem = cellsContainerRef.value.querySelector('.beaker-cell.selected');
-    elem.focus();
+    if (typeof(elem) !== "undefined" && elem !== null) {
+        elem.focus();
+    }
 }
 
 const selectNextCell = (event?) => {
@@ -428,24 +431,18 @@ const selectNextCell = (event?) => {
     }
 
     const currentIndex = selectedCellIndex.value;
+    const childCount = getChildCount(currentIndex);
     const [parent, child] = splitCellIndex(currentIndex);
     // TODO should we wrap around? Should we auto-add a new cell?
     if (parent === cellCount.value - 1) {
         return;
     }
 
-    if (typeof(child) === "undefined") {
-        selectCell(`${parent + 1}`);
-    } else {
-        if (child >= getChildCount(currentIndex) - 1) {
-            selectCell(`${parent + 1}`);
-        } else {
-            selectCell(`${parent}:${child + 1}`);
-        }
-    }
-
-    if (typeof(child) !== "undefined" && child < getChildCount(currentIndex) - 1) {
-        selectCell(`${parent}:${child + 1}`);
+    // since children are 0-indexed, consider a parent selector as "child -1" for purpose of incrementing
+    const childIndex = typeof(child) === "undefined" ? -1 : child;
+    console.log(childCount, childIndex);
+    if (childCount > 0 && childIndex < childCount - 1) {
+        selectCell(`${parent}:${childIndex + 1}`);
     } else {
         selectCell(`${parent + 1}`);
     }
@@ -466,16 +463,24 @@ const selectPreviousCell = (event?) => {
     }
 
     const currentIndex = selectedCellIndex.value;
+    const childCount = getChildCount(currentIndex);
     const [parent, child] = splitCellIndex(currentIndex);
 
     if (parent === 0) {
         return;
     }
 
-    if (typeof(child) !== "undefined" && child > 0) {
+    if (childCount > 0 && child > 0) {
         selectCell(`${parent}:${child - 1}`);
     } else {
-        selectCell(`${parent - 1}`);
+        // select last child of above cell if present
+        const target = `${parent - 1}`;
+        const targetChildCount = getChildCount(target);
+        if (targetChildCount > 0) {
+            selectCell(`${target}:${targetChildCount - 1}`)
+        } else {
+            selectCell(target);
+        }
     }
 
     nextTick(() => {

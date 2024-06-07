@@ -39,6 +39,7 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     source: nbformat.MultilineString;
     status: BeakerCellStatus;
     children?: BeakerBaseCell[]
+    custom_child_renderer?: boolean = false;
 
     constructor() {
         this.status = "idle";
@@ -104,6 +105,7 @@ export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
 
 export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell {
     declare cell_type: 'code';
+    declare run_code_tool_result: string | undefined;
     id?: string;
     outputs: nbformat.IOutput[];
     execution_count: nbformat.ExecutionCount;
@@ -125,6 +127,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
 
 
     public execute(session: BeakerSession): IBeakerFuture | null {
+        this.run_code_tool_result = undefined;
         const handleIOPub = (msg: IBeakerIOPubMessage): void => {
             const msg_type = msg.header.msg_type;
             const content = msg.content;
@@ -229,6 +232,8 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         Object.keys(content).forEach((key) => {this[key] = content[key] });
         this.events = this.events || [];
         this.children = this.children || [];
+        // notify the BeakerCell component that special rendering is happening in BeakerQueryCell
+        this.custom_child_renderer = true;
         if (this.id === undefined) {
             this.id = uuidv4();
         }
@@ -290,7 +295,17 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 for (const cell of this.children) {
                     if (cell.metadata?.execution_id == content.execution_id) {
                         cell.execution_count = content.execution_count;
-                        cell.execution_status = content.execution_status;
+                        cell.status = content.execution_status;
+                        cell.run_code_tool_result = "success";
+                        if (content.execution_status === "error") {
+                            // TODO: align to message output, placeholder
+                            cell.outputs.push({
+                                output_type: "error",
+                                ename: msg.content.ename,
+                                evalue: msg.content.evalue,
+                                traceback: msg.content.traceback,
+                            });
+                        }
                         break;
                     }
                 }

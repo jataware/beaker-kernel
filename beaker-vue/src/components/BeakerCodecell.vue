@@ -20,8 +20,8 @@
             <div class="state-info">
                 <div class="execution-count-badge">
                     <Badge
-                        :class="{secondary: badgeSeverity === 'secondary'}"
-                        :severity="badgeSeverity"
+                        :class="{secondary: status === 'secondary'}"
+                        :severity="status"
                         :value="cell.execution_count || '&nbsp;'">
                     </Badge>
                 </div>
@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject } from "vue";
+import { defineProps, nextTick, defineExpose, ref, shallowRef, computed, inject } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
@@ -79,6 +79,10 @@ const badgeSeverity = computed(() => {
     return mappings[executeState.value];
 });
 
+const status = computed(() => {
+    return cell.value?.run_code_tool_result || badgeSeverity.value;
+})
+
 function handleCodeChange() {
     if (executeState.value !== ExecuteStatus.Pending) {
         executeState.value = ExecuteStatus.Modified;
@@ -107,25 +111,20 @@ const codeExtensions = computed(() => {
 
 });
 
+const handleDone = async (message: any) => {
+    if (message?.content?.status === 'ok') {
+        executeState.value = ExecuteStatus.Success;
+    } else {
+        executeState.value = ExecuteStatus.Error;
+    }
+    // Timeout added to busy indicators from jumping in/out too quickly
+    setTimeout(() => {
+        isBusy.value = false;
+    }, 500);
+};
+
 const execute = (evt: any) => {
     isBusy.value = true;
-
-    const handleDone = async (message: any) => {
-
-        if (message?.content?.status === 'ok') {
-            executeState.value = ExecuteStatus.Success;
-        } else {
-            executeState.value = ExecuteStatus.Error;
-        }
-
-
-        // Timeout added to busy indicators from jumping in/out too quickly
-        setTimeout(() => {
-            isBusy.value = false;
-        }, 500);
-
-    };
-
     const future = props.cell.execute(session);
     future.done.then(handleDone);
     executeState.value = ExecuteStatus.Pending;

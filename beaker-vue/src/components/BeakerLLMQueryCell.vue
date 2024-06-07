@@ -78,6 +78,21 @@
                 @click="respond"
             />
         </div>
+        <div class="cell-children">
+            <Component
+                v-for="(child, subindex) in props.cell?.children"
+                :key="child.id"
+                :is="BeakerCodeCell"
+                :cell="child"
+                :index="`${index}:${subindex}`"
+                :class="{
+                    selected: (index === selectedCellIndex)
+                }"
+                ref="childrenRef"
+                drag-enabled=false
+                @click.stop="props.childOnClickCallback(`${index}:${subindex}`)"
+            />
+        </div>
     </div>
 
 </template>
@@ -88,9 +103,14 @@ import Button from "primevue/button";
 import ContainedTextArea from './ContainedTextArea.vue';
 import { IIOPubMessage } from "@jupyterlab/services/lib/kernel/messages";
 import { BeakerSession } from 'beaker-kernel';
+import BeakerCodeCell from './BeakerCodecell.vue';
 
 const props = defineProps([
-    "cell",
+    'index',
+    'cell',
+    'selectedCellIndex',
+    'childOnClickCallback',
+    'selectNext'
 ]);
 
 const cell = ref(props.cell);
@@ -99,6 +119,7 @@ const editingContents = ref("");
 const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
+const childrenRef = ref<typeof BeakerCodeCell|null>(null);
 
 function cancelEdit() {
     editing.value = false;

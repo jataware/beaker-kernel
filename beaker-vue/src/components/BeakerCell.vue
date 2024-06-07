@@ -21,12 +21,21 @@
       </div>
 
       <div class="cell-contents">
+        <!-- pass properties for index and funcs down so that if the given component -->
+        <!-- needs further control over how its children render, that it can -->
         <Component
             :is="componentMap[props.cell.cell_type || 'raw']"
             :cell="props.cell"
             ref="typedCellRef"
+            
+            :index="index"
+            :selectedCellIndex="selectedCellIndex"
+            :childOnClickCallback="childOnClickCallback"
+            :selectNext="() => emit('keyboard-nav', 'select-next-cell')"
         />
-        <div class="cell-children">
+        <!-- fallback/standard child rendering, if cell does not take ownership of it -->
+        <!-- TODO: best representation of which cells must handle their own subtree rendering -->
+        <div class="cell-children" v-if="typeof props.cell?.custom_child_renderer === 'undefined'">
             <Component
                 v-for="(child, subindex) in props.cell?.children"
                 :key="child.id"
@@ -39,8 +48,6 @@
                 ref="childrenRef"
                 drag-enabled=false
                 @click.stop="childOnClickCallback(`${index}:${subindex}`)"
-                @keydown.ctrl.enter.prevent="execute"
-                @keydown.shift.enter.prevent="executeAndMove"
                 @keyup.esc="unfocusEditor"
             />
         </div>
@@ -50,24 +57,28 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, defineEmits, defineExpose, Component, nextTick } from "vue";
+import { defineProps, ref, computed, defineEmits, defineExpose, Component, inject } from "vue";
 import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
+import { BeakerSession } from 'beaker-kernel';
 
 const props = defineProps([
     'index',
     'cell',
     'dragEnabled',
     'selectedCellIndex',
-    'childOnClickCallback'
+    'childOnClickCallback',
+    'getCell'
 ]);
 
 const emit = defineEmits([
     'move-cell',
     'keyboard-nav'
 ]);
+
+const session: BeakerSession = inject("session");
 
 type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
 
@@ -104,16 +115,9 @@ const unfocusEditor = () => {
 };
 
 function execute() {
-    const child = getSelectedChild();
-    const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
-    
-    if (targetRef?.value?.execute) {
-        targetRef.value.execute();
-        // For code/markdown cells
-        unfocusEditor();
-        return true;
-    }
-    return false;
+    props.getCell(props.selectedCellIndex)?.execute(session);
+    unfocusEditor();
+    return true;
 }
 
 const executeAndMove = () => {
