@@ -20,8 +20,8 @@
             <div class="state-info">
                 <div class="execution-count-badge">
                     <Badge
-                        :class="{secondary: status === 'secondary'}"
-                        :severity="status"
+                        :class="{secondary: badgeSeverity === 'secondary'}"
+                        :severity="badgeSeverity"
                         :value="cell.execution_count || '&nbsp;'">
                     </Badge>
                 </div>
@@ -61,13 +61,12 @@ const handleReady = (payload) => {
 };
 
 enum ExecuteStatus {
-  Success = 'success',
+  Success = 'ok',
   Modified = 'modified',
   Error = 'error',
   Pending = 'pending',
+  None = 'none'
 }
-
-const executeState = ref<ExecuteStatus>(ExecuteStatus.Pending);
 
 const badgeSeverity = computed(() => {
     const mappings = {
@@ -75,25 +74,19 @@ const badgeSeverity = computed(() => {
         [ExecuteStatus.Modified]: 'warning',
         [ExecuteStatus.Error]: 'danger',
         [ExecuteStatus.Pending]: 'secondary',
+        [ExecuteStatus.None]: "secondary",
     };
-    return mappings[executeState.value];
+    return mappings[cell.value?.last_execution.status];
 });
 
-const status = computed(() => {
-    return cell.value?.run_code_tool_result || badgeSeverity.value;
-})
 
 function handleCodeChange() {
-    if (executeState.value !== ExecuteStatus.Pending) {
-        executeState.value = ExecuteStatus.Modified;
-    }
-
+    cell.value.reset_execution_state();
     // TODO See codemirror view API for future keyboard navigation
     // eg to know if we're at the top or bottom
     // of editor and user presser up/down arrows keys to navigate
     // to another cell
     // console.log(editorView.value.inputState);
-
 }
 
 const codeExtensions = computed(() => {
@@ -111,23 +104,8 @@ const codeExtensions = computed(() => {
 
 });
 
-const handleDone = async (message: any) => {
-    if (message?.content?.status === 'ok') {
-        executeState.value = ExecuteStatus.Success;
-    } else {
-        executeState.value = ExecuteStatus.Error;
-    }
-    // Timeout added to busy indicators from jumping in/out too quickly
-    setTimeout(() => {
-        isBusy.value = false;
-    }, 500);
-};
-
 const execute = (evt: any) => {
-    isBusy.value = true;
     const future = props.cell.execute(session);
-    future.done.then(handleDone);
-    executeState.value = ExecuteStatus.Pending;
 }
 
 const enter = () => {

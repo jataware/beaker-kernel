@@ -575,7 +575,7 @@ const runCell = (cell?: string | IBeakerCell) => {
         cell = _getCell(cell);
     }
     if (cell !== undefined) {
-                cell.execute(session);
+        cell.execute(session);
     }
 }
 

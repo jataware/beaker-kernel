@@ -115,7 +115,10 @@ const unfocusEditor = () => {
 };
 
 function execute() {
-    props.getCell(props.selectedCellIndex)?.execute(session);
+    const child = getSelectedChild();
+    const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
+    
+    targetRef.value?.execute(session);
     unfocusEditor();
     return true;
 }

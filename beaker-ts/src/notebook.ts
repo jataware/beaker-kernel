@@ -26,6 +26,8 @@ export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
 
 export type BeakerCellStatus = messages.Status | "awaiting_input";
 
+export type BeakerCellExecutionStatus = {status: "none"} | {status: "modified"} | {status: "pending"} |  messages.IReplyOkContent | messages.IReplyAbortContent | messages.IReplyErrorContent;
+
 export type BeakerCellType = nbformat.CellType | string | 'query';
 
 export class BeakerBaseCell implements nbformat.IBaseCell {
@@ -38,11 +40,17 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     metadata: Partial<nbformat.ICellMetadata>;
     source: nbformat.MultilineString;
     status: BeakerCellStatus;
-    children?: BeakerBaseCell[]
+    children?: BeakerBaseCell[];
+    last_execution?: BeakerCellExecutionStatus;
     custom_child_renderer?: boolean = false;
 
     constructor() {
         this.status = "idle";
+        this.last_execution = {status: "none"};
+    }
+
+    public reset_execution_state(): void {
+        this.last_execution = {status: "modified"};
     }
 
     public fromJSON(obj: any) {
@@ -73,9 +81,8 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
 }
 
 export interface IBeakerQueryEvent extends JSONObject {
-    type: "thought" | "response" | "user_question" | "user_answer" | "error";
-    content: string;
-
+    type: "thought" | "response" | "user_question" | "user_answer" | "error" | "code_cell";
+    content: string | PartialJSONValue;
 };
 
 export interface IQueryCell extends nbformat.IBaseCell {
@@ -109,6 +116,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
     id?: string;
     outputs: nbformat.IOutput[];
     execution_count: nbformat.ExecutionCount;
+    // messages.ReplyContent<IReplyOkContent> would be preferable as a base but ReplyContent is private.
     declare metadata: Partial<nbformat.ICodeCellMetadata>;
 
     constructor(content: nbformat.ICell) {
@@ -125,9 +133,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         }
     }
 
-
     public execute(session: BeakerSession): IBeakerFuture | null {
-        this.run_code_tool_result = undefined;
         const handleIOPub = (msg: IBeakerIOPubMessage): void => {
             const msg_type = msg.header.msg_type;
             const content = msg.content;
@@ -159,26 +165,39 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
 
         const handleReply = async (msg: messages.IExecuteReplyMsg) => {
             if (msg.content.status === "ok") {
+                this.last_execution = {status: "ok"};
                 this.execution_count = msg.content.execution_count;
             }
             else if (msg.content.status === "error") {
                 this.execution_count = msg.content.execution_count;
-                this.outputs.push({
-                    output_type: "error",
+                const error_details = {
                     ename: msg.content.ename,
                     evalue: msg.content.evalue,
                     traceback: msg.content.traceback,
+                };
+                this.last_execution = {
+                    status: "error",
+                    ...error_details
+                };
+                this.outputs.push({
+                    output_type: "error",
+                    ...error_details
                 });
             }
             else if (msg.content.status === "abort") {
                 this.execution_count = msg.content.execution_count;
+                const error_details = {
+                    ename: "Execution aborted",
+                    evalue: "Execution aborted",
+                    traceback: [],
+                };
+                this.last_execution = {
+                    status: "error",
+                    ...error_details,
+                };
                 this.outputs.push({
                     output_type: "error",
-                    content: {
-                        ename: "Execution aborted",
-                        evalue: "Execution aborted",
-                        traceback: [],
-                    },
+                    content: error_details,
                 });
             }
         };
@@ -290,22 +309,36 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                     outputs: [],
                 });
                 this.children.push(codeCell);
+                this.events.push({
+                    type: "code_cell",
+                    content: {
+                        id: codeCell.id,
+                        index: this.children?.length - 1
+                    },
+                });
+
             }
             else if (msg_type == "update_notebook_cell") {
                 for (const cell of this.children) {
                     if (cell.metadata?.execution_id == content.execution_id) {
                         cell.execution_count = content.execution_count;
-                        cell.status = content.execution_status;
-                        cell.run_code_tool_result = "success";
+                        let status = {
+                            status: content.execution_status
+                        }
                         if (content.execution_status === "error") {
                             // TODO: align to message output, placeholder
-                            cell.outputs.push({
-                                output_type: "error",
+                            const error_details = {
                                 ename: msg.content.ename,
                                 evalue: msg.content.evalue,
                                 traceback: msg.content.traceback,
+                            };
+                            cell.outputs.push({
+                                output_type: "error",
+                                ...error_details,
                             });
+                            status = {...status, ...error_details};
                         }
+                        cell.last_execution = status;
                         break;
                     }
                 }
@@ -325,15 +358,35 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
 
         const handleReply = async (msg: messages.IExecuteReplyMsg) => {
             if (msg.content.status === "ok") {
-                // TODO: Additional success handling?
+                this.last_execution = {
+                    status: "ok",
+                };
             }
             else if (msg.content.status === "error") {
+                const error_details = {
+                    ename: msg.content.ename,
+                    evalue: msg.content.evalue,
+                    traceback: msg.content.traceback,
+                };
+                this.last_execution = {
+                    status: "error",
+                    ...error_details
+                };
                 this.events.push({
                     type: "error",
                     content: msg.content.evalue,
                 });
             }
             else if (msg.content.status === "abort") {
+                const error_details = {
+                    ename: "Execution aborted",
+                    evalue: "Execution aborted",
+                    traceback: [],
+                };
+                this.last_execution = {
+                    status: "error",
+                    ...error_details,
+                };
                 this.events.push({
                     type: "error",
                     content: "Request aborted",
