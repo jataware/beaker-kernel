@@ -11,7 +11,8 @@ from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 from archytas.tool_utils import collect_tools_from_object
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import action, get_socket, server_token, server_url
+from beaker_kernel.lib.utils import action, get_socket
+from beaker_kernel.lib.config import config
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -127,9 +128,9 @@ class BaseContext:
             for subkernel in autodiscover("subkernels").values()
         }
         res = requests.post(
-            f"{server_url}/api/kernels",
+            f"{config.jupyter_server}/api/kernels",
             json={"name": language, "path": ""},
-            headers={"Authorization": f"token {server_token}"},
+            headers={"Authorization": f"token {config.jupyter_token}"},
         )
         kernel_info = res.json()
         self.beaker_kernel.update_running_kernels()

@@ -319,6 +319,12 @@ class BeakerJupyterApp(LabServerApp):
     open_browser = False
     extension_url = "/"
 
+    subcommands = {}
+
+    @classmethod
+    def get_extension_package(cls):
+        return cls.__module__
+
     def initialize_handlers(self):
         """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""
         self.handlers.append((r"/api/kernels", SafeKernelHandler))

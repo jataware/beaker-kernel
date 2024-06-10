@@ -12,6 +12,7 @@ from archytas.tool_utils import tool
 
 from .jupyter_kernel_proxy import ( KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                    JupyterMessage, JupyterMessageTuple)
+from .config import ConfigClass
 
 if TYPE_CHECKING:
     from beaker_kernel.kernel import LLMKernel
@@ -19,9 +20,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
-server_url = os.environ.get("JUPYTER_SERVER", None)
-server_token = os.environ.get("JUPYTER_TOKEN", None)
+config = ConfigClass()
 
 def env_enabled(env_var: str):
     return os.environ.get(env_var, "false").lower() == "true"

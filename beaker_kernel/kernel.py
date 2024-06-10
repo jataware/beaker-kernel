@@ -19,7 +19,7 @@ from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
 from .lib.utils import (message_handler, LogMessageEncoder, magic,
-                        handle_message, get_socket, server_url, server_token)
+                        handle_message, get_socket)
 
 if TYPE_CHECKING:
     from .lib.agent import BaseAgent
