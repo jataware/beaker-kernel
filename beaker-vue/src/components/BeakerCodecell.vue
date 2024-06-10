@@ -29,6 +29,14 @@
                     v-if="isBusy"
                     class="pi pi-spin pi-spinner busy-icon"
                 />
+                <Button
+                    v-if="hasRollback"
+                    class="rollback-button"
+                    :severity="badgeSeverity"
+                    icon="pi pi-refresh"
+                    size="small"
+                    @click="rollback"
+                />
             </div>
         </div>
     </div>
@@ -41,6 +49,8 @@ import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
+import Button from 'primevue/button';
+
 
 const props = defineProps([
     "cell",
@@ -67,6 +77,12 @@ enum ExecuteStatus {
   Pending = 'pending',
   None = 'none'
 }
+
+const hasRollback = computed(() => {
+    return typeof(cell.value?.last_execution?.checkpoint_index) !== "undefined";
+});
+
+const rollback = () => cell.value.rollback(session);
 
 const badgeSeverity = computed(() => {
     const mappings = {
@@ -175,6 +191,13 @@ defineExpose({
             background-color: var(--surface-d);
         }
     }
+}
+
+.rollback-button {
+    margin-top: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 45%;
 }
 
 .busy-icon {

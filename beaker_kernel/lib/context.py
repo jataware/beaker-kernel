@@ -287,14 +287,14 @@ class BaseContext:
         return template.render(**render_dict)
 
 
-    async def execute(self, command, response_handler=None, parent_header={}):
+    async def execute(self, command, response_handler=None, parent_header={}, store_history=False):
         self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
         stream = self.subkernel.connected_kernel.streams.shell
         execution_message = self.subkernel.connected_kernel.make_multipart_message(
             msg_type="execute_request",
             content={
                 "silent": False,
-                "store_history": False,
+                "store_history": store_history,
                 "user_expressions": {},
                 "allow_stdin": True,
                 "stop_on_error": False,

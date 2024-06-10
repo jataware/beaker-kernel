@@ -46,8 +46,8 @@ class BaseSubkernel(abc.ABC):
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
         return self.context.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)
 
-    async def execute(self, command, response_handler=None, parent_header={}):
-        return await self.context.execute(command, response_handler, parent_header)
+    async def execute(self, command, response_handler=None, parent_header={}, store_history=False):
+        return await self.context.execute(command, response_handler, parent_header, store_history)
 
     async def evaluate(self, expression, parent_header={}):
         return await self.context.evaluate(expression, parent_header)
@@ -110,6 +110,8 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
     update_payload = {
         "execution_count": execution_context["result"].content["execution_count"],
         "execution_status": execution_context["result"].content["status"],
+        "execution_return": str(execution_context["return"]),
+        "dump": str(execution_context["return"]),
         "execution_id": str(execution_id),
         "checkpoint_index": checkpoint_index
     }
@@ -197,7 +199,7 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
 
     async def execute_and_checkpoint(self, code: str) -> tuple[int, Any]:
         checkpoint_index = await self.add_checkpoint()
-        result = await self.evaluate(code)
+        result = await self.execute(code, store_history=True)
         return checkpoint_index, result
 
     async def execute_and_rollback(self, code: str):

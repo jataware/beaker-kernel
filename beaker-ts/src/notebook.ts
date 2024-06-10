@@ -26,7 +26,14 @@ export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
 
 export type BeakerCellStatus = messages.Status | "awaiting_input";
 
-export type BeakerCellExecutionStatus = {status: "none"} | {status: "modified"} | {status: "pending"} |  messages.IReplyOkContent | messages.IReplyAbortContent | messages.IReplyErrorContent;
+export type BeakerCellExecutionStatus =
+    | {status: "none"} 
+    | {status: "modified"} 
+    | {status: "pending"} 
+    | messages.IReplyAbortContent 
+    | messages.IReplyErrorContent
+    | (messages.IReplyOkContent & { checkpoint_index? : number })
+    ;
 
 export type BeakerCellType = nbformat.CellType | string | 'query';
 
@@ -218,6 +225,21 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         future.onReply = handleReply;
         return future;
     }
+
+    public rollback(session: BeakerSession): IBeakerFuture | null {
+        if (this?.last_execution?.status === "ok") {
+            console.log(this.last_execution.checkpoint_index);
+            const future = session.executeAction(
+                "rollback",
+                {
+                    checkpoint_index: this.last_execution.checkpoint_index
+                }
+            );
+            this.last_execution = {"status": "none"};
+            return future;
+        }
+        return null;
+    };
 }
 
 export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMarkdownCell {
@@ -322,9 +344,10 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 for (const cell of this.children) {
                     if (cell.metadata?.execution_id == content.execution_id) {
                         cell.execution_count = content.execution_count;
-                        let status = {
+                        let status : BeakerCellExecutionStatus = {
                             status: content.execution_status
                         }
+                        
                         if (content.execution_status === "error") {
                             // TODO: align to message output, placeholder
                             const error_details = {
@@ -337,6 +360,15 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                                 ...error_details,
                             });
                             status = {...status, ...error_details};
+                        }
+                        else if (status.status === "ok") {
+                            status = {...status, checkpoint_index: content.checkpoint_index};
+                            cell.outputs.push({
+                                output_type: "execute_result",
+                                data: {
+                                    "text/plain": content.execution_return
+                                }
+                            });
                         }
                         cell.last_execution = status;
                         break;
