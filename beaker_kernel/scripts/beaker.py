@@ -74,18 +74,20 @@ def notebook(ctx, jupyter_args):
         webbrowser.open(app.public_url)
         app.start()
     finally:
-        pass
+        app.stop()
 
 
 @cli.group(name="dev", invoke_without_command=True)
-@click.option("--open-notebook", "-n", is_flag=True, default=True, type=bool, help="Whether a webbrowser should be opened to the notebook.")
+@click.option("--no-open-notebook", "-n", is_flag=True, default=False, type=bool, help="Prevent opening the notebook in a webbrowser.")
 @click.pass_context
-def dev(ctx: click.Context, open_notebook=None):
+def dev(ctx: click.Context, no_open_notebook):
     """
     Start Beaker server in development mode. (Subcommands available)
     """
     # Don't run if we are running watch
     if ctx.invoked_subcommand is None:
+        # Invert the default behavior around opening the notebook as `watch` has an opposite default.
+        ctx.params["open_notebook"] = not ctx.params.pop("no_open_notebook")
         # Invoke watch as default action
         watch.invoke(ctx)
         return
@@ -93,7 +95,7 @@ def dev(ctx: click.Context, open_notebook=None):
 
 @dev.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
 @click.argument("jupyter_args", nargs=-1, type=click.UNPROCESSED)
-@click.option("--open-notebook", "-n", is_flag=True, default=False, type=bool, help="Whether a webbrowser should be opened to the notebook.")
+@click.option("--open-notebook", "-n", is_flag=True, default=False, type=bool, help="Open a notebook in a webbrowser.")
 def serve(jupyter_args, open_notebook):
     from beaker_kernel.server.dev import DevBeakerJupyterApp
 
@@ -103,12 +105,12 @@ def serve(jupyter_args, open_notebook):
             webbrowser.open(app.public_url)
         app.start()
     finally:
-        pass
+        app.stop()
 
 
 @dev.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
 @click.option("--extra_dir", multiple=True)
-@click.option("--open-notebook", "-n", is_flag=True, default=False, type=bool, help="Whether a webbrowser should be opened to the notebook.")
+@click.option("--open-notebook", "-n", is_flag=True, default=False, type=bool, help="Open a notebook in a webbrowser.")
 @click.argument("jupyter_args", nargs=-1, type=click.UNPROCESSED)
 def watch(extra_dir=None, open_notebook=None, jupyter_args=None):
     from beaker_kernel.server.dev import create_observer
@@ -141,7 +143,7 @@ def watch(extra_dir=None, open_notebook=None, jupyter_args=None):
     finally:
         if app_subprocess:
             click.echo("Cleaning up...")
-            app_subprocess.kill()
+            app_subprocess.terminate()
         observer.unschedule_all()
         observer.stop()
         del observer
