@@ -38,6 +38,7 @@
 import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
+import { EditorView } from "codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
@@ -93,7 +94,7 @@ function handleCodeChange() {
 }
 
 const codeExtensions = computed(() => {
-    const ext = [];
+    const ext = [EditorView.lineWrapping];
 
     const subkernel = activeContext.value?.language?.subkernel || '';
     const isPython = subkernel.includes('python');
