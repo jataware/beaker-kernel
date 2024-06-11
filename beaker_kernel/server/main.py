@@ -4,12 +4,14 @@ import json
 import logging
 import os
 import uuid
+import urllib.parse
 from typing import Dict
 
 from jupyter_core.utils import ensure_async
 from jupyter_server.auth.decorator import authorized
 from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
+from jupyter_server.serverapp import ServerApp
 from jupyter_server.services.kernels.handlers import MainKernelHandler, json_default
 from jupyter_server.utils import url_escape, url_path_join
 from jupyterlab_server import LabServerApp
@@ -310,14 +312,44 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
         }
         return self.write(json.dumps(output))
 
+
+class BeakerServerApp(ServerApp):
+    """
+    Customizable ServerApp for use with Beaker
+    """
+
+    @property
+    def public_url(self):
+        return f"http://{self.ip}:{self.port}/"
+
+    @property
+    def local_url(self):
+        return self.public_url
+
+    @property
+    def display_url(self):
+        return f"    {self.public_url}"
+
+    def _get_urlparts(self, path: str | None = None, include_token: bool = False) -> urllib.parse.ParseResult:
+        # Always return urls without tokens
+        return super()._get_urlparts(path, False)
+
+
 class BeakerJupyterApp(LabServerApp):
     name = "beaker_kernel"
+    serverapp_class = BeakerServerApp
     load_other_extensions = True
     app_name = "Beaker Jupyter App"
     app_version = version
     allow_origin = "*"
     open_browser = False
     extension_url = "/"
+
+    subcommands = {}
+
+    @classmethod
+    def get_extension_package(cls):
+        return cls.__module__
 
     def initialize_handlers(self):
         """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""

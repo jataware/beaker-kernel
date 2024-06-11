@@ -332,9 +332,9 @@ function handleNavAction(action) {
 /**
  * Splits a combined cell index into component parts.
  * Cell indices are in the form of `"1:2"` (representing notebook cell 1, third child)
- * 
+ *
  * usage: `const [parent, child] = splitCellIndex("1:2")`
- * 
+ *
  * note: child will be `undefined` in the case of `const [parent, child] = splitCellIndex("1")`
  * due to assignment destructuring rules
  */

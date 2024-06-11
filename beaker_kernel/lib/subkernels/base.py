@@ -10,8 +10,9 @@ import requests
 
 from archytas.tool_utils import AgentRef, tool, LoopControllerRef, ReactContextRef
 
-from ..utils import server_url, server_token, env_enabled, action
+from ..utils import env_enabled, action
 from ..jupyter_kernel_proxy import ProxyKernelClient
+from ..config import config
 
 Checkpoint = dict[str, str]
 
@@ -42,7 +43,7 @@ class BaseSubkernel(abc.ABC):
         self.jupyter_id = jupyter_id
         self.connected_kernel = ProxyKernelClient(subkernel_configuration)
         self.context = context
-    
+
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
         return self.context.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)
 
@@ -58,8 +59,8 @@ class BaseSubkernel(abc.ABC):
             try:
                 print(f"Shutting down connected subkernel {self.jupyter_id}")
                 res = requests.delete(
-                    f"{server_url}/api/kernels/{self.jupyter_id}",
-                    headers={"Authorization": f"token {server_token}"},
+                    f"{config.JUPYTER_SERVER}/api/kernels/{self.jupyter_id}",
+                    headers={"Authorization": f"token {config.JUPYTER_TOKEN}"},
                 )
                 if res.status_code == 204:
                     self.jupyter_id = None
@@ -75,10 +76,10 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
     was used.
 
     This tool can be help answer questions about the kernel state. For
-    example, a user may ask something about a dictionary `d` and using 
+    example, a user may ask something about a dictionary `d` and using
     run code with the `code` of `d.keys()`.
 
-    This tool can also be used to double check if code will work before 
+    This tool can also be used to double check if code will work before
     returning it as a final answer.
 
     Note that this tool does not capture `stdout` AND only returns the
@@ -169,7 +170,7 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         self.checkpoints.append(checkpoint)
         return len(self.checkpoints) - 1
 
-   
+
     async def rollback(self, checkpoint_index: int):
         if not self.checkpoints_enabled:
             raise RuntimeError("Checkpoints are not enabled")
@@ -178,7 +179,7 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         checkpoint = self.checkpoints[checkpoint_index]
         await self.load_checkpoint(checkpoint)
         self.checkpoints = self.checkpoints[:checkpoint_index + 1]
-    
+
     @action(action_name="rollback", enabled=env_enabled("ENABLE_CHECKPOINTS"))
     async def rollback_action(self, message):
         checkpoint_index = message.content.get("checkpoint_index", None)
@@ -207,5 +208,3 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         result = await self.evaluate(code)
         await self.rollback(checkpoint_index)
         return str(result["return"])
-
-

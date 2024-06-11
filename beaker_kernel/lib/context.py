@@ -11,7 +11,8 @@ from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 from archytas.tool_utils import collect_tools_from_object
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import action, get_socket, server_token, server_url
+from beaker_kernel.lib.utils import action, get_socket
+from beaker_kernel.lib.config import config
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -34,6 +35,7 @@ class BaseContext:
     subkernel: "BaseSubkernel"
     config: Dict[str, Any]
     agent: "ReActAgent"
+    current_llm_query: str | None
 
     intercepts: List[Tuple[str, Callable, str]]
     jinja_env: Optional[Environment]
@@ -52,6 +54,7 @@ class BaseContext:
             context=self,
             tools=self.subkernel.tools,
         )
+        self.current_llm_query = None
 
         self.disable_tools()
 
@@ -89,7 +92,7 @@ class BaseContext:
             for attr, value in os.environ.items() if attr.startswith(TOOL_TOGGLE_PREFIX)
         }
         toggles.update({
-            attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): getattr(self, attr) 
+            attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): getattr(self, attr)
             for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)
         })
         disabled_tools = [
@@ -125,9 +128,9 @@ class BaseContext:
             for subkernel in autodiscover("subkernels").values()
         }
         res = requests.post(
-            f"{server_url}/api/kernels",
+            f"{config.JUPYTER_SERVER}/api/kernels",
             json={"name": language, "path": ""},
-            headers={"Authorization": f"token {server_token}"},
+            headers={"Authorization": f"token {config.JUPYTER_TOKEN}"},
         )
         kernel_info = res.json()
         self.beaker_kernel.update_running_kernels()

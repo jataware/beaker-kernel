@@ -150,6 +150,7 @@ const filteredLogs = computed(() => {
   margin-top: 0.5rem;
   // margin-bottom: 0;
   position: relative;
+  white-space: pre-wrap;
 
   .p-panel-header {
     background: var(--surface-b);

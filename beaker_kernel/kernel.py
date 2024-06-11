@@ -19,7 +19,7 @@ from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
 from .lib.utils import (message_handler, LogMessageEncoder, magic,
-                        handle_message, get_socket, server_url, server_token)
+                        handle_message, get_socket)
 
 if TYPE_CHECKING:
     from .lib.agent import BaseAgent
@@ -387,6 +387,7 @@ class LLMKernel(KernelProxyManager):
             return
         if not self.context:
             raise Exception("Context has not been set")
+        setattr(self.context, "current_llm_query", request)
         try:
             # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track thoughts
             self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
@@ -433,6 +434,7 @@ class LLMKernel(KernelProxyManager):
         finally:
             # When done, put thought handler back to default to not potentially cause confused thoughts.
             self.context.agent.thought_handler = self.handle_thoughts
+            setattr(self.context, "current_llm_query", None)
 
     async def kernel_info_reply(self, server, target_stream, data):
         await self.send_preview(parent_header={})

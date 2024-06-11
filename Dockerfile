@@ -23,4 +23,4 @@ USER jupyter
 WORKDIR /jupyter
 
 # Service
-CMD ["python", "-m", "beaker_kernel.server.main", "--ip", "0.0.0.0"]
+CMD ["beaker", "notebook", "--ip", "0.0.0.0"]
