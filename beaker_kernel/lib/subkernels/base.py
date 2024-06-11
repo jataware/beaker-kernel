@@ -58,8 +58,8 @@ class BaseSubkernel(abc.ABC):
             try:
                 print(f"Shutting down connected subkernel {self.jupyter_id}")
                 res = requests.delete(
-                    f"{config.jupyter_server}/api/kernels/{self.jupyter_id}",
-                    headers={"Authorization": f"token {config.jupyter_token}"},
+                    f"{config.JUPYTER_SERVER}/api/kernels/{self.jupyter_id}",
+                    headers={"Authorization": f"token {config.JUPYTER_TOKEN}"},
                 )
                 if res.status_code == 204:
                     self.jupyter_id = None

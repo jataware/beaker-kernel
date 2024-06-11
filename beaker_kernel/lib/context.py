@@ -128,9 +128,9 @@ class BaseContext:
             for subkernel in autodiscover("subkernels").values()
         }
         res = requests.post(
-            f"{config.jupyter_server}/api/kernels",
+            f"{config.JUPYTER_SERVER}/api/kernels",
             json={"name": language, "path": ""},
-            headers={"Authorization": f"token {config.jupyter_token}"},
+            headers={"Authorization": f"token {config.JUPYTER_TOKEN}"},
         )
         kernel_info = res.json()
         self.beaker_kernel.update_running_kernels()

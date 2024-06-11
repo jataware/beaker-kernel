@@ -8,9 +8,13 @@ from dataclasses import MISSING
 
 import click
 import dotenv
+import webbrowser
 
-from beaker_kernel.lib.config import config as beaker_config
+from beaker_kernel.lib.config import locate_envfile, config as beaker_config
 from beaker_kernel.lib.autodiscovery import LIB_LOCATIONS
+
+
+SENSITIVE_STR_REPR = "*" * 8
 
 
 class BeakerCli(click.Group):
@@ -61,18 +65,25 @@ def cli():
 @click.argument("jupyter_args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
 def notebook(ctx, jupyter_args):
+    """
+    Start Beaker in local mode and opens a notebook.
+    """
     from beaker_kernel.server.main import BeakerJupyterApp
     try:
-        # BeakerJupyterApp.launch_instance(argv=[jupyter_args])
         app = BeakerJupyterApp.initialize_server(argv=jupyter_args)
+        webbrowser.open(app.public_url)
         app.start()
     finally:
         pass
 
 
 @cli.group(name="dev", invoke_without_command=True)
+@click.option("--open-notebook", "-n", is_flag=True, default=True, type=bool, help="Whether a webbrowser should be opened to the notebook.")
 @click.pass_context
-def dev(ctx):
+def dev(ctx: click.Context, open_notebook=None):
+    """
+    Start Beaker server in development mode. (Subcommands available)
+    """
     # Don't run if we are running watch
     if ctx.invoked_subcommand is None:
         # Invoke watch as default action
@@ -82,11 +93,14 @@ def dev(ctx):
 
 @dev.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
 @click.argument("jupyter_args", nargs=-1, type=click.UNPROCESSED)
-def serve(jupyter_args):
+@click.option("--open-notebook", "-n", is_flag=True, default=False, type=bool, help="Whether a webbrowser should be opened to the notebook.")
+def serve(jupyter_args, open_notebook):
     from beaker_kernel.server.dev import DevBeakerJupyterApp
 
     try:
         app = DevBeakerJupyterApp.initialize_server(argv=jupyter_args)
+        if open_notebook:
+            webbrowser.open(app.public_url)
         app.start()
     finally:
         pass
@@ -94,10 +108,12 @@ def serve(jupyter_args):
 
 @dev.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
 @click.option("--extra_dir", multiple=True)
+@click.option("--open-notebook", "-n", is_flag=True, default=False, type=bool, help="Whether a webbrowser should be opened to the notebook.")
 @click.argument("jupyter_args", nargs=-1, type=click.UNPROCESSED)
-def watch(extra_dir=None, jupyter_args=None):
+def watch(extra_dir=None, open_notebook=None, jupyter_args=None):
     from beaker_kernel.server.dev import create_observer
     app_subprocess = None
+    jupyter_args = jupyter_args or []
 
     def restart():
         click.echo(" *** Restarting service *** \n")
@@ -107,10 +123,15 @@ def watch(extra_dir=None, jupyter_args=None):
     try:
         while True:
             try:
-                app_subprocess = subprocess.Popen([
-                        sys.executable,
-                        sys.argv[0], "dev", "serve", *jupyter_args],
-                        env=os.environ
+                args = [
+                    sys.executable,
+                    sys.argv[0], "dev", "serve", *jupyter_args
+                ]
+                if open_notebook:
+                    args.append("--open-notebook")
+                app_subprocess = subprocess.Popen(
+                    args,
+                    env=os.environ
                 )
                 app_subprocess.wait()
             except (InterruptedError, KeyboardInterrupt, EOFError) as err:
@@ -126,15 +147,94 @@ def watch(extra_dir=None, jupyter_args=None):
         del observer
 
 
-@cli.command()
+@cli.group()
 def config():
-    sensitive_str = "*" * 8
-    envfile = dotenv.find_dotenv()
-    updates = {}
-    if envfile:
-        envfile = os.path.abspath(envfile)
+    """
+    Options for viewing and updating configuration settings
+    """
+    pass
+
+
+@config.command()
+def find():
+    """
+    Locate the configuration file for currently in use
+    """
+    envfile = locate_envfile()
+    if os.path.isfile(envfile):
+        click.echo(f"Configuration location: {envfile}\n")
     else:
-        envfile = os.path.abspath(os.path.join(os.path.curdir, ".env"))
+        click.echo(f"No configuration file located.\nDefault location is: {envfile}\n")
+
+
+@config.command()
+@click.option("--sensitive", "-s", is_flag=True, default=False, type=bool, help="By default, sensitive values are masked. Set this flag to show the actual value.")
+def show(sensitive):
+    """
+    Displays the current Beaker configuration
+    """
+    envfile: str = locate_envfile()
+    if os.path.isfile(envfile):
+        dotenv_config = dotenv.dotenv_values(envfile)
+    else:
+        dotenv_config = {}
+    has_sensitive = False
+
+    click.echo(f"Current Beaker configuration:\n")
+    for field_name, field in beaker_config.__dataclass_fields__.items():
+        env_var: str = field.metadata.get("env_var", None)
+        description: str = field.metadata.get("description", "(No description provided)")
+        is_sensitive: bool = field.metadata.get("sensitive", False)
+        aliases: list[str] = field.metadata.get("aliases", None) or []
+
+        value = getattr(beaker_config, field_name)
+
+        exists_in_config_file = False
+        env_vars_to_check = [env_var, *aliases]
+        for env_var in env_vars_to_check:
+            if env_var in dotenv_config:
+                exists_in_config_file = True
+                dotenv_config.pop(env_var)
+                break
+
+        if is_sensitive and not sensitive:
+            if value:
+                display_value = SENSITIVE_STR_REPR  # rerun with -s flag to display value
+            else:
+                display_value = '(undefined)'
+            has_sensitive = True
+        else:
+            display_value = value
+
+        click.echo(f"# {field_name}: {description}")
+        click.echo(f"{field_name}={display_value}", nl= False)
+        if not exists_in_config_file:
+            click.echo("  # default  not defined in config file", nl=False)
+        click.echo("\n")
+
+    if dotenv_config:
+        click.echo("\nThe following environment variables are defined in the configuration file but not defined in the "
+                   "Beaker configuration:")
+        for var_name, value in dotenv_config.items():
+            if sensitive:
+                click.echo(f"  {var_name}={value}")
+            else:
+                click.echo(f"  {var_name}={SENSITIVE_STR_REPR}")
+        click.echo("")
+
+    if has_sensitive:
+        click.echo("# To expose sensitive values, rerun with the -s flag")
+
+
+@config.command()
+@click.option("--file", "-f", "envfile", type=click.Path(exists=False))
+def update(envfile):
+    """
+    Iterate through available options, prompting for new or updated values.
+    """
+    updates = {}
+    if envfile is None:
+        envfile = locate_envfile()
     envfile_exists = os.path.isfile(envfile)
     if envfile_exists:
         dotenv_config = dotenv.dotenv_values(envfile)
@@ -158,17 +258,17 @@ def config():
                 default = MISSING
 
         if is_sensitive and default:
-            default_display = sensitive_str
+            default_display = SENSITIVE_STR_REPR
         else:
             default_display = default
 
         prompt = f"""
-Please enter the value for configuration option {field_name} (environment variable {env_var})
+Please enter the value for configuration option {field_name}:
 Description: {description}
 
 {field_name}"""
         value = click.prompt(prompt, default=default_display,)
-        if value == sensitive_str:
+        if value == SENSITIVE_STR_REPR:
             value = default
         if value != dotenv_config.get(env_var, MISSING):
             updates[env_var] = value
@@ -180,7 +280,7 @@ Description: {description}
         if isinstance(approval, bool) and approval:
             click.echo("Saving...")
             for varname, value in updates.items():
-                dotenv.set_key(envfile, varname, value)
+                dotenv.set_key(envfile, varname, value, quote_mode="never")
             click.echo("Done.")
         else:
             click.echo("Aborting without saving.")
