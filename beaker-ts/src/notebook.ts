@@ -26,14 +26,22 @@ export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
 
 export type BeakerCellStatus = messages.Status | "awaiting_input";
 
-export type BeakerCellExecutionStatus =
-    | {status: "none"} 
-    | {status: "modified"} 
-    | {status: "pending"} 
-    | messages.IReplyAbortContent 
-    | messages.IReplyErrorContent
-    | (messages.IReplyOkContent & { checkpoint_index? : number })
-    ;
+export type BeakerCellExecutionStatus = IBeakerCellExecutionStatusPlain | IBeakerCellExecutionStatusOk | IBeakerCellExecutionStatusError 
+
+export interface IBeakerCellExecutionStatusPlain {
+    status: "none" | "modified" | "pending" | "abort";
+}
+
+export interface IBeakerCellExecutionStatusOk {
+    status: "ok"
+    checkpoint_index?: number;
+}
+export interface IBeakerCellExecutionStatusError {
+    status: "error";
+    ename: string;
+    evalue: string;
+    traceback: string[];
+}
 
 export type BeakerCellType = nbformat.CellType | string | 'query';
 
