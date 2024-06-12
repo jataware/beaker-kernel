@@ -56,7 +56,6 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     source: nbformat.MultilineString;
     status: BeakerCellStatus;
     children?: BeakerBaseCell[];
-    last_execution?: BeakerCellExecutionStatus;
     custom_child_renderer?: boolean = false;
 
     constructor() {
@@ -127,12 +126,12 @@ export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
 
 export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell {
     declare cell_type: 'code';
-    declare run_code_tool_result: string | undefined;
     id?: string;
     outputs: nbformat.IOutput[];
     execution_count: nbformat.ExecutionCount;
-    // messages.ReplyContent<IReplyOkContent> would be preferable as a base but ReplyContent is private.
     declare metadata: Partial<nbformat.ICodeCellMetadata>;
+    last_execution?: BeakerCellExecutionStatus;
+
 
     constructor(content: nbformat.ICell) {
         super();
