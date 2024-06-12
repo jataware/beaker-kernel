@@ -592,35 +592,29 @@ export class BeakerNotebook {
             }
         });
 
-        // attach children to parents: partition before attaching in one pass
-        // such that there's no dangling indices while removing elements from a list by iteration
-        //
-        // this is entirely a no-op if no cells are tagged as children; legacy notebooks of all parent cells are unaffected
-        const [parentCells, childCells]: [IBeakerCell[], IBeakerCell[]] = cellList.reduce(
-            (partitions: IBeakerCell[][], cell: IBeakerCell) => {
-                const isChild = (cell: IBeakerCell) => typeof(cell.metadata.beaker_child_of) !== "undefined";
-                partitions[isChild(cell) ? 1 : 0].push(cell);
-                return partitions;
-            }, [[], []]
-        );
-        // avoid the need to search parents every iteration when attaching
-        const childMap: {[parent_uuid: string]: IBeakerCell[]} = childCells.reduce((mapping, cell) => {
-            const parent_uuid = String(cell.metadata.beaker_child_of);
-            return {
-                [parent_uuid]: [...(mapping[parent_uuid] || []) , cell]
-            };
-        }, {});
-        parentCells.forEach((parent) => {
-            parent.children = childMap[String(parent.id)] || [];
+        let cellMap: {[uuid: string]: BeakerBaseCell} = {};
+        cellList.forEach((cell: BeakerBaseCell) => {
+            cellMap[cell.id] = cell;
         });
 
+        let i = 0;
+        while (i < cellList.length) {
+            const cell = cellList[i];
+            if (typeof(cell.metadata.beaker_child_of) !== "undefined") {
+                cellMap[cell.metadata.beaker_child_of].children.push(cellList.splice(i, 1)[0]);
+            }
+            else {
+                i++;
+            }
+        }
 
         this.cells.splice(
             0,
             this.cells.length,
-            ...parentCells
+            ...cellList
         );
 
+        console.log(this.cells);
         this.content.metadata = obj.metadata;
     }
 
