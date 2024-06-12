@@ -67,6 +67,7 @@
                 />
             </span>
             <template v-if="event.type === 'response'" >{{ event.content }}</template>
+            <template v-if="event.type === 'abort'" >{{ event.content }}</template>
         </div>
         <div
             class="input-request"

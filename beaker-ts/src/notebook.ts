@@ -94,7 +94,7 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
 }
 
 export interface IBeakerQueryEvent extends JSONObject {
-    type: "thought" | "response" | "user_question" | "user_answer" | "error" | "code_cell";
+    type: "thought" | "response" | "user_question" | "user_answer" | "error" | "code_cell" | "abort";
     content: string | PartialJSONValue;
 };
 
@@ -415,17 +415,11 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 });
             }
             else if (msg.content.status === "abort") {
-                const error_details = {
-                    ename: "Execution aborted",
-                    evalue: "Execution aborted",
-                    traceback: [],
-                };
                 this.last_execution = {
-                    status: "error",
-                    ...error_details,
+                    status: "abort",
                 };
                 this.events.push({
-                    type: "error",
+                    type: "abort",
                     content: "Request aborted",
                 });
             }
