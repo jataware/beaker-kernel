@@ -120,7 +120,6 @@ const unfocusEditor = () => {
 
 function execute() {
     const child = getSelectedChild();
-    console.log(childrenRef, child);
     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
     
     if (targetRef?.value) {

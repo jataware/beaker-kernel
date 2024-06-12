@@ -112,7 +112,6 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
         "execution_count": execution_context["result"].content["execution_count"],
         "execution_status": execution_context["result"].content["status"],
         "execution_return": str(execution_context["return"]),
-        "dump": str(execution_context["return"]),
         "execution_id": str(execution_id),
         "checkpoint_index": checkpoint_index
     }
