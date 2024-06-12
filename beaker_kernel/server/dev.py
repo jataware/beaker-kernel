@@ -30,13 +30,13 @@ class DevBeakerJupyterApp(BeakerJupyterApp):
 
 
 class BeakerHandler(watchdog_events.FileSystemEventHandler):
-    def __init__(self, observer, modules) -> None:
+    def __init__(self, observer, modules, callback=None) -> None:
         super().__init__()
         self.observer = observer
         self.modules = modules
+        self.callback = callback
 
     def on_any_event(self, event):
-        global app_subprocess
         # Only restart based on specific message types below
         if not isinstance(
             event,
@@ -51,24 +51,24 @@ class BeakerHandler(watchdog_events.FileSystemEventHandler):
 
         # Only restart for changes to python files or procedure files
         if event.src_path.endswith(".py") or "procedures" in event.src_path:
+            print(f"\n *** Detected a change in file {event.src_path} *** ")
 
-            # Drain the queue:
-            while not observer.event_queue.empty():
-                observer.event_queue.get_nowait()
+            # Drain the queue, as we are restarting regardless of other changes:
+            while not self.observer.event_queue.empty():
+                self.observer.event_queue.get_nowait()
 
-            # Try to reimport all the modules as a way to check if we will crash
-            # if we restart.
+            # Try to reimport all the modules as a way to check if we will crash if we restart.
             try:
                 for mod in self.modules:
                     importlib.reload(mod)
             except ImportError:
                 logger.error("Error reloading")
 
-            if app_subprocess:
-                app_subprocess.terminate()
+            if self.callback:
+                self.callback()
 
 
-def create_observer(extra_dirs=None):
+def create_observer(extra_dirs=None, callback=None):
     contexts = autodiscover("contexts")
     subkernels = autodiscover("subkernels")
     modules = set([inspect.getmodule(beaker_kernel)])
@@ -93,8 +93,10 @@ def create_observer(extra_dirs=None):
         if not is_subpath:
             paths.add(path)
 
+    print("Watching the following paths for modifications:")
+    print("\n".join(f"  {path}" for path in paths))
     observer = Observer()
-    handler = BeakerHandler(observer, modules)
+    handler = BeakerHandler(observer, modules, callback=callback)
 
     for path in paths:
         observer.schedule(event_handler=handler, path=path, recursive=True)
