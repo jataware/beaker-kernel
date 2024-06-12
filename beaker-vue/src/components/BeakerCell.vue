@@ -27,7 +27,7 @@
             :is="componentMap[props.cell.cell_type || 'raw']"
             :cell="props.cell"
             ref="typedCellRef"
-            
+
             :index="index"
             :selectedCellIndex="selectedCellIndex"
             :childOnClickCallback="childOnClickCallback"
@@ -104,7 +104,7 @@ function focusEditor() {
     const child = getSelectedChild();
     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : beakerCellRef;
     
-    if (targetRef.value) {
+    if (targetRef?.value) {
         const editor: HTMLElement|null = targetRef.value.querySelector('.cm-content');
         if (editor) {
             editor.focus();
@@ -120,9 +120,17 @@ const unfocusEditor = () => {
 
 function execute() {
     const child = getSelectedChild();
+    console.log(childrenRef, child);
     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
     
-    targetRef.value?.execute(session);
+    if (targetRef?.value) {
+        targetRef.value?.execute(session);
+    }
+
+    else {
+        props.getCell(props.selectedCellIndex).execute(session);
+    }
+
     unfocusEditor();
     return true;
 }
