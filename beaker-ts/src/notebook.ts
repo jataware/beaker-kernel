@@ -242,6 +242,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
                 }
             );
             this.last_execution = {"status": "none"};
+            this.execution_count = null;
             return future;
         }
         return null;
