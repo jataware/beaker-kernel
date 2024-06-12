@@ -325,7 +325,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                     nb.addCell(codeCell);
                 }
             }
-            else if (msg_type == "add_notebook_cell") {
+            else if (msg_type == "add_child_codecell") {
                 const codeCell = new BeakerCodeCell({
                     cell_type: "code",
                     source: content.code,
@@ -345,7 +345,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 });
 
             }
-            else if (msg_type == "update_notebook_cell") {
+            else if (msg_type == "update_child_codecell") {
                 for (const cell of this.children) {
                     if (cell.metadata?.execution_id == content.execution_id) {
                         cell.execution_count = content.execution_count;

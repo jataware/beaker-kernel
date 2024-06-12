@@ -102,7 +102,7 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
     }
 
     agent.context.subkernel.context.send_response(
-        "iopub", "add_notebook_cell", result, parent_header=message.header
+        "iopub", "add_child_codecell", result, parent_header=message.header
     )
 
     (checkpoint_index, execution_context) = await agent.context.subkernel.execute_and_checkpoint(code)
@@ -116,7 +116,7 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
         "checkpoint_index": checkpoint_index
     }
     agent.context.send_response(
-        "iopub", "update_notebook_cell", update_payload, parent_header=message.header
+        "iopub", "update_child_codecell", update_payload, parent_header=message.header
     )
 
     return execution_context
