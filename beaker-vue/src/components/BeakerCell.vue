@@ -35,7 +35,7 @@
         />
         <!-- fallback/standard child rendering, if cell does not take ownership of it -->
         <!-- TODO: best representation of which cells must handle their own subtree rendering -->
-        <div class="cell-children" v-if="typeof props.cell?.custom_child_renderer === 'undefined'">
+        <div class="cell-children" v-if="!customChildRendererMap[props.cell.cell_type || 'raw']">
             <Component
                 v-for="(child, subindex) in props.cell?.children"
                 :key="child.id"
@@ -91,6 +91,10 @@ const componentMap: {[key: string]: Component} = {
     'query': BeakerLLMQueryCell,
     'markdown': BeakerMarkdownCell
 }
+
+const customChildRendererMap: {[key: string]: boolean} = {
+    'query': true,
+};
 
 const getSelectedChild = (): number | undefined => {
     return props.selectedCellIndex.split(":").map((part: string) => Number(part))?.[1];

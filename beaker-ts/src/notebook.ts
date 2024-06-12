@@ -56,7 +56,6 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     source: nbformat.MultilineString;
     status: BeakerCellStatus;
     children?: BeakerBaseCell[];
-    custom_child_renderer?: boolean = false;
 
     constructor() {
         this.status = "idle";
@@ -280,8 +279,6 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         Object.keys(content).forEach((key) => {this[key] = content[key] });
         this.events = this.events || [];
         this.children = this.children || [];
-        // notify the BeakerCell component that special rendering is happening in BeakerQueryCell
-        this.custom_child_renderer = true;
         if (this.id === undefined) {
             this.id = uuidv4();
         }
