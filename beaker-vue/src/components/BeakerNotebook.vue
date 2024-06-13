@@ -84,7 +84,8 @@
                     <NotebookControls
                         @run-cell="runCell()"
                         @remove-cell="removeCell"
-                        @add-cell="addCell"
+                        @add-code-cell="addCodeCell"
+                        @add-markdown-cell="addMarkdownCell"
                         @set-context="reapplyContext"
                     />
                 <div style="flex: 1; display: flex; position: relative;">
@@ -319,7 +320,7 @@ function handleNavAction(action) {
         focusSelectedCell();
     } else if (action === 'select-next-cell') {
         if (selectedCellIndex.value === cellCount.value - 1) {
-            addCell();
+            addCodeCell();
         } else {
             selectNextCell();
         }
@@ -458,10 +459,10 @@ function handleKeyboardShortcut(event) {
     }
 
     if (['b', 'B'].includes(event.key)){
-        addCell(selectedCellIndex.value + 1);
+        addCodeCell(selectedCellIndex.value + 1);
     } else if (['a', 'A'].includes(event.key)){
         let prevIndex = selectedCellIndex.value;
-        addCell(prevIndex);
+        addCodeCell(prevIndex);
     }
 
     if (['d', 'D'].includes(event.key)) {
@@ -485,8 +486,23 @@ function scrollBottomCellContainer(event) {
     }
 }
 
-const addCell = (toIndex) => {
+const addCodeCell = (toIndex) => {
     const newCell = session.addCodeCell("");
+
+    if (typeof toIndex !== 'number') {
+        toIndex = selectedCellIndex.value + 1;
+    }
+    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
+
+    selectCell(newCell);
+
+    nextTick(() => {
+        focusSelectedCell();
+    });
+}
+
+const addMarkdownCell = (toIndex) => {
+    const newCell = session.addMarkdownCell("");
 
     if (typeof toIndex !== 'number') {
         toIndex = selectedCellIndex.value + 1;

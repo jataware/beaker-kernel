@@ -11,7 +11,7 @@
                     :class="{'dark-mode': theme === 'dark'}"
                 >
                     <Codemirror
-                        v-model="cellSource"
+                        v-model="cell.source"
                         placeholder="Your markdown..."
                         :extensions="codeExtensions"
                         :autofocus="true"
@@ -39,7 +39,6 @@ const props = defineProps([
 const cell = ref(props.cell);
 const theme = inject('theme');
 const editing = ref(false);
-const cellSource = ref<string>(props.cell?.source.join("\n"));
 
 const codeExtensions = computed(() => {
     const ext = [
@@ -55,13 +54,12 @@ const codeExtensions = computed(() => {
 });
 
 const renderedMarkdown = computed(() => {
-    const rawSource = props.cell?.source?.join("\n");
-
-    return marked.parse(rawSource);
+    //const rawSource = props.cell?.source?.join("\n");
+    return marked.parse(props.cell?.source);
 });
 
 const execute = (evt: any) => {
-    cell.value.source = cellSource.value.split("\n");
+    //cell.value.source = cellSource.value.split("\n");
     editing.value = false;
 }
 
@@ -91,6 +89,7 @@ onBeforeMount(() => {
 .markdown-cell {
     padding-right: 2rem;
     padding-left: 1rem;
+    min-height: 80%;
 }
 
 .markdown-edit-cell-grid {
