@@ -594,6 +594,7 @@ const updateContextInfo = async () => {
     const activeContextInfo = await session.activeContext();
     activeContext.value = activeContextInfo;
     selectedKernel.value = activeContextInfo.slug;
+    activeContextPayload.value = activeContextInfo.config;
 }
 
 const selectAction = (actionName: string) => {

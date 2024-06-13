@@ -446,7 +446,7 @@ class LLMKernel(KernelProxyManager):
         context_class = self.context.__class__
         context_slug = context_slugs_by_class.get(context_class, "Not Found")
         full_context_class = f"{context_class.__module__}.{context_class.__name__}"
-        context_config = getattr(self.context, "config", None)
+        context_config = getattr(self.context, "config", {}).get("context_info", None)
         context_info = self.context.get_info()
         self.send_response(
             stream="iopub",
