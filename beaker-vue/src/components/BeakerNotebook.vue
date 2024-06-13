@@ -84,7 +84,8 @@
                     <NotebookControls
                         @run-cell="runCell()"
                         @remove-cell="removeCell"
-                        @add-cell="addCell"
+                        @add-code-cell="addCodeCell"
+                        @add-markdown-cell="addMarkdownCell"
                         @set-context="reapplyContext"
                     />
                 <div style="flex: 1; display: flex; position: relative;">
@@ -198,7 +199,7 @@
 
 <script setup lang="tsx">
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
-import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
+import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 
 import Card from 'primevue/card';
 import Button from 'primevue/button';
@@ -322,7 +323,7 @@ function handleNavAction(action) {
         focusSelectedCell();
     } else if (action === 'select-next-cell') {
         if (selectedCellIndex.value === String(cellCount.value - 1)) {
-            addCell();
+            addCodeCell();
         } else {
             selectNextCell();
         }
@@ -525,9 +526,9 @@ function handleKeyboardShortcut(event) {
 
     const [parent, child] = splitCellIndex(selectedCellIndex.value);
     if (['b', 'B'].includes(event.key)){
-        addCell(parent + 1);
+        addCodeCell(parent + 1);
     } else if (['a', 'A'].includes(event.key)){
-        addCell(parent);
+        addCodeCell(parent);
     }
 
     if (['d', 'D'].includes(event.key)) {
@@ -551,8 +552,24 @@ function scrollBottomCellContainer(event) {
     }
 }
 
-const addCell = (toIndex?: number) => {
+const addCodeCell = (toIndex?: number) => {
     const newCell = session.addCodeCell("");
+
+    if (typeof toIndex !== 'number') {
+        const [parent, child] = splitCellIndex(selectedCellIndex.value);
+        toIndex = parent + 1;
+    }
+    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
+
+    selectCell(newCell);
+
+    nextTick(() => {
+        focusSelectedCell();
+    });
+}
+
+const addMarkdownCell = (toIndex?: number) => {
+    const newCell = session.addMarkdownCell("");
 
     if (typeof toIndex !== 'number') {
         const [parent, child] = splitCellIndex(selectedCellIndex.value);
