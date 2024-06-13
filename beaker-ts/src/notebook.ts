@@ -130,7 +130,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
     execution_count: nbformat.ExecutionCount;
     declare metadata: Partial<nbformat.ICodeCellMetadata>;
     last_execution?: BeakerCellExecutionStatus;
-
+    busy?: boolean;
 
     constructor(content: nbformat.ICell) {
         super();
@@ -141,12 +141,14 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         if (this.execution_count === undefined) {
             this.execution_count = null;
         }
+        this.busy = false;
         if (Array.isArray(this.source)) {
             this.source = this.source.join("\n");
         }
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
+        this.busy = true;
         const handleIOPub = (msg: IBeakerIOPubMessage): void => {
             const msg_type = msg.header.msg_type;
             const content = msg.content;
@@ -154,6 +156,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
                 this.status = content.execution_state;
             }
             else if (msg_type === "execute_result") {
+                this.busy = false;
                 if (content.execution_count) {
                     this.execution_count = content.execution_count;
                 }
@@ -177,6 +180,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         };
 
         const handleReply = async (msg: messages.IExecuteReplyMsg) => {
+            this.busy = false;
             if (msg.content.status === "ok") {
                 this.last_execution = {status: "ok"};
                 this.execution_count = msg.content.execution_count;
@@ -334,6 +338,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                         execution_id: content.execution_id
                     },
                     outputs: [],
+                    busy: true,
                 });
                 this.children.push(codeCell);
                 this.events.push({

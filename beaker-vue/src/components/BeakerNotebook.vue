@@ -108,7 +108,7 @@
                             }"
                             ref="notebookCellsRef"
                             :selectedCellIndex="selectedCellIndex"
-                            :index="index"
+                            :index="String(index)"
                             :drag-enabled="isDragEnabled"
                             @move-cell="handleMoveCell"
                             @click="selectCell(index)"
@@ -200,6 +200,7 @@
 <script setup lang="tsx">
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
+import { IBeakerCell } from "beaker-kernel/dist/notebook";
 
 import Card from 'primevue/card';
 import Button from 'primevue/button';

@@ -58,7 +58,6 @@ const props = defineProps([
 ]);
 
 const cell = ref(props.cell);
-const isBusy = ref(false);
 const editorView = shallowRef();
 const theme = inject('theme');
 const session = inject('session');
@@ -84,6 +83,10 @@ const hasRollback = computed(() => {
 });
 
 const rollback = () => cell.value.rollback(session);
+
+const isBusy = computed(() => {
+    return cell.value?.busy;
+});
 
 const badgeSeverity = computed(() => {
     const mappings = {
