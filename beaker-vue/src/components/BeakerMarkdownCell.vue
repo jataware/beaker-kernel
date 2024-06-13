@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed, onBeforeMount, defineExpose, nextTick} from "vue";
+import { defineProps, ref, inject, computed, onBeforeMount, defineExpose} from "vue";
 import { marked } from 'marked';
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
@@ -54,12 +54,10 @@ const codeExtensions = computed(() => {
 });
 
 const renderedMarkdown = computed(() => {
-    //const rawSource = props.cell?.source?.join("\n");
     return marked.parse(props.cell?.source);
 });
 
 const execute = (evt: any) => {
-    //cell.value.source = cellSource.value.split("\n");
     editing.value = false;
 }
 
