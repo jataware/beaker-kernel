@@ -579,8 +579,9 @@ const addMarkdownCell = (toIndex?: number) => {
     arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
 
     selectCell(newCell);
-
+    
     nextTick(() => {
+        notebookCellsRef.value[notebookCellsRef.value.length - 1].enter();
         focusSelectedCell();
     });
 }
@@ -599,7 +600,9 @@ const runCell = (cell?: string | IBeakerCell) => {
 
 const removeCell = () => {
     const [parent, child] = splitCellIndex(selectedCellIndex.value);
-    if (typeof(child) !== "undefined") {
+    console.log(parent, child);
+    if (typeof(child) !== "undefined" 
+        && typeof(session.notebook.cells?.[parent]?.children) !== "undefined") {
         session.notebook.cells[parent].children.splice(child, 1);
     } else {
         session.notebook.removeCell(parent);

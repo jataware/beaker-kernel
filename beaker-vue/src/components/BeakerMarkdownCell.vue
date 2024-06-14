@@ -54,19 +54,19 @@ const codeExtensions = computed(() => {
 });
 
 const renderedMarkdown = computed(() => {
-    //const rawSource = props.cell?.source?.join("\n");
     return marked.parse(props.cell?.source);
 });
 
-const execute = (evt: any) => {
-    //cell.value.source = cellSource.value.split("\n");
+const execute = () => {
     editing.value = false;
 }
 
-const enter = (evt: KeyboardEvent) => {
+const enter = (evt?: KeyboardEvent) => {
     editing.value = true;
-    evt.preventDefault();
-    evt.stopPropagation();
+    if (typeof(evt) !== "undefined") {
+        evt.preventDefault();
+        evt.stopPropagation();
+    }
 }
 
 defineExpose({
