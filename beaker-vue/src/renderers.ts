@@ -37,6 +37,9 @@ export const JSONRenderer: IMimeRenderer<BeakerRenderOutput> = {
                 showIcon: true,
                 showDoubleQuotes: "isQuotes",
                 showLineNumber: "linenum",
+                style: {
+                    whiteSpace: "pre",
+                },
             }
         };
     }
