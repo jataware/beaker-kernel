@@ -20,7 +20,23 @@
             :draggable="props.dragEnabled"
         />
       </div>
+      <Dropdown 
+        class="cell-type-selector" 
+        v-model="cell_type" 
+        :options="Object.keys(props.availableCellTypes)"
+        dropdown-icon="pi pi-code"
+      >
+        <template #value="slotProps">
+            <span :class="cellIconMap[slotProps.value]"></span>
+        </template>
 
+        <template #option="slotProps">
+            <div class="cell-type-dropdown-item">
+                <span :class="cellIconMap[slotProps.option]"></span>
+                <span>{{ slotProps.option }}</span>
+            </div>
+        </template>
+      </Dropdown>
       <div class="cell-contents">
         <!-- pass properties for index and funcs down so that if the given component -->
         <!-- needs further control over how its children render, that it can -->
@@ -52,17 +68,6 @@
             />
         </div>
       </div>
-
-      <Dropdown class="cell-type-selector" v-model="cell_type" :options="Object.keys(props.availableCellTypes)">
-        <template #value="slotProps">
-            <img :src="cellIconMap[slotProps.value]"/>
-        </template>
-        <template #option="slotProps">
-            <div class="cell-type-dropdown-item">
-                <img :src="cellIconMap[slotProps.option]"/> <span>{{ slotProps.option }}</span>
-            </div>
-        </template>
-      </Dropdown>
     </div>
   </div>
 </template>
@@ -101,10 +106,10 @@ export interface IBeakerCellComponent {
 }
 const props = withDefaults(defineProps<Props>(), {
     availableCellTypes: () => {return {
-        'raw': BeakerRawCell,
         'code': BeakerCodeCell,
         'markdown': BeakerMarkdownCell,
         'query': BeakerLLMQueryCell,
+        'raw': BeakerRawCell,
     }}
 });
 
@@ -121,12 +126,19 @@ const beakerCellRef = ref<HTMLDivElement|null>(null);
 const typedCellRef = ref<BeakerCellType|null>(null);
 const childrenRef = ref<BeakerCellType|null>(null);
 
+// const cellIconMap = {
+//     "code": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAACXBIWXMAAAsTAAALEwEAmpwYAAABuElEQVR4nO1WXUsCQRTd32ZQvbQmZpSt9kGKsZZp5UeWZMn6VYEsWC8+KJRZ6W5q9RxhEUVERfhvTuw+SJGrFbsqNRfuy517hzNzz7kzFEXsv5hQq6OXnCIAa+QG64SDwk9FoqOZnnCBAKTJDTKEg7puisQw7QAvZrqn4v6RSfQNWxTX19Pb4LL8p9iAcaozAIcmbMheFeAMh5qu9+ktKDyIMLOLjZh9NYDcdQE0Y9MWoHFmDkf3AkJ7O4o5VvcSDm+LX+LeXQ7HDyJMNqc2AC0LHpSeK/DEtlrmJfN7CKRiTddckQ0IL1X5EKoCdKwFIb6eY9bvb81N4yTKbxfQW+2KOTMrXnkvdmNdHYC+3SiKT2WMOebbtsYZDmH/Mtc2b5x1ofhUwXIy0lmA+5c5RfF8dJONxcnjGYJ8onMtpi12ub3SCGrP5Src0U2NRBJvLpJAKo7EYbrlHo2D+nzqiuQ7Y+bg5hRWt0ex1rvDybyT+NfxQW1mF+XhLA3pZjXSoM7flWCYcnTnqeOyvPy8KdboGQyOTnfvs8CLGfmD8Nt6zQHqVHYCUEdukCYcxN8UidBDThH7L/YO0lkO65xU5hsAAAAASUVORK5CYII=",
+//     "markdown": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABc0lEQVR4nO2YMUoDQRSGP7QSSSWkil3EIoVYpPEOVl5AQfvcxCMoCIIh2HgGG/sUCl5AENxFsVFGBt7KMsxudtddMhPfBz8E8pa8LzPzFgYURVEURVk9toEZkAImkqTALbCbl3gNoLGmsb0PkJUwkWdKZNvJFCQhgCbaCstuQEX4ryviclnhGVvjUqkZh05FNoF5Sf0j0ItBxDICPjy1n8AefoIUsZx5ak8pJlgRy1Wu7oZyghMZ5T7bs/Ak6RXUBCsylwOfsS9xh0HwIga4pphsPEchYoBjz3cnNZqaUJ9JFyLuqHVH8iKRb+CohsQh8NWFSP7l53tJLhLJ/oyDChJj4L2rrZXlQtJ0v78AwxKJodR0dkbafO4Z6Hue2ZJVN7GI2Dw4Y30DuK/ze6GI2NwB68Bag7uEoEQMcC4xbYvEEpbdgIqwqiuSBtDEX/OGXASbyDNDbrNjv8TeyWb8QC6CkwAaMxWTyEr8SiiKoigKDfkBUM4f7jMK7QsAAAAASUVORK5CYII=",
+//     "query": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAEn0lEQVR4nO2ZeajVRRTHP+/p81m2WlGWWbT4hy1UFC1EhUVJZIRplkuYlrlUmgUVPcIKpD+MSoosabGNhy1GhEHbH0aFhImKoJJmK7Zo3bLnknrjwBk4DHfmN/O7L98V7hcG3p3fzPzmM7+Zc86cB0011VRTJXUyMB14DlgEvATMBi4BWtkPdCbwEVCNlE3AjTSoWoEHgJ0FELa8CfShwfRkBoAtL3vjHANcB5zaExBTSgD8C8wDDtcx5MvcC1RMm7XA/UC/fQXydCbEJ8Dppv8wnXSo/XfapmFAfgBu9izbosS+u4FJPQ3Spab3AG1/EDAH2JH5JfcCV3fnxE8CpgKXJYCIZTpB27UAY4AfSxqGKrAZOKpegBOB14A9Ouj0CMhqYKjpezbwWR0AVVMeqQfiUmCLN2AIZAHQW58dCczXPV5rUuuBEcDlwBeJIL8AvcpAnB9wdCGQ4Vo/FtgamMw2daDt5j2y9UYD3ybAnJYLcQiwMTBYCEQcmuidQL9OYKCJCCYCHcCBWtcXuA/4MwIiwFnqiAwWApGtInrLqxdfcZUZ+xzgc/NcjMBks22OAJ5S5+m/+6YciD5qJXJBbtD6Tv0tKzvDnBvRLGM0/PKVRslOQ4AlXptrc0AuKNinIRC3WmLhXgSO1t+9dau6v6fowQ2N/zZwipnPlWoN5dmAHJC7S4LIIXdbw0lWeCXwm/ZzX0fAHgO2B96xE3jcxGSy7UaRqTklQWwYIiv3inpl22adN6HjA+2qWraoAbBWLllzS4LcovXixf8qGOM9750XAl9G2q/NPR+iu0qC3Kr1Cwr6u5UWteldRNSiN8hNBRH0WakgQxNBHvXqb9f6+QkgYtFEhwJ/Aw+a4LKvno9q5PwkxV1tBeb3IbOCI4ENWj9N659JAJHJu4jY1X2v2xI95LH+M1O/ysyAQ6qqpZltbnDtessbr7/nJYBIiI9+BVtfMVYt1v9dMlTLIVU9jzyhRprniQQQ2R7O+ZYBWUcJiUNaFRl0ubmjiAYD70farzcXpV4lQX4qA+JeOLng7Cz2siBXqDMsinzLgGzIBXgYuFMNgOhgdZhdgRfs0q3V3yzAbZr+sZHvJIXAi70qiSAf5IKsCTikQcAbBR55hlkAp/OAZdrGPdtVAqQjF8S+RMqnen11OhdYWuNFf2ho4TKK/TU0tzdGt8V2ZILs1kxMsloDA8lWeAE4Vtu1aAi/Ub+QH/neEbgxOvP9TyZIJyX0e2TAbeoc3Q2v3UvAucg31F/OG15cVikA2WxCmix9XLBXbQLO+RP5Uq9Hzs8aTTo4Y9CVCFLxLl5ZmpYAYv3Jsxp+VAMTuccccsm0vJpofr8BzqAO9auRDsote3XCA8xXmBoYt+KBrNYgtVv+DTGuDogVwMVmrIuAryPtK8ZIOGPSrXo+E2CrrqTLjMgBXRg5Nz7I/6aWxKh2j16s3H2hTXMAsVzVPgVxuiZyg1uuV1abbo0Fmz0Kgh68EZpxl0j2Z42dnPkdaHJbuaWDBtIgNZe5EHNpQB0HfJgI8CtwPQ2ukQpU698LK/VKbRN6Da/DNI0zTI1AVuqzKfYz/Qcr2bcbKUiQRgAAAABJRU5ErkJggg==",
+//     "raw": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAB10lEQVR4nO2VSytFURTHf3mMpCiPIgPvARMT+QKU5AMoc2MheU0MxMTASJkwRpkoUW5hzAdQDJRMGHsv7axbq9NFt87Z5x7tf+1a+7/XWWf/9trnXggKCvpLktBYJeMA3iAk6xCSdQiJjLjrSdIQvgAkKQifAJIEhG8AiRsiDQCJEyItAIkLIk0AieF9AaBYSal3IPH3SYmNopX2hiUA8M+ukFUTMAu8FMjbMHnrxm9U7wH4AKqBGuATuNe1Rl8Aec0WyBs168PGH1TvDLg2OTdATuNBHwAuPjedsDmverIVQBlQZbo0pc9sAbum3j6wqfGULwB3ik71kZy8PwD0aZzTtW2dTwMLpt4SMKnxju8rNBPJcZtxmjcnvqBrlzp3V2wEaADqzNzpyieA2+BbJMedvNMJcKhxv64969XqApr1+xgCWoAOoFJzEgfo/KHdT0B5gTrOe9ScHpOzCMxpXAb0+voZdRtHT812YO+XWnuaM2a8g8gz474A3oFuA5Nfn1BvyXjL6k3ofMXUuQNuzXzNF4CYLnQqkPPa1Ts1z1yo16bzI6BWuyf6J9aq3nHSAGmPopX2hiUAkPErFFXsBf+QBICIQgdK7QpJ1j9iCQCEDgQFBfGtL/wpbKROSAb6AAAAAElFTkSuQmCC",
+// }
+
 const cellIconMap = {
-    "code": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAACXBIWXMAAAsTAAALEwEAmpwYAAABuElEQVR4nO1WXUsCQRTd32ZQvbQmZpSt9kGKsZZp5UeWZMn6VYEsWC8+KJRZ6W5q9RxhEUVERfhvTuw+SJGrFbsqNRfuy517hzNzz7kzFEXsv5hQq6OXnCIAa+QG64SDwk9FoqOZnnCBAKTJDTKEg7puisQw7QAvZrqn4v6RSfQNWxTX19Pb4LL8p9iAcaozAIcmbMheFeAMh5qu9+ktKDyIMLOLjZh9NYDcdQE0Y9MWoHFmDkf3AkJ7O4o5VvcSDm+LX+LeXQ7HDyJMNqc2AC0LHpSeK/DEtlrmJfN7CKRiTddckQ0IL1X5EKoCdKwFIb6eY9bvb81N4yTKbxfQW+2KOTMrXnkvdmNdHYC+3SiKT2WMOebbtsYZDmH/Mtc2b5x1ofhUwXIy0lmA+5c5RfF8dJONxcnjGYJ8onMtpi12ub3SCGrP5Src0U2NRBJvLpJAKo7EYbrlHo2D+nzqiuQ7Y+bg5hRWt0ex1rvDybyT+NfxQW1mF+XhLA3pZjXSoM7flWCYcnTnqeOyvPy8KdboGQyOTnfvs8CLGfmD8Nt6zQHqVHYCUEdukCYcxN8UidBDThH7L/YO0lkO65xU5hsAAAAASUVORK5CYII=",
-    "markdown": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABc0lEQVR4nO2YMUoDQRSGP7QSSSWkil3EIoVYpPEOVl5AQfvcxCMoCIIh2HgGG/sUCl5AENxFsVFGBt7KMsxudtddMhPfBz8E8pa8LzPzFgYURVEURVk9toEZkAImkqTALbCbl3gNoLGmsb0PkJUwkWdKZNvJFCQhgCbaCstuQEX4ryviclnhGVvjUqkZh05FNoF5Sf0j0ItBxDICPjy1n8AefoIUsZx5ak8pJlgRy1Wu7oZyghMZ5T7bs/Ak6RXUBCsylwOfsS9xh0HwIga4pphsPEchYoBjz3cnNZqaUJ9JFyLuqHVH8iKRb+CohsQh8NWFSP7l53tJLhLJ/oyDChJj4L2rrZXlQtJ0v78AwxKJodR0dkbafO4Z6Hue2ZJVN7GI2Dw4Y30DuK/ze6GI2NwB68Bag7uEoEQMcC4xbYvEEpbdgIqwqiuSBtDEX/OGXASbyDNDbrNjv8TeyWb8QC6CkwAaMxWTyEr8SiiKoigKDfkBUM4f7jMK7QsAAAAASUVORK5CYII=",
-    "query": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAEn0lEQVR4nO2ZeajVRRTHP+/p81m2WlGWWbT4hy1UFC1EhUVJZIRplkuYlrlUmgUVPcIKpD+MSoosabGNhy1GhEHbH0aFhImKoJJmK7Zo3bLnknrjwBk4DHfmN/O7L98V7hcG3p3fzPzmM7+Zc86cB0011VRTJXUyMB14DlgEvATMBi4BWtkPdCbwEVCNlE3AjTSoWoEHgJ0FELa8CfShwfRkBoAtL3vjHANcB5zaExBTSgD8C8wDDtcx5MvcC1RMm7XA/UC/fQXydCbEJ8Dppv8wnXSo/XfapmFAfgBu9izbosS+u4FJPQ3Spab3AG1/EDAH2JH5JfcCV3fnxE8CpgKXJYCIZTpB27UAY4AfSxqGKrAZOKpegBOB14A9Ouj0CMhqYKjpezbwWR0AVVMeqQfiUmCLN2AIZAHQW58dCczXPV5rUuuBEcDlwBeJIL8AvcpAnB9wdCGQ4Vo/FtgamMw2daDt5j2y9UYD3ybAnJYLcQiwMTBYCEQcmuidQL9OYKCJCCYCHcCBWtcXuA/4MwIiwFnqiAwWApGtInrLqxdfcZUZ+xzgc/NcjMBks22OAJ5S5+m/+6YciD5qJXJBbtD6Tv0tKzvDnBvRLGM0/PKVRslOQ4AlXptrc0AuKNinIRC3WmLhXgSO1t+9dau6v6fowQ2N/zZwipnPlWoN5dmAHJC7S4LIIXdbw0lWeCXwm/ZzX0fAHgO2B96xE3jcxGSy7UaRqTklQWwYIiv3inpl22adN6HjA+2qWraoAbBWLllzS4LcovXixf8qGOM9750XAl9G2q/NPR+iu0qC3Kr1Cwr6u5UWteldRNSiN8hNBRH0WakgQxNBHvXqb9f6+QkgYtFEhwJ/Aw+a4LKvno9q5PwkxV1tBeb3IbOCI4ENWj9N659JAJHJu4jY1X2v2xI95LH+M1O/ysyAQ6qqpZltbnDtessbr7/nJYBIiI9+BVtfMVYt1v9dMlTLIVU9jzyhRprniQQQ2R7O+ZYBWUcJiUNaFRl0ubmjiAYD70farzcXpV4lQX4qA+JeOLng7Cz2siBXqDMsinzLgGzIBXgYuFMNgOhgdZhdgRfs0q3V3yzAbZr+sZHvJIXAi70qiSAf5IKsCTikQcAbBR55hlkAp/OAZdrGPdtVAqQjF8S+RMqnen11OhdYWuNFf2ho4TKK/TU0tzdGt8V2ZILs1kxMsloDA8lWeAE4Vtu1aAi/Ub+QH/neEbgxOvP9TyZIJyX0e2TAbeoc3Q2v3UvAucg31F/OG15cVikA2WxCmix9XLBXbQLO+RP5Uq9Hzs8aTTo4Y9CVCFLxLl5ZmpYAYv3Jsxp+VAMTuccccsm0vJpofr8BzqAO9auRDsote3XCA8xXmBoYt+KBrNYgtVv+DTGuDogVwMVmrIuAryPtK8ZIOGPSrXo+E2CrrqTLjMgBXRg5Nz7I/6aWxKh2j16s3H2hTXMAsVzVPgVxuiZyg1uuV1abbo0Fmz0Kgh68EZpxl0j2Z42dnPkdaHJbuaWDBtIgNZe5EHNpQB0HfJgI8CtwPQ2ukQpU698LK/VKbRN6Da/DNI0zTI1AVuqzKfYz/Qcr2bcbKUiQRgAAAABJRU5ErkJggg==",
-    "raw": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAB10lEQVR4nO2VSytFURTHf3mMpCiPIgPvARMT+QKU5AMoc2MheU0MxMTASJkwRpkoUW5hzAdQDJRMGHsv7axbq9NFt87Z5x7tf+1a+7/XWWf/9trnXggKCvpLktBYJeMA3iAk6xCSdQiJjLjrSdIQvgAkKQifAJIEhG8AiRsiDQCJEyItAIkLIk0AieF9AaBYSal3IPH3SYmNopX2hiUA8M+ukFUTMAu8FMjbMHnrxm9U7wH4AKqBGuATuNe1Rl8Aec0WyBs168PGH1TvDLg2OTdATuNBHwAuPjedsDmverIVQBlQZbo0pc9sAbum3j6wqfGULwB3ik71kZy8PwD0aZzTtW2dTwMLpt4SMKnxju8rNBPJcZtxmjcnvqBrlzp3V2wEaADqzNzpyieA2+BbJMedvNMJcKhxv64969XqApr1+xgCWoAOoFJzEgfo/KHdT0B5gTrOe9ScHpOzCMxpXAb0+voZdRtHT812YO+XWnuaM2a8g8gz474A3oFuA5Nfn1BvyXjL6k3ofMXUuQNuzXzNF4CYLnQqkPPa1Ts1z1yo16bzI6BWuyf6J9aq3nHSAGmPopX2hiUAkPErFFXsBf+QBICIQgdK7QpJ1j9iCQCEDgQFBfGtL/wpbKROSAb6AAAAAElFTkSuQmCC",
-}
+    "code": "pi pi-code",
+    "markdown": "pi pi-pencil",
+    "query": "pi pi-sparkles",
+    "raw": "pi pi-question-circle",
+};
 
 const customChildRendererMap: {[key: string]: boolean} = {
     'query': true,
@@ -237,11 +249,11 @@ defineExpose({
 
 .cell-grid {
     display: grid;
-
+    justify-content: start;
     grid-template-areas:
-        "drag-handle cell-contents";
+        "cell-type-dropdown drag-handle cell-contents";
 
-    grid-template-columns: 1.4rem auto;
+    grid-template-columns: 2rem 1.4rem 1fr;
 }
 
 .cell-contents {
@@ -299,18 +311,25 @@ defineExpose({
 
 
 .cell-type-selector {
-    width: 2.5rem;
+    grid-area: cell-type-dropdown;
+    margin-left: auto;
+    margin-right: auto;
+    width: 1.5rem;
     aspect-ratio: 1 / 1;
     padding: 0;
     border-color: #c5c6cc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
     .p-dropdown-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: auto;
         padding: 0;
         width: 100%;
         aspect-ratio: 1 / 1;
-        img {
-            width: 100%;
-            aspect-ratio: 1 / 1;
-        }
     }
     .p-dropdown-trigger {
         display: none;
