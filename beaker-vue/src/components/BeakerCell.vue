@@ -7,6 +7,9 @@
     @keydown.shift.enter.prevent="executeAndMove"
     @keyup.esc="unfocusEditor"
     @cell-state-changed="cellStateChanged"
+    @keydown.y.prevent="cell_type = 'code'"
+    @keydown.m.prevent="cell_type = 'markdown'"
+    @keydown.r.prevent="cell_type = 'raw'"
     ref="beakerCellRef"
   >
     <div class="cell-grid">
