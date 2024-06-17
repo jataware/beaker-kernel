@@ -7,9 +7,9 @@
     @keydown.shift.enter.prevent="executeAndMove"
     @keyup.esc="unfocusEditor"
     @cell-state-changed="cellStateChanged"
-    @keydown.y.prevent="cell_type = 'code'"
-    @keydown.m.prevent="cell_type = 'markdown'"
-    @keydown.r.prevent="cell_type = 'raw'"
+    @keydown.y="(event) => switchCellTypeContextualEvent(event, 'code')"
+    @keydown.m="(event) => switchCellTypeContextualEvent(event, 'markdown')"
+    @keydown.r="(event) => switchCellTypeContextualEvent(event, 'raw')"
     ref="beakerCellRef"
   >
     <div class="cell-grid">
@@ -129,6 +129,15 @@ const beakerCellRef = ref<HTMLDivElement|null>(null);
 const typedCellRef = ref<BeakerCellType|null>(null);
 const childrenRef = ref<BeakerCellType|null>(null);
 
+const isOuterCellFocused = () => document.activeElement.classList.contains("beaker-cell");
+const switchCellTypeContextualEvent = (event, type) => {
+    if (isOuterCellFocused()) {
+        cell_type.value = type;
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}
+
 // const cellIconMap = {
 //     "code": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAACXBIWXMAAAsTAAALEwEAmpwYAAABuElEQVR4nO1WXUsCQRTd32ZQvbQmZpSt9kGKsZZp5UeWZMn6VYEsWC8+KJRZ6W5q9RxhEUVERfhvTuw+SJGrFbsqNRfuy517hzNzz7kzFEXsv5hQq6OXnCIAa+QG64SDwk9FoqOZnnCBAKTJDTKEg7puisQw7QAvZrqn4v6RSfQNWxTX19Pb4LL8p9iAcaozAIcmbMheFeAMh5qu9+ktKDyIMLOLjZh9NYDcdQE0Y9MWoHFmDkf3AkJ7O4o5VvcSDm+LX+LeXQ7HDyJMNqc2AC0LHpSeK/DEtlrmJfN7CKRiTddckQ0IL1X5EKoCdKwFIb6eY9bvb81N4yTKbxfQW+2KOTMrXnkvdmNdHYC+3SiKT2WMOebbtsYZDmH/Mtc2b5x1ofhUwXIy0lmA+5c5RfF8dJONxcnjGYJ8onMtpi12ub3SCGrP5Src0U2NRBJvLpJAKo7EYbrlHo2D+nzqiuQ7Y+bg5hRWt0ex1rvDybyT+NfxQW1mF+XhLA3pZjXSoM7flWCYcnTnqeOyvPy8KdboGQyOTnfvs8CLGfmD8Nt6zQHqVHYCUEdukCYcxN8UidBDThH7L/YO0lkO65xU5hsAAAAASUVORK5CYII=",
 //     "markdown": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABc0lEQVR4nO2YMUoDQRSGP7QSSSWkil3EIoVYpPEOVl5AQfvcxCMoCIIh2HgGG/sUCl5AENxFsVFGBt7KMsxudtddMhPfBz8E8pa8LzPzFgYURVEURVk9toEZkAImkqTALbCbl3gNoLGmsb0PkJUwkWdKZNvJFCQhgCbaCstuQEX4ryviclnhGVvjUqkZh05FNoF5Sf0j0ItBxDICPjy1n8AefoIUsZx5ak8pJlgRy1Wu7oZyghMZ5T7bs/Ak6RXUBCsylwOfsS9xh0HwIga4pphsPEchYoBjz3cnNZqaUJ9JFyLuqHVH8iKRb+CohsQh8NWFSP7l53tJLhLJ/oyDChJj4L2rrZXlQtJ0v78AwxKJodR0dkbafO4Z6Hue2ZJVN7GI2Dw4Y30DuK/ze6GI2NwB68Bag7uEoEQMcC4xbYvEEpbdgIqwqiuSBtDEX/OGXASbyDNDbrNjv8TeyWb8QC6CkwAaMxWTyEr8SiiKoigKDfkBUM4f7jMK7QsAAAAASUVORK5CYII=",
@@ -178,7 +187,10 @@ const cellStateChanged = (newState: CellState) => {
 function focusEditor() {
     const child = getSelectedChild();
     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : beakerCellRef;
-    
+    if (cell_type.value === "markdown") {
+        console.log(typedCellRef.value)
+        typedCellRef.value.enter();
+    }
     if (targetRef?.value) {
         const editor: HTMLElement|null = targetRef.value.querySelector('.cm-content');
         if (editor) {

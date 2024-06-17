@@ -2,6 +2,7 @@
     <div
         class="markdown-cell"
         @dblclick.stop.prevent="if (!editing) {editing = true};"
+        @keyup.enter.exact.stop.prevent="if (!editing) {editing = true;}; focusEditor();"
     >
         <div v-if="!editing" v-html="renderedMarkdown"></div>
         <div v-else>
@@ -9,6 +10,7 @@
                 <div
                     class="markdown-edit-data"
                     :class="{'dark-mode': theme === 'dark'}"
+                    :ref="editorRef"
                 >
                     <Codemirror
                         v-model="cell.source"
@@ -39,6 +41,7 @@ const props = defineProps([
 const cell = ref(props.cell);
 const theme = inject('theme');
 const editing = ref(false);
+const editorRef = ref(null);
 
 const codeExtensions = computed(() => {
     const ext = [
@@ -52,6 +55,15 @@ const codeExtensions = computed(() => {
     return ext;
 
 });
+
+const focusEditor = () => {
+    const editor: HTMLElement|null = editorRef.value.querySelector('.cm-content');
+        if (editor) {
+            editor.focus();
+        }
+};
+
+
 
 const renderedMarkdown = computed(() => {
     return marked.parse(props.cell?.source);

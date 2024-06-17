@@ -268,7 +268,7 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 
     public execute(session: BeakerSession): IBeakerFuture | null {
         // TODO: Replace this with code to render markdown.
-        return null
+        return null;
     };
 }
 
@@ -302,13 +302,13 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 this.events.push({
                     type: "thought",
                     content: content.thought,
-                })
+                });
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
                 this.events.push({
                     type: "response",
                     content: content.text,
-                })
+                });
             }
             else if (msg_type === "code_cell") {
                 const nb = session.notebook;
@@ -348,7 +348,6 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                         index: this.children?.length - 1
                     },
                 });
-
             }
             else if (msg_type == "update_child_codecell") {
                 for (const cell of this.children) {
