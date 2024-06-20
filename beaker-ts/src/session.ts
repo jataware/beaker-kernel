@@ -9,7 +9,7 @@ import fetch from 'node-fetch';
 import { Slot } from '@lumino/signaling';
 
 import { createMessageId, IBeakerAvailableContexts, IBeakerFuture, IActiveContextInfo } from './util';
-import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage } from './notebook';
+import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage, BeakerBaseCell } from './notebook';
 import { BeakerHistory } from './history';
 import { BeakerRenderer, IBeakerRendererOptions } from './render';
 
@@ -115,6 +115,48 @@ export class BeakerSession {
      * @param msg - The incoming IOPub message
      */
     private _sessionMessageHandler(_sessionContext: SessionContext, msg: IBeakerIOPubMessage) {
+        // TODO: not quite right, should be removed, O
+
+        // required to retrieve displayed execution results from subkernel when initiated from subkernel rather
+        // than the cell execute function, as futures are not accessible to handle the iopub display_data message.
+        if (msg.header.msg_type === "display_data_child_codecell") {
+            // search for execution id in nested cells; all parents, as well as their children
+            let parent_index : number | undefined = undefined;
+            let child_index : number | undefined = undefined;
+            let found : boolean = false;
+            for (parent_index = 0; parent_index < this.notebook.cells.length; parent_index++) {
+                const parent = this.notebook.cells[parent_index];
+                if (parent.metadata?.execution_id === msg.content.metadata.target_cell) {
+                    found = true;
+                    break;
+                }
+                if (typeof(parent?.children) !== undefined) {
+                    const children = (parent.children as BeakerBaseCell[]);
+                    for (child_index = 0; child_index < children.length; child_index++) {
+                        if (parent.children[child_index].metadata?.execution_id === msg.content.metadata.target_cell) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) {
+                        break;
+                    }
+                    child_index = undefined;
+                }
+            }
+            if (!found) {
+                console.error("Attempted to attach subkernel execution display_data to nonexisting execution_id.")
+                return;
+            }
+
+            msg.header.msg_type = "display_data";
+            if (typeof(child_index) !== undefined) {
+                this.notebook.cells[parent_index].children[child_index].handleIOPub(msg);
+            } 
+            else {
+                this.notebook.cells[parent_index].handleIOPub(msg);
+            }
+        }
         if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
             if (msg.header.msg_type === "context_setup_response") {
                 this._sessionInfo = msg.content;

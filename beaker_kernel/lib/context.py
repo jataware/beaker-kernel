@@ -290,7 +290,7 @@ class BaseContext:
         return template.render(**render_dict)
 
 
-    async def execute(self, command, response_handler=None, parent_header={}, store_history=False):
+    async def execute(self, command, response_handler=None, parent_header={}, store_history=False, target_cell=None):
         self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
         stream = self.subkernel.connected_kernel.streams.shell
         execution_message = self.subkernel.connected_kernel.make_multipart_message(
@@ -336,6 +336,9 @@ class BaseContext:
 
             if message.parent_header.get("msg_id", None) != message_id:
                 return data
+            if target_cell is not None:
+                return data
+
             return None
 
         async def collect_result(server, target_stream, data):
@@ -343,6 +346,9 @@ class BaseContext:
             # Ensure we are only working on handlers for this message response
             if message.parent_header.get("msg_id", None) != message_id:
                 return data
+            if target_cell is not None:
+                message_context["target_cell"] = target_cell
+                #return data
 
             data = message.content["data"].get("text/plain", None)
             message_context["return"] = data
@@ -355,6 +361,9 @@ class BaseContext:
             # Ensure we are only working on handlers for this message response
             if message.parent_header.get("msg_id", None) != message_id:
                 return data
+            if target_cell is not None:
+                message_context["target_cell"] = target_cell
+                #return data
             stream = message.content["name"]
             message_context[f"{stream}_list"].append(message.content["text"])
 
@@ -374,6 +383,9 @@ class BaseContext:
             # Ensure we are only working on handlers for this message response
             if message.parent_header.get("msg_id", None) != message_id:
                 return data
+            if target_cell is not None:
+                #return data
+                pass
             if response_handler:
                 filter_list.remove(
                     InterceptionFilter(iopub_socket, "stream", response_handler)
@@ -393,6 +405,33 @@ class BaseContext:
             )
             message_context["result"] = message
             message_context["done"] = True
+
+        if target_cell is not None:
+            # for the subkernel execute, data needs to be attached to pair the results to the
+            # target cell and be able to display it -- allows the react loop's plot output
+            # to be shown in the child of the query cell.
+            async def handle_display_data(server, target_stream, data):
+                message = JupyterMessage.parse(data)
+                # subscribed to by session.ts session handler
+                message.content["metadata"] = message.content.get("metadata", {}) | {
+                    "target_cell": str(target_cell)
+                }
+                # subscribed to by session.ts session handler
+                self.send_response(
+                    stream="iopub",
+                    msg_or_type="display_data_child_codecell",
+                    content=message.content,
+                    parent_header=parent_header,
+                )
+                # cleanup after single instance of target_cell to not overreach
+                filter_list.remove(
+                    InterceptionFilter(iopub_socket, "display_data", handle_display_data)
+                )
+                logger.warn("intercepted display data on target cell")
+                return data
+            filter_list.append(
+                InterceptionFilter(iopub_socket, "display_data", handle_display_data)
+            )
 
         filter_list.append(
             InterceptionFilter(iopub_socket, "execute_input", silence_message)

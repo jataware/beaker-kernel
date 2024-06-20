@@ -147,78 +147,78 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         }
     }
 
+    public async handleIOPub (msg: IBeakerIOPubMessage) {
+        const msg_type = msg.header.msg_type;
+        const content = msg.content;
+        if (msg_type === "status") {
+            this.status = content.execution_state;
+        }
+        else if (msg_type === "execute_result") {
+            this.busy = false;
+            if (content.execution_count) {
+                this.execution_count = content.execution_count;
+            }
+            this.outputs.push({
+                output_type: "execute_result",
+                ...content
+            })
+        }
+        else if (msg_type === "stream") {
+            this.outputs.push({
+                output_type: "stream",
+                ...content
+            })
+        }
+        else if (msg_type === "display_data") {
+            this.outputs.push({
+                output_type: "display_data",
+                ...content
+            })
+        }
+    };
+
+    public async handleReply(msg: messages.IExecuteReplyMsg) {
+        this.busy = false;
+        if (msg.content.status === "ok") {
+            this.last_execution = {status: "ok"};
+            this.execution_count = msg.content.execution_count;
+        }
+        else if (msg.content.status === "error") {
+            this.execution_count = msg.content.execution_count;
+            const error_details = {
+                ename: msg.content.ename,
+                evalue: msg.content.evalue,
+                traceback: msg.content.traceback,
+            };
+            this.last_execution = {
+                status: "error",
+                ...error_details
+            };
+            this.outputs.push({
+                output_type: "error",
+                ...error_details
+            });
+        }
+        else if (msg.content.status === "abort") {
+            this.execution_count = msg.content.execution_count;
+            const error_details = {
+                ename: "Execution aborted",
+                evalue: "Execution aborted",
+                traceback: [],
+            };
+            this.last_execution = {
+                status: "error",
+                ...error_details,
+            };
+            this.outputs.push({
+                output_type: "error",
+                content: error_details,
+            });
+        }
+    };
+
     public execute(session: BeakerSession): IBeakerFuture | null {
         this.busy = true;
-        const handleIOPub = (msg: IBeakerIOPubMessage): void => {
-            const msg_type = msg.header.msg_type;
-            const content = msg.content;
-            if (msg_type === "status") {
-                this.status = content.execution_state;
-            }
-            else if (msg_type === "execute_result") {
-                this.busy = false;
-                if (content.execution_count) {
-                    this.execution_count = content.execution_count;
-                }
-                this.outputs.push({
-                    output_type: "execute_result",
-                    ...content
-                })
-            }
-            else if (msg_type === "stream") {
-                this.outputs.push({
-                    output_type: "stream",
-                    ...content
-                })
-            }
-            else if (msg_type === "display_data") {
-                this.outputs.push({
-                    output_type: "display_data",
-                    ...content
-                })
-            }
-        };
-
-        const handleReply = async (msg: messages.IExecuteReplyMsg) => {
-            this.busy = false;
-            if (msg.content.status === "ok") {
-                this.last_execution = {status: "ok"};
-                this.execution_count = msg.content.execution_count;
-            }
-            else if (msg.content.status === "error") {
-                this.execution_count = msg.content.execution_count;
-                const error_details = {
-                    ename: msg.content.ename,
-                    evalue: msg.content.evalue,
-                    traceback: msg.content.traceback,
-                };
-                this.last_execution = {
-                    status: "error",
-                    ...error_details
-                };
-                this.outputs.push({
-                    output_type: "error",
-                    ...error_details
-                });
-            }
-            else if (msg.content.status === "abort") {
-                this.execution_count = msg.content.execution_count;
-                const error_details = {
-                    ename: "Execution aborted",
-                    evalue: "Execution aborted",
-                    traceback: [],
-                };
-                this.last_execution = {
-                    status: "error",
-                    ...error_details,
-                };
-                this.outputs.push({
-                    output_type: "error",
-                    content: error_details,
-                });
-            }
-        };
-
         this.outputs.splice(0, this.outputs.length);
         const future = session.sendBeakerMessage(
             "execute_request",
@@ -231,8 +231,10 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
                 stop_on_error: false,
             }
         );
-        future.onIOPub = handleIOPub;
-        future.onReply = handleReply;
+        // wrapping in arrow fixes a lexical binding problem with this.session.session.id in session.ts
+        // TODO: cleaner way to do this?
+        future.onIOPub = (message) => this.handleIOPub(message);
+        future.onReply = (message: messages.IExecuteReplyMsg) => this.handleReply(message);
         return future;
     }
 
