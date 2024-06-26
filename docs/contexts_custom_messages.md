@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Custom Messages
+title: Actions and Custom Messages
 parent: Contexts
 nav_order: 2
 has_toc: true
@@ -56,3 +56,22 @@ ID in the datastore.
 Finally, the kernel should return a message of type `save_var_reply` which
 should always be the final message of the flow and indicates that the request is
 complete, along with the final status in the message payload.
+
+# Actions
+Actions wrap custom messaging in a higher level interface. Requests
+and replies are automatically generated for the wrapped function.
+
+
+```python
+class FooContext(BaseContext):
+  ...
+
+  @action()
+  async def modify_important_var(self, message):
+    "Modify `important_var` and return the current value"
+    num = message.get("number")
+    await self.execute(f"important_var += {number}")
+    result = await self.evaluate("important_var")
+    return str(result["return"])
+
+```

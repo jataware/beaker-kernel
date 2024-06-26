@@ -10,5 +10,8 @@ COPY Gemfile ./
 RUN gem install bundler
 RUN bundle install
 
+RUN apt-get update
+RUN apt-get install jekyll -y
+
 EXPOSE 4000
 CMD jekyll serve -d /_site --watch --force_polling -H 0.0.0.0 -P 4000
