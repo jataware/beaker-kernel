@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import logging
@@ -28,6 +29,19 @@ def env_enabled(env_var: str):
 def get_socket(stream_name: str):
     socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_name)]
     return socket
+
+
+class ExecutionTask(asyncio.Task):
+    execute_request_msg: JupyterMessage | None
+
+    def __init__(
+        self,
+        *args,
+        execute_request_msg: JupyterMessage | None = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.execute_request_msg = execute_request_msg
 
 
 class handle_message(AbstractAsyncContextManager):

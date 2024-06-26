@@ -200,7 +200,8 @@
 <script setup lang="tsx">
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
-import { IBeakerCell } from "beaker-kernel/dist/notebook";
+import { type IBeakerCell } from "beaker-kernel";
+// import { IBeakerCell } from "beaker-kernel/dist/notebook";
 
 import Card from 'primevue/card';
 import Button from 'primevue/button';
@@ -442,7 +443,6 @@ const selectNextCell = (event?) => {
 
     // since children are 0-indexed, consider a parent selector as "child -1" for purpose of incrementing
     const childIndex = typeof(child) === "undefined" ? -1 : child;
-    console.log(childCount, childIndex);
     if (childCount > 0 && childIndex < childCount - 1) {
         selectCell(`${parent}:${childIndex + 1}`);
     } else {
@@ -579,7 +579,7 @@ const addMarkdownCell = (toIndex?: number) => {
     arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
 
     selectCell(newCell);
-    
+
     nextTick(() => {
         notebookCellsRef.value[notebookCellsRef.value.length - 1].enter();
         focusSelectedCell();
@@ -600,8 +600,7 @@ const runCell = (cell?: string | IBeakerCell) => {
 
 const removeCell = () => {
     const [parent, child] = splitCellIndex(selectedCellIndex.value);
-    console.log(parent, child);
-    if (typeof(child) !== "undefined" 
+    if (typeof(child) !== "undefined"
         && typeof(session.notebook.cells?.[parent]?.children) !== "undefined") {
         session.notebook.cells[parent].children.splice(child, 1);
     } else {
@@ -712,7 +711,6 @@ function handleDrop(event: DragEvent, index: number) {
     const targetId = session.notebook.cells[index].id
 
     if (sourceId !== targetId){
-        console.log("drop to from ", sourceIndex, index);
         arrayMove(session.notebook.cells, sourceIndex, index);
     }
 }

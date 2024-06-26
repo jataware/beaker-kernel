@@ -138,7 +138,8 @@ class JupyterMessage(JupyterMessageTuple):
 
 
 class AbstractProxyKernel(object):
-    def __init__(self, config, role, zmq_context=zmq.Context.instance()):
+    def __init__(self, config, role, zmq_context=zmq.Context.instance(), session_id=None):
+        self.session_id = session_id
         if role not in ("server", "client"):
             raise ValueError("role value must be 'server' or 'client'")
         self.role = role
@@ -180,25 +181,32 @@ class AbstractProxyKernel(object):
         return six.ensure_binary(h.hexdigest())
 
     def make_multipart_message(
-        self, msg_type, content={}, parent_header={}, metadata={}, msg_id=None
+        self, msg_type, content={}, parent_header={}, metadata={}, msg_id=None, identities=None, session_id=None,
     ):
         if msg_id is None:
             msg_id = str(uuid.uuid4())
+
+        session_id = session_id or self.session_id or str(uuid.uuid4())
+
+        if identities is None:
+            identities = []
+
+
         header = {
             "date": datetime.datetime.now().isoformat(),
             "msg_id": msg_id,
             "username": "kernel",
-            "session": getattr(self, "session_id", str(uuid.uuid4())),
+            "session": session_id,
             "msg_type": msg_type,
             "version": "5.0",
         }
-        msg = JupyterMessage([], None, header, parent_header, metadata, content, [])
+        msg = JupyterMessage(identities, None, header, parent_header, metadata, content, [])
         return msg.sign_using(self.config.get("key")).parts
 
 
 class ProxyKernelClient(AbstractProxyKernel):
-    def __init__(self, config, role="client", zmq_context=zmq.Context.instance()):
-        super(ProxyKernelClient, self).__init__(config, role, zmq_context)
+    def __init__(self, config, role="client", zmq_context=zmq.Context.instance(), session_id=None):
+        super(ProxyKernelClient, self).__init__(config, role, zmq_context, session_id=session_id)
 
 
 InterceptionFilter = namedtuple(
@@ -207,10 +215,10 @@ InterceptionFilter = namedtuple(
 
 
 class ProxyKernelServer(AbstractProxyKernel):
-    def __init__(self, config, role="server", zmq_context=zmq.Context.instance()):
-        super(ProxyKernelServer, self).__init__(config, role, zmq_context)
+    def __init__(self, config, role="server", zmq_context=zmq.Context.instance(), session_id=None):
+        super(ProxyKernelServer, self).__init__(config, role, zmq_context, session_id=session_id)
         self.filters = []
-        self.session_id = None
+        self.session_id = session_id
         self.proxy_target = None
 
     def _proxy_to(
@@ -229,13 +237,14 @@ class ProxyKernelServer(AbstractProxyKernel):
             resign_using = resign_using or self.proxy_target.config.get("key")
 
         async def handler(data):
+            i = "execute_reply" in str(data)
             if socktype.signed:
                 msg = JupyterMessage.parse(data, validate_using)
-                if not self.session_id and is_reply:
-                    # We catch the session ID here so that if we inject custom
-                    # messages we can use `make_multipart_message` to get a one with
-                    # the right ID
-                    self.session_id = msg.header.get("session")
+                if is_reply and msg.header.get("msg_type", "").endswith("_reply"):
+                    if not isinstance(msg.identities, list):
+                        msg.identities = []
+                    if self.session_id and self.session_id not in msg.identities:
+                        msg.identities.append(msg.parent_header.get("session"))
                 for stream_type, msg_type, callback in self.filters:
                     if stream_type == socktype and msg_type == msg.header.get(
                         "msg_type"
@@ -249,7 +258,6 @@ class ProxyKernelServer(AbstractProxyKernel):
                     data = JupyterMessage.parse(data).sign_using(resign_using).parts
             other_stream.send_multipart(data)
             other_stream.flush()
-
         return handler
 
     def set_proxy_target(self, proxy_client):
@@ -281,12 +289,13 @@ class ProxyKernelServer(AbstractProxyKernel):
 
 
 class KernelProxyManager(object):
-    def __init__(self, server):
+    def __init__(self, server, session_id=None):
         if isinstance(server, ProxyKernelServer):
             self.server = server
         else:
-            self.server = ProxyKernelServer(server)
+            self.server = ProxyKernelServer(server, session_id=session_id)
 
+        self.session_id = session_id
         self._kernel_info_requests = []
         self.server.intercept_message(
             "shell", "kernel_info_request", self._on_kernel_info_request
@@ -369,5 +378,5 @@ class KernelProxyManager(object):
         if self.kernels[matching] == self.server.config:
             raise ValueError("Refusing loopback connection")
         self.connected_kernel_name = matching
-        self.connected_kernel = ProxyKernelClient(self.kernels[matching])
+        self.connected_kernel = ProxyKernelClient(self.kernels[matching], session_id=self.session_id)
         self.server.set_proxy_target(self.connected_kernel)

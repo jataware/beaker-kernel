@@ -96,7 +96,7 @@ const badgeSeverity = computed(() => {
         [ExecuteStatus.Pending]: 'secondary',
         [ExecuteStatus.None]: "secondary",
     };
-    return mappings[cell.value?.last_execution.status];
+    return mappings[cell.value?.last_execution?.status];
 });
 
 
