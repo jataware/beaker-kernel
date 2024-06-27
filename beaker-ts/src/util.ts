@@ -69,7 +69,7 @@ export class BeakerCellFuture extends KernelFutureHandler<IBeakerShellMessage, I
         }
         // Clean up from kernel future list when complete.
         const disposalCallback: (() => void) = () => {
-            // @ts-ignore -- Register future via private member
+            // @ts-ignore -- Deregister future via private member for cleanup
             kernel._futures.delete(msgId);
         };
         super(disposalCallback, msg, expectReply, disposeOnDone, kernel)
@@ -119,7 +119,7 @@ export namespace BeakerCellFutures {
     export const handleReply = (msg: IBeakerShellMessage, cell: IBeakerCell) => {
         cell.busy = false;
         if (msg.content.status === "ok") {
-            cell.last_execution = {status: "ok"};
+            cell.last_execution = {...cell.last_execution, status: "ok"};
             cell.execution_count = Number(msg.content.execution_count);
         }
         else if (msg.content.status === "error") {

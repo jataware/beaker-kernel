@@ -216,6 +216,7 @@ InterceptionFilter = namedtuple(
 
 class ProxyKernelServer(AbstractProxyKernel):
     def __init__(self, config, role="server", zmq_context=zmq.Context.instance(), session_id=None):
+        self.manager = None
         super(ProxyKernelServer, self).__init__(config, role, zmq_context, session_id=session_id)
         self.filters = []
         self.session_id = session_id
@@ -294,6 +295,7 @@ class KernelProxyManager(object):
             self.server = server
         else:
             self.server = ProxyKernelServer(server, session_id=session_id)
+        self.server.manager = self
 
         self.session_id = session_id
         self._kernel_info_requests = []

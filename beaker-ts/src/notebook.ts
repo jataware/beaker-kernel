@@ -26,10 +26,15 @@ export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
 
 export type BeakerCellStatus = messages.Status | "awaiting_input";
 
-export type BeakerCellExecutionStatus = IBeakerCellExecutionStatusPlain | IBeakerCellExecutionStatusOk | IBeakerCellExecutionStatusError
+export type BeakerCellExecutionStatus = IBeakerCellExecutionStatusPlain | IBeakerCellExecutionStatusPending | IBeakerCellExecutionStatusOk | IBeakerCellExecutionStatusError;
 
 export interface IBeakerCellExecutionStatusPlain {
-    status: "none" | "modified" | "pending" | "abort";
+    status: "none" | "modified" | "abort";
+}
+
+export interface IBeakerCellExecutionStatusPending {
+    status: "pending";
+    checkpoint_index?: number;
 }
 
 export interface IBeakerCellExecutionStatusOk {
@@ -182,8 +187,23 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
                     checkpoint_index: this.last_execution.checkpoint_index
                 }
             );
-            this.last_execution = {"status": "none"};
-            this.execution_count = null;
+            // Treat rolling back like an execution as it may fail
+            this.busy = true;
+
+            // Clear outputs and children when rollback completes
+            future.done.then((reply_msg: messages.IExecuteReplyMsg) => {
+                if (reply_msg.content.status === "ok") {
+                    this.busy = false;
+                    this.last_execution = {"status": "none"};
+                    this.execution_count = null;
+                    this.outputs.splice(0, this.outputs.length);
+                    this.children.splice(0, this.children.length);
+                }
+                else if (reply_msg.content.status === "error") {
+                    this.last_execution = reply_msg.content;
+                    this.outputs.push({...reply_msg.content, output_type: "error"})
+                }
+            });
             return future;
         }
         return null;
@@ -277,6 +297,10 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                     outputs: [],
                     busy: true,
                 });
+                codeCell.last_execution = {
+                    status: "pending",
+                    checkpoint_index: content.checkpoint_index,
+                }
                 this.children.push(codeCell);
                 this.events.push({
                     type: "code_cell",
