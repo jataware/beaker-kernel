@@ -13,33 +13,7 @@
     ref="beakerCellRef"
   >
     <div class="cell-grid">
-      <div
-        class="drag-handle"
-        :class="{
-            'drag-disabled': !props.dragEnabled,
-        }"
-      >
-        <DraggableMarker
-            :draggable="props.dragEnabled"
-        />
-      </div>
-      <Dropdown 
-        class="cell-type-selector" 
-        v-model="cell_type" 
-        :options="Object.keys(props.availableCellTypes)"
-        dropdown-icon="pi pi-code"
-      >
-        <template #value="slotProps">
-            <span :class="cellIconMap[slotProps.value]"></span>
-        </template>
 
-        <template #option="slotProps">
-            <div class="cell-type-dropdown-item">
-                <span :class="cellIconMap[slotProps.option]"></span>
-                <span>{{ slotProps.option }}</span>
-            </div>
-        </template>
-      </Dropdown>
       <div class="cell-contents">
         <!-- pass properties for index and funcs down so that if the given component -->
         <!-- needs further control over how its children render, that it can -->

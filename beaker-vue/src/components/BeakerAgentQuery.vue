@@ -1,9 +1,5 @@
 <template>
     <Card class="agent-input-card">
-        <template #title>
-            How can the agent help?
-        </template>
-
         <template #content>
             <div class="query-input-container">
                 <ContainedTextArea

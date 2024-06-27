@@ -1,41 +1,5 @@
 <template>
   <div class="notebook-controls">
-      <InputGroup>
-          <SplitButton
-              @click="emit('add-code-cell')"
-              v-tooltip.bottom="{value: 'Add New Cell', showDelay: 300}"
-              icon="pi pi-plus pi-code"
-              size="small"
-              severity="info"
-              :model="menuModel"
-              text
-          />
-          <Button
-              @click="emit('remove-cell')"
-              v-tooltip.bottom="{value: 'Remove Selected Cell', showDelay: 300}"
-              icon="pi pi-minus"
-              size="small"
-              severity="info"
-              text
-          />
-          <Button
-              @click="emit('run-cell')"
-              v-tooltip.bottom="{value: 'Run Selected Cell', showDelay: 300}"
-              icon="pi pi-play"
-              size="small"
-              severity="info"
-              text
-          />
-          <!-- TODO implement Stop-->
-          <Button
-              @click="identity"
-              v-tooltip.bottom="{value: 'Stop Execution', showDelay: 300}"
-              icon="pi pi-stop"
-              size="small"
-              severity="info"
-              text
-          />
-      </InputGroup>
       <InputGroup style="margin-right: 1rem;">
           <Button
               @click="emit('reset-nb')"

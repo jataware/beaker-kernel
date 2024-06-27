@@ -47,7 +47,7 @@
                 />
             </div>
         </div>
-        <div class="events" :class="event.type" v-for="event of cell.events" :key="event">
+        <div class="events" :class="event.type" v-for="event of events" :key="event">
             <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
             <template v-if="event.type === 'thought'" >{{ event.content }}</template>
             <span v-if="event.type ==='code_cell'">
@@ -109,7 +109,8 @@ const props = defineProps([
     'cell',
     'selectedCellIndex',
     'childOnClickCallback',
-    'selectNext'
+    'selectNext',
+    'excludedEvents'
 ]);
 
 const cell = ref(props.cell);
@@ -119,6 +120,7 @@ const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
 const childrenRef = ref<typeof BeakerCodeCell|null>(null);
+const events = props.cell.events.filter(({ type }) => !(props.eventFilter || ["thought"]).includes(type));
 
 const getChildByCellId = (child_id: string) : BeakerBaseCell | undefined => {
     const index = cell.value.children?.findIndex((child) => child.id === child_id)

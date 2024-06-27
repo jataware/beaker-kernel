@@ -196,7 +196,7 @@ function handleNavAction(action) {
         focusSelectedCell();
     } else if (action === 'select-next-cell') {
         if (selectedCellIndex.value === String(cellCount.value - 1)) {
-            addCodeCell();
+           return;
         } else {
             selectNextCell();
         }
