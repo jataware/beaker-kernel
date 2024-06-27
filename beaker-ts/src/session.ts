@@ -294,7 +294,6 @@ export class BeakerSession {
         // Remove cells via splice to ensure reactivity
         this.notebook.cells.splice(0, this.notebook.cells.length);
         this._history.clear();
-        this.addCodeCell("");
         this._sessionContext.restartKernel();
     }
 
