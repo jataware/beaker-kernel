@@ -77,9 +77,12 @@ for _name, _value in dict(locals()).items():
         continue
     _path = f"%s/{_name}.pkl"
     with open(_path, "wb") as _f:
-       _dill.dump(_value, _f)
-       _result[_name] = _path
-
+        try:
+            _dill.dump(_value, _f)
+        except Exception as e:
+            continue
+        _result[_name] = _path
+        
 _result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
 del _inspect, _json, _dill
 _result
