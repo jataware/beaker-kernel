@@ -2,6 +2,7 @@
     <div
         class="markdown-cell"
         @dblclick.stop.prevent="if (!editing) {editing = true};"
+        @keyup.enter.exact.stop.prevent="if (!editing) {editing = true;}; focusEditor();"
     >
         <div v-if="!editing" v-html="renderedMarkdown"></div>
         <div v-else>
@@ -9,9 +10,10 @@
                 <div
                     class="markdown-edit-data"
                     :class="{'dark-mode': theme === 'dark'}"
+                    :ref="editorRef"
                 >
                     <Codemirror
-                        v-model="cellSource"
+                        v-model="cell.source"
                         placeholder="Your markdown..."
                         :extensions="codeExtensions"
                         :autofocus="true"
@@ -39,7 +41,7 @@ const props = defineProps([
 const cell = ref(props.cell);
 const theme = inject('theme');
 const editing = ref(false);
-const cellSource = ref<string>(props.cell?.source.join("\n"));
+const editorRef = ref(null);
 
 const codeExtensions = computed(() => {
     const ext = [
@@ -54,21 +56,29 @@ const codeExtensions = computed(() => {
 
 });
 
-const renderedMarkdown = computed(() => {
-    const rawSource = props.cell?.source?.join("\n");
+const focusEditor = () => {
+    const editor: HTMLElement|null = editorRef.value.querySelector('.cm-content');
+        if (editor) {
+            editor.focus();
+        }
+};
 
-    return marked.parse(rawSource);
+
+
+const renderedMarkdown = computed(() => {
+    return marked.parse(props.cell?.source);
 });
 
-const execute = (evt: any) => {
-    cell.value.source = cellSource.value.split("\n");
+const execute = () => {
     editing.value = false;
 }
 
-const enter = (evt: KeyboardEvent) => {
+const enter = (evt?: KeyboardEvent) => {
     editing.value = true;
-    evt.preventDefault();
-    evt.stopPropagation();
+    if (typeof(evt) !== "undefined") {
+        evt.preventDefault();
+        evt.stopPropagation();
+    }
 }
 
 defineExpose({
@@ -91,6 +101,7 @@ onBeforeMount(() => {
 .markdown-cell {
     padding-right: 2rem;
     padding-left: 1rem;
+    min-height: 80%;
 }
 
 .markdown-edit-cell-grid {

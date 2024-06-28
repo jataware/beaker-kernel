@@ -49,11 +49,25 @@
         </div>
         <div class="events" :class="event.type" v-for="event of cell.events" :key="event">
             <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
-            <!--
-            <span v-if="event.type ==='user_answer'">Reply:</span>
-            -->
-            {{ event.content }}
-
+            <template v-if="event.type === 'thought'" >{{ event.content }}</template>
+            <span v-if="event.type ==='code_cell'">
+                <Component
+                    v-if="typeof(getChildByCellId(event.content?.id)) !== 'undefined'"
+                    
+                    :key="event.content.id"
+                    :is="BeakerCodeCell"
+                    :cell="getChildByCellId(event.content.id)"
+                    :index="`${index}:${event.content.index}`"
+                    :class="{
+                        selected: (index === selectedCellIndex)
+                    }"
+                    ref="childrenRef"
+                    drag-enabled=false
+                    @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)"
+                />
+            </span>
+            <template v-if="event.type === 'response'" >{{ event.content }}</template>
+            <template v-if="event.type === 'abort'" >{{ event.content }}</template>
         </div>
         <div
             class="input-request"
@@ -87,10 +101,15 @@ import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
 import Button from "primevue/button";
 import ContainedTextArea from './ContainedTextArea.vue';
 import { IIOPubMessage } from "@jupyterlab/services/lib/kernel/messages";
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
+import BeakerCodeCell from './BeakerCodecell.vue';
 
 const props = defineProps([
-    "cell",
+    'index',
+    'cell',
+    'selectedCellIndex',
+    'childOnClickCallback',
+    'selectNext'
 ]);
 
 const cell = ref(props.cell);
@@ -99,6 +118,12 @@ const editingContents = ref("");
 const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
+const childrenRef = ref<typeof BeakerCodeCell|null>(null);
+
+const getChildByCellId = (child_id: string) : BeakerBaseCell | undefined => {
+    const index = cell.value.children?.findIndex((child) => child.id === child_id)
+    return cell.value?.children?.[index]
+}
 
 function cancelEdit() {
     editing.value = false;

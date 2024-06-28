@@ -68,7 +68,7 @@ class LLMKernel(KernelProxyManager):
         self.magic_commands = {}
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
-        super().__init__(session_config)
+        super().__init__(session_config, session_id=f"{kernel_id}_session")
         self.register_magic_commands()
         self.add_base_intercepts()
         self.context = None

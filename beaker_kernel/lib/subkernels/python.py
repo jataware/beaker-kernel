@@ -77,19 +77,22 @@ for _name, _value in dict(locals()).items():
         continue
     _path = f"%s/{_name}.pkl"
     with open(_path, "wb") as _f:
-       _dill.dump(_value, _f)
-       _result[_name] = _path
-
+        try:
+            _dill.dump(_value, _f)
+        except Exception as e:
+            continue
+        _result[_name] = _path
+        
 _result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
 del _inspect, _json, _dill
 _result
 """ % self.storage_prefix
-        response = await self.evaluate(save_state_code)
+        response = await self.context.evaluate(save_state_code)
         return response["return"]
-        
+
 
     async def load_checkpoint(self, checkpoint: Checkpoint):
-        vars = await self.evaluate("""
+        vars = await self.context.evaluate("""
 import dill as _dill
 _exclusion_critieria = lambda name: name.startswith('_') or name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open')
 [ name for name, value in dict(locals()).items() if not _exclusion_critieria(name) ]
@@ -101,8 +104,7 @@ _exclusion_critieria = lambda name: name.startswith('_') or name in ('In', 'Out'
 
 with open("{filename}", "rb") as _file:
     {varname} = _dill.load(_file)
-    
-""" 
+
+"""
         deserialization_code += "del _dill"
-        await self.execute(deserialization_code)
-        
+        await self.context.execute(deserialization_code)

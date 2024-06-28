@@ -1,12 +1,13 @@
 <template>
   <div class="notebook-controls">
       <InputGroup>
-          <Button
-              @click="emit('add-cell')"
+          <SplitButton
+              @click="emit('add-code-cell')"
               v-tooltip.bottom="{value: 'Add New Cell', showDelay: 300}"
-              icon="pi pi-plus"
+              icon="pi pi-plus pi-code"
               size="small"
               severity="info"
+              :model="menuModel"
               text
           />
           <Button
@@ -37,7 +38,7 @@
       </InputGroup>
       <InputGroup style="margin-right: 1rem;">
           <Button
-              @click="resetNotebook"
+              @click="emit('reset-nb')"
               v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
               icon="pi pi-refresh"
               size="small"
@@ -60,6 +61,7 @@
 <script setup>
 import { defineEmits, inject } from 'vue';
 import Button from 'primevue/button';
+import SplitButton from 'primevue/splitbutton';
 import InputGroup from 'primevue/inputgroup';
 import OpenNotebookButton from './OpenNotebookButton.vue';
 import { downloadFileDOM, getDateTime } from '../util';
@@ -67,9 +69,23 @@ import { downloadFileDOM, getDateTime } from '../util';
 const emit = defineEmits([
   "run-cell",
   "remove-cell",
-  "add-cell",
-  "set-context"
+  "add-code-cell",
+  "add-markdown-cell",
+  "reset-nb"
 ]);
+
+const menuModel = [
+    {
+        label: "Add Code Cell",
+        icon: "pi pi-code",
+        command: () => emit("add-code-cell"),
+    },
+    {
+        label: "Add Markdown Cell",
+        icon: "pi pi-pencil",
+        command: () => emit("add-markdown-cell"),
+    }
+];
 
 const session = inject("session");
 
@@ -78,11 +94,6 @@ const identity = () => {console.log('identity func called');};
 function loadNotebook(notebookJSON) {
     session.loadNotebook(notebookJSON);
 }
-
-const resetNotebook = () => {
-    session.reset();
-    emit('set-context');
-};
 
 
 function downloadNotebook() {

@@ -84,8 +84,9 @@
                     <NotebookControls
                         @run-cell="runCell()"
                         @remove-cell="removeCell"
-                        @add-cell="addCell"
-                        @set-context="reapplyContext"
+                        @add-code-cell="addCodeCell"
+                        @add-markdown-cell="addMarkdownCell"
+                        @reset-nb="resetNB"
                     />
                 <div style="flex: 1; display: flex; position: relative;">
                     <!-- Added drag-sort-enable to BeakerCell parent to
@@ -98,7 +99,7 @@
                             v-for="(cell, index) in session.notebook.cells"
                             :key="cell.id"
                             :class="{
-                                selected: (index === selectedCellIndex),
+                                selected: (index.toString() === selectedCellIndex),
                                 'drag-source': (index == dragSourceIndex),
                                 'drag-above': (index === dragOverIndex && index < dragSourceIndex),
                                 'drag-below': (index === dragOverIndex && index > dragSourceIndex),
@@ -106,11 +107,14 @@
                                 'drag-active': isDragActive,
                             }"
                             ref="notebookCellsRef"
-                            :index="index"
+                            :selectedCellIndex="selectedCellIndex"
+                            :index="String(index)"
                             :drag-enabled="isDragEnabled"
                             @move-cell="handleMoveCell"
                             @click="selectCell(index)"
+                            :childOnClickCallback="selectCell"
                             :cell="cell"
+                            :getCell="_getCell"
                             @keyboard-nav="handleNavAction"
                             @dragstart="handleDragStart($event, cell, index)"
                             @drop="handleDrop($event, index)"
@@ -195,7 +199,9 @@
 
 <script setup lang="tsx">
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
-import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
+import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
+import { type IBeakerCell } from "beaker-kernel";
+// import { IBeakerCell } from "beaker-kernel/dist/notebook";
 
 import Card from 'primevue/card';
 import Button from 'primevue/button';
@@ -256,7 +262,7 @@ const connectionColor = computed(() => {
 // TODO info object map type
 const notebookCellsRef = ref<typeof BeakerCell|null>(null);
 const activeContext = ref<{slug: string, class: string, context: any, info: any} | undefined>(undefined);
-const selectedCellIndex = ref(0);
+const selectedCellIndex = ref("");
 const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 const showDebugPane = ref (true);
@@ -318,15 +324,38 @@ function handleNavAction(action) {
     if (action === 'focus-cell') {
         focusSelectedCell();
     } else if (action === 'select-next-cell') {
-        if (selectedCellIndex.value === cellCount.value - 1) {
-            addCell();
+        if (selectedCellIndex.value === String(cellCount.value - 1)) {
+            addCodeCell();
         } else {
             selectNextCell();
         }
     }
 }
 
-function handleMoveCell(fromIndex, toIndex) {
+/**
+ * Splits a combined cell index into component parts.
+ * Cell indices are in the form of `"1:2"` (representing notebook cell 1, third child)
+ *
+ * usage: `const [parent, child] = splitCellIndex("1:2")`
+ *
+ * note: child will be `undefined` in the case of `const [parent, child] = splitCellIndex("1")`
+ * due to assignment destructuring rules
+ */
+const splitCellIndex = (index: string): number[] => index.split(":").map((part) => Number(part));
+
+const mergeCellIndex = (parent: number, child: number | undefined): string => {
+    if (typeof(child) !== "undefined") {
+        return `${parent}:${child}`;
+    }
+    return `${parent}`;
+}
+
+const getChildCount = (index: string): number => {
+    const [parent, child] = splitCellIndex(index);
+    return session.notebook.cells[parent]?.children?.length || 0
+}
+
+function handleMoveCell(fromIndex: number, toIndex: number) {
     arrayMove(session.notebook.cells, fromIndex, toIndex)
     selectCell(toIndex);
 }
@@ -335,35 +364,48 @@ const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
 });
 
-const _cellIndex = (cell: IBeakerCell): number => {
-    let index = -1;
+const _cellIndex = (cell: number | string | IBeakerCell): string => {
+    let index = "-1";
+    if (typeof(cell) === "string") {
+        index = cell;
+    }
     if (typeof(cell) === "number") {
-        index = cell
+        index = cell.toString();
     }
     else if (cell instanceof BeakerBaseCell) {
-        index = session.notebook.cells.indexOf(cell);
+        const notebookIndex = session.notebook.cells.indexOf(cell);
+        index = notebookIndex.toString();
+
+        // cell is within a notebook cell's children
+        if (notebookIndex === -1) {
+            for (const [notebookIndex, notebookCell] of session.notebook.cells.entries()) {
+                const innerIndex = notebookCell?.children?.indexOf(cell);
+                if (innerIndex !== -1) {
+                    index = `${notebookIndex}:${innerIndex}`;
+                    break;
+                }
+            }
+        }
     }
     return index;
 }
 
 
-const _getCell = (cell: number | IBeakerCell) => {
+const _getCell = (cell: string | IBeakerCell): IBeakerCell => {
     const index = _cellIndex(cell);
-    return session.notebook.cells[index];
+    const [parent, child] = splitCellIndex(index);
+    if (typeof(child) !== "undefined") {
+        return session.notebook.cells[parent]?.children[child];
+    }
+    return session.notebook.cells[parent];
 }
 
-const selectCell = (cell: number | IBeakerCell) => {
-    let index = -1;
-    if (Number.isInteger(cell) ) {
-        index = cell;
-    }
-    else if (cell instanceof BeakerBaseCell) {
-        index = _cellIndex(cell);
-    }
+const selectCell = (cell: number | string | IBeakerCell): void => {
+    let index = _cellIndex(cell);
     selectedCellIndex.value = index;
 }
 
-const commonSelectAction = (event) => {
+const commonSelectAction = (event): boolean => {
     const { target } = event;
 
     const isEditingCode = target.className === 'cm-content'; // codemirror
@@ -381,20 +423,31 @@ function focusSelectedCell() {
         return;
     }
     const elem = cellsContainerRef.value.querySelector('.beaker-cell.selected');
-    elem.focus();
+    if (typeof(elem) !== "undefined" && elem !== null) {
+        elem.focus();
+    }
 }
 
-const selectNextCell = (event) => {
+const selectNextCell = (event?) => {
     if (event && !commonSelectAction(event)) {
         return;
     }
 
     const currentIndex = selectedCellIndex.value;
+    const childCount = getChildCount(currentIndex);
+    const [parent, child] = splitCellIndex(currentIndex);
     // TODO should we wrap around? Should we auto-add a new cell?
-    if (currentIndex === cellCount.value - 1) {
+    if (parent === cellCount.value - 1) {
         return;
     }
-    selectCell(currentIndex + 1);
+
+    // since children are 0-indexed, consider a parent selector as "child -1" for purpose of incrementing
+    const childIndex = typeof(child) === "undefined" ? -1 : child;
+    if (childCount > 0 && childIndex < childCount - 1) {
+        selectCell(`${parent}:${childIndex + 1}`);
+    } else {
+        selectCell(`${parent + 1}`);
+    }
 
     nextTick(() => {
         focusSelectedCell();
@@ -405,17 +458,32 @@ const selectNextCell = (event) => {
     }
 };
 
-const selectPreviousCell = (event) => {
+const selectPreviousCell = (event?) => {
 
     if (event && !commonSelectAction(event)) {
         return;
     }
 
     const currentIndex = selectedCellIndex.value;
-    if (currentIndex === 0) {
+    const childCount = getChildCount(currentIndex);
+    const [parent, child] = splitCellIndex(currentIndex);
+
+    if (parent === 0) {
         return;
     }
-    selectCell(currentIndex - 1);
+
+    if (childCount > 0 && child > 0) {
+        selectCell(`${parent}:${child - 1}`);
+    } else {
+        // select last child of above cell if present
+        const target = `${parent - 1}`;
+        const targetChildCount = getChildCount(target);
+        if (targetChildCount > 0) {
+            selectCell(`${target}:${targetChildCount - 1}`)
+        } else {
+            selectCell(target);
+        }
+    }
 
     nextTick(() => {
         focusSelectedCell();
@@ -457,11 +525,11 @@ function handleKeyboardShortcut(event) {
         selectPreviousCell();
     }
 
+    const [parent, child] = splitCellIndex(selectedCellIndex.value);
     if (['b', 'B'].includes(event.key)){
-        addCell(selectedCellIndex.value + 1);
+        addCodeCell(parent + 1);
     } else if (['a', 'A'].includes(event.key)){
-        let prevIndex = selectedCellIndex.value;
-        addCell(prevIndex);
+        addCodeCell(parent);
     }
 
     if (['d', 'D'].includes(event.key)) {
@@ -485,11 +553,12 @@ function scrollBottomCellContainer(event) {
     }
 }
 
-const addCell = (toIndex) => {
+const addCodeCell = (toIndex?: number) => {
     const newCell = session.addCodeCell("");
 
     if (typeof toIndex !== 'number') {
-        toIndex = selectedCellIndex.value + 1;
+        const [parent, child] = splitCellIndex(selectedCellIndex.value);
+        toIndex = parent + 1;
     }
     arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
 
@@ -500,7 +569,24 @@ const addCell = (toIndex) => {
     });
 }
 
-const runCell = (cell?: number | IBeakerCell) => {
+const addMarkdownCell = (toIndex?: number) => {
+    const newCell = session.addMarkdownCell("");
+
+    if (typeof toIndex !== 'number') {
+        const [parent, child] = splitCellIndex(selectedCellIndex.value);
+        toIndex = parent + 1;
+    }
+    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
+
+    selectCell(newCell);
+
+    nextTick(() => {
+        notebookCellsRef.value[notebookCellsRef.value.length - 1].enter();
+        focusSelectedCell();
+    });
+}
+
+const runCell = (cell?: string | IBeakerCell) => {
     if (cell === undefined) {
         cell = selectedCell.value;
     }
@@ -513,20 +599,27 @@ const runCell = (cell?: number | IBeakerCell) => {
 }
 
 const removeCell = () => {
-    session.notebook.removeCell(selectedCellIndex.value);
+    const [parent, child] = splitCellIndex(selectedCellIndex.value);
+    if (typeof(child) !== "undefined"
+        && typeof(session.notebook.cells?.[parent]?.children) !== "undefined") {
+        session.notebook.cells[parent].children.splice(child, 1);
+    } else {
+        session.notebook.removeCell(parent);
+    }
 
     // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
     if (cellCount.value === 0) {
         session.addCodeCell("");
     }
     // Fixup the selection if we remove the last item.
-    if (selectedCellIndex.value >= cellCount.value) {
-        selectedCellIndex.value = cellCount.value - 1;
+    if (parent >= cellCount.value) {
+        selectedCellIndex.value = mergeCellIndex(cellCount.value - 1, 0);
     }
 };
 
 const resetNB = async () => {
     await session.reset();
+    reapplyContext();
     if (cellCount.value === 0) {
         session.addCodeCell("");
     }

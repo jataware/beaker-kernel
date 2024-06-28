@@ -13,6 +13,7 @@ import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, Bea
 import { BeakerHistory } from './history';
 import { BeakerRenderer, IBeakerRendererOptions } from './render';
 
+
 export interface IBeakerSessionOptions {
     settings: any;
     name: string;
@@ -21,6 +22,7 @@ export interface IBeakerSessionOptions {
     rendererOptions?: IBeakerRendererOptions;
     messageHandler?: Slot<any, any>;
 };
+
 
 /**
  * Main class for connecting to and working with a Beaker kernel.
@@ -292,7 +294,6 @@ export class BeakerSession {
         // Remove cells via splice to ensure reactivity
         this.notebook.cells.splice(0, this.notebook.cells.length);
         this._history.clear();
-        this.addCodeCell("");
         this._sessionContext.restartKernel();
     }
 

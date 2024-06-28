@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import logging
@@ -14,9 +15,6 @@ from .jupyter_kernel_proxy import ( KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                    JupyterMessage, JupyterMessageTuple)
 from .config import ConfigClass
 
-if TYPE_CHECKING:
-    from beaker_kernel.kernel import LLMKernel
-
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +28,23 @@ def get_socket(stream_name: str):
     return socket
 
 
+class ExecutionTask(asyncio.Task):
+    execute_request_msg: JupyterMessage | None
+
+    def __init__(
+        self,
+        *args,
+        execute_request_msg: JupyterMessage | None = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.execute_request_msg = execute_request_msg
+
+
 class handle_message(AbstractAsyncContextManager):
-    def __init__(self, kernel: 'LLMKernel', server, target_stream, msg_data: JupyterMessageTuple, send_status_updates=True) -> None:
+    def __init__(self, server, target_stream, msg_data: JupyterMessageTuple, send_status_updates=True) -> None:
         super().__init__()
-        self.kernel = kernel
+        self.beaker_kernel = server.manager
         self.send_status_updates = send_status_updates
         message = JupyterMessage.parse(msg_data)
         self.server = server
@@ -44,7 +55,7 @@ class handle_message(AbstractAsyncContextManager):
         self.reply_type = self.message_type.replace("_request", "") + "_reply"
         self.return_val = None
         if self.send_status_updates:
-            self.kernel.send_response(
+            self.beaker_kernel.send_response(
                 "iopub", "status", {"execution_state": "busy"}, parent_header=message.header
             )
 
@@ -73,11 +84,11 @@ class handle_message(AbstractAsyncContextManager):
                 "return": self.return_val,
             }
 
-        self.kernel.send_response(
+        self.beaker_kernel.send_response(
             "shell", self.reply_type, reply_content, parent_header=self.message.header, parent_identities=self.message.identities
         )
         if self.send_status_updates:
-            self.kernel.send_response(
+            self.beaker_kernel.send_response(
                 "iopub", "status", {"execution_state": "idle"}, parent_header=self.message.header, parent_identities=self.message.identities
             )
         return None
@@ -89,7 +100,7 @@ def message_handler(fn):
     """
     @wraps(fn)
     async def wrapper(self, server, target_stream, data: JupyterMessageTuple):
-        async with handle_message(self, server, target_stream, data) as ctx:
+        async with handle_message(server, target_stream, data) as ctx:
             result = await fn(self, ctx.message)
             ctx.return_val = result
             return result

@@ -29,25 +29,35 @@
                     v-if="isBusy"
                     class="pi pi-spin pi-spinner busy-icon"
                 />
+                <Button
+                    v-if="hasRollback"
+                    class="rollback-button"
+                    :severity="badgeSeverity"
+                    icon="pi pi-refresh"
+                    size="small"
+                    @click="rollback"
+                />
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject } from "vue";
+import { defineProps, nextTick, defineExpose, ref, shallowRef, computed, inject } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
+import { EditorView } from "codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
+import Button from 'primevue/button';
+
 
 const props = defineProps([
     "cell",
 ]);
 
 const cell = ref(props.cell);
-const isBusy = ref(false);
 const editorView = shallowRef();
 const theme = inject('theme');
 const session = inject('session');
@@ -61,13 +71,22 @@ const handleReady = (payload) => {
 };
 
 enum ExecuteStatus {
-  Success = 'success',
+  Success = 'ok',
   Modified = 'modified',
   Error = 'error',
   Pending = 'pending',
+  None = 'none'
 }
 
-const executeState = ref<ExecuteStatus>(ExecuteStatus.Pending);
+const hasRollback = computed(() => {
+    return typeof(cell.value?.last_execution?.checkpoint_index) !== "undefined";
+});
+
+const rollback = () => cell.value.rollback(session);
+
+const isBusy = computed(() => {
+    return cell.value?.busy;
+});
 
 const badgeSeverity = computed(() => {
     const mappings = {
@@ -75,25 +94,23 @@ const badgeSeverity = computed(() => {
         [ExecuteStatus.Modified]: 'warning',
         [ExecuteStatus.Error]: 'danger',
         [ExecuteStatus.Pending]: 'secondary',
+        [ExecuteStatus.None]: "secondary",
     };
-    return mappings[executeState.value];
+    return mappings[cell.value?.last_execution?.status];
 });
 
-function handleCodeChange() {
-    if (executeState.value !== ExecuteStatus.Pending) {
-        executeState.value = ExecuteStatus.Modified;
-    }
 
+function handleCodeChange() {
+    cell.value.reset_execution_state();
     // TODO See codemirror view API for future keyboard navigation
     // eg to know if we're at the top or bottom
     // of editor and user presser up/down arrows keys to navigate
     // to another cell
     // console.log(editorView.value.inputState);
-
 }
 
 const codeExtensions = computed(() => {
-    const ext = [];
+    const ext = [EditorView.lineWrapping];
 
     const subkernel = activeContext.value?.language?.subkernel || '';
     const isPython = subkernel.includes('python');
@@ -108,27 +125,7 @@ const codeExtensions = computed(() => {
 });
 
 const execute = (evt: any) => {
-    isBusy.value = true;
-
-    const handleDone = async (message: any) => {
-
-        if (message?.content?.status === 'ok') {
-            executeState.value = ExecuteStatus.Success;
-        } else {
-            executeState.value = ExecuteStatus.Error;
-        }
-
-
-        // Timeout added to busy indicators from jumping in/out too quickly
-        setTimeout(() => {
-            isBusy.value = false;
-        }, 500);
-
-    };
-
     const future = props.cell.execute(session);
-    future.done.then(handleDone);
-    executeState.value = ExecuteStatus.Pending;
 }
 
 const enter = () => {
@@ -198,6 +195,13 @@ defineExpose({
             background-color: var(--surface-d);
         }
     }
+}
+
+.rollback-button {
+    margin-top: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 45%;
 }
 
 .busy-icon {

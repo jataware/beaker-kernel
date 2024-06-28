@@ -7,16 +7,23 @@ from tempfile import mkdtemp
 from os import makedirs, environ
 import requests
 
-from archytas.tool_utils import AgentRef, tool
+from archytas.tool_utils import AgentRef, tool, LoopControllerRef, ReactContextRef
 
-from ..utils import env_enabled, action
+from ..utils import env_enabled, action, ExecutionTask
 from ..jupyter_kernel_proxy import ProxyKernelClient
 from ..config import config
+from ..context import BaseContext
 
 Checkpoint = dict[str, str]
 
+
 class JsonStateEncoder(json.JSONEncoder):
     pass
+
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 class BaseSubkernel(abc.ABC):
     DISPLAY_NAME: str
@@ -38,20 +45,10 @@ class BaseSubkernel(abc.ABC):
     def tools(self):
         return [tool for tool, condition in self.TOOLS if condition]
 
-    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
+    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context: BaseContext):
         self.jupyter_id = jupyter_id
-        self.connected_kernel = ProxyKernelClient(subkernel_configuration)
+        self.connected_kernel = ProxyKernelClient(subkernel_configuration, session_id=context.beaker_kernel.session_id)
         self.context = context
-
-    def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
-        return self.context.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)
-
-    async def execute(self, command, response_handler=None, parent_header={}):
-        return await self.context.execute(command, response_handler, parent_header)
-
-    async def evaluate(self, expression, parent_header={}):
-        return await self.context.evaluate(expression, parent_header)
-
 
     def cleanup(self):
         if self.jupyter_id is not None:
@@ -68,30 +65,133 @@ class BaseSubkernel(abc.ABC):
 
 
 @tool()
-async def run_code(code: str, agent: AgentRef) -> str:
+async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
     """
-    Execute code in the user's session. After execution,
-    the state of the kernel will be rolled back to before this tool
-    was used.
+    Executes code in the user's notebook on behalf of the user, but collects the outputs of the run for use by the Agent
+    in the ReAct loop, if needed.
 
-    This tool can be help answer questions about the kernel state. For
-    example, a user may ask something about a dictionary `d` and using
-    run code with the `code` of `d.keys()`.
+    The code runs in a new codecell and the user can watch the execution and will see all of the normal output in the
+    Jupyter interface.
 
-    This tool can also be used to double check if code will work before
-    returning it as a final answer.
+    This tool can be used to probe the user's environment or collect information to answer questions, or can be used to
+    run code completely on behalf of the user. If a user asks the agent to do something that reasonably should be done
+    via code, you should probably default to using this tool.
 
-    Note that this tool does not capture `stdout` AND only returns the
-    results of the last expression evaluated.
+    This tool can be run more than once in a react loop. All actions and variables created in earlier uses of the tool
+    in a particular loop should be assumed to exist for future uses of the tool in the same loop.
 
     Args:
-        code (str): Code to run directly in Jupyter.
+        code (str): Code to run directly in Jupyter. This should be a string exactly as it would appear in a notebook
+                    codecell. No extra escaping of newlines or similar characters is required.
     Returns:
-        str: Result of the `expr`
-
+        str: A summary of the run, along with the collected stdout, stderr, returned result, display_data items, and any
+             errors that may have occurred.
     """
-    result = await agent.context.subkernel.execute_and_rollback(code)
-    return result
+    def format_execution_context(context) -> str:
+        """
+        Formats the execution context into a format that is easy for the agent to parse and understand.
+        """
+        stdout_list = context.get("stdout_list")
+        stderr_list = context.get("stderr_list")
+        display_data_list = context.get("display_data_list")
+        error = context.get("error")
+        return_value = context.get("return")
+
+        output = [
+             """Execution report:""",
+            f"""Execution id: {context['id']}""",
+            f"""Successful?: {context['done'] and not context['error']}""",
+            f"""Code executed:
+```
+{context['command']}
+```\n""",
+        ]
+
+        if error:
+            output.extend([
+                 "The following error was thrown when executing the code",
+                 "  Error:",
+                f"    {error['ename']} {error['evalue']}",
+                 "  TraceBack:",
+                 "\n".join(error['traceback']),
+                 "",
+            ])
+
+
+        if stdout_list:
+            output.extend([
+                "The execution produced the following stdout output:",
+                "\n".join(["```", *stdout_list, "```\n"]),
+            ])
+        if stderr_list:
+            output.extend([
+                "The execution produced the following stderr output:",
+                "\n".join(["```", *stderr_list, "```\n"]),
+            ])
+        if display_data_list:
+            output.append(
+                "The execution produced the following `display_data` objects to display in the notebook:",
+            )
+            for idx, display_data in enumerate(display_data_list):
+                output.append(
+                    f"display_data item {idx}:"
+                )
+                for mimetype, value in display_data.items():
+                    if len(value) > 800:
+                        value = f"{value[:400]} ... truncated ... {value[-400:]}"
+                    output.append(
+                        f"{mimetype}:"
+                    )
+                    output.append(
+                        f"```\n{value}\n```\n"
+                    )
+        if return_value:
+            output.append(
+                "The execution returned the following:",
+            )
+            if isinstance(return_value, str):
+                output.extend([
+                    '```', return_value, '```\n'
+                ])
+        output.append("Execution Report Complete")
+        return "\n".join(output)
+
+    # TODO: In future, this may become a parameter and we allow the agent to decide if code should be automatically run
+    # or just be added.
+    autoexecute = True
+    message = react_context.get("message", None)
+    identities = getattr(message, 'identities', [])
+
+    try:
+        execution_task: ExecutionTask
+        checkpoint_index, execution_task = await agent.context.subkernel.checkpoint_and_execute(
+            code, not autoexecute, parent_header=message.header, identities=identities
+        )
+        execute_request_msg = {
+            name: getattr(execution_task.execute_request_msg, name)
+            for name in execution_task.execute_request_msg.json_field_names
+        }
+        agent.context.send_response(
+            "iopub",
+            "add_child_codecell",
+            {
+                "action": "code_cell",
+                "language": agent.context.subkernel.SLUG,
+                "code": code.strip(),
+                "autoexecute": autoexecute,
+                "execute_request_msg": execute_request_msg,
+                "checkpoint_index": checkpoint_index,
+            },
+            parent_header=message.header,
+            parent_identities=getattr(message, "identities", None),
+        )
+
+        execution_context = await execution_task
+    except Exception as err:
+        logger.error(err, exc_info=err)
+        raise
+
+    return format_execution_context(execution_context)
 
 
 class BaseCheckpointableSubkernel(BaseSubkernel):
@@ -168,9 +268,13 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
             shutil.rmtree(self.storage_prefix, ignore_errors=True)
             self.checkpoints = []
 
-
-    async def execute_and_rollback(self, code: str):
+    async def checkpoint_and_execute(self, code: str, surpress_messages: bool = False, parent_header = None, identities = None) -> tuple[int, ExecutionTask]:
         checkpoint_index = await self.add_checkpoint()
-        result = await self.evaluate(code)
+        task = self.context.execute(code, store_history=True, surpress_messages=surpress_messages, parent_header=parent_header, identities=identities)
+        return checkpoint_index, task
+
+    async def execute_and_rollback(self, code: str, surpress_messages: bool = False, parent_header = None, identities=None):
+        checkpoint_index = await self.add_checkpoint()
+        result = await self.context.execute(code, surpress_messages=surpress_messages, parent_header=parent_header, identities=identities)
         await self.rollback(checkpoint_index)
         return str(result["return"])

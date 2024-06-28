@@ -5,13 +5,12 @@ import logging
 import os.path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 import requests
+import uuid
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
-from archytas.tool_utils import collect_tools_from_object
-
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import action, get_socket
+from beaker_kernel.lib.utils import action, get_socket, ExecutionTask
 from beaker_kernel.lib.config import config
 
 
@@ -145,6 +144,7 @@ class BaseContext:
             raise ValueError("Refusing loopback connection")
         subkernel = kernel_opts[language](subkernel_id, kernels[matching], self)
         self.beaker_kernel.server.set_proxy_target(subkernel.connected_kernel)
+        self.beaker_kernel.server.session_id = str(uuid.uuid4())
         return subkernel
 
 
@@ -289,15 +289,25 @@ class BaseContext:
             )
         return template.render(**render_dict)
 
-
-    async def execute(self, command, response_handler=None, parent_header={}):
+    def execute(self,
+        command,
+        response_handler=None,
+        parent_header={},
+        store_history=False,
+        surpress_messages=True,
+        identities=None,
+    ) -> ExecutionTask:
         self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
         stream = self.subkernel.connected_kernel.streams.shell
-        execution_message = self.subkernel.connected_kernel.make_multipart_message(
+
+        if identities is None:
+            identities = []
+
+        execute_request_multipart = self.subkernel.connected_kernel.make_multipart_message(
             msg_type="execute_request",
             content={
                 "silent": False,
-                "store_history": False,
+                "store_history": store_history,
                 "user_expressions": {},
                 "allow_stdin": True,
                 "stop_on_error": False,
@@ -307,119 +317,147 @@ class BaseContext:
             metadata={
                 "trusted": True,
             },
+            identities=identities,
         )
-        stream.send_multipart(execution_message)
-        original_message = JupyterMessage.parse(execution_message)
-        message_id = original_message.header.get("msg_id")
-        self.beaker_kernel.internal_executions.add(message_id)
+        execute_request_msg = JupyterMessage.parse(execute_request_multipart)
+        async def execution_coro():
+            stream.send_multipart(execute_request_multipart)
+            message_id = execute_request_msg.header.get("msg_id")
+            self.beaker_kernel.internal_executions.add(message_id)
 
-        message_context = {
-            "id": message_id,
-            "stdout_list": [],
-            "stderr_list": [],
-            "return": None,
-            "error": None,
-            "done": False,
-            "result": None,
-            "parent": original_message,
-        }
-        message_metadata = {}
+            message_context = {
+                "id": message_id,
+                "command": command,
+                "stdout_list": [],
+                "stderr_list": [],
+                "display_data_list": [],
+                "return": None,
+                "error": None,
+                "done": False,
+                "result": None,
+                "parent": execute_request_msg,
+            }
+            message_metadata = {}
 
-        filter_list = self.beaker_kernel.server.filters
+            filter_list = self.beaker_kernel.server.filters
 
-        shell_socket = get_socket("shell")
-        iopub_socket = get_socket("iopub")
+            shell_socket = get_socket("shell")
+            iopub_socket = get_socket("iopub")
 
-        # Generate a handler to catch and silence the output
-        async def silence_message(server, target_stream, data):
-            message = JupyterMessage.parse(data)
+            # Generate a handler to catch and silence the output
+            async def silence_message(server, target_stream, data):
+                message = JupyterMessage.parse(data)
 
-            if message.parent_header.get("msg_id", None) != message_id:
-                return data
-            return None
+                if not surpress_messages or message.parent_header.get("msg_id", None) != message_id:
+                    return data
+                return None
 
-        async def collect_result(server, target_stream, data):
-            message = JupyterMessage.parse(data)
-            # Ensure we are only working on handlers for this message response
-            if message.parent_header.get("msg_id", None) != message_id:
-                return data
+            async def collect_result(server, target_stream, data):
+                message = JupyterMessage.parse(data)
+                # Ensure we are only working on handlers for this message response
+                if message.parent_header.get("msg_id", None) != message_id:
+                    return data
 
-            data = message.content["data"].get("text/plain", None)
-            message_context["return"] = data
-            filter_list.remove(
-                InterceptionFilter(iopub_socket, "execute_result", collect_result)
-            )
+                content_data = message.content["data"].get("text/plain", None)
+                message_context["return"] = content_data
+                if not surpress_messages:
+                    return data
 
-        async def collect_stream(server, target_stream, data):
-            message = JupyterMessage.parse(data)
-            # Ensure we are only working on handlers for this message response
-            if message.parent_header.get("msg_id", None) != message_id:
-                return data
-            stream = message.content["name"]
-            message_context[f"{stream}_list"].append(message.content["text"])
+            async def collect_display_data(server, target_stream, data):
+                message = JupyterMessage.parse(data)
+                # Ensure we are only working on handlers for this message response
+                if message.parent_header.get("msg_id", None) != message_id:
+                    return data
+                display_data = message.content["data"]
+                message_context["display_data_list"].append(display_data)
+                if not surpress_messages:
+                    return data
 
-        async def handle_error(server, target_stream, data):
-            message = JupyterMessage.parse(data)
-            content = message.content
-            message_context["error"] = content
-            logger.error(
-                "Error: %s %s\nTraceback:\n%s",
-                content["ename"],
-                content["evalue"],
-                "\n".join(content["traceback"]),
-            )
+            async def collect_stream(server, target_stream, data):
+                message = JupyterMessage.parse(data)
+                # Ensure we are only working on handlers for this message response
+                if message.parent_header.get("msg_id", None) != message_id:
+                    return data
+                stream = message.content["name"]
+                message_context[f"{stream}_list"].append(message.content["text"])
+                if not surpress_messages:
+                    return data
 
-        async def cleanup(server, target_stream, data):
-            message = JupyterMessage.parse(data)
-            # Ensure we are only working on handlers for this message response
-            if message.parent_header.get("msg_id", None) != message_id:
-                return data
-            if response_handler:
-                filter_list.remove(
-                    InterceptionFilter(iopub_socket, "stream", response_handler)
+            async def handle_error(server, target_stream, data):
+                message = JupyterMessage.parse(data)
+                content = message.content
+                message_context["error"] = content
+                logger.error(
+                    "Error: %s %s\nTraceback:\n%s",
+                    content["ename"],
+                    content["evalue"],
+                    "\n".join(content["traceback"]),
                 )
-            filter_list.remove(
-                InterceptionFilter(iopub_socket, "stream", collect_stream)
-            )
-            filter_list.remove(
+                if not surpress_messages:
+                    return data
+
+            async def cleanup(server, target_stream, data):
+                message = JupyterMessage.parse(data)
+                # Ensure we are only working on handlers for this message response
+                if message.parent_header.get("msg_id", None) != message_id:
+                    return data
+                if response_handler:
+                    filter_list.remove(
+                        InterceptionFilter(iopub_socket, "stream", response_handler)
+                    )
+                filter_list.remove(
+                    InterceptionFilter(iopub_socket, "stream", collect_stream)
+                )
+                filter_list.remove(
+                    InterceptionFilter(iopub_socket, "display_data", collect_display_data)
+                )
+                filter_list.remove(
+                    InterceptionFilter(iopub_socket, "execute_input", silence_message)
+                )
+                filter_list.remove(
+                    InterceptionFilter(iopub_socket, "execute_request", silence_message)
+                )
+                filter_list.remove(
+                    InterceptionFilter(iopub_socket, "execute_result", collect_result)
+                )
+                filter_list.remove(InterceptionFilter(iopub_socket, "error", handle_error))
+                filter_list.remove(
+                    InterceptionFilter(shell_socket, "execute_reply", cleanup)
+                )
+                message_context["result"] = message.content
+                message_context["done"] = True
+                if not surpress_messages:
+                    return data
+
+            filter_list.append(
                 InterceptionFilter(iopub_socket, "execute_input", silence_message)
             )
-            filter_list.remove(
+            filter_list.append(
                 InterceptionFilter(iopub_socket, "execute_request", silence_message)
             )
-            filter_list.remove(InterceptionFilter(iopub_socket, "error", handle_error))
-            filter_list.remove(
-                InterceptionFilter(shell_socket, "execute_reply", cleanup)
-            )
-            message_context["result"] = message
-            message_context["done"] = True
-
-        filter_list.append(
-            InterceptionFilter(iopub_socket, "execute_input", silence_message)
-        )
-        filter_list.append(
-            InterceptionFilter(iopub_socket, "execute_request", silence_message)
-        )
-        filter_list.append(
-            InterceptionFilter(iopub_socket, "execute_result", collect_result)
-        )
-        filter_list.append(InterceptionFilter(shell_socket, "execute_reply", cleanup))
-        filter_list.append(InterceptionFilter(iopub_socket, "stream", collect_stream))
-        filter_list.append(InterceptionFilter(iopub_socket, "error", handle_error))
-
-        if response_handler:
             filter_list.append(
-                InterceptionFilter(iopub_socket, "stream", response_handler)
+                InterceptionFilter(iopub_socket, "execute_result", collect_result)
             )
+            filter_list.append(InterceptionFilter(shell_socket, "execute_reply", cleanup))
+            filter_list.append(InterceptionFilter(iopub_socket, "stream", collect_stream))
+            filter_list.append(InterceptionFilter(iopub_socket, "display_data", collect_display_data))
+            filter_list.append(InterceptionFilter(iopub_socket, "error", handle_error))
 
-        await asyncio.sleep(0.1)
-        while not message_context["done"]:
+            if response_handler:
+                filter_list.append(
+                    InterceptionFilter(iopub_socket, "stream", response_handler)
+                )
+
+            await asyncio.sleep(0.1)
+            while not message_context["done"]:
+                await asyncio.sleep(0.2)
+            # Wait for any straggling messages
             await asyncio.sleep(0.2)
-        # Wait for any straggling messages
-        await asyncio.sleep(0.2)
-        self.beaker_kernel.internal_executions.remove(message_id)
-        self.beaker_kernel.debug("execution_end", message_context, parent_header=parent_header)
-        return message_context
+            self.beaker_kernel.internal_executions.remove(message_id)
+            self.beaker_kernel.debug("execution_end", message_context, parent_header=parent_header)
+            return message_context
+        task = ExecutionTask(coro=execution_coro(), execute_request_msg=execute_request_msg)
+        return task
 
     async def evaluate(self, expression, parent_header={}):
         result = await self.execute(expression, parent_header=parent_header)
