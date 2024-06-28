@@ -38,7 +38,7 @@
       </InputGroup>
       <InputGroup style="margin-right: 1rem;">
           <Button
-              @click="resetNotebook"
+              @click="emit('reset-nb')"
               v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
               icon="pi pi-refresh"
               size="small"
@@ -71,7 +71,7 @@ const emit = defineEmits([
   "remove-cell",
   "add-code-cell",
   "add-markdown-cell",
-  "set-context"
+  "reset-nb"
 ]);
 
 const menuModel = [
@@ -94,11 +94,6 @@ const identity = () => {console.log('identity func called');};
 function loadNotebook(notebookJSON) {
     session.loadNotebook(notebookJSON);
 }
-
-const resetNotebook = () => {
-    session.reset();
-    emit('set-context');
-};
 
 
 function downloadNotebook() {

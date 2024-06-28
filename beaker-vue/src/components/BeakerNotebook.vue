@@ -86,7 +86,7 @@
                         @remove-cell="removeCell"
                         @add-code-cell="addCodeCell"
                         @add-markdown-cell="addMarkdownCell"
-                        @set-context="reapplyContext"
+                        @reset-nb="resetNB"
                     />
                 <div style="flex: 1; display: flex; position: relative;">
                     <!-- Added drag-sort-enable to BeakerCell parent to
@@ -619,6 +619,7 @@ const removeCell = () => {
 
 const resetNB = async () => {
     await session.reset();
+    reapplyContext();
     if (cellCount.value === 0) {
         session.addCodeCell("");
     }
