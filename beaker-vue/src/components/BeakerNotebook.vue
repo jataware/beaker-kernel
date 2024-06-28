@@ -487,9 +487,6 @@ const removeCell = () => {
 const resetNB = async () => {
     await session.reset();
     reapplyContext();
-    if (cellCount.value === 0) {
-        session.addCodeCell("");
-    }
 };
 
 function toggleContextSelection() {
