@@ -610,8 +610,26 @@ export class BeakerNotebook {
         this.cells.push(cell);
     }
 
+    public insertCell(cell: IBeakerCell | nbformat.ICell, position: number) {
+        this.cells.splice(position, 0, cell);
+    }
+
     public removeCell(index: number) {
         this.cells.splice(index, 1);
+    }
+
+    public cutCell(index: number) {
+        const removedValues = this.cells.splice(index, 1);
+        if (removedValues.length > 0) {
+            return removedValues[0];
+        }
+        return null;
+    }
+
+    public moveCell(fromIndex: number, toIndex: number) {
+        if (fromIndex !== toIndex) {
+            this.insertCell(this.cutCell(fromIndex), toIndex);
+        }
     }
 
     public setSubkernelInfo(sessionInfo: any) {

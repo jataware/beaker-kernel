@@ -7,7 +7,6 @@
             >
                 <Codemirror
                     v-model="cell.source"
-                    ref="codemirrorRef"
                     placeholder="Your code..."
                     :extensions="codeExtensions"
                     :disabled="isBusy"
@@ -15,7 +14,7 @@
                     @change="handleCodeChange"
                     @ready="handleReady"
                 />
-                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
+                <CodeCellOutput v-if="props.renderOutput" :outputs="cell.outputs" :busy="isBusy" />
             </div>
             <div class="state-info">
                 <div class="execution-count-badge">
@@ -44,7 +43,7 @@
 
 <script setup lang="ts">
 import { defineProps, nextTick, defineExpose, ref, shallowRef, computed, inject } from "vue";
-import CodeCellOutput from "./BeakerCodecellOutput.vue";
+import CodeCellOutput from "./UICodeCellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView } from "codemirror";
 import { python } from '@codemirror/lang-python';
@@ -53,16 +52,22 @@ import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 
 
-const props = defineProps([
-    "cell",
-]);
+const props = defineProps({
+    cell: {
+        type: Object,
+        required: true
+    },
+    renderOutput: {
+        type: Boolean,
+        default: true
+    }
+});
 
 const cell = ref(props.cell);
 const editorView = shallowRef();
 const theme = inject('theme');
 const session = inject('session');
 const activeContext = inject('active_context');
-const codemirrorRef = ref<typeof Codemirror|null>(null);
 
 const handleReady = (payload) => {
     // TODO unused, but very useful for future operations.
@@ -128,15 +133,8 @@ const execute = (evt: any) => {
     const future = props.cell.execute(session);
 }
 
-const enter = () => {
-    if(codemirrorRef.value?.focus) {
-        codemirrorRef.value?.focus();
-    }
-}
-
 defineExpose({
-    execute,
-    enter,
+    execute
 });
 
 

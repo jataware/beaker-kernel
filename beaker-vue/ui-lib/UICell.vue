@@ -19,13 +19,15 @@
             'drag-disabled': !props.dragEnabled,
         }"
       >
-        <DraggableMarker
-            :draggable="props.dragEnabled"
-        />
+        <slot name="drag-indicator">
+            <DraggableMarker
+                :draggable="props.dragEnabled"
+            />
+        </slot>
       </div>
-      <Dropdown 
-        class="cell-type-selector" 
-        v-model="cell_type" 
+      <Dropdown
+        class="cell-type-selector"
+        v-model="cell_type"
         :options="Object.keys(props.availableCellTypes)"
         dropdown-icon="pi pi-code"
       >
@@ -46,6 +48,7 @@
         <Component
             :is="cellComponent"
             :cell="props.cell"
+            :renderOutput="renderOutput"
             ref="typedCellRef"
             :index="index"
             :selectedCellIndex="selectedCellIndex"
@@ -87,10 +90,10 @@ import BeakerRawCell from './BeakerRawCell.vue';
 import { IBeakerCell } from "beaker-kernel/dist/notebook";
 import Dropdown from 'primevue/dropdown';
 
-export type CellTypes = 
-    | typeof BeakerRawCell 
-    | typeof BeakerCodeCell 
-    | typeof BeakerMarkdownCell 
+export type CellTypes =
+    | typeof BeakerRawCell
+    | typeof BeakerCodeCell
+    | typeof BeakerMarkdownCell
     | typeof BeakerLLMQueryCell;
 
 export interface Props {
@@ -117,13 +120,14 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits([
-    'move-cell',
-    'keyboard-nav'
+    'keyboard-nav',
+    'click'
 ]);
 
 const session: BeakerSession = inject("session");
 
-type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
+// type BeakerCellType = typof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
+type BeakerCellType = typeof CodeCell | typeof AgentCell | typeof MarkdownCell;
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
 const typedCellRef = ref<BeakerCellType|null>(null);
@@ -208,7 +212,7 @@ const unfocusEditor = () => {
 function execute() {
     const child = getSelectedChild();
     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
-    
+
     if (targetRef?.value) {
         targetRef.value?.execute(session);
     }
@@ -230,7 +234,7 @@ const executeAndMove = () => {
 const enter = (event) => {
     const child = getSelectedChild();
     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
-    
+
     if (targetRef?.value?.enter) {
         targetRef.value.enter(event);
     }
@@ -244,7 +248,6 @@ defineExpose({
 </script>
 
 <style lang="scss">
-
 .beaker-cell {
     padding: 1rem 0 1rem 0.2rem;
     border-right: 5px solid transparent;
@@ -298,32 +301,28 @@ defineExpose({
 }
 
 .drag-source {
-    background-color: #222;
+      background-color: #222;
     > * {
         opacity: 0.5;
         background-color: #222;
     }
 }
-
 .drag-above {
-    box-shadow: 0px -5px 1px var(--purple-200);
+      box-shadow: 0px -5px 1px var(--purple-200);
 
     &:first-child {
         margin-top: 5px;
         padding-top: calc(1rem - 5px);
     }
 }
-
-.drag-itself, .drag-itself.selected {
-    background-color: var(--purple-200);
-}
-
 .drag-below {
     box-shadow: 0px 5px 0px var(--purple-200);
     margin-bottom: 5px;
     padding-bottom: calc(1rem - 5px);
 }
-
+.drag-itself, .drag-itself.selected {
+    background-color: var(--purple-200);
+}
 
 .cell-type-selector {
     grid-area: cell-type-dropdown;
@@ -360,4 +359,5 @@ defineExpose({
         aspect-ratio: 1 / 1;
     }
 }
+
 </style>

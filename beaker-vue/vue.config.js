@@ -4,8 +4,11 @@ const path = require('path');
 module.exports = defineConfig({
   // publicPath: "/dev_ui/",
   pages: {
-    index: 'src/main.ts',
-    admin: 'src/admin.ts',
+    index: 'src/pages/dev-interface.ts',
+    admin: 'src/pages/admin.ts',
+    notebook: 'src/pages/notebook.ts',
+    cell: 'src/pages/cell.ts',
+    playground: 'src/pages/playground.ts',
   },
   assetsDir: "static/",
   transpileDependencies: true,
