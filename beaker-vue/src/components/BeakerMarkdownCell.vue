@@ -1,8 +1,8 @@
 <template>
     <div
         class="markdown-cell"
-        @dblclick.stop.prevent="if (!editing) {editing = true};"
-        @keyup.enter.exact.stop.prevent="if (!editing) {editing = true;}; focusEditor();"
+        @dblclick.stop.prevent="if (!editing && !props.markdown_readonly) {editing = true};"
+        @keyup.enter.exact.stop.prevent="if (!editing && !props.markdown_readonly) {editing = true;}; focusEditor();"
     >
         <div v-if="!editing" v-html="renderedMarkdown"></div>
         <div v-else>
@@ -34,7 +34,8 @@ import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
 
 const props = defineProps([
-    "cell"
+    "cell",
+    "markdown_readonly"
 ]);
 
 
@@ -57,7 +58,7 @@ const codeExtensions = computed(() => {
 });
 
 const focusEditor = () => {
-    const editor: HTMLElement|null = editorRef.value.querySelector('.cm-content');
+    const editor: HTMLElement|null = editorRef?.value?.querySelector('.cm-content');
         if (editor) {
             editor.focus();
         }
@@ -74,6 +75,9 @@ const execute = () => {
 }
 
 const enter = (evt?: KeyboardEvent) => {
+    if (props.markdown_readonly) {
+        return;
+    }
     editing.value = true;
     if (typeof(evt) !== "undefined") {
         evt.preventDefault();

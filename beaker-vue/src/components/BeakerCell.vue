@@ -25,7 +25,8 @@
       </div>
       <Dropdown 
         class="cell-type-selector" 
-        v-model="cell_type" 
+        :model-value="cell_type" 
+        @update:model-value="(value) => switchCellTypeContextualEvent(null, value)"
         :options="Object.keys(props.availableCellTypes)"
         dropdown-icon="pi pi-code"
       >
@@ -76,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed, defineEmits, defineExpose, withDefaults, inject  } from "vue";
+import { defineProps, ref, shallowRef, computed, defineEmits, defineExpose, withDefaults, inject  } from "vue";
 import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodecell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
@@ -84,7 +85,7 @@ import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import { BeakerSession } from 'beaker-kernel';
 
 import BeakerRawCell from './BeakerRawCell.vue';
-import { IBeakerCell } from "beaker-kernel/dist/notebook";
+import { BeakerBaseCell, IBeakerCell } from "beaker-kernel/dist/notebook";
 import Dropdown from 'primevue/dropdown';
 
 export type CellTypes = 
@@ -127,14 +128,20 @@ type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
 const typedCellRef = ref<BeakerCellType|null>(null);
-const childrenRef = ref<BeakerCellType|null>(null);
+const childrenRef = shallowRef<BeakerCellType|null>(null);
 
 const isOuterCellFocused = () => document.activeElement.classList.contains("beaker-cell");
 const switchCellTypeContextualEvent = (event, type) => {
-    if (isOuterCellFocused()) {
+    // rather than error handling, the 0 case here is one where we know that the inner cell is not selected
+    // and instead of firing at the wrong time, the absence of a selection is a just fine condition.
+    if (isOuterCellFocused() || document.activeElement.classList.length == 0) {
+        console.log(event, type);
+        (props.cell as BeakerBaseCell).convert_inplace_to(session, type);
         cell_type.value = type;
-        event.preventDefault();
-        event.stopPropagation();
+        if (event && typeof(event) !== "undefined") {
+            event.preventDefault();
+            event.stopPropagation();
+        }
     }
 }
 

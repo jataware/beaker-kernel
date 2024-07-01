@@ -72,6 +72,44 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
         this.last_execution = {status: "modified"};
     }
 
+    // convert the notebook cell to another kind of cell:
+    // this is necessary because of the UI state falling out of sync with
+    // serialization and unserialization in the case of saving to ipynb --
+    // without this, a code cell changed to markdown would be code on refresh.
+    //
+    // usage: `cell.convert_inplace_to(session, typeof BeakerNotebookCellType)`
+    //
+    // precondition: must be a parent cell, not a child cell
+    public convert_inplace_to(session: BeakerSession, new_type: BeakerCellType): void {
+        const target_index = session.notebook.cells.findIndex(
+            (cell) => cell.id === this?.id
+        );
+        if (target_index === -1) {
+            console.warn("attempted to convert cell not found in parent cell in place; cell not found");
+            return;
+        }
+        // this is much less readable with a map of strings to extended typing information
+        // compared to just checking individually with branches.
+        let new_cell: IBeakerCell;
+        if (new_type === "markdown") {
+            new_cell = new BeakerMarkdownCell({...this});
+        } 
+        else if (new_type === "code") {
+            new_cell = new BeakerCodeCell({...this});
+        }
+        else if (new_type === "query") {
+            new_cell = new BeakerQueryCell({...this});
+        }
+        else if (new_type === "raw") {
+            new_cell = new BeakerRawCell({...this});
+        } else {
+            console.warn("invalid cell type provided for conversion target");
+            return;
+        }
+        new_cell.cell_type = new_type;
+        session.notebook.cells.splice(target_index, 1, new_cell);
+    }
+
     public fromJSON(obj: any) {
         Object.keys(obj).forEach((key) => {
             this[key] = obj[key];
@@ -100,7 +138,15 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
 }
 
 export interface IBeakerQueryEvent extends JSONObject {
-    type: "thought" | "response" | "user_question" | "user_answer" | "error" | "code_cell" | "abort";
+    type: 
+        | "thought" 
+        | "response" 
+        | "user_question" 
+        | "user_answer" 
+        | "error" 
+        | "code_cell" 
+        | "markdown_cell"
+        | "abort";
     content: string | PartialJSONValue;
 };
 
@@ -256,15 +302,47 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 this.status = content.execution_state;
             }
             else if (msg_type === "llm_thought") {
+                if (content.thought === "") {
+                    return;
+                }
+                const mdCell = new BeakerMarkdownCell({
+                    cell_type: "markdown",
+                    source: 
+`*Thought*:  
+> ${content.thought}`,
+                    metadata: {
+                        parent_cell: this.id,
+                        query_event_type: "llm_thought"
+                    }
+                });
+                this.children.push(mdCell)
                 this.events.push({
-                    type: "thought",
-                    content: content.thought,
+                    type: "markdown_cell",
+                    content: {
+                        id: mdCell.id,
+                        index: this.children?.length - 1,
+                    }
                 });
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
+                const mdCell = new BeakerMarkdownCell({
+                    cell_type: "markdown",
+                    source:
+`- - -
+*Response*:  
+> ${content.text}`,
+                    metadata: {
+                        parent_cell: this.id,
+                        query_event_type: "llm_response"
+                    }
+                });
+                this.children.push(mdCell)
                 this.events.push({
-                    type: "response",
-                    content: content.text,
+                    type: "markdown_cell",
+                    content: {
+                        id: mdCell.id,
+                        index: this.children?.length - 1,
+                    }
                 });
             }
             else if (msg_type === "code_cell") {

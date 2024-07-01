@@ -16,8 +16,9 @@
                     </div>
                 </div>
                 <div v-else>
-                    <div>
-                        {{ cell.source }} <span v-if="savedEdit" style="font-weight: 100;">(edited)</span>
+                    <div class="llm-prompt-container">
+                        <p class="llm-prompt-text">{{ cell.source }}</p>
+                        <p v-if="savedEdit" style="font-weight: 100;">(edited)</p>
                     </div>
                 </div>
             </div>
@@ -47,27 +48,33 @@
                 />
             </div>
         </div>
-        <div class="events" :class="event.type" v-for="event of cell.events" :key="event">
-            <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
-            <template v-if="event.type === 'thought'" >{{ event.content }}</template>
-            <span v-if="event.type ==='code_cell'">
-                <Component
-                    v-if="typeof(getChildByCellId(event.content?.id)) !== 'undefined'"
-                    
-                    :key="event.content.id"
-                    :is="BeakerCodeCell"
-                    :cell="getChildByCellId(event.content.id)"
-                    :index="`${index}:${event.content.index}`"
-                    :class="{
-                        selected: (index === selectedCellIndex)
-                    }"
-                    ref="childrenRef"
-                    drag-enabled=false
-                    @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)"
-                />
-            </span>
-            <template v-if="event.type === 'response'" >{{ event.content }}</template>
-            <template v-if="event.type === 'abort'" >{{ event.content }}</template>
+        <div class="event-container" v-if="cell.events.length > 0">
+            <div class="query-events-header">
+                <span class="query-events-header-text">Agent Output</span>
+            </div>
+            <div class="events" :class="event.type" v-for="event of cell.events" :key="event">
+                <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
+                <template v-if="event.type === 'thought'" >{{ event.content }}</template>
+                <span v-if="event.type ==='code_cell' || event.type === 'markdown_cell'">
+                    <Component
+                        v-if="typeof(getChildByCellId(event.content?.id)) !== 'undefined'"
+                        
+                        :key="event.content.id"
+                        :is="cellEventTypeMap[event.type]"
+                        :cell="getChildByCellId(event.content.id)"
+                        :index="`${index}:${event.content.index}`"
+                        :class="{
+                            selected: (index === selectedCellIndex)
+                        }"
+                        ref="childrenRef"
+                        drag-enabled=false
+                        @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)"
+                        :markdown_readonly="true"
+                    />
+                </span>
+                <template v-if="event.type === 'response'" >{{ event.content }}</template>
+                <template v-if="event.type === 'abort'" >{{ event.content }}</template>
+            </div>
         </div>
         <div
             class="input-request"
@@ -97,12 +104,13 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, nextTick, inject } from "vue";
 import Button from "primevue/button";
 import ContainedTextArea from './ContainedTextArea.vue';
 import { IIOPubMessage } from "@jupyterlab/services/lib/kernel/messages";
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 import BeakerCodeCell from './BeakerCodecell.vue';
+import BeakerMarkdownCell from "./BeakerMarkdownCell.vue";
 
 const props = defineProps([
     'index',
@@ -118,7 +126,11 @@ const editingContents = ref("");
 const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
-const childrenRef = ref<typeof BeakerCodeCell|null>(null);
+const childrenRef = shallowRef<typeof BeakerCodeCell|null>(null);
+const cellEventTypeMap = ref({
+    "code_cell": BeakerCodeCell,
+    "markdown_cell": BeakerMarkdownCell
+});
 
 const getChildByCellId = (child_id: string) : BeakerBaseCell | undefined => {
     const index = cell.value.children?.findIndex((child) => child.id === child_id)
@@ -165,7 +177,7 @@ defineExpose({execute});
 
 <style lang="scss">
 .llm-query-cell {
-    padding: 0.5rem 0.35rem 1rem 1.2rem;
+    padding: 0rem 0.35rem 1rem 1.2rem;
 }
 
 .query-row {
@@ -179,9 +191,7 @@ defineExpose({execute});
 }
 
 .query {
-    font-weight: bold;
     flex: 1;
-    line-height: 2.5rem;
     margin-bottom: 0.25rem;
 }
 
@@ -234,4 +244,42 @@ defineExpose({execute});
     color: var(--primary-text-color);
 }
 
+
+.llm-prompt-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.llm-prompt-header {
+
+}
+
+.llm-prompt-text {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+span > div.markdown-cell {
+    padding-left: 0;
+}
+
+.event-container {
+    margin-top: 1.25rem;
+    padding: 0rem;
+    border-radius: 6px;
+    background-color: var(--surface-c);
+}
+
+.event-container > div {
+    padding: 0.5rem;
+}
+
+.query-events-header {
+    background-color: var(--surface-b);
+    border-radius: 6px 6px 0 0;
+}
+
+.query-events-header {
+    font-weight: 600;
+}
 </style>

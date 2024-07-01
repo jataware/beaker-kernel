@@ -71,6 +71,7 @@ const emit = defineEmits([
   "remove-cell",
   "add-code-cell",
   "add-markdown-cell",
+  "set-context",
   "reset-nb"
 ]);
 
