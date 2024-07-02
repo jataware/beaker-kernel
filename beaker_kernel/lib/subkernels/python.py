@@ -3,6 +3,10 @@ from typing import Any
 
 from .base import BaseCheckpointableSubkernel, Checkpoint
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 class PythonSubkernel(BaseCheckpointableSubkernel):
     DISPLAY_NAME = "Python 3"
     SLUG = "python3"
@@ -82,7 +86,7 @@ for _name, _value in dict(locals()).items():
         except Exception as e:
             continue
         _result[_name] = _path
-        
+
 _result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
 del _inspect, _json, _dill
 _result
@@ -108,3 +112,17 @@ with open("{filename}", "rb") as _file:
 """
         deserialization_code += "del _dill"
         await self.context.execute(deserialization_code)
+
+    async def setup(self):
+        setup_code = f"""
+import importlib
+import os
+import site
+import sys
+if site.USER_SITE not in sys.path:
+    os.makedirs(site.USER_SITE, exist_ok=True)
+    sys.path.append(site.USER_SITE)
+    importlib.invalidate_caches()
+del importlib, os, site, sys
+"""
+        await self.context.execute(setup_code)
