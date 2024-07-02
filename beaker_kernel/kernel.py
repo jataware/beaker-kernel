@@ -247,8 +247,15 @@ class LLMKernel(KernelProxyManager):
         }
         self.context = context_cls(beaker_kernel=self, config=config)
         await self.context.setup(context_info=context_info, parent_header=parent_header)
-        await self.send_preview(parent_header=parent_header)
+        subkernel = self.context.subkernel
+        kernel_setup_func = getattr(subkernel, "setup", None)
+        if kernel_setup_func:
+            if inspect.iscoroutinefunction(kernel_setup_func):
+                await kernel_setup_func()
+            else:
+                kernel_setup_func()
         await self.update_connection_file(context={"name": context_name, "config": context_info})
+        await self.send_preview(parent_header=parent_header)
 
     async def post_execute(self, queue, message_id, data):
         message = JupyterMessage.parse(data)
