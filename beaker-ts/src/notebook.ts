@@ -290,10 +290,30 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             this.id = uuidv4();
         }
     }
+    public pushMarkdownChild(prompt: string, type: string) {
+        const mdCell = new BeakerMarkdownCell({
+            cell_type: "markdown",
+            source: prompt,
+            metadata: {
+                parent_cell: this.id,
+                event_type: type
+            }
+        });
+        this.children.push(mdCell)
+        this.events.push({
+            type: "markdown_cell",
+            content: {
+                id: mdCell.id,
+                index: this.children?.length - 1,
+                event_type: type
+            }
+        });
+    }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
         this.events.splice(0, this.events.length);
         this.children.splice(0, this.children.length);
+
 
         const handleIOPub = async (msg: IBeakerIOPubMessage) => {
             const msg_type = msg.header.msg_type;
@@ -305,45 +325,12 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 if (content.thought === "") {
                     return;
                 }
-                const mdCell = new BeakerMarkdownCell({
-                    cell_type: "markdown",
-                    source: 
-`*Thought*:  
-> ${content.thought}`,
-                    metadata: {
-                        parent_cell: this.id,
-                        query_event_type: "llm_thought"
-                    }
-                });
-                this.children.push(mdCell)
-                this.events.push({
-                    type: "markdown_cell",
-                    content: {
-                        id: mdCell.id,
-                        index: this.children?.length - 1,
-                    }
-                });
+                const prompt = `*Thought*:\n> ${content.thought}`;
+                this.pushMarkdownChild(prompt, "llm_thought");
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
-                const mdCell = new BeakerMarkdownCell({
-                    cell_type: "markdown",
-                    source:
-`- - -
-*Response*:  
-> ${content.text}`,
-                    metadata: {
-                        parent_cell: this.id,
-                        query_event_type: "llm_response"
-                    }
-                });
-                this.children.push(mdCell)
-                this.events.push({
-                    type: "markdown_cell",
-                    content: {
-                        id: mdCell.id,
-                        index: this.children?.length - 1,
-                    }
-                });
+                const prompt = `- - -\n*Response*:\n> ${content.text}`;
+                this.pushMarkdownChild(prompt, "llm_response");
             }
             else if (msg_type === "code_cell") {
                 const nb = session.notebook;
@@ -441,10 +428,8 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
 
         const handleStdin = async (msg: messages.IStdinMessage) => {
             if (messages.isInputRequestMsg(msg)) {
-                this.events.push({
-                    type: "user_question",
-                    content: msg.content.prompt,
-                });
+                const prompt = `**User Prompt**: *${msg.content.prompt}*`;
+                this.pushMarkdownChild(prompt, "user_question")
                 this.status = "awaiting_input";
                 this._current_input_request_message = msg;
             }
@@ -499,12 +484,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         if (this.status !== "awaiting_input") {
             return;
         }
-
-        this.events.push({
-            type: "user_answer",
-            content: response,
-        });
-
+        this.pushMarkdownChild(`**User Reply**: ${response}`, "user_answer")
         // Send the reply to the kernel
         session.kernel.sendInputReply(
             {

@@ -723,7 +723,7 @@ function handleDrop(event: DragEvent, index: number) {
 function handleDragStart(event: DragEvent, beakerCell: IBeakerCell, index: number)  {
     if (event.dataTransfer !== null) {
 
-        var paintTarget: HTMLElement|null = (event.target as HTMLElement).closest('.beaker-cell');
+        var paintTarget: HTMLElement|null = (event.target as HTMLElement)?.closest('.beaker-cell');
 
         event.dataTransfer.dropEffect = 'move';
         event.dataTransfer.effectAllowed = 'move';

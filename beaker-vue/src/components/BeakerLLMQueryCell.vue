@@ -48,11 +48,18 @@
                 />
             </div>
         </div>
-        <div class="event-container" v-if="cell.events.length > 0">
+        <div class="event-container" v-if="cell_events.length > 0">
             <div class="query-events-header">
                 <span class="query-events-header-text">Agent Output</span>
             </div>
-            <div class="events" :class="event.type" v-for="event of cell.events" :key="event">
+            <div class="events" 
+                :class="{
+                    [event.type]: true, 
+                    [event.content.event_type]: true
+                }" 
+                v-for="event of cell_events" 
+                :key="event"
+            >
                 <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
                 <template v-if="event.type === 'thought'" >{{ event.content }}</template>
                 <span v-if="event.type ==='code_cell' || event.type === 'markdown_cell'">
@@ -64,7 +71,8 @@
                         :cell="getChildByCellId(event.content.id)"
                         :index="`${index}:${event.content.index}`"
                         :class="{
-                            selected: (index === selectedCellIndex)
+                            selected: (index === selectedCellIndex),
+                            [event.content.event_type]: true
                         }"
                         ref="childrenRef"
                         drag-enabled=false
@@ -120,7 +128,8 @@ const props = defineProps([
     'selectNext'
 ]);
 
-const cell = ref(props.cell);
+const cell = shallowRef(props.cell);
+const cell_events = shallowRef(props.cell.events);
 const editing = ref(false);
 const editingContents = ref("");
 const savedEdit = ref("");
@@ -193,10 +202,6 @@ defineExpose({execute});
 .query {
     flex: 1;
     margin-bottom: 0.25rem;
-}
-
-.user_question {
-    font-style: italic;
 }
 
 .user_answer {
@@ -272,6 +277,8 @@ span > div.markdown-cell {
 
 .event-container > div {
     padding: 0.5rem;
+    display: flex;
+    flex-direction: row;
 }
 
 .query-events-header {
@@ -281,5 +288,34 @@ span > div.markdown-cell {
 
 .query-events-header {
     font-weight: 600;
+}
+
+.markdown_cell + .user_question, .markdown_cell + .user_answer {
+    background-color: var(--surface-b);
+}
+
+.user_question > div > p, .user_answer > div > p {
+    padding: 0;
+    margin: 0;
+}
+
+.user_answer {
+    background-color: var(--surface-b);
+}
+
+.markdown_cell + .user_question {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+div.events.markdown_cell.user_answer {
+    margin-top: 0;
+    padding-top: 0;
+    margin-bottom: 0;
+    border-radius: 0;
+}
+
+.events + .code_cell > span {
+    width: 100%;
 }
 </style>

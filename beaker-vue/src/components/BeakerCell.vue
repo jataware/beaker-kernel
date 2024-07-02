@@ -10,6 +10,7 @@
     @keydown.y="(event) => switchCellTypeContextualEvent(event, 'code')"
     @keydown.m="(event) => switchCellTypeContextualEvent(event, 'markdown')"
     @keydown.r="(event) => switchCellTypeContextualEvent(event, 'raw')"
+    @keydown.q="(event) => switchCellTypeContextualEvent(event, 'query')"
     ref="beakerCellRef"
   >
     <div class="cell-grid">
