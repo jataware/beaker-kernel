@@ -17,29 +17,47 @@
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
+            <div class="state-info">
+                <div class="execution-count-badge">
+                    <Badge
+                        :class="{secondary: badgeSeverity === 'secondary'}"
+                        :severity="badgeSeverity"
+                        :value="cell.execution_count || '&nbsp;'">
+                    </Badge>
+                </div>
+                <i
+                    v-if="isBusy"
+                    class="pi pi-spin pi-spinner busy-icon"
+                />
+                <Button
+                    v-if="hasRollback"
+                    class="rollback-button"
+                    :severity="badgeSeverity"
+                    icon="pi pi-refresh"
+                    size="small"
+                    @click="rollback"
+                />
+            </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject } from "vue";
+import { defineProps, nextTick, defineExpose, ref, shallowRef, computed, inject } from "vue";
 import CodeCellOutput from "./BeakerCodecellOutput.vue";
 import { Codemirror } from "vue-codemirror";
+import { EditorView } from "codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
+import Button from 'primevue/button';
+
 
 const props = defineProps([
     "cell",
-    "cell-state",
-]);
-
-const emit = defineEmits([
-    "cell-state-changed",
 ]);
 
 const cell = ref(props.cell);
-const isBusy = ref(false);
 const editorView = shallowRef();
 const theme = inject('theme');
 const session = inject('session');
@@ -52,26 +70,47 @@ const handleReady = (payload) => {
     editorView.value = payload.view;
 };
 
-function handleCodeChange() {
-    // emit("cell-state-changed", ExecuteStatus.Modified);
-    console.log("current state:", props.cellState);
-    if (props.cellState !== "modified" && props.cellState !== "pending") {
-        emit("cell-state-changed", "modified");
-    }
-    // if (executeState.value !== ExecuteStatus.Pending) {
-    //     executeState.value = ExecuteStatus.Modified;
-    // }
+enum ExecuteStatus {
+  Success = 'ok',
+  Modified = 'modified',
+  Error = 'error',
+  Pending = 'pending',
+  None = 'none'
+}
 
+const hasRollback = computed(() => {
+    return typeof(cell.value?.last_execution?.checkpoint_index) !== "undefined";
+});
+
+const rollback = () => cell.value.rollback(session);
+
+const isBusy = computed(() => {
+    return cell.value?.busy;
+});
+
+const badgeSeverity = computed(() => {
+    const mappings = {
+        [ExecuteStatus.Success]: 'success',
+        [ExecuteStatus.Modified]: 'warning',
+        [ExecuteStatus.Error]: 'danger',
+        [ExecuteStatus.Pending]: 'secondary',
+        [ExecuteStatus.None]: "secondary",
+    };
+    return mappings[cell.value?.last_execution?.status];
+});
+
+
+function handleCodeChange() {
+    cell.value.reset_execution_state();
     // TODO See codemirror view API for future keyboard navigation
     // eg to know if we're at the top or bottom
     // of editor and user presser up/down arrows keys to navigate
     // to another cell
     // console.log(editorView.value.inputState);
-
 }
 
 const codeExtensions = computed(() => {
-    const ext = [];
+    const ext = [EditorView.lineWrapping];
 
     const subkernel = activeContext.value?.language?.subkernel || '';
     const isPython = subkernel.includes('python');
@@ -86,30 +125,7 @@ const codeExtensions = computed(() => {
 });
 
 const execute = (evt: any) => {
-    isBusy.value = true;
-
-    const handleDone = async (message: any) => {
-
-        if (message?.content?.status === 'ok') {
-            // executeState.value = ExecuteStatus.Success;
-            emit("cell-state-changed", "success");
-        } else {
-            // executeState.value = ExecuteStatus.Error;
-            emit("cell-state-changed", "error");
-        }
-
-
-        // Timeout added to busy indicators from jumping in/out too quickly
-        setTimeout(() => {
-            isBusy.value = false;
-        }, 500);
-
-    };
-
     const future = props.cell.execute(session);
-    future.done.then(handleDone);
-    // executeState.value = ExecuteStatus.Pending;
-    emit("cell-state-changed", "pending");
 }
 
 const enter = () => {
@@ -128,6 +144,10 @@ defineExpose({
 
 
 <style lang="scss">
+.code-cell {
+    padding-left: 0.2rem;
+}
+
 .code-cell-grid {
     display: grid;
 
@@ -155,5 +175,40 @@ defineExpose({
     }
 }
 
+
+.state-info {
+    grid-area: exec;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.execution-count-badge {
+    font-family: monospace;
+    min-width: 3rem;
+    display: flex;
+    justify-content: center;
+
+    .p-badge {
+        border-radius: 15%;
+        &.secondary {
+            background-color: var(--surface-d);
+        }
+    }
+}
+
+.rollback-button {
+    margin-top: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 45%;
+}
+
+.busy-icon {
+    color: var(--blue-500);
+    font-weight: bold;
+    font-size: 1.3rem;
+    margin-top: 1rem;
+}
 
 </style>

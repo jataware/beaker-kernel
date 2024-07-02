@@ -1,49 +1,51 @@
 <template>
-  <div
-    class="cell-container drag-sort-enable"
-    ref="cellsContainerRef"
-  >
-    <BeakerCell
-      v-for="(cell, index) in session.notebook.cells"
-      :key="cell.id"
-      class="beaker-cell"
-      :class="{
-        'drag-source': (index == dragSourceIndex),
-        'drag-above': (index === dragOverIndex && index < dragSourceIndex),
-        'drag-below': (index === dragOverIndex && index > dragSourceIndex),
-        'drag-itself': (index === dragOverIndex && index === dragSourceIndex ),
-        'drag-active': isDragActive,
-        'selected': index === props.selectedCellIndex
-      }"
-      :cell="cell"
-      @click="props.selectCell(index)"
-      @move-cell="handleMoveCell"
-      @keyboard-nav="handleNavAction"
-      :drag-enabled="isDragEnabled"
-      @dragstart="handleDragStart($event, cell, index)"
-      @dragover="handleDragOver($event, cell, index)"
-      @drop="handleDrop($event, index)"
-      @dragend="handleDragEnd"
-      :ref="(el) => {setSelectedRef(el, index === props.selectedCellIndex)}"
-    />
     <div
-      class="drop-overflow-catcher"
-      @dragover="dragOverIndex = session.notebook.cells.length - 1; $event.preventDefault();"
-      @drop="handleDrop($event, session.notebook.cells.length - 1)"
+        class="cell-container drag-sort-enable"
+        ref="cellsContainerRef"
     >
-      <slot name="notebook-background" />
+        <BeakerCell
+            v-for="(cell, index) in session.notebook.cells"
+            :key="cell.id"
+            class="beaker-cell"
+            :class="{
+                selected: (index.toString() === selectedCellIndex),
+                'drag-source': (index == dragSourceIndex),
+                'drag-above': (index === dragOverIndex && index < dragSourceIndex),
+                'drag-below': (index === dragOverIndex && index > dragSourceIndex),
+                'drag-itself': (index === dragOverIndex && index === dragSourceIndex ),
+                'drag-active': isDragActive,
+            }"
+            :ref="(el) => {setSelectedRef(el, index === props.selectedCellIndex)}"
+            :selectedCellIndex="selectedCellIndex"
+            :index="String(index)"
+            :drag-enabled="isDragEnabled"
+            @move-cell="handleMoveCell"
+            @click="props.selectCell(index)"
+            :childOnClickCallback="selectCell"
+            :cell="cell"
+            :getCell="_getCell"
+            @keyboard-nav="handleNavAction"
+            @dragstart="handleDragStart($event, cell, index)"
+            @drop="handleDrop($event, index)"
+            @dragover="handleDragOver($event, cell, index)"
+            @dragend="handleDragEnd"
+        />
+        <div
+            class="drop-overflow-catcher"
+            @dragover="dragOverIndex = session.notebook.cells.length-1; $event.preventDefault();"
+            @drop="handleDrop($event, session.notebook.cells.length-1)"
+        >
+            <slot name="notebook-background" />
+        </div>
     </div>
-  </div>
 </template>
 
 <script setup lang="tsx">
 import { ref, inject, computed, nextTick, defineProps, defineExpose } from 'vue';
 import BeakerCell from '@/components/cell/BeakerCell.vue';
-import { IBeakerCell } from 'beaker-kernel';
-// import Cell from './UICell.vue';
-// import { focusSelectedCell } from './common.ts';
+import { BeakerSession, IBeakerCell } from 'beaker-kernel';
 
-const session = inject('session');
+const session: BeakerSession = inject('session');
 
 const props = defineProps([
     'selectCell',
@@ -59,6 +61,9 @@ const isDeleteprefixActive = ref(false);
 
 const isDragEnabled = computed(() => session.notebook?.cells.length > 1);
 const cellCount = computed(() => session.notebook?.cells?.length || 0);
+const selectedCell = computed(() => {
+    return _getCell(props.selectedCellIndex.value);
+});
 
 function setSelectedRef(el, selected) {
     if (selected) {
@@ -85,9 +90,13 @@ function selectCellByObj(cellObj) {
   props.selectCell(index);
 }
 
-const _getCell = (cell: number | IBeakerCell) => {
+const _getCell = (cell: string | IBeakerCell): IBeakerCell => {
     // const index = _cellIndex(cell);
-    return cellsContainerRef.value[cell];
+    // const [parent, child] = splitCellIndex(index);
+    // if (typeof(child) !== "undefined") {
+    //     return session.notebook.cells[parent]?.children[child];
+    // }
+    // return session.notebook.cells[parent];
 }
 
 const addCell = (toIndex) => {
@@ -120,10 +129,9 @@ const removeCell = () => {
     }
 };
 
-const runCell = (cell?: number | IBeakerCell) => {
-    // console.log(cell);
+const runCell = (cell?: string | IBeakerCell) => {
     if (cell === undefined) {
-        cell = props.selectedCellIndex;
+        cell = selectedCell.value;
     }
     else {
         cell = _getCell(cell);

@@ -79,6 +79,11 @@ import SvgPlaceholder from '@/components/misc/SvgPlaceholder.vue';
 import BeakerCell from '@/components/cell/BeakerCell.vue';
 
 
+// double check this import
+// import { arrayMove, capitalize } from '../util';
+import { arrayMove } from '../../util';
+
+
 const props = defineProps([
     "connectionStatus",
     "debugLogs",
@@ -93,7 +98,7 @@ const emit = defineEmits([
 // TODO info object map type
 const notebookCellsRef = ref<typeof BeakerCell|null>(null);
 const activeContext = ref<{slug: string, class: string, context: any, info: any} | undefined>(undefined);
-const selectedCellIndex = ref(0);
+const selectedCellIndex = ref("");
 const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 const showDebugPane = ref (true);
@@ -115,9 +120,49 @@ provide('active_context', activeContext);
 
 const cellCount = computed(() => session.notebook?.cells?.length || 0);
 
-const applyTheme = () => {
-    const themeLink = document.querySelector('#primevue-theme');
-    themeLink.href = `/themes/soho-${selectedTheme.value}/theme.css`;
+/**
+ * Parses emits by other child components to follow commands that the notebook
+ * controls.
+ **/
+function handleNavAction(action) {
+    // TODO types
+    if (action === 'focus-cell') {
+        focusSelectedCell();
+    } else if (action === 'select-next-cell') {
+        if (selectedCellIndex.value === String(cellCount.value - 1)) {
+            addCodeCell();
+        } else {
+            selectNextCell();
+        }
+    }
+}
+
+/**
+ * Splits a combined cell index into component parts.
+ * Cell indices are in the form of `"1:2"` (representing notebook cell 1, third child)
+ *
+ * usage: `const [parent, child] = splitCellIndex("1:2")`
+ *
+ * note: child will be `undefined` in the case of `const [parent, child] = splitCellIndex("1")`
+ * due to assignment destructuring rules
+ */
+const splitCellIndex = (index: string): number[] => index.split(":").map((part) => Number(part));
+
+const mergeCellIndex = (parent: number, child: number | undefined): string => {
+    if (typeof(child) !== "undefined") {
+        return `${parent}:${child}`;
+    }
+    return `${parent}`;
+}
+
+const getChildCount = (index: string): number => {
+    const [parent, child] = splitCellIndex(index);
+    return session.notebook.cells[parent]?.children?.length || 0
+}
+
+function handleMoveCell(fromIndex: number, toIndex: number) {
+    //arrayMove(session.notebook.cells, fromIndex, toIndex)
+    selectCell(toIndex);
 }
 
 function handleKeyboardShortcut(event) {
@@ -140,32 +185,135 @@ const selectedCell = computed(() => {
     return _getCell(selectedCellIndex.value);
 });
 
-const _cellIndex = (cell: IBeakerCell): number => {
-    let index = -1;
+const _cellIndex = (cell: number | string | IBeakerCell): string => {
+    let index = "-1";
+    if (typeof(cell) === "string") {
+        index = cell;
+    }
     if (typeof(cell) === "number") {
-        index = cell
+        index = cell.toString();
     }
     else if (cell instanceof BeakerBaseCell) {
-        index = session.notebook.cells.indexOf(cell);
+        const notebookIndex = session.notebook.cells.indexOf(cell);
+        index = notebookIndex.toString();
+
+        // cell is within a notebook cell's children
+        if (notebookIndex === -1) {
+            for (const [notebookIndex, notebookCell] of session.notebook.cells.entries()) {
+                const innerIndex = notebookCell?.children?.indexOf(cell);
+                if (innerIndex !== -1) {
+                    index = `${notebookIndex}:${innerIndex}`;
+                    break;
+                }
+            }
+        }
     }
     return index;
 }
 
-const _getCell = (cell: number | IBeakerCell) => {
+
+const _getCell = (cell: string | IBeakerCell): IBeakerCell => {
     const index = _cellIndex(cell);
-    return notebookCellsRef.value[index];
+    const [parent, child] = splitCellIndex(index);
+    if (typeof(child) !== "undefined") {
+        return session.notebook.cells[parent]?.children[child];
+    }
+    return session.notebook.cells[parent];
 }
 
-const selectCell = (cell: number | IBeakerCell) => {
-    let index = -1;
-    if (Number.isInteger(cell) ) {
-        index = cell;
-    }
-    else if (cell instanceof BeakerBaseCell) {
-        index = _cellIndex(cell);
-    }
+const selectCell = (cell: number | string | IBeakerCell): void => {
+    let index = _cellIndex(cell);
     selectedCellIndex.value = index;
 }
+
+const commonSelectAction = (event): boolean => {
+    const { target } = event;
+
+    const isEditingCode = target.className === 'cm-content'; // codemirror
+    const isTextArea = target.className.includes('resizeable-textarea');
+
+    if (isEditingCode || isTextArea) {
+        return false;
+    }
+
+    return true;
+};
+
+function focusSelectedCell() {
+    if (!beakerNotebookRef.value){
+        return;
+    }
+    const elem = beakerNotebookRef.value.querySelector('.beaker-cell.selected');
+    if (typeof(elem) !== "undefined" && elem !== null) {
+        elem.focus();
+    }
+}
+
+const selectNextCell = (event?) => {
+    if (event && !commonSelectAction(event)) {
+        return;
+    }
+
+    const currentIndex = selectedCellIndex.value;
+    const childCount = getChildCount(currentIndex);
+    const [parent, child] = splitCellIndex(currentIndex);
+    // TODO should we wrap around? Should we auto-add a new cell?
+    if (parent === cellCount.value - 1) {
+        return;
+    }
+
+    // since children are 0-indexed, consider a parent selector as "child -1" for purpose of incrementing
+    const childIndex = typeof(child) === "undefined" ? -1 : child;
+    if (childCount > 0 && childIndex < childCount - 1) {
+        selectCell(`${parent}:${childIndex + 1}`);
+    } else {
+        selectCell(`${parent + 1}`);
+    }
+
+    nextTick(() => {
+        focusSelectedCell();
+    });
+
+    if (event) {
+        event.preventDefault();
+    }
+};
+
+const selectPreviousCell = (event?) => {
+
+    if (event && !commonSelectAction(event)) {
+        return;
+    }
+
+    const currentIndex = selectedCellIndex.value;
+    const childCount = getChildCount(currentIndex);
+    const [parent, child] = splitCellIndex(currentIndex);
+
+    if (parent === 0) {
+        return;
+    }
+
+    if (childCount > 0 && child > 0) {
+        selectCell(`${parent}:${child - 1}`);
+    } else {
+        // select last child of above cell if present
+        const target = `${parent - 1}`;
+        const targetChildCount = getChildCount(target);
+        if (targetChildCount > 0) {
+            selectCell(`${target}:${targetChildCount - 1}`)
+        } else {
+            selectCell(target);
+        }
+    }
+
+    nextTick(() => {
+        focusSelectedCell();
+    });
+
+    if (event) {
+        event.preventDefault();
+    }
+};
 
 const addCell = (toIndex) => {
     beakerNotebookRef.value.addCell(toIndex);
@@ -189,61 +337,41 @@ const addCell = (toIndex) => {
     // });
 }
 
+const addCodeCell = (toIndex?: number) => {
+    const newCell = session.addCodeCell("");
 
-const selectNextCell = (event) => {
-    if (event && !commonSelectAction(event)) {
-        return;
+    if (typeof toIndex !== 'number') {
+        const [parent, child] = splitCellIndex(selectedCellIndex.value);
+        toIndex = parent + 1;
     }
+    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
 
-    const currentIndex = selectedCellIndex.value;
-    // TODO should we wrap around? Should we auto-add a new cell?
-    if (currentIndex === cellCount.value - 1) {
-        return;
-    }
-    selectCell(currentIndex + 1);
+    selectCell(newCell);
 
     nextTick(() => {
         focusSelectedCell();
     });
+}
 
-    if (event) {
-        event.preventDefault();
+const addMarkdownCell = (toIndex?: number) => {
+    const newCell = session.addMarkdownCell("");
+
+    if (typeof toIndex !== 'number') {
+        const [parent, child] = splitCellIndex(selectedCellIndex.value);
+        toIndex = parent + 1;
     }
-};
+    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
 
-const selectPreviousCell = (event) => {
-
-    if (event && !commonSelectAction(event)) {
-        return;
-    }
-
-    const currentIndex = selectedCellIndex.value;
-    if (currentIndex === 0) {
-        return;
-    }
-    selectCell(currentIndex - 1);
+    selectCell(newCell);
 
     nextTick(() => {
+        notebookCellsRef.value[notebookCellsRef.value.length - 1].enter();
         focusSelectedCell();
     });
+}
 
-    if (event) {
-        event.preventDefault();
-    }
-};
-
-const runCell = (cell?: number | IBeakerCell) => {
+const runCell = (cell?: string | IBeakerCell) => {
     beakerNotebookRef.value.runCell(cell);
-    // console.log(cell);
-    // if (cell === undefined) {
-    //     cell = selectedCell.value;
-    // }
-    // else {
-    //     cell = _getCell(cell);
-    // }
-    // if (cell !== undefined) {
-    //     cell.execute(session);
-    // }
 }
 
 const removeCell = () => {
@@ -347,35 +475,12 @@ function scrollBottomCellContainer() {
     }
 }
 
-const focusSelectedCell = (ref) => {
-    let parent = document;
-    if (ref && ref.value){
-      parent = ref.value;
-    }
-    const elem: HTMLElement|null = parent.querySelector('.beaker-cell.selected');
-    if (elem) {
-        elem.focus();
-    }
-}
 
-const commonSelectAction = (event) => {
-    const { target } = event;
-
-    const isEditingCode = target.className === 'cm-content'; // codemirror
-    const isTextArea = target.className.includes('resizeable-textarea');
-
-    if (isEditingCode || isTextArea) {
-        return false;
-    }
-
-    return true;
-};
 
 onBeforeMount(() => {
     if (cellCount.value <= 0) {
         session.addCodeCell("");
     }
-    applyTheme();
 });
 
 onMounted(() => {
@@ -383,6 +488,8 @@ onMounted(() => {
 });
 
 defineExpose({
+
+    handleKeyboardShortcut,
     updateContextInfo,
 })
 
