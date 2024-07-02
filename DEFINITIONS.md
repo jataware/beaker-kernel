@@ -84,6 +84,13 @@ similar external (to the controller) resources.
 
 ### BeakerQueryCell
 
+### BeakerExtendedCell
+> A framework for adding additional cell types that can be serialized and stored as part of a notebook.  
+> The cell is represented internally and in exports as a "raw" notebook cell, meaning that it uses the
+BeakerRawCellModel class to store its representation.  
+> All state MUST be serializable to JSON for storage.  
+> Cell state is stored in the `metadata` field of the BeakerRawCellModel instance.
+
 
 ## Responsibility of handling updates between layers
  - Any action/modification that originates in the Vue layer should be handled as much as possible in the vue layer.
