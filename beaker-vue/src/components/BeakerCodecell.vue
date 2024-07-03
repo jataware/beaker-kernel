@@ -2,6 +2,7 @@
     <div class="code-cell">
         <div class="code-cell-grid">
             <div
+                v-if="isVisible"
                 class="code-data"
                 :class="{'dark-mode': theme === 'dark'}"
             >
@@ -17,13 +18,22 @@
                 />
                 <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
             </div>
+            <div v-else> 
+                <Button
+                    icon="pi pi-code"
+                    size="small"
+                    rounded
+                    @click="toggleVisible"
+                />               
+            </div>
             <div class="state-info">
                 <div class="execution-count-badge">
-                    <Badge
-                        :class="{secondary: badgeSeverity === 'secondary'}"
-                        :severity="badgeSeverity"
-                        :value="cell.execution_count || '&nbsp;'">
-                    </Badge>
+                    <Button
+                        v-show="isVisible"
+                        icon="pi pi-arrow-down-left-and-arrow-up-right-to-center"
+                        size="small"
+                        @click="toggleVisible"
+                    />
                 </div>
                 <i
                     v-if="isBusy"
@@ -59,6 +69,8 @@ const props = defineProps([
 
 const cell = ref(props.cell);
 const editorView = shallowRef();
+const isVisible = ref(false);
+const toggleVisible = () => isVisible.value = !isVisible.value;
 const theme = inject('theme');
 const session = inject('session');
 const activeContext = inject('active_context');

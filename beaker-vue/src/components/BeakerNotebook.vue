@@ -46,14 +46,15 @@
                             @dragover="handleDragOver($event, cell, index)"
                             @dragend="handleDragEnd"
                         />
-                        <BeakerAgentQuery
-                            class="agent-query-container"
-                            @select-cell="selectCell"
-                            @run-cell="runCell"
-                            :run-cell-callback="scrollBottomCellContainer"
-                        />
                     </div>
+
                 </div>
+                    <BeakerAgentQuery
+                        class="agent-query-container"
+                        @select-cell="selectCell"
+                        @run-cell="runCell"
+                        :run-cell-callback="scrollBottomCellContainer"
+                    />
             </div>
         </main>
 

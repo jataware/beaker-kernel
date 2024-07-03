@@ -2,7 +2,7 @@
     <div class="llm-query-cell">
         <div class="query-row">
             <div class="query">
-                <div v-if="editing" style="display: flex">
+                <div v-if="editing" style="display: flex; justify-content: end">
                     <!-- TODO move ctrl/shift event stop on keyboard controller -->
                     <ContainedTextArea
                         style="max-width: 50%; margin-right: 0.75rem; flex: 1;"
@@ -24,6 +24,7 @@
             <div class="actions">
                 <Button
                     text
+                    v-show="!editing"
                     size="small"
                     icon="pi pi-pencil"
                     severity="info"
@@ -48,12 +49,9 @@
             </div>
         </div>
         <div class="events" :class="event.type" v-for="event of viewableEvents(cell.events)" :key="event">
-            <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
-            <template v-if="event.type === 'thought'" >{{ event.content }}</template>
-            <span v-if="event.type ==='code_cell'">
+            <template v-if="event.type === 'thought'"><span>Thought:&nbsp;</span> {{ event.content }}</template>
+            <span v-else-if="event.type ==='code_cell' && typeof(getChildByCellId(event.content?.id)) !== 'undefined'">
                 <Component
-                    v-if="typeof(getChildByCellId(event.content?.id)) !== 'undefined'"
-                    
                     :key="event.content.id"
                     :is="BeakerCodeCell"
                     :cell="getChildByCellId(event.content.id)"
@@ -66,8 +64,8 @@
                     @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)"
                 />
             </span>
-            <template v-if="event.type === 'response'" >{{ event.content }}</template>
-            <template v-if="event.type === 'abort'" >{{ event.content }}</template>
+            <template v-else-if="event.type === 'response'" >{{ event.content }}</template>
+            <template v-else-if="event.type === 'abort'" >{{ event.content }}</template>
         </div>
         <div
             class="input-request"
@@ -180,6 +178,8 @@ defineExpose({execute});
 }
 
 .query {
+    align-items: right;
+    text-align: right;
     font-weight: bold;
     flex: 1;
     line-height: 2.5rem;
