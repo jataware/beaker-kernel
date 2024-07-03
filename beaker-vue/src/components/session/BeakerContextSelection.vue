@@ -80,7 +80,6 @@ import Checkbox from 'primevue/checkbox';
 
 const props = defineProps([
     "isOpen",
-    "toggleOpen",
     "contextProcessing"
 ]);
 
@@ -91,14 +90,10 @@ const theme = inject("theme");
 const session = inject("session");
 const activeContext = inject('active_context');
 
-const closeDialog = () => {
-    props.toggleOpen();
-};
-
 const emit = defineEmits([
-    "select-cell",
-    "run-cell",
     "update-context-info",
+    "context-changed",
+    "close-context-selection",
 ]);
 
 const selectedContextSlug = ref<string>();
@@ -109,12 +104,17 @@ const contextPayloadData = ref({});
 const codeExtensions = computed(() => {
     const ext = [];
 
-    if (theme.value === 'dark') {
+    if (theme === 'dark') {
         ext.push(oneDark);
     }
     return ext;
 
 });
+
+const closeDialog = () => {
+    emit("close-context-selection")
+};
+
 
 interface IBeakerContext {
     languages: {
@@ -219,7 +219,7 @@ watch(() => props.isOpen, (open /*, oldValue*/) => {
     }
 });
 
-const setContext = () => {
+const setContext = async () => {
     // TODO determine if there's a better way to work with primevue's checkbox state
     const isDebug = logDebug.value.includes('true');
     const isVerbose = logVerbose.value.includes('true');
@@ -233,7 +233,8 @@ const setContext = () => {
       debug: isDebug,
       verbose: isVerbose,
     };
-    emit("update-context-info", contextMessageContent);
+    emit("context-changed", contextMessageContent);
+    emit("close-context-selection")
 }
 
 /*
@@ -247,9 +248,11 @@ const setContext = () => {
 }
 */
 onMounted(async () => {
-    const contexts = await session.availableContexts();
-    contextData.value = contexts;
-    selectedContextSlug.value = Object.keys(contexts)[0];
+    const contexts = await session?.availableContexts();
+    if(contexts) {
+        contextData.value = contexts;
+        selectedContextSlug.value = Object.keys(contexts)[0];
+    }
 })
 </script>
 

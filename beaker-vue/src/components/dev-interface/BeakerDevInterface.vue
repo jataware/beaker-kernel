@@ -1,6 +1,6 @@
 <template>
     <div class="beaker-dev-interface">
-        <header>
+        <!-- <header>
             <BeakerHeader
                 :connectionStatus="props.connectionStatus"
                 :toggleDarkMode="toggleDarkMode"
@@ -8,10 +8,9 @@
                 :kernel="selectedKernel"
                 @select-kernel="toggleContextSelection"
             />
-        </header>
+        </header> -->
 
         <main style="display: flex;">
-
             <SideMenu
                 position="left"
                 :show-label="true"
@@ -304,9 +303,9 @@ onBeforeMount(() => {
     applyTheme();
 });
 
-onMounted(() => {
-    updateContextInfo();
-});
+// onMounted(() => {
+//     updateContextInfo();
+// });
 
 </script>
 

@@ -1,9 +1,9 @@
 <template>
     <div class="beaker-notebook">
-        <div class="controls">
+        <div class="controls" style="position: relative;">
             <InputGroup>
+                <slot name="notebook_buttons_left">
                 <Button
-                    v-if="!props.singleCell"
                     @click="addCell()"
                     icon="pi pi-plus"
                     size="small"
@@ -11,7 +11,6 @@
                     text
                 />
                 <Button
-                    v-if="!props.singleCell"
                     @click="removeCell()"
                     icon="pi pi-minus"
                     size="small"
@@ -25,44 +24,47 @@
                     severity="info"
                     text
                 />
+                </slot>
             </InputGroup>
-            <InputGroup style="margin-right: 1rem;">
-                <Button
-                    @click="resetNotebook"
-                    v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
-                    icon="pi pi-refresh"
-                    size="small"
-                    severity="info"
-                    text
-                />
-                <Button
-                    @click="downloadNotebook"
-                    v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
-                    icon="pi pi-download"
-                    size="small"
-                    severity="info"
-                    text
-                />
-                <OpenNotebookButton @open-file="loadNotebook"/>
+            <InputGroup style="margin-right: 1rem; position: absolute; right: 0;">
+                <slot name="notebook_buttons_right">
+                    <Button
+                        @click="resetNotebook"
+                        v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
+                        icon="pi pi-refresh"
+                        size="small"
+                        severity="info"
+                        text
+                    />
+                    <Button
+                        @click="downloadNotebook"
+                        v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
+                        icon="pi pi-download"
+                        size="small"
+                        severity="info"
+                        text
+                    />
+                    <OpenNotebookButton @open-file="loadNotebook"/>
+                </slot>
             </InputGroup>
         </div>
 
         <div class="ide-cells">
-                    <NotebookPanel
-                        :selectCell="selectCell"
-                        :selectedCellIndex="selectedCellIndex"
-                        ref="beakerNotebookRef"
-                    >
-                        <template #notebook-background>
-                        <transition name="fade">
-                            <div class="welcome-placeholder" v-if="cellCount < 3">
-                                <SvgPlaceholder />
-                            </div>
-                        </transition>
-                    </template>
-                </NotebookPanel>
-            </div>
+            <NotebookPanel
+                :selectCell="selectCell"
+                :selectedCellIndex="selectedCellIndex"
+                ref="beakerNotebookRef"
+            >
+                <template #notebook-background>
+                    <transition name="fade">
+                        <div class="welcome-placeholder" v-if="cellCount < 3">
+                            <SvgPlaceholder />
+                        </div>
+                    </transition>
+                </template>
+            </NotebookPanel>
         </div>
+    </div>
 </template>
 
 <script setup lang="tsx">
@@ -77,11 +79,12 @@ import NotebookControls from '@/components/notebook/NotebookControls.vue';
 import BeakerAgentQuery from '@/components/agent/BeakerAgentQuery.vue';
 import SvgPlaceholder from '@/components/misc/SvgPlaceholder.vue';
 import BeakerCell from '@/components/cell/BeakerCell.vue';
+import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
 
 
 // double check this import
 // import { arrayMove, capitalize } from '../util';
-import { arrayMove } from '../../util';
+// import { arrayMove } from "beaker-kernel/src/util"
 
 
 const props = defineProps([
@@ -344,7 +347,7 @@ const addCodeCell = (toIndex?: number) => {
         const [parent, child] = splitCellIndex(selectedCellIndex.value);
         toIndex = parent + 1;
     }
-    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
+    // arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
 
     selectCell(newCell);
 
@@ -360,7 +363,7 @@ const addMarkdownCell = (toIndex?: number) => {
         const [parent, child] = splitCellIndex(selectedCellIndex.value);
         toIndex = parent + 1;
     }
-    arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
+    // arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
 
     selectCell(newCell);
 
@@ -399,75 +402,6 @@ function toggleContextSelection() {
     contextSelectionOpen.value = !contextSelectionOpen.value;
 }
 
-const setContext = (contextPayload: any) => {
-
-    contextProcessing.value = true;
-
-    // Clear preview data upon changing contexts.
-    emit("clear-preview");
-
-    const future = session.sendBeakerMessage(
-        "context_setup_request",
-        contextPayload
-    );
-    future.done.then((result: any) => {
-
-        contextProcessing.value = false;
-        activeContextPayload.value = contextPayload;
-
-        if (result?.content?.status === 'error') {
-            let formatted = result?.content?.evalue;
-            if (formatted) {
-                const endsWithPeriod = /\.$/.test(formatted);
-                if (!endsWithPeriod) {
-                    formatted += '.';
-                }
-            }
-            showToast({
-                title: 'Context Setup Failed',
-                severity: 'error',
-                detail: `${formatted} Please try again or contact us.`,
-                life: 0
-            });
-            return;
-        }
-
-        if (result?.content?.status === 'abort') {
-            showToast({
-                title: 'Context Setup Aborted',
-                severity: 'warning',
-                detail: result?.content?.evalue,
-                life: 6000
-            });
-        }
-
-        // Close the context dialog
-        contextSelectionOpen.value = false;
-        // Update the context info in the sidebar
-        // TODO: Is this even needed? Could maybe be fed/triggered by existing events?
-        updateContextInfo();
-    });
-}
-
-function reapplyContext() {
-    setContext(activeContextPayload.value);
-}
-
-const updateContextInfo = async () => {
-    const activeContextInfo = await session.activeContext();
-    activeContext.value = activeContextInfo;
-    selectedKernel.value = activeContextInfo.slug;
-}
-
-const selectAction = (actionName: string) => {
-    if (debugTabView.value === null) {
-        return;
-    }
-    const index = debugTabView.value.tabs.findIndex((tab) => (tab.props?.tabId === "action"));
-    rightPaneTabIndex.value = index;
-    showDebugPane.value = true;
-    selectedAction.value = actionName;
-};
 
 function scrollBottomCellContainer() {
     if (beakerNotebookRef.value) {
@@ -475,22 +409,18 @@ function scrollBottomCellContainer() {
     }
 }
 
-
-
 onBeforeMount(() => {
     if (cellCount.value <= 0) {
         session.addCodeCell("");
     }
 });
 
-onMounted(() => {
-    updateContextInfo();
-});
+// onMounted(() => {
+// });
 
 defineExpose({
 
     handleKeyboardShortcut,
-    updateContextInfo,
 })
 
 </script>
@@ -550,6 +480,7 @@ footer {
 .ide-cells {
     position: relative;
     display: flex;
+    flex: 1;
     flex-direction: column;
     z-index: 3;
     background-color: var(--surface-a);

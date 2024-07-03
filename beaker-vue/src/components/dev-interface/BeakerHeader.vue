@@ -12,8 +12,8 @@
                 iconPos="right"
                 class="connection-button"
                 @click="selectKernel"
-                :label="props.kernel"
-                :loading="props.loading"
+                :label="activeContext?.slug"
+                :loading="!(activeContext?.slug)"
             />
         </template>
 
@@ -72,13 +72,15 @@ import { capitalize } from '../../util';
 const props = defineProps([
     "connectionStatus",
     "toggleDarkMode",
-    "loading",
+    // "loading",
     "kernel"
 ]);
 
 const emit = defineEmits(["selectKernel"]);
 
 const theme = inject('theme');
+const session = inject("session");
+const activeContext = inject('active_context');
 
 function selectKernel() {
     emit('select-kernel');

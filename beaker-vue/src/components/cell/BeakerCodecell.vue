@@ -106,7 +106,6 @@ function handleCodeChange() {
     // eg to know if we're at the top or bottom
     // of editor and user presser up/down arrows keys to navigate
     // to another cell
-    // console.log(editorView.value.inputState);
 }
 
 const codeExtensions = computed(() => {

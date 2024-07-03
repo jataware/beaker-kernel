@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, computed, inject, watch } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, computed, inject, watch } from "vue";
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
@@ -106,17 +106,17 @@ const emit = defineEmits([
 const session = inject('session');
 
 const showToast = inject('show_toast');
-const theme = inject('theme');
+// const theme = inject('theme');
 
-const codeExtensions = computed(() => {
-    const ext = [];
+// const codeExtensions = computed(() => {
+//     const ext = [];
 
-    if (theme.value === 'dark') {
-        ext.push(oneDark);
-    }
-    return ext;
+//     if (theme.value === 'dark') {
+//         ext.push(oneDark);
+//     }
+//     return ext;
 
-});
+// });
 
 const actionType = ref<string>();
 const actionPayload = ref<string>("{\n}");
@@ -189,6 +189,10 @@ watch(() => props.selectedAction, async (newValue: string) => {
         selectAction(newValue);
         emit("clearSelection");
     }
+});
+
+defineExpose({
+    selectAction,
 });
 
 </script>

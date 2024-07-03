@@ -1,26 +1,139 @@
 <template>
-    <BeakerDevInterface
-      ref="notebookRef"
-      :connectionStatus="connectionStatus"
-      :debugLogs="debugLogs"
-      :rawMessages="rawMessages"
-      :previewData="previewData"
-      @clear-preview="previewData = undefined"
-    />
-    <Toast position="bottom-right" />
+  <div id="app">
+        <BeakerSession
+            ref="beakerSession"
+            :connectionSettings="props.config"
+            sessionName="dev_interface"
+            :sessionId="sessionId"
+            defaultKernel="beaker_kernel"
+            :renderers="renderers"
+            @iopub-msg="iopubMessage"
+            @unhandled-msg="unhandledMessage"
+            @any-msg="anyMessage"
+            @session-status-changed="statusChanged"
+            @context-changed="(context) => {if(context) activeContext = context;}"
+        >
+            <div class="beaker-dev-interface">
+            <header>
+                <BeakerHeader
+                    :connectionStatus="connectionStatus"
+                    :toggleDarkMode="toggleDarkMode"
+                    :loading="!activeContext?.slug"
+                    @select-kernel="toggleContextSelection"
+                />
+            </header>
+            <main style="display: flex;">
+                <SideMenu
+                    position="left"
+                    :show-label="true"
+                    highlight="line"
+                >
+                    <SideMenuPanel label="Context" icon="pi pi-home">
+                        <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
+                    </SideMenuPanel>
+                </SideMenu>
+
+                    <div class="central-panel"
+                        @keydown="handleKeyboardShortcut"
+                    >
+                        <BeakerNotebook
+                            ref="beakerNotebookRef"
+                        >
+                            <template #notebook-background>
+                                <div class="welcome-placeholder">
+                                    <SvgPlaceholder />
+                                </div>
+                            </template>
+                        </BeakerNotebook>
+                        <BeakerAgentQuery
+                            class="agent-query-container"
+                        />
+                    </div>
+                        <SideMenu
+                            position="right"
+                            ref="rightMenu"
+                            highlight="line"
+                            :show-label="true"
+                        >
+                            <SideMenuPanel tabId="preview" label="Preview" icon="pi pi-eye">
+                                <PreviewPane :previewData="previewData"/>
+                            </SideMenuPanel>
+
+                            <SideMenuPanel tabId="action" label="Actions" icon="pi pi-send">
+                                <Card class="debug-card">
+                                    <template #title>Execute an Action</template>
+                                    <template #content>
+                                        <BeakerExecuteAction
+                                            ref="executeActionRef"
+                                            :actions="activeContext?.info?.actions"
+                                            :rawMessages="rawMessages"
+                                        />
+                                            <!-- :selectedAction="selectedAction" -->
+                                            <!-- @clear-selection="selectedAction = undefined" -->
+                                    </template>
+                                </Card>
+                            </SideMenuPanel>
+
+                            <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
+                                <LoggingPane :entries="debugLogs" />
+                            </SideMenuPanel>
+
+                            <SideMenuPanel label="Messages" icon="pi pi-comments">
+                                <LoggingPane :entries="rawMessages" />
+                            </SideMenuPanel>
+
+                            <SideMenuPanel label="Files" icon="pi pi-file-export">
+                                <BeakerFilePane />
+                            </SideMenuPanel>
+
+                        </SideMenu>
+            </main>
+            <footer>
+                <FooterDrawer />
+            </footer>
+            </div>
+            <!-- TODO: Move this to part of session via named slot? -->
+            <BeakerContextSelection
+                :isOpen="contextSelectionOpen"
+                :toggleOpen="toggleContextSelection"
+                :contextProcessing="contextProcessing"
+                @context-changed="(contextData) => {beakerSession.setContext(contextData)}"
+                @close-context-selection="contextSelectionOpen = false"
+            />
+        </BeakerSession>
+
+        <!-- Modals, popups and globals -->
+        <Toast position="bottom-right" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, reactive, ref, onBeforeMount, provide, onBeforeUnmount } from 'vue';
-import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
-import BeakerDevInterface from '@/components/dev-interface/BeakerDevInterface.vue';
+import { defineProps, reactive, ref, onBeforeMount, provide, inject } from 'vue';
+import { JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from '@/components/notebook/BeakerNotebook.vue';
+import BeakerSession from '@/components/session/BeakerSession.vue';
+import BeakerHeader from '@/components/dev-interface/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
+import Card from 'primevue/card';
+import LoggingPane from '@/components/dev-interface/LoggingPane.vue';
+import BeakerAgentQuery from '@/components/agent/BeakerAgentQuery.vue';
+import BeakerContextSelection from "@/components/session/BeakerContextSelection.vue";
+import BeakerExecuteAction from "@/components/dev-interface/BeakerExecuteAction.vue";
+import ContextTree from '@/components/dev-interface/ContextTree.vue';
+import BeakerFilePane from '@/components/dev-interface/BeakerFilePane.vue';
+import PreviewPane from '@/components/dev-interface/PreviewPane.vue';
+import SvgPlaceholder from '@/components/misc/SvgPlaceholder.vue';
+import SideMenu from "@/components/sidemenu/SideMenu.vue";
+import SideMenuPanel from "@/components/sidemenu/SideMenuPanel.vue";
+import FooterDrawer from '@/components/dev-interface/FooterDrawer.vue';
+
 const toast = useToast();
+
+const activeContext = ref();
 
 // Let's only use severity=success|warning|danger(=error) for now
 const showToast = ({title, detail, life=3000, severity='success', position='bottom-right'}) => {
@@ -34,39 +147,27 @@ const showToast = ({title, detail, life=3000, severity='success', position='bott
     });
 };
 
+const urlParams = new URLSearchParams(window.location.search);
+const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
+
 const props = defineProps([
-  "config"
+  "config",
+
+  "connectionSettings",
+  "sessionName",
+  "sessionId",
+  "defaultKernel",
+  "renderers",
+
 ]);
+
 
 const renderers = [
   ...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
   JSONRenderer,
   LatexRenderer,
   DecapodeRenderer,
-]
-
-const urlParams = new URLSearchParams(window.location.search);
-const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
-
-if (sessionId !== "dev_session") {
-  window.addEventListener("beforeunload", (evt) => {
-    snapshot();
-    evt.returnValue = true;
-    evt.preventDefault();
-  });
-}
-
-const rawSession = new BeakerSession(
-  {
-    settings: props.config,
-    name: "MyKernel",
-    kernelName: "beaker_kernel",
-    sessionId: sessionId,
-    rendererOptions: {
-      renderers
-    }
-  }
-);
+];
 
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
@@ -74,78 +175,70 @@ const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
 const saveInterval = ref();
 const notebookRef = ref<typeof BeakerNotebook>();
+const beakerSession = ref<typeof BeakerSession>();
 
-rawSession.sessionReady.then(() => {
+const contextSelectionOpen = ref(false);
+const activeContextPayload = ref<any>(null);
+const contextProcessing = ref(false);
+const rightMenu = ref<typeof SideMenuPanel>();
+const executeActionRef = ref<typeof BeakerExecuteAction>();
+const selectedTheme = ref(localStorage.getItem('theme') || 'light');
 
-    rawSession.session.iopubMessage.connect((session, msg) => {
+const applyTheme = () => {
+    const themeLink = document.querySelector('#primevue-theme');
+    themeLink.href = `/themes/soho-${selectedTheme.value}/theme.css`;
+}
 
-        if (msg.header.msg_type === 'status') {
-          setTimeout(() => {
-            const newStatus = msg?.content?.execution_state || 'connecting';
-            connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
-          }, 1000);
-        }
-        else if (msg.header.msg_type === "preview") {
-          previewData.value = msg.content;
-        }
-        else if (msg.header.msg_type === "debug_event") {
-            debugLogs.value.push({
-              type: msg.content.event,
-              body: msg.content.body,
-              timestamp: msg.header.date,
-            });
-        }
-        else if (msg.header.msg_type === "context_info_update") {
-          notebookRef.value.updateContextInfo();
-        }
+const toggleDarkMode = () => {
+    selectedTheme.value = selectedTheme.value === 'light' ? 'dark' : 'light'
+    localStorage.setItem('theme', selectedTheme.value);
+    applyTheme();
+};
 
+
+const iopubMessage = (msg) => {
+  if (msg.header.msg_type === "preview") {
+    previewData.value = msg.content;
+  } else if (msg.header.msg_type === "debug_event") {
+    debugLogs.value.push({
+      type: msg.content.event,
+      body: msg.content.body,
+      timestamp: msg.header.date,
     });
-    rawSession.session.session.anyMessage.connect((_: unknown, {msg, direction}) => {
-      rawMessages.value.push({
-        type: direction,
-        body: msg,
-        timestamp: msg.header.date,
-      });
-    });
+  }
+};
 
-});
+const anyMessage = (msg, direction) => {
+  rawMessages.value.push({
+    type: direction,
+    body: msg,
+    timestamp: msg.header.date,
+  });
+};
+
+const unhandledMessage = (msg) => {
+  console.log("Unhandled message recieved", msg);
+}
+
+const statusChanged = (newStatus) => {
+  connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
+};
+
+const toggleContextSelection = () => {
+  contextSelectionOpen.value = !contextSelectionOpen.value;
+};
+
+const selectAction = (actionName: string) => {
+    rightMenu.value?.selectPanel("action");
+    executeActionRef.value?.selectAction(actionName);
+};
 
 onBeforeMount(() => {
   document.title = "Beaker Development Interface"
-  var notebookData: {[key: string]: any};
-  try {
-    notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-  }
-  catch (e) {
-    notebookData = {};
-  }
-  if (notebookData[sessionId]) {
-    rawSession.notebook.loadFromIPynb(notebookData[sessionId]);
-  }
-  saveInterval.value = setInterval(snapshot, 30000);
 });
 
-
-onBeforeUnmount(() => {
-  clearInterval(saveInterval.value);
-});
-
-const beakerSession = reactive(rawSession);
-
-provide('session', beakerSession);
 provide('show_toast', showToast);
 
-const snapshot = () => {
-  var notebookData: {[key: string]: any};
-  try {
-    notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-  }
-  catch (e) {
-    notebookData = {};
-  }
-  notebookData[sessionId] = rawSession.notebook.toIPynb();
-  localStorage.setItem("notebookData", JSON.stringify(notebookData));
-};
 </script>
 
 <style lang="scss">
@@ -153,5 +246,29 @@ const snapshot = () => {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background-color: var(--surface-b);
 }
+
+.central-panel {
+    flex: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.beaker-dev-interface {
+    padding-bottom: 1rem;
+    height: 100vh;
+    width: 100vw;
+    display: grid;
+    grid-gap: 1px;
+
+    grid-template-areas:
+        "header header header header"
+        "main main main main"
+        "footer footer footer footer";
+
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+}
+
 </style>
