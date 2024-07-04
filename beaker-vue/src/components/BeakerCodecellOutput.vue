@@ -1,6 +1,6 @@
 <template>
-    <div class="code-cell-output jp-RenderedText">
-        <div v-for="output of props.outputs" :key="output">
+    <div class="code-cell-output jp-RenderedText" v-if="stripInvisibleOutputs(props.outputs).length > 0">
+        <div v-for="output of stripInvisibleOutputs(props.outputs)" :key="output">
             <div v-if="output.output_type == 'stream'" :class="output.output_type">{{ output.text }}</div>
             <BeakerMimeBundle
                 v-else-if="['display_data', 'execute_result'].includes(output.output_type)"
@@ -25,8 +25,16 @@ const session = inject('session');
 
 const props = defineProps([
     "outputs",
-    "busy"
+    "busy",
+    "isVisible"
 ]);
+
+const stripInvisibleOutputs = (outputs) => {
+    return outputs.filter((output) => {
+        const displayAnyway = ['display_data', 'execute_result'].includes(output.output_type);
+        return props.isVisible || displayAnyway;
+    });
+}
 
 const rebundleError = (errorOutput) => {
     const traceback = (Array.isArray(errorOutput.traceback) ? errorOutput.traceback?.join('\n') : errorOutput.traceback?.toString());

@@ -2,12 +2,12 @@
     <div class="code-cell">
         <div class="code-cell-grid">
             <div
-                v-if="isVisible"
                 class="code-data"
                 :class="{'dark-mode': theme === 'dark'}"
             >
                 <Codemirror
                     v-model="cell.source"
+                    v-if="isVisible"
                     ref="codemirrorRef"
                     placeholder="Your code..."
                     :extensions="codeExtensions"
@@ -16,15 +16,14 @@
                     @change="handleCodeChange"
                     @ready="handleReady"
                 />
-                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
-            </div>
-            <div v-else> 
-                <Button
-                    icon="pi pi-code"
-                    size="small"
-                    rounded
-                    @click="toggleVisible"
-                />               
+                <div v-else> 
+                    <Button
+                        icon="pi pi-code"
+                        size="small"
+                        @click="toggleVisible"
+                    />               
+                </div>
+                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" :isVisible="isVisible"/>
             </div>
             <div class="state-info">
                 <div class="execution-count-badge">
