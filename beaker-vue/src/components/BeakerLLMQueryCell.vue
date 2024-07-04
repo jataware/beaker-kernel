@@ -48,9 +48,8 @@
                 />
             </div>
         </div>
-        <div class="events" :class="event.type" v-for="event of viewableEvents(cell.events)" :key="event">
-            <template v-if="event.type === 'thought'"><span>Thought:&nbsp;</span> {{ event.content }}</template>
-            <span v-else-if="event.type ==='code_cell' && typeof(getChildByCellId(event.content?.id)) !== 'undefined'">
+        <div class="events" :class="event.type" v-for="event of cell.events" :key="event">
+            <span v-if="event.type ==='code_cell' && typeof(getChildByCellId(event.content?.id)) !== 'undefined'">
                 <Component
                     :key="event.content.id"
                     :is="BeakerCodeCell"
@@ -64,6 +63,9 @@
                     @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)"
                 />
             </span>
+            <!--<template v-else-if="event.type === 'thought'"><span>Thought:&nbsp;</span> {{ event.content }}</template> -->
+            <template v-else-if="event.type === 'user_question'" >{{ event.content }}</template>
+            <template v-else-if="event.type === 'user_answer'" >{{ event.content }}</template>
             <template v-else-if="event.type === 'response'" >{{ event.content }}</template>
             <template v-else-if="event.type === 'abort'" >{{ event.content }}</template>
         </div>
@@ -117,7 +119,6 @@ const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
 const childrenRef = ref<typeof BeakerCodeCell|null>(null);
-const viewableEvents = (events) => events.filter(({ type }) => !(["thought"].includes(type)));
 
 const getChildByCellId = (child_id: string) : BeakerBaseCell | undefined => {
     const index = cell.value.children?.findIndex((child) => child.id === child_id)

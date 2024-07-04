@@ -9,6 +9,7 @@
               severity="info"
               text
           />
+          <!--
           <Button
               @click="downloadNotebook"
               v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
@@ -18,17 +19,28 @@
               text
           />
           <OpenNotebookButton @open-file="loadNotebook"/>
+          -->
+          <Button
+              @click="toggleFileMenu"
+              v-tooltip.bottom="{value: 'Show file menu', showDelay: 300}"
+              icon="pi pi-folder-open"
+              size="small"
+              severity="info"
+              text
+          />
+          <OverlayPanel ref="isFileMenuOpen"><BeakerFilePane/></OverlayPanel>
       </InputGroup>
   </div>
 </template>
 
 <script setup>
-import { defineEmits, inject } from 'vue';
+import { defineEmits, inject, ref } from 'vue';
 import Button from 'primevue/button';
-import SplitButton from 'primevue/splitbutton';
+import OverlayPanel from 'primevue/overlaypanel';
 import InputGroup from 'primevue/inputgroup';
 import OpenNotebookButton from './OpenNotebookButton.vue';
 import { downloadFileDOM, getDateTime } from '../util';
+import BeakerFilePane from './BeakerFilePane.vue';
 
 const emit = defineEmits([
   "run-cell",
@@ -37,6 +49,11 @@ const emit = defineEmits([
   "add-markdown-cell",
   "reset-nb"
 ]);
+
+const isFileMenuOpen = ref();
+const toggleFileMenu = (event) => {
+    isFileMenuOpen.value.toggle(event);
+}
 
 const menuModel = [
     {
