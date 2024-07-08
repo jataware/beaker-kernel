@@ -38,6 +38,7 @@ dependencies = [
   "xarray",
   "numpy",
   "scipy",
+  "openpyxl",
 ]
 
 [project.scripts]
