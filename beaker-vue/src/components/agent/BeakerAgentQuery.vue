@@ -36,6 +36,8 @@ const props = defineProps([
     "runCellCallback"
 ]);
 
+const beakerSession = inject("beaker-session");
+
 const query = ref("");
 const emit = defineEmits([
     "select-cell",
@@ -45,19 +47,23 @@ const emit = defineEmits([
 const session = inject("session");
 
 const handleQuery = (e: any) => {
+    console.log(beakerSession);
+    console.log(session);
     if (!query.value.trim()) {
         return; // TODO notify user that they're missing the agent query?
     }
 
     const cell = session.addQueryCell(query.value);
-    query.value = "";
-    emit("select-cell", cell);
+
+    // cell.execute(session);
+    // query.value = "";
+    // emit("select-cell", cell);
     nextTick(() => {
         // Delay running of cell by a ticket to allow selection and rendering to complete.
-        emit("run-cell", cell);
-        setTimeout(() => {
-            props.runCellCallback();
-        }, 1000);
+        // emit("run-cell", cell);
+        // setTimeout(() => {
+        //     props.runCellCallback();
+        // }, 1000);
     });
 }
 

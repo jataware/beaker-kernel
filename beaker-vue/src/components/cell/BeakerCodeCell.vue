@@ -1,56 +1,59 @@
 <template>
-    <div class="code-cell">
-        <div class="code-cell-grid">
-            <div
-                class="code-data"
-                :class="{'dark-mode': theme === 'dark'}"
-            >
-                <Codemirror
-                    v-model="cell.source"
-                    ref="codemirrorRef"
-                    placeholder="Your code..."
-                    :extensions="codeExtensions"
-                    :disabled="isBusy"
-                    :autofocus="true"
-                    @change="handleCodeChange"
-                    @ready="handleReady"
-                />
-                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
-            </div>
-            <div class="state-info">
-                <div class="execution-count-badge">
-                    <Badge
-                        :class="{secondary: badgeSeverity === 'secondary'}"
-                        :severity="badgeSeverity"
-                        :value="cell.execution_count || '&nbsp;'">
-                    </Badge>
+    <BeakerCell :cell="props.cell">
+        <div class="code-cell">
+            <div class="code-cell-grid">
+                <div
+                    class="code-data"
+                    :class="{'dark-mode': theme === 'dark'}"
+                >
+                    <Codemirror
+                        v-model="cell.source"
+                        ref="codemirrorRef"
+                        placeholder="Your code..."
+                        :extensions="codeExtensions"
+                        :disabled="isBusy"
+                        :autofocus="true"
+                        @change="handleCodeChange"
+                        @ready="handleReady"
+                    />
+                    <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
                 </div>
-                <i
-                    v-if="isBusy"
-                    class="pi pi-spin pi-spinner busy-icon"
-                />
-                <Button
-                    v-if="hasRollback"
-                    class="rollback-button"
-                    :severity="badgeSeverity"
-                    icon="pi pi-refresh"
-                    size="small"
-                    @click="rollback"
-                />
+                <div class="state-info">
+                    <div class="execution-count-badge">
+                        <Badge
+                            :class="{secondary: badgeSeverity === 'secondary'}"
+                            :severity="badgeSeverity"
+                            :value="cell.execution_count || '&nbsp;'">
+                        </Badge>
+                    </div>
+                    <i
+                        v-if="isBusy"
+                        class="pi pi-spin pi-spinner busy-icon"
+                    />
+                    <Button
+                        v-if="hasRollback"
+                        class="rollback-button"
+                        :severity="badgeSeverity"
+                        icon="pi pi-refresh"
+                        size="small"
+                        @click="rollback"
+                    />
+                </div>
             </div>
         </div>
-    </div>
+    </BeakerCell>
 </template>
 
 <script setup lang="ts">
 import { defineProps, nextTick, defineExpose, ref, shallowRef, computed, inject } from "vue";
-import CodeCellOutput from "./BeakerCodecellOutput.vue";
+import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView } from "codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
+import BeakerCell from "./BeakerCell.vue";
 
 
 const props = defineProps([
@@ -61,7 +64,7 @@ const cell = ref(props.cell);
 const editorView = shallowRef();
 const theme = inject('theme');
 const session = inject('session');
-const activeContext = inject('active_context');
+const activeContext = inject('activeContext');
 const codemirrorRef = ref<typeof Codemirror|null>(null);
 
 const handleReady = (payload) => {
@@ -111,14 +114,14 @@ function handleCodeChange() {
 const codeExtensions = computed(() => {
     const ext = [EditorView.lineWrapping];
 
-    const subkernel = activeContext.value?.language?.subkernel || '';
+    const subkernel = session.activeContext?.value?.language?.subkernel || '';
     const isPython = subkernel.includes('python');
     if (isPython) {
         ext.push(python());
     }
-    if (theme.value === 'dark') {
-        ext.push(oneDark);
-    }
+    // if (theme.value === 'dark') {
+    //     ext.push(oneDark);
+    // }
     return ext;
 
 });

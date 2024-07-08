@@ -1,8 +1,9 @@
 /**
  *
  **/
+// TODO: Fix this as to be better null safe
 export function capitalize(s: string) {
-    return s.charAt(0).toUpperCase() + s.slice(1);
+    return s?.charAt(0).toUpperCase() + s.slice(1) || s;
 }
 
 /**

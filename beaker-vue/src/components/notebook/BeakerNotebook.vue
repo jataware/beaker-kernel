@@ -1,93 +1,31 @@
 <template>
     <div class="beaker-notebook">
-        <div class="controls" style="position: relative;">
-            <InputGroup>
-                <slot name="notebook_buttons_left">
-                <Button
-                    @click="addCell()"
-                    icon="pi pi-plus"
-                    size="small"
-                    severity="info"
-                    text
-                />
-                <Button
-                    @click="removeCell()"
-                    icon="pi pi-minus"
-                    size="small"
-                    severity="info"
-                    text
-                />
-                <Button
-                    @click="runCell()"
-                    icon="pi pi-play"
-                    size="small"
-                    severity="info"
-                    text
-                />
-                </slot>
-            </InputGroup>
-            <InputGroup style="margin-right: 1rem; position: absolute; right: 0;">
-                <slot name="notebook_buttons_right">
-                    <Button
-                        @click="resetNotebook"
-                        v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
-                        icon="pi pi-refresh"
-                        size="small"
-                        severity="info"
-                        text
-                    />
-                    <Button
-                        @click="downloadNotebook"
-                        v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
-                        icon="pi pi-download"
-                        size="small"
-                        severity="info"
-                        text
-                    />
-                    <OpenNotebookButton @open-file="loadNotebook"/>
-                </slot>
-            </InputGroup>
-        </div>
-
-        <div class="ide-cells">
-            <NotebookPanel
-                :selectCell="selectCell"
-                :selectedCellIndex="selectedCellIndex"
-                ref="beakerNotebookRef"
-            >
-                <template #notebook-background>
-                    <transition name="fade">
-                        <div class="welcome-placeholder" v-if="cellCount < 3">
-                            <SvgPlaceholder />
-                        </div>
-                    </transition>
-                </template>
-            </NotebookPanel>
-        </div>
+        <BeakerNotebookToolbar/>
+        <NotebookPanel
+            :selectCell="selectCell"
+            :selectedCellIndex="selectedCellIndex"
+            ref="beakerNotebookRef"
+        >
+            <template #notebook-background>
+                <div class="welcome-placeholder">
+                    <SvgPlaceholder />
+                </div>
+            </template>
+        </NotebookPanel>
     </div>
 </template>
 
 <script setup lang="tsx">
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
 import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
-import { BeakerCodeCell } from "beaker-kernel";
 
-import Button from "primevue/button";
-
-import NotebookPanel from '@/components/notebook/NotebookPanel.vue';
-import NotebookControls from '@/components/notebook/NotebookControls.vue';
-import BeakerAgentQuery from '@/components/agent/BeakerAgentQuery.vue';
+import NotebookPanel from '@/components/notebook/BeakerNotebookPanel.vue';
+import BeakerNotebookToolbar from "./BeakerNotebookToolbar.vue";
 import SvgPlaceholder from '@/components/misc/SvgPlaceholder.vue';
 import BeakerCell from '@/components/cell/BeakerCell.vue';
-import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
-
-
-// double check this import
-// import { arrayMove, capitalize } from '../util';
-// import { arrayMove } from "beaker-kernel/src/util"
-
 
 const props = defineProps([
+    "cellMap",
     "connectionStatus",
     "debugLogs",
     "rawMessages",
@@ -100,26 +38,15 @@ const emit = defineEmits([
 
 // TODO info object map type
 const notebookCellsRef = ref<typeof BeakerCell|null>(null);
-const activeContext = ref<{slug: string, class: string, context: any, info: any} | undefined>(undefined);
 const selectedCellIndex = ref("");
-const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
-const showDebugPane = ref (true);
-const activeContextPayload = ref<any>(null);
-const contextProcessing = ref(false);
-const rightPaneTabIndex = ref(0);
 const isDeleteprefixActive = ref(false);
 const selectedTheme = ref(localStorage.getItem('theme') || 'light');
-const debugTabView = ref<{tabs: any[]}|null>(null);
-const selectedAction = ref<string|undefined>(undefined);
 const beakerNotebookRef = ref<typeof NotebookPanel>();
 
 
 const session: BeakerSession = inject('session');
-const showToast = inject('show_toast');
-
-provide('theme', selectedTheme);
-provide('active_context', activeContext);
+provide('cell-component-mapping', props.cellMap);
 
 const cellCount = computed(() => session.notebook?.cells?.length || 0);
 
@@ -428,138 +355,10 @@ defineExpose({
 
 <style lang="scss">
 .beaker-notebook {
-    // height: 80%;
-    // width: 100vw;
     display: flex;
     flex: 1;
     flex-direction: column;
     height: 100%;
-    // display: grid;
-    // grid-gap: 1px;
-
-    // grid-template-areas:
-    //     "header header header header"
-    //     "main main main main"
-    //     "footer footer footer footer";
-
-    // grid-template-columns: 1fr 1fr 1fr 1fr;
-    // grid-template-rows: auto 1fr auto;
-}
-
-.notebook-json {
-    text-align: left;
-    background-color: var(--surface-b);
-    border-radius: 0.5rem;
-    border: 1px solid var(--gray-300);
-    overflow: auto;
-}
-
-header {
-    grid-area: header;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-main {
-    grid-area: main;
-}
-
-footer {
-    grid-area: footer;
-}
-
-.main-panel {
-    display: flex;
-    flex-direction: column;
-    &:focus {
-        outline: none;
-    }
-}
-
-.ide-cells {
-    position: relative;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    z-index: 3;
-    background-color: var(--surface-a);
-}
-
-
-.agent-query-container {
-    flex: 0 1 8rem;
-}
-
-.main-ide-panel {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    height: 100%;
-}
-
-.cell-container {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    top: 0;
-    overflow-y: auto;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    z-index: 2;
-}
-
-
-.right-splitter {
-    display: flex;
-    flex-direction: column;
-
-    &:focus {
-        outline: none;
-    }
-
-    .p-tabview {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        li .p-tabview-nav-link {
-            padding: 0;
-            .p-button {
-                pointer-events: none;
-                color: var(--text-color-secondary);
-            }
-        }
-    }
-
-    .p-tabview-panels {
-        flex: 1;
-        position: relative;
-    }
-}
-
-.scroller-area {
-    position: absolute;
-    top:0;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    overflow-y: auto;
-}
-
-.debug-card {
-    &.p-card {
-        border-radius: 0;
-    }
-    .p-card-content {
-        padding-top: 0.75rem;
-        padding-bottom: 0.25rem;
-    }
-
-    .vjs-tree-node:hover{
-        background-color: var(--surface-b);
-    }
-
 }
 
 .welcome-placeholder  {
@@ -574,31 +373,5 @@ footer {
     justify-content: center;
     opacity: 90%;
 }
-
-.fade-enter-active {
-    transition: opacity 1s ease-out;
-}
-.fade-leave-active {
-    transition: opacity 1s ease-in;
-}
-.fade-leave-from {
-    stop-opacity: 90%;
-}
-.fade-leave-to {
-    opacity: 0;
-}
-.fade-enter-from {
-    opacity: 0;
-}
-.fade-enter-to {
-    opacity: 90%;
-}
-
-.debug-pane-toggler {
-    background-color: var(--surface-a);
-    display: flex;
-    flex-direction: column;
-}
-
 
 </style>

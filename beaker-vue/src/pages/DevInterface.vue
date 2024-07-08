@@ -11,8 +11,11 @@
             @unhandled-msg="unhandledMessage"
             @any-msg="anyMessage"
             @session-status-changed="statusChanged"
-            @context-changed="(context) => {if(context) activeContext = context;}"
         >
+            <!-- <KeypressController
+                :this="beakerSession"
+                :keyBindings="keyBindings"
+            > -->
             <div class="beaker-dev-interface">
             <header>
                 <BeakerHeader
@@ -34,10 +37,11 @@
                 </SideMenu>
 
                     <div class="central-panel"
-                        @keydown="handleKeyboardShortcut"
                     >
                         <BeakerNotebook
                             ref="beakerNotebookRef"
+                            :cell-map="cellComponentMapping"
+                            v-on="notebookKeyBindings"
                         >
                             <template #notebook-background>
                                 <div class="welcome-placeholder">
@@ -92,6 +96,7 @@
                 <FooterDrawer />
             </footer>
             </div>
+            <!-- </KeypressController> -->
             <!-- TODO: Move this to part of session via named slot? -->
             <BeakerContextSelection
                 :isOpen="contextSelectionOpen"
@@ -111,8 +116,11 @@
 import { defineProps, reactive, ref, onBeforeMount, provide, inject } from 'vue';
 import { JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from '@/components/notebook/BeakerNotebook.vue';
+import BeakerNotebookToolbar from '@/components/notebook/BeakerNotebookToolbar.vue';
+import BeakerNotebookPanel from '@/components/notebook/BeakerNotebookPanel.vue';
 import BeakerSession from '@/components/session/BeakerSession.vue';
 import BeakerHeader from '@/components/dev-interface/BeakerHeader.vue';
+import KeypressController from '@/components/controllers/KeypressController.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
@@ -131,19 +139,40 @@ import SideMenu from "@/components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "@/components/sidemenu/SideMenuPanel.vue";
 import FooterDrawer from '@/components/dev-interface/FooterDrawer.vue';
 
+import BeakerCodeCell from '@/components/cell/BeakerCodeCell.vue';
+import BeakerMarkdownCell from '@/components/cell/BeakerMarkdownCell.vue';
+import BeakerLLMQueryCell from '@/components/cell/BeakerLLMQueryCell.vue';
+import BeakerRawCell from '@/components/cell/BeakerRawCell.vue';
+
+import { notebookKeyBindings } from './keybindings';
+
+console.log(notebookKeyBindings);
+
 const toast = useToast();
 
 const activeContext = ref();
 
+// test function for finding cells
+// currently returns a vnode object instead of expecte ref object
+const foo = () => {
+    const id = beakerSession.value.session.notebook.cells[0].id;
+    const cell = beakerSession.value.findNotebookCellById(id);
+    // console.log(id, cell);
+    // if (cell.execute) {
+    //     cell.execute();
+    // }
+}
+
+// TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
 // Let's only use severity=success|warning|danger(=error) for now
 const showToast = ({title, detail, life=3000, severity='success', position='bottom-right'}) => {
     toast.add({
-      summary: title,
-      detail,
-      life,
-      // for options, seee https://primevue.org/toast/
-      severity,
-      position
+        summary: title,
+        detail,
+        life,
+        // for options, seee https://primevue.org/toast/
+        severity,
+        position
     });
 };
 
@@ -168,6 +197,13 @@ const renderers = [
   LatexRenderer,
   DecapodeRenderer,
 ];
+
+const cellComponentMapping = {
+    'code': BeakerCodeCell,
+    'markdown': BeakerMarkdownCell,
+    'query': BeakerLLMQueryCell,
+    'raw': BeakerRawCell,
+}
 
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
@@ -237,6 +273,7 @@ onBeforeMount(() => {
   document.title = "Beaker Development Interface"
 });
 
+// TODO: See above. Move somewhere better.
 provide('show_toast', showToast);
 
 </script>
@@ -248,6 +285,30 @@ provide('show_toast', showToast);
   overflow: hidden;
   background-color: var(--surface-b);
 }
+
+header {
+    grid-area: header;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+main {
+    grid-area: main;
+}
+
+footer {
+    grid-area: footer;
+}
+
+.main-panel {
+    display: flex;
+    flex-direction: column;
+    &:focus {
+        outline: none;
+    }
+}
+
 
 .central-panel {
     flex: 1000;

@@ -1,136 +1,168 @@
 <template>
-  <slot>
-    <BeakerNotebook
-      :connectionStatus="connectionStatus"
-      :debugLogs="debugLogs"
-      :rawMessages="rawMessages"
-      :previewData="previewData"
-      @clear-preview="previewData = undefined"
-    />
-  </slot>
+  <slot></slot>
 </template>
 
-<script setup lang="ts">
-import { defineProps, reactive, ref, inject, provide, defineEmits, onMounted, defineExpose } from 'vue';
+<script lang="ts">
+import { defineProps, reactive, ref, inject, provide, defineEmits, onMounted, defineExpose, onBeforeMount } from 'vue';
 import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
-import { type IActiveContextInfo } from 'beaker-kernel/util';
+// import { type IActiveContextInfo } from 'beaker-kernel/util';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
+import BeakerCell from '@/components/cell/BeakerCell.vue'
 
-const showToast = inject('show_toast');
+export default {
+  props: {
+      "connectionSettings": Object,
+      "sessionName": String,
+      "sessionId": String,
+      "defaultKernel": String,
+      "renderers": Object,
+  },
 
-const props = defineProps([
-  "connectionSettings",
-  "sessionName",
-  "sessionId",
-  "defaultKernel",
-  "renderers",
+  emits: [
+      "iopub-msg",
+      "unhandled-msg",
+      "any-msg",
+      "session-status-changed",
+      "context-changed",
+  ],
 
-]);
+  setup(props, { emit }) {
 
-const emit = defineEmits([
-  "iopub-msg",
-  "unhandled-msg",
-  "any-msg",
-  "session-status-changed",
-  "context-changed",
-]);
+    const status = ref("unknown");
 
-const activeContext = ref<IActiveContextInfo | undefined>(undefined);
 
-const rawSession = new BeakerSession(
-  {
-    settings: props.connectionSettings,
-    name: props.sessionName,
-    sessionId: props.sessionId,
-    kernelName: props.defaultKernel,
-    rendererOptions: {
-      renderers: props.renderers || []
-    }
-  }
-);
+    // const activeContext = ref<IActiveContextInfo | undefined>(undefined);
+    const activeContext = ref();
 
-rawSession.sessionReady.then(() => {
-
-  rawSession.session.iopubMessage.connect((session, msg) => {
-    emit("iopub-msg", msg);
-    if (messages.isStatusMsg(msg)) {
-      const newStatus = msg?.content?.execution_state || 'connecting';
-      emit("session-status-changed", newStatus);
-    }
-  });
-  rawSession.session.session.anyMessage.connect((_: unknown, {msg, direction}) => {
-    emit("any-msg", msg, direction);
-  });
-  rawSession.session.unhandledMessage.connect((session, msg) => {
-    emit("unhandled-msg", msg);
-  });
-});
-
-const beakerSession = reactive(rawSession);
-
-const fetchContextInfo = async () => {
-  const activeContextInfo = await beakerSession.activeContext();
-  activeContext.value = activeContextInfo;
-  emit("context-changed", activeContext.value);
-}
-
-const setContext = (contextPayload: any) => {
-    // TODO: Figure out a better way set context to "loading" state
-    activeContext.value = {};
-
-    const future = beakerSession.sendBeakerMessage(
-        "context_setup_request",
-        contextPayload
+    const rawSession = new BeakerSession(
+      {
+        settings: props.connectionSettings,
+        name: props.sessionName,
+        sessionId: props.sessionId,
+        kernelName: props.defaultKernel,
+        rendererOptions: {
+          renderers: props.renderers || []
+        }
+      }
     );
-    future.done.then((result: any) => {
 
-        if (result?.content?.status === 'error') {
-            let formatted = result?.content?.evalue;
-            if (formatted) {
-                const endsWithPeriod = /\.$/.test(formatted);
-                if (!endsWithPeriod) {
-                    formatted += '.';
-                }
-            }
-            showToast({
-                title: 'Context Setup Failed',
-                severity: 'error',
-                detail: `${formatted} Please try again or contact us.`,
-                life: 0
-            });
-            return;
+    rawSession.sessionReady.then(() => {
+
+      rawSession.session.iopubMessage.connect((session, msg) => {
+        emit("iopub-msg", msg);
+        if (messages.isStatusMsg(msg)) {
+          const newStatus = msg?.content?.execution_state || 'connecting';
+          status.value = newStatus;
+          emit("session-status-changed", newStatus);
         }
-
-        if (result?.content?.status === 'abort') {
-            showToast({
-                title: 'Context Setup Aborted',
-                severity: 'warning',
-                detail: result?.content?.evalue,
-                life: 6000
-            });
-            return;
-        }
-
-        // Close the context dialog
-        // contextSelectionOpen.value = false;
-        // Update the context info in the sidebar
-        // TODO: Is this even needed? Could maybe be fed/triggered by existing events?
-        fetchContextInfo();
+      });
+      rawSession.session.session.anyMessage.connect((_: unknown, {msg, direction}) => {
+        emit("any-msg", msg, direction);
+      });
+      rawSession.session.unhandledMessage.connect((session, msg) => {
+        emit("unhandled-msg", msg);
+      });
     });
+
+    const beakerSession = reactive(rawSession);
+
+
+
+    return {
+      activeContext,
+      session: beakerSession,
+      status,
+    }
+  },
+
+  methods: {
+    findNotebookCell(predicate: ((BeakerCell) => boolean)) {
+      const subtree = this.$.subTree;
+      console.log('22', subtree);
+      const children = [...subtree.dynamicChildren];
+      while (children.length > 0) {
+        const child = children.splice(0, 1)[0];
+        if (child?.component && predicate(child)) {
+          return child;
+          // return child.component.proxy;
+        }
+        if (Array.isArray(child.component?.subTree?.children) ) {
+          children.push(...child.component.subTree.children);
+        }
+        if (Array.isArray(child.children)) {
+          children.push(...child.children);
+        }
+      }
+    },
+
+    findNotebookCellById(id: string): typeof BeakerCell {
+      return this.findNotebookCell((component) => {return component.props?.cell?.id === id})
+    },
+
+    async fetchContextInfo() {
+      const activeContextInfo = await this.session.activeContext();
+      this.activeContext = activeContextInfo;
+      this.$emit("context-changed", this.activeContext);
+    },
+
+    setContext(contextPayload: any) {
+        const showToast: (...args) => void = inject('show_toast');
+        // TODO: Figure out a better way set context to "loading" state
+        this.activeContext = {};
+
+        const future = this.session.sendBeakerMessage(
+            "context_setup_request",
+            contextPayload
+        );
+        future.done.then((result: any) => {
+
+            if (result?.content?.status === 'error') {
+                let formatted = result?.content?.evalue;
+                if (formatted) {
+                    const endsWithPeriod = /\.$/.test(formatted);
+                    if (!endsWithPeriod) {
+                        formatted += '.';
+                    }
+                }
+                showToast({
+                    title: 'Context Setup Failed',
+                    severity: 'error',
+                    detail: `${formatted} Please try again or contact us.`,
+                    life: 0
+                });
+                return;
+            }
+
+            if (result?.content?.status === 'abort') {
+                showToast({
+                    title: 'Context Setup Aborted',
+                    severity: 'warning',
+                    detail: result?.content?.evalue,
+                    life: 6000
+                });
+                return;
+            }
+
+            // Close the context dialog
+            // contextSelectionOpen.value = false;
+            // Update the context info in the sidebar
+            // TODO: Is this even needed? Could maybe be fed/triggered by existing events?
+            this.fetchContextInfo();
+        });
+        return future;
+    },
+  },
+
+  beforeMount() {
+    // Register session dependencies for injection (Must be in beforeMount to be available to children)
+    provide('beakerSession', this);
+    provide('session', this.session);
+  },
+
+  mounted() {
+    this.fetchContextInfo();
+  },
 }
-
-
-provide('session', beakerSession);
-provide('active_context', activeContext);
-
-onMounted(() => {
-  fetchContextInfo();
-});
-
-defineExpose({
-  setContext
-});
-
 </script>
 
 <style lang="scss">

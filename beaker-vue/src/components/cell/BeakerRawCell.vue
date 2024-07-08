@@ -1,4 +1,5 @@
 <template>
+    <BeakerCell :cell="props.cell">
     <div class="raw-cell">
         <div class="raw-cell-header">
             <span class="raw-cell-title">Raw cell</span>
@@ -13,6 +14,7 @@
             @ready="handleReady"
         />
     </div>
+    </BeakerCell>
 </template>
 
 <script setup lang="ts">
@@ -22,6 +24,7 @@ import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
+import BeakerCell from "./BeakerCell.vue";
 
 const props = defineProps([
     "cell",
@@ -32,7 +35,7 @@ const isBusy = ref(false);
 const editorView = shallowRef();
 const theme = inject('theme');
 const session = inject('session');
-const activeContext = inject('active_context');
+const activeContext = inject('activeContext');
 const codemirrorRef = ref<typeof Codemirror|null>(null);
 
 const handleReady = (payload) => {
@@ -52,9 +55,9 @@ const executeState = ref<ExecuteStatus>(ExecuteStatus.Pending);
 
 const rawExtensions = computed(() => {
     const ext = [];
-    if (theme.value === 'dark') {
-        ext.push(oneDark);
-    }
+    // if (theme.value === 'dark') {
+    //     ext.push(oneDark);
+    // }
     return ext;
 
 });
@@ -69,9 +72,19 @@ const enter = () => {
     }
 }
 
+const exit = () => {
+    window.blur();
+}
+
+const clear = () => {
+    cell.value.source = "";
+}
+
 defineExpose({
     execute,
     enter,
+    exit,
+    clear,
 });
 
 

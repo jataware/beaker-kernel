@@ -1,4 +1,5 @@
 <template>
+    <BeakerCell :cell="props.cell">
     <div class="llm-query-cell">
         <div class="query-row">
             <div class="query">
@@ -53,7 +54,7 @@
             <span v-if="event.type ==='code_cell'">
                 <Component
                     v-if="typeof(getChildByCellId(event.content?.id)) !== 'undefined'"
-                    
+
                     :key="event.content.id"
                     :is="BeakerCodeCell"
                     :cell="getChildByCellId(event.content.id)"
@@ -94,6 +95,28 @@
         </div>
     </div>
 
+    <template #child-cells>
+        <div class="cell-children">
+            <Component
+                v-for="(child, subindex) in props.cell?.children"
+                :key="child.id"
+                :is="child.cell_type"
+                :cell="child"
+                :index="`${index}:${subindex}`"
+                :class="{
+                    selected: (index === selectedCellIndex)
+                }"
+                ref="childrenRef"
+                drag-enabled=false
+            />
+                <!-- @click.stop="childOnClickCallback(`${index}:${subindex}`)" -->
+                <!-- :is="cellComponent" -->
+                <!-- @keyup.esc="unfocusEditor" -->
+        </div>
+
+    </template>
+    </BeakerCell>
+
 </template>
 
 <script setup lang="ts">
@@ -102,7 +125,8 @@ import Button from "primevue/button";
 import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
 import { IIOPubMessage } from "@jupyterlab/services/lib/kernel/messages";
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
-import BeakerCodeCell from './BeakerCodecell.vue';
+import BeakerCodeCell from './BeakerCodeCell.vue';
+import BeakerCell from "./BeakerCell.vue";
 
 const props = defineProps([
     'index',

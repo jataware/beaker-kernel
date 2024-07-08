@@ -11,7 +11,7 @@
         <main
             @keydown="handleKeyboardShortcut"
         >
-            <NotebookControls 
+            <NotebookControls
                 :selectCell="selectCell"
                 :selectedCellIndex="selectedCellIndex"
                 :runCell="runCell"
@@ -19,7 +19,7 @@
 
             <Button text size="small" label="debug" @click="debug" />
 
-            <Notebook 
+            <Notebook
                 :selectCell="selectCell"
                 :selectedCellIndex="selectedCellIndex"
                 ref="notebookRef"
@@ -53,7 +53,6 @@ const selectedCellIndex = ref(0);
 const activeContext = ref(undefined);
 const notebookRef = ref(null);
 
-provide('active_context', activeContext);
 provide('theme', 'light');
 
 const selectCell = (index) => {

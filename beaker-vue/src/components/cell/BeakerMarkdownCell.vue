@@ -1,4 +1,5 @@
 <template>
+    <BeakerCell :cell="props.cell">
     <div
         class="markdown-cell"
         @dblclick.stop.prevent="if (!editing) {editing = true};"
@@ -23,6 +24,7 @@
             </div>
         </div>
     </div>
+    </BeakerCell>
 </template>
 
 <script setup lang="ts">
@@ -32,6 +34,7 @@ import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
+import BeakerCell from "./BeakerCell.vue";
 
 const props = defineProps([
     "cell"

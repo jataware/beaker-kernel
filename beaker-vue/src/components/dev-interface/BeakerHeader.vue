@@ -3,7 +3,7 @@
         <template #start>
             <div class="status-bar">
                 <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
-                {{capitalize(props.connectionStatus)}}
+                {{capitalize(beakerSession?.status || "Huh?")}}
             </div>
             <Button
                 outlined
@@ -12,8 +12,8 @@
                 iconPos="right"
                 class="connection-button"
                 @click="selectKernel"
-                :label="activeContext?.slug"
-                :loading="!(activeContext?.slug)"
+                :label="beakerSession.activeContext?.slug"
+                :loading="!(beakerSession.activeContext?.slug)"
             />
         </template>
 
@@ -70,17 +70,14 @@ import { capitalize } from '../../util';
 
 // TODO too many granular props- use a slot instead?
 const props = defineProps([
-    "connectionStatus",
     "toggleDarkMode",
-    // "loading",
     "kernel"
 ]);
 
 const emit = defineEmits(["selectKernel"]);
 
 const theme = inject('theme');
-const session = inject("session");
-const activeContext = inject('active_context');
+const beakerSession = inject("beakerSession");
 
 function selectKernel() {
     emit('select-kernel');
@@ -128,7 +125,7 @@ const connectionStatusColorMap = {
 };
 
 const connectionColor = computed(() => {
-    return connectionStatusColorMap[props.connectionStatus];
+    return connectionStatusColorMap[beakerSession.status];
 });
 
 </script>

@@ -3,9 +3,10 @@
         class="cell-container drag-sort-enable"
         ref="cellsContainerRef"
     >
-        <BeakerCell
+        <component
             v-for="(cell, index) in session.notebook.cells"
-            :key="cell.id"
+            :is="cellMap[cell.cell_type]"
+            :key="String(cell.id)"
             class="beaker-cell"
             :class="{
                 selected: (index.toString() === selectedCellIndex),
@@ -42,14 +43,14 @@
 
 <script setup lang="tsx">
 import { ref, inject, computed, nextTick, defineProps, defineExpose } from 'vue';
-import BeakerCell from '@/components/cell/BeakerCell.vue';
 import { BeakerSession, IBeakerCell } from 'beaker-kernel';
 
 const session: BeakerSession = inject('session');
+const cellMap = inject("cell-component-mapping");
 
 const props = defineProps([
     'selectCell',
-    'selectedCellIndex'
+    'selectedCellIndex',
 ]);
 
 const cellsContainerRef = ref(null);
@@ -345,10 +346,12 @@ defineExpose({
 
 <style lang="scss">
 .cell-container {
+    position: relative;
     display: flex;
     flex: 1;
     flex-direction: column;
     background-color: var(--surface-a);
+    z-index: 3;
 }
 
 .drop-overflow-catcher {
