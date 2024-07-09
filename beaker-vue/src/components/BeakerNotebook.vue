@@ -632,7 +632,9 @@ onBeforeMount(() => {
 });
 
 onMounted(() => {
-    updateContextInfo();
+    updateContextInfo()
+    .then(() => setContext({"context": "biome"}));
+
 });
 
 defineExpose({

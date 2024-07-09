@@ -1,7 +1,11 @@
 ---
 # Jupyter LLM docker compose by Matthew Printz
-
 version: '3'
+
+networks:
+  biome-beaker:
+    external: true 
+
 services:
   jupyter:
     build:
@@ -22,6 +26,8 @@ services:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
     command: ["beaker", "dev", "watch", "--ip", "0.0.0.0"]
+    networks:
+      - biome-beaker
   ui:
     image: node:20
     volumes:
@@ -31,3 +37,5 @@ services:
     ports:
       - "8080:8080"
     command: ["npm", "run", "serve"]
+    networks:
+      - biome-beaker

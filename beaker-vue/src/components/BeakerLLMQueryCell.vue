@@ -63,11 +63,12 @@
                     @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)"
                 />
             </span>
-            <!--<template v-else-if="event.type === 'thought'"><span>Thought:&nbsp;</span> {{ event.content }}</template> -->
+            <!-- <template v-else-if="event.type === 'thought'"><span>Thought:&nbsp;</span> {{ event.content }}</template> -->
             <template v-else-if="event.type === 'user_question'" >{{ event.content }}</template>
             <template v-else-if="event.type === 'user_answer'" >{{ event.content }}</template>
             <template v-else-if="event.type === 'response'" >{{ event.content }}</template>
             <template v-else-if="event.type === 'abort'" >{{ event.content }}</template>
+
         </div>
         <div
             class="input-request"
