@@ -1,45 +1,45 @@
 <template>
-        <div class="code-cell">
-            <div class="code-cell-grid">
-                <div
-                    class="code-data"
-                    :class="{'dark-mode': theme === 'dark'}"
-                >
-                    <Codemirror
-                        v-model="cell.source"
-                        ref="codemirrorRef"
-                        placeholder="Your code..."
-                        :extensions="codeExtensions"
-                        :disabled="isBusy"
-                        :autofocus="true"
-                        @change="handleCodeChange"
-                        @ready="handleReady"
-                    />
-                    <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
-                </div>
-                <div class="state-info">
-                    <div class="execution-count-badge">
-                        <Badge
-                            :class="{secondary: badgeSeverity === 'secondary'}"
-                            :severity="badgeSeverity"
-                            :value="cell.execution_count || '&nbsp;'">
-                        </Badge>
-                    </div>
-                    <i
-                        v-if="isBusy"
-                        class="pi pi-spin pi-spinner busy-icon"
-                    />
-                    <Button
-                        v-if="hasRollback"
-                        class="rollback-button"
+    <div class="code-cell">
+        <div class="code-cell-grid">
+            <div
+                class="code-data"
+                :class="{'dark-mode': theme === 'dark'}"
+            >
+                <Codemirror
+                    v-model="cell.source"
+                    ref="codemirrorRef"
+                    placeholder="Your code..."
+                    :extensions="codeExtensions"
+                    :disabled="isBusy"
+                    :autofocus="true"
+                    @change="handleCodeChange"
+                    @ready="handleReady"
+                />
+                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
+            </div>
+            <div class="state-info">
+                <div class="execution-count-badge">
+                    <Badge
+                        :class="{secondary: badgeSeverity === 'secondary'}"
                         :severity="badgeSeverity"
-                        icon="pi pi-refresh"
-                        size="small"
-                        @click="rollback"
-                    />
+                        :value="cell.execution_count || '&nbsp;'">
+                    </Badge>
                 </div>
+                <i
+                    v-if="isBusy"
+                    class="pi pi-spin pi-spinner busy-icon"
+                />
+                <Button
+                    v-if="hasRollback"
+                    class="rollback-button"
+                    :severity="badgeSeverity"
+                    icon="pi pi-refresh"
+                    size="small"
+                    @click="rollback"
+                />
             </div>
         </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -51,7 +51,6 @@ import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
-import BeakerCell from "./BeakerCell.vue";
 
 
 const props = defineProps([

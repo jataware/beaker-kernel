@@ -53,7 +53,8 @@
 
 <script setup lang="tsx">
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
-import { IBeakerCell, BeakerBaseCell, BeakerSession } from 'beaker-kernel';
+import { IBeakerCell, BeakerBaseCell, BeakerSession, BeakerNotebook } from 'beaker-kernel';
+import BeakerNotebookComponent from './BeakerNotebook.vue';
 
 import Button from "primevue/button";
 import Toolbar from "primevue/toolbar";
@@ -61,68 +62,55 @@ import Toolbar from "primevue/toolbar";
 import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
 
 const session: BeakerSession = inject('session');
+const notebook: typeof BeakerNotebookComponent = inject('notebook');
 
 
 const addCell = (toIndex) => {
-    console.log("add cell");
-    session.addCodeCell("");
+    const newCell = session.addCodeCell("");
+    notebook.selectCell(newCell);
 }
 
 const addCodeCell = (toIndex?: number) => {
     const newCell = session.addCodeCell("");
-
-    // if (typeof toIndex !== 'number') {
-    //     const [parent, child] = splitCellIndex(selectedCellIndex.value);
-    //     toIndex = parent + 1;
-    // }
-    // arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
-
-    // selectCell(newCell);
-
-    // nextTick(() => {
-    //     focusSelectedCell();
-    // });
+    notebook.selectCell(newCell);
 }
 
 const addMarkdownCell = (toIndex?: number) => {
     const newCell = session.addMarkdownCell("");
-
-    // if (typeof toIndex !== 'number') {
-    //     const [parent, child] = splitCellIndex(selectedCellIndex.value);
-    //     toIndex = parent + 1;
-    // }
-    // // arrayMove(session.notebook.cells, cellCount.value - 1, toIndex)
-
-    // selectCell(newCell);
-
-    // nextTick(() => {
-    //     notebookCellsRef.value[notebookCellsRef.value.length - 1].enter();
-    //     focusSelectedCell();
-    // });
+    notebook.selectCell(newCell);
 }
 
 const runCell = (cell?: string | IBeakerCell) => {
-    // beakerNotebookRef.value.runCell(cell);
-    session
+    console.log("selectedCell", notebook.selectedCell);
+    if (!notebook.selectedCell) {
+        return;
+    }
+    notebook.selectedCell.execute();
 }
 
 const removeCell = () => {
-    // beakerNotebookRef.value.removeCell();
-    session
-    // session.notebook.removeCell(selectedCellIndex.value);
+    if (!notebook.selectedCell) {
+        return;
+    }
+    // if (session.notebook.cells.includes(notebook.selectedCell))
+    const cellIdx = session.notebook.cells.indexOf(notebook.selectedCell.cell);
+    console.log({cellIdx});
+    if (cellIdx >= 0) {
+        session.notebook.cells.splice(cellIdx, 1);
+    }
 
-    // // Always keep at least one cell. If we remove the last cell, replace it with a new empty codecell.
-    // if (cellCount.value === 0) {
-    //     session.addCodeCell("");
-    // }
-    // // Fixup the selection if we remove the last item.
-    // if (selectedCellIndex.value >= cellCount.value) {
-    //     selectedCellIndex.value = cellCount.value - 1;
-    // }
+    if (notebook.cellCount <= 0) {
+        notebook.selectCell(session.addCodeCell(""));
+    }
 };
 
-const resetNB = async () => {
-    await session.reset();
+const resetNotebook = async () => {
+    notebook.selectNextCell();
+
+    // await session.reset();
+    // if (notebook.cellCount <= 0) {
+    //     notebook.selectCell(session.addCodeCell(""));
+    // }
 };
 
 </script>

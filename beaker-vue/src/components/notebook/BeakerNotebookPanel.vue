@@ -3,34 +3,37 @@
         class="cell-container drag-sort-enable"
         ref="cellsContainerRef"
     >
-        <component
+        <BeakerCell
             v-for="(cell, index) in session.notebook.cells"
-            :is="cellMap[cell.cell_type]"
-            :key="String(cell.id)"
+            :cell="cell"
+            :selected="cell.id === props.selectedCell"
+            :key="`outercell-${cell.id}`"
             class="beaker-cell"
             :class="{
-                selected: (index.toString() === selectedCellIndex),
+                selected: (cell.id === props.selectedCell),
                 'drag-source': (index == dragSourceIndex),
                 'drag-above': (index === dragOverIndex && index < dragSourceIndex),
                 'drag-below': (index === dragOverIndex && index > dragSourceIndex),
                 'drag-itself': (index === dragOverIndex && index === dragSourceIndex ),
                 'drag-active': isDragActive,
             }"
-            :ref="(el) => {setSelectedRef(el, index === props.selectedCellIndex)}"
-            :selectedCellIndex="selectedCellIndex"
-            :index="String(index)"
             :drag-enabled="isDragEnabled"
             @move-cell="handleMoveCell"
-            @click="props.selectCell(index)"
-            :childOnClickCallback="selectCell"
-            :cell="cell"
-            :getCell="_getCell"
+            @click="$emit('cell-clicked', cell.id)"
             @keyboard-nav="handleNavAction"
             @dragstart="handleDragStart($event, cell, index)"
             @drop="handleDrop($event, index)"
             @dragover="handleDragOver($event, cell, index)"
             @dragend="handleDragEnd"
-        />
+        >
+            <!-- :ref="(el) => {setSelectedRef(el, index === props.selectedCellIndex)}"
+            :selectedCellIndex="selectedCellIndex"
+            :index="String(index)" -->
+            <component
+                :is="cellMap[cell.cell_type]"
+                :cell="cell"
+            />
+        </BeakerCell>
         <div
             class="drop-overflow-catcher"
             @dragover="dragOverIndex = session.notebook.cells.length-1; $event.preventDefault();"
@@ -42,13 +45,19 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, inject, computed, nextTick, defineProps, defineExpose } from 'vue';
+import { ref, inject, computed, nextTick, defineProps, defineExpose, defineEmits } from 'vue';
 import { BeakerSession, IBeakerCell } from 'beaker-kernel';
+import BeakerCell from '../cell/BeakerCell.vue';
 
 const session: BeakerSession = inject('session');
 const cellMap = inject("cell-component-mapping");
 
 const props = defineProps([
+    'selectedCell',
+
+
+
+
     'selectCell',
     'selectedCellIndex',
 ]);
@@ -62,9 +71,10 @@ const isDeleteprefixActive = ref(false);
 
 const isDragEnabled = computed(() => session.notebook?.cells.length > 1);
 const cellCount = computed(() => session.notebook?.cells?.length || 0);
-const selectedCell = computed(() => {
-    return _getCell(props.selectedCellIndex.value);
-});
+
+const emit = defineEmits([
+    "cell-clicked",
+])
 
 function setSelectedRef(el, selected) {
     if (selected) {
@@ -132,7 +142,7 @@ const removeCell = () => {
 
 const runCell = (cell?: string | IBeakerCell) => {
     if (cell === undefined) {
-        cell = selectedCell.value;
+        // cell = selectedCell.value;
     }
     else {
         cell = _getCell(cell);

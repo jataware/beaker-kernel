@@ -2,6 +2,7 @@
   <div
     class="beaker-cell"
     tabindex="0"
+    @click="clicked"
   >
     <!-- ref="beakerCellRef" -->
     <!-- @cell-state-changed="cellStateChanged" -->
@@ -90,6 +91,11 @@ const props = defineProps<Props>();
 const beakerSession: typeof BeakerSession = inject("beakerSession");
 const cellMap = inject("cell-component-mapping");
 
+const clicked = (evt) => {
+    console.log("you clicked on", cell.value.id, "with event", evt);
+    console.log("Searching...", beakerSession.findNotebookCellById(cell.value.id));
+};
+
 type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
 
 // const beakerCellRef = ref<HTMLDivElement|null>(null);
@@ -157,7 +163,8 @@ function typeChanged() {
 //     }
 // };
 
-// function execute() {
+function execute() {
+
 //     const child = getSelectedChild();
 //     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
 
@@ -171,7 +178,7 @@ function typeChanged() {
 
 //     unfocusEditor();
 //     return true;
-// }
+}
 
 // const executeAndMove = () => {
 //     if (execute()) {

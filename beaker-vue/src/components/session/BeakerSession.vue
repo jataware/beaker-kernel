@@ -3,11 +3,21 @@
 </template>
 
 <script lang="ts">
-import { defineProps, reactive, ref, inject, provide, defineEmits, onMounted, defineExpose, onBeforeMount } from 'vue';
+import { defineProps, reactive, ref, inject, provide, defineEmits, onMounted, defineExpose, onBeforeMount, toRef, VNode, isVNode } from 'vue';
 import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
 // import { type IActiveContextInfo } from 'beaker-kernel/util';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import BeakerCell from '@/components/cell/BeakerCell.vue'
+
+const getCellData = (vnode: VNode) => (vnode?.props?.cell || vnode?.component?.setupState?.cell);
+
+const isCell = (vnode: VNode) => {
+  return (
+    getCellData(vnode) !== undefined
+    && vnode.component.exposed?.execute !== undefined
+    && vnode.component.exposed?.enter !== undefined
+  )
+}
 
 export default {
   props: {
@@ -66,8 +76,6 @@ export default {
 
     const beakerSession = reactive(rawSession);
 
-
-
     return {
       activeContext,
       session: beakerSession,
@@ -78,13 +86,11 @@ export default {
   methods: {
     findNotebookCell(predicate: ((BeakerCell) => boolean)) {
       const subtree = this.$.subTree;
-      console.log('22', subtree);
       const children = [...subtree.dynamicChildren];
       while (children.length > 0) {
         const child = children.splice(0, 1)[0];
-        if (child?.component && predicate(child)) {
-          return child;
-          // return child.component.proxy;
+        if (isCell(child) && predicate(child)) {
+          return {...child.component?.proxy, ...child.component?.exposeProxy};
         }
         if (Array.isArray(child.component?.subTree?.children) ) {
           children.push(...child.component.subTree.children);
@@ -96,7 +102,7 @@ export default {
     },
 
     findNotebookCellById(id: string): typeof BeakerCell {
-      return this.findNotebookCell((component) => {return component.props?.cell?.id === id})
+      return this.findNotebookCell((vnode) => (getCellData(vnode).id === id))
     },
 
     async fetchContextInfo() {
@@ -155,7 +161,7 @@ export default {
 
   beforeMount() {
     // Register session dependencies for injection (Must be in beforeMount to be available to children)
-    provide('beakerSession', this);
+    provide('beakerSession', reactive(this));
     provide('session', this.session);
   },
 

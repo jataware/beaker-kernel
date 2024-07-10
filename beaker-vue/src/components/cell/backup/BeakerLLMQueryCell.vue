@@ -63,9 +63,8 @@
                     }"
                     ref="childrenRef"
                     drag-enabled=false
-                    @click.stop="() => notebook.selectCell(cell)"
+                    @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)"
                 />
-                <!-- @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)" -->
             </span>
             <template v-if="event.type === 'response'" >{{ event.content }}</template>
             <template v-if="event.type === 'abort'" >{{ event.content }}</template>
@@ -95,27 +94,6 @@
         </div>
     </div>
 
-    <!-- <template #child-cells>
-        <div class="cell-children">
-            <Component
-                v-for="(child, subindex) in props.cell?.children"
-                :key="child.id"
-                :is="child.cell_type"
-                :cell="child"
-                :index="`${index}:${subindex}`"
-                :class="{
-                    selected: (index === selectedCellIndex)
-                }"
-                ref="childrenRef"
-                drag-enabled=false
-            /> -->
-                <!-- @click.stop="childOnClickCallback(`${index}:${subindex}`)" -->
-                <!-- :is="cellComponent" -->
-                <!-- @keyup.esc="unfocusEditor" -->
-        <!-- </div>
-
-    </template> -->
-
 </template>
 
 <script setup lang="ts">
@@ -125,8 +103,6 @@ import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
 import { IIOPubMessage } from "@jupyterlab/services/lib/kernel/messages";
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 import BeakerCodeCell from './BeakerCodeCell.vue';
-import BeakerCell from "./BeakerCell.vue";
-import BeakerNotebookComponent from '../notebook/BeakerNotebook.vue';
 
 const props = defineProps([
     'index',
@@ -143,7 +119,6 @@ const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
 const childrenRef = ref<typeof BeakerCodeCell|null>(null);
-const notebook: typeof BeakerNotebookComponent = inject("notebook");
 
 const getChildByCellId = (child_id: string) : BeakerBaseCell | undefined => {
     const index = cell.value.children?.findIndex((child) => child.id === child_id)
@@ -183,15 +158,7 @@ function execute() {
     const future = props.cell.execute(session);
 }
 
-function enter() {
-    console.log("entered");
-    // const future = props.cell.execute(session);
-}
-
-defineExpose({
-    execute,
-    enter,
-});
+defineExpose({execute});
 
 </script>
 

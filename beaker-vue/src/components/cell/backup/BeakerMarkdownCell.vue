@@ -32,7 +32,6 @@ import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
-import BeakerCell from "./BeakerCell.vue";
 
 const props = defineProps([
     "cell"
@@ -43,7 +42,6 @@ const cell = ref(props.cell);
 const theme = inject('theme');
 const editing = ref(false);
 const editorRef = ref(null);
-const notebook = inject('notebook');
 
 const codeExtensions = computed(() => {
     const ext = [

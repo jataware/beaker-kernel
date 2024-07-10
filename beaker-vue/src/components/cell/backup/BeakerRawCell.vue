@@ -22,7 +22,6 @@ import { Codemirror } from "vue-codemirror";
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
-import BeakerCell from "./BeakerCell.vue";
 
 const props = defineProps([
     "cell",
@@ -53,9 +52,9 @@ const executeState = ref<ExecuteStatus>(ExecuteStatus.Pending);
 
 const rawExtensions = computed(() => {
     const ext = [];
-    // if (theme.value === 'dark') {
-    //     ext.push(oneDark);
-    // }
+    if (theme.value === 'dark') {
+        ext.push(oneDark);
+    }
     return ext;
 
 });
@@ -70,19 +69,9 @@ const enter = () => {
     }
 }
 
-const exit = () => {
-    window.blur();
-}
-
-const clear = () => {
-    cell.value.source = "";
-}
-
 defineExpose({
     execute,
     enter,
-    exit,
-    clear,
 });
 
 
