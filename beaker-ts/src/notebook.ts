@@ -1,6 +1,6 @@
 import * as nbformat from '@jupyterlab/nbformat';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import { JSONObject, PartialJSONValue } from '@lumino/coreutils';
+import { JSONObject, PartialJSONObject, PartialJSONValue } from '@lumino/coreutils';
 import { IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -137,23 +137,60 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     }
 }
 
-export interface IBeakerQueryEvent extends JSONObject {
-    type: 
-        | "thought" 
-        | "response" 
-        | "user_question" 
-        | "user_answer" 
-        | "error" 
-        | "code_cell" 
-        | "markdown_cell"
-        | "abort";
-    content: string | PartialJSONValue;
+// Simple payload events
+
+type BeakerQueryTextEventType = 
+    | "thought" 
+    | "response" 
+    | "user_question" 
+    | "user_answer" 
+    | "abort";
+
+export interface IBeakerQueryTextEvent extends PartialJSONObject {
+    type: BeakerQueryTextEventType
+    content: string;
 };
+
+// Specific-payload types
+
+type BeakerQueryCellEventType = "code_cell"
+
+export interface IBeakerQueryCellEvent extends PartialJSONObject{
+    type: BeakerQueryCellEventType
+    content: {
+        cell: IBeakerCell
+        parent_id: string
+        metadata: PartialJSONObject
+    };
+};
+
+type BeakerQueryErrorEventType = "error";
+
+export interface IBeakerQueryErrorEvent extends PartialJSONObject{
+    type: BeakerQueryErrorEventType
+    content: {
+        ename: string
+        evalue: string
+        traceback: string[]
+    };
+}
+
+// umbrella-type for events
+
+export type BeakerQueryEventType =  
+    | BeakerQueryTextEventType
+    | BeakerQueryCellEventType
+    | BeakerQueryErrorEventType;
+
+export type BeakerQueryEvent = 
+    | IBeakerQueryTextEvent
+    | IBeakerQueryCellEvent
+    | IBeakerQueryErrorEvent;
 
 export interface IQueryCell extends nbformat.IBaseCell {
     cell_type: 'query';
     id?: string;
-    events: IBeakerQueryEvent[];
+    events: BeakerQueryEvent[];
 }
 
 export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
@@ -278,7 +315,7 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     declare cell_type: 'query';
     id?: string;
-    events: IBeakerQueryEvent[];
+    events: BeakerQueryEvent[];
 
     _current_input_request_message: messages.IInputRequestMsg;
 
@@ -289,25 +326,6 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         if (this.id === undefined) {
             this.id = uuidv4();
         }
-    }
-    public pushMarkdownChild(prompt: string, type: string) {
-        const mdCell = new BeakerMarkdownCell({
-            cell_type: "markdown",
-            source: prompt,
-            metadata: {
-                parent_cell: this.id,
-                event_type: type
-            }
-        });
-        this.children.push(mdCell)
-        this.events.push({
-            type: "markdown_cell",
-            content: {
-                id: mdCell.id,
-                index: this.children?.length - 1,
-                event_type: type
-            }
-        });
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
@@ -326,11 +344,17 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                     return;
                 }
                 const prompt = `*Thought*:\n> ${content.thought}`;
-                this.pushMarkdownChild(prompt, "llm_thought");
+                this.events.push({
+                    type: "thought",
+                    content: prompt
+                })
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
                 const prompt = `- - -\n*Response*:\n> ${content.text}`;
-                this.pushMarkdownChild(prompt, "llm_response");
+                this.events.push({
+                    type: "response",
+                    content: prompt
+                })
             }
             else if (msg_type === "code_cell") {
                 const nb = session.notebook;
@@ -366,14 +390,17 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                     status: "pending",
                     checkpoint_index: content.checkpoint_index,
                 }
-                this.children.push(codeCell);
+                // cell is stored in events - we point the children field to the same object
+                // to make selection and execution work
                 this.events.push({
                     type: "code_cell",
                     content: {
-                        id: codeCell.id,
-                        index: this.children?.length - 1
-                    },
+                        parent_id: this.id,
+                        cell: codeCell,
+                        metadata: {}
+                    }
                 });
+                this.children.push(codeCell);
 
                 const reactiveCell = this.children[this.children.length - 1] as BeakerCodeCell;
                 if (autoexecute && content.execute_request_msg) {
@@ -453,7 +480,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 };
                 this.events.push({
                     type: "error",
-                    content: msg.content.evalue,
+                    content:{...error_details}
                 });
             }
             else if (msg.content.status === "abort") {

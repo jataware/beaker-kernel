@@ -771,6 +771,14 @@ onMounted(() => {
     updateContextInfo();
 });
 
+provide('notebookCellExports', {
+    selectCell,
+    selectedCellIndex,
+    runCell, 
+    selectNextCell,
+    getCell: _getCell
+});
+
 defineExpose({
     updateContextInfo,
 })
