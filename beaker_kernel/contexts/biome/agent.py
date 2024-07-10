@@ -36,10 +36,11 @@ class BiomeAgent(BaseAgent):
 
 
     @tool(autosummarize=True)
-    async def search(self, query: str, agent: AgentRef, loop: LoopControllerRef) -> list:
+    async def search(self, query: str) -> list:
         """
         Search for data sources in the Biome app. Results will be matched semantically
-        and string distance.
+        and string distance. Use this to find a data source. You don't need live
+        web searches.
 
         Args:
             query (str): The query used to find the datasource.
@@ -47,9 +48,9 @@ class BiomeAgent(BaseAgent):
             list: The data sources found ordered from most relevant to least relevant.
         """
 
-        url = f"{BIOME_URL}/sources"
-        result = requests.get(url, params={"query": query})
-        raw_sources = result.json()['sources']
+        endpoint = f"{BIOME_URL}/sources"
+        response = requests.get(endpoint, params={"query": query})
+        raw_sources = response.json()['sources']
         sources = [
             # Include only necessary fields to ensure LLM context length is not exceeded.
             {
@@ -62,7 +63,7 @@ class BiomeAgent(BaseAgent):
             } for source in raw_sources
         ]
         return str(sources)
-
+    
     # TODO(DESIGN): Deal with long running jobs in tools
     #
     # Option 1: We can return the job id and the agent can poll for the result.
@@ -75,6 +76,41 @@ class BiomeAgent(BaseAgent):
     #
     # Option 3: We can maybe leverage new widgets in the Analyst UI??
     #
+    
+    # CHOOSING OPTION 2 FOR THE TIME BEING
+
+    @tool()
+    async def query_page(self, query: str, base_url: str) -> str:
+        """
+        Run a query over a *specific* source in the Biome app and return the results.
+        Find the url from a data source by using `search` tool first and
+        picking the most relevant one. 
+
+        Args:
+            query (str): Query to run over the source.
+            base_url (str): URL to run query over.
+        Returns:
+            str: The answer to the query running over the given url
+        """
+        response = requests.post( f"{BIOME_URL}/tasks/query", json={"user_task": query, "url": base_url})
+        job_id = response.json()["job_id"]
+        status = "queued"
+        result = None
+        while status == "queued" or status == "started":
+            try:
+                response = requests.get(f"{BIOME_URL}/tasks/{job_id}").json()
+            except Exception as e:
+                logger.error(f"\n\n\n\nError getting job status: {e}\n\n\n\n")
+                raise e
+            status = response["status"]
+            result = response["result"]["job_result"]
+        if status != "finished":
+            return f"Query failed to complete. Job {status}"
+        logger.error(f"\n\n{result['answer']}\n\n\n")
+        return result["answer"] 
+
+
+
     # @tool(autosummarize=True)
     # async def scan(self, base_url: str, agent:AgentRef, loop: LoopControllerRef) -> dict:
     #     """

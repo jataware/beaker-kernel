@@ -13,7 +13,7 @@
                     @click="handleQuery"
                     class="agent-submit-button"
                     icon="pi pi-reply"
-                    label="enter"
+                    label="ask"
                 />
             </div>
         </template>
@@ -62,6 +62,8 @@ const handleQuery = (e: any) => {
 
 <style lang="scss">
 .agent-input-card {
+    padding-left: 20%;
+    padding-right: 20%;
     .p-card-body .p-card-content {
         padding: 0.75rem 0;
     }

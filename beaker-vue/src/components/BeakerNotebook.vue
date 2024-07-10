@@ -1,9 +1,9 @@
 <template>
     <div class="beaker-notebook">
-        <main style="display: flex;">
+        <main style="display: flex; justify-content: center;">
             <div
                 class="ide-cells"
-                style="flex: 100;"
+                style="flex: 100; justify-content: center;"
                 @keydown="handleKeyboardShortcut"
             >
                 <NotebookControls

@@ -7,7 +7,6 @@
             >
                 <Codemirror
                     v-model="cell.source"
-                    v-if="isVisible"
                     ref="codemirrorRef"
                     placeholder="Your code..."
                     :extensions="codeExtensions"
@@ -16,35 +15,21 @@
                     @change="handleCodeChange"
                     @ready="handleReady"
                 />
-                <div v-else> 
-                    <Button
-                        icon="pi pi-code"
-                        size="small"
-                        @click="toggleVisible"
-                    />               
-                </div>
-                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" :isVisible="isVisible"/>
+                <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" :isVisible="true"/>
             </div>
             <div class="state-info">
                 <div class="execution-count-badge">
-                    <Button
+                    <!-- <Badge
                         v-show="isVisible"
+                        outlined
                         icon="pi pi-arrow-down-left-and-arrow-up-right-to-center"
                         size="small"
                         @click="toggleVisible"
-                    />
+                    /> -->
                 </div>
                 <i
                     v-if="isBusy"
                     class="pi pi-spin pi-spinner busy-icon"
-                />
-                <Button
-                    v-if="hasRollback"
-                    class="rollback-button"
-                    :severity="badgeSeverity"
-                    icon="pi pi-refresh"
-                    size="small"
-                    @click="rollback"
                 />
             </div>
         </div>
@@ -68,8 +53,6 @@ const props = defineProps([
 
 const cell = ref(props.cell);
 const editorView = shallowRef();
-const isVisible = ref(false);
-const toggleVisible = () => isVisible.value = !isVisible.value;
 const theme = inject('theme');
 const session = inject('session');
 const activeContext = inject('active_context');
