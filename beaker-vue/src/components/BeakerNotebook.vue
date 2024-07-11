@@ -138,7 +138,7 @@ const selectedKernel = ref();
 const contextSelectionOpen = ref(false);
 const showDebugPane = ref (true);
 const cellsContainerRef = ref(null);
-const activeContextPayload = ref<any>(null);
+const activeContextPayload = ref<any>({"context": "biome"});
 const contextProcessing = ref(false);
 const rightPaneTabIndex = ref(0);
 const isDeleteprefixActive = ref(false);
@@ -486,6 +486,7 @@ const removeCell = () => {
 
 const resetNB = async () => {
     await session.reset();
+    activeContextPayload.value = {"context": "biome"};
     reapplyContext();
 };
 

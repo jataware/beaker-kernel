@@ -63,11 +63,11 @@ class BiomeAgent(BaseAgent):
             } for source in raw_sources
         ]
         return str(sources)
-    
+
     # TODO(DESIGN): Deal with long running jobs in tools
     #
     # Option 1: We can return the job id and the agent can poll for the result.
-    # This will require a job status tool. Once the status is done, we can either 
+    # This will require a job status tool. Once the status is done, we can either
     # check the result if it's a query or check the data source if it's a scan.
     # This feels a bit messy though that the job creation has a similar return
     # output on queue but getting the result is very different for each job.
@@ -76,7 +76,7 @@ class BiomeAgent(BaseAgent):
     #
     # Option 3: We can maybe leverage new widgets in the Analyst UI??
     #
-    
+
     # CHOOSING OPTION 2 FOR THE TIME BEING
 
     @tool()
@@ -84,7 +84,7 @@ class BiomeAgent(BaseAgent):
         """
         Run a query over a *specific* source in the Biome app and return the results.
         Find the url from a data source by using `search` tool first and
-        picking the most relevant one. 
+        picking the most relevant one.
 
         Args:
             query (str): Query to run over the source.
@@ -97,17 +97,12 @@ class BiomeAgent(BaseAgent):
         status = "queued"
         result = None
         while status == "queued" or status == "started":
-            try:
-                response = requests.get(f"{BIOME_URL}/tasks/{job_id}").json()
-            except Exception as e:
-                logger.error(f"\n\n\n\nError getting job status: {e}\n\n\n\n")
-                raise e
+            response = requests.get(f"{BIOME_URL}/tasks/{job_id}").json()
             status = response["status"]
             result = response["result"]["job_result"]
         if status != "finished":
             return f"Query failed to complete. Job {status}"
-        logger.error(f"\n\n{result['answer']}\n\n\n")
-        return result["answer"] 
+        return result["answer"]
 
 
 
@@ -140,7 +135,7 @@ class BiomeAgent(BaseAgent):
     #     Returns:
     #         dict: The information about the query job
     #     """
-        
+
     #     url = f"{BIOME_URL}/tasks/query"
     #     base_url = "TODO(IMPLEMENT): Use the source_id to get the base url"
     #     result = requests.post(url, json={"user_task": query, "url": base_url})
