@@ -49,16 +49,22 @@
             </div>
         </div>
         <div class="event-container" v-if="taggedCellEvents.length > 0">
-            <div class="query-events-header">
-                <span class="query-events-header-text">Agent Output</span>
-            </div>
             <div class="events">
-                <BeakerLLMQueryEvent
-                    v-for="[eventIndex, event] of taggedCellEvents.entries()" 
-                    :key="eventIndex"
-                    :event="event"
-                    :index="index"
-                />
+                <Accordion :multiple="true" :class="'query-accordion'">
+                    <AccordionTab 
+                        v-for="[eventIndex, event] of taggedCellEvents.entries()" 
+                        :header="queryEventNameMap[event.type]"
+                        :key="eventIndex"
+                        :class="'query-accordiontab'"
+                    >
+                        <BeakerLLMQueryEvent
+                            :key="eventIndex"
+                            :event="event"
+                            :index="index"
+                            :queryCell="cell"
+                        />
+                    </AccordionTab>
+                </Accordion>
             </div>
         </div>
         <div
@@ -91,10 +97,12 @@
 <script setup lang="ts">
 import { defineProps, defineExpose, ref, shallowRef, inject, computed } from "vue";
 import Button from "primevue/button";
+import Accordion from "primevue/accordion";
+import AccordionTab from "primevue/accordiontab";
 import ContainedTextArea from './ContainedTextArea.vue';
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 import BeakerLLMQueryEvent from "./BeakerLLMQueryEvent.vue";
-import { BeakerQueryEvent } from "beaker-kernel/dist/notebook";
+import { BeakerQueryEvent, BeakerQueryEventType } from "beaker-kernel/dist/notebook";
 
 const props = defineProps([
     'index',
@@ -119,6 +127,16 @@ const taggedCellEvents = computed(() => {
     }
     return events;
 });
+
+const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
+    "thought": "Agent Thought",
+    "response": "Agent Response",
+    "code_cell": "Code",
+    "user_answer": "User Input",
+    "user_question": "User Input",
+    "error": "Error",
+    "abort": "Abort"
+}
 
 function cancelEdit() {
     editing.value = false;
@@ -222,10 +240,6 @@ defineExpose({execute});
     flex-direction: column;
 }
 
-.llm-prompt-header {
-
-}
-
 .llm-prompt-text {
     margin-top: 0;
     margin-bottom: 0;
@@ -235,7 +249,7 @@ defineExpose({execute});
     margin-top: 1.25rem;
     padding: 0rem;
     border-radius: 6px;
-    background-color: var(--surface-c);
+    //background-color: var(--surface-c);
 }
 
 .query-events-header {
@@ -245,6 +259,11 @@ defineExpose({execute});
 
 .query-events-header {
     font-weight: 600;
+}
+
+.query-accordion .p-accordion-content {
+    padding-top: 0.25rem;
+    padding-bottom: 0rem;
 }
 
 </style>

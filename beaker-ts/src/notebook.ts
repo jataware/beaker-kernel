@@ -343,14 +343,14 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 if (content.thought === "") {
                     return;
                 }
-                const prompt = `*Thought*:\n> ${content.thought}`;
+                const prompt = `${content.thought}`;
                 this.events.push({
                     type: "thought",
                     content: prompt
                 })
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
-                const prompt = `- - -\n*Response*:\n> ${content.text}`;
+                const prompt = `${content.text}`;
                 this.events.push({
                     type: "response",
                     content: prompt

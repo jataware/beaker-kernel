@@ -16,6 +16,15 @@ module.exports = defineConfig({
       }
     }
   },
+  css: {
+    loaderOptions: {
+      scss: {
+        additionalData: `@import url('@jupyterlab/notebook/style/index.css');
+        @import url('@jupyterlab/outputarea/style/index.css');
+        @import url('@jupyterlab/rendermime/style/index.css');`
+      },
+    }
+  },
   devServer: {
     proxy: {
       '^/stats': {

@@ -1,12 +1,24 @@
 <template>
     <div class="llm-query-event">
         <span v-if="isMarkdownRef" v-html="markdownBody" />
+        <span v-if="event.type === 'response'">
+            <Accordion :multiple="true">
+                <AccordionTab 
+                    v-for="[index, child] in queryCell?.children?.entries()" 
+                    :key="index"
+                    :header="`${tabHeader(child?.outputs)}`"
+                >
+                    <BeakerCodecellOutput :outputs="child?.outputs" />
+                </AccordionTab>
+            </Accordion>
+        </span>
         <span v-else-if="props.event?.type === 'code_cell'">
             <BeakerCodecell
                 :cell="event.content.cell"
                 :index="`${index}:${event.content.metadata.subindex}`"
                 :class="{
                     selected: (index.toString() === selectedCellIndex),
+                    'query-event-code-cell': true
                 }"
                 :selectedCellIndex="selectedCellIndex"
                 @click.stop="selectCell(`${index}:${event.content.metadata.subindex}`)"
@@ -22,7 +34,9 @@ import { BeakerSession } from 'beaker-kernel';
 import { BeakerQueryEvent, BeakerQueryEventType } from "beaker-kernel/dist/notebook";
 import { marked } from 'marked';
 import BeakerCodecell from "./BeakerCodecell.vue";
-import BeakerCell from "./BeakerCell.vue";
+import BeakerCodecellOutput from "./BeakerCodecellOutput.vue";
+import Accordion from "primevue/accordion";
+import AccordionTab from "primevue/accordiontab";
 
 const session: BeakerSession = inject("session");
 
@@ -37,7 +51,8 @@ const {
 
 const props = defineProps([
     'event',
-    'index'
+    'index',
+    'queryCell'
 ]);
 
 onBeforeMount(() => {
@@ -58,6 +73,14 @@ const isMarkdownRef = computed(() => isMarkdown(props.event))
 const markdownBody = computed(() => 
     isMarkdown(props.event) ? marked.parse(props.event.content) : "");
 
+const tabHeader = (outputs) => {
+    console.log(outputs);
+    if (typeof outputs === "undefined") {
+        return "";
+    }
+    return Object.keys(outputs[0].data);
+}
+
 function execute() {
 
     //const future = props.cell.execute(session);
@@ -69,45 +92,8 @@ defineExpose({execute});
 
 <style lang="scss">
 
-.markdown_cell + .user_question, .markdown_cell + .user_answer {
-    background-color: var(--surface-b);
+.query-event-code-cell {
+    font-size: 0.75rem;
 }
 
-.user_question > div > p, .user_answer > div > p {
-    padding: 0;
-    margin: 0;
-}
-
-.user_answer {
-    background-color: var(--surface-b);
-}
-
-.markdown_cell + .user_question {
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-div.events.markdown_cell.user_answer {
-    margin-top: 0;
-    padding-top: 0;
-    margin-bottom: 0;
-    border-radius: 0;
-}
-
-.events + .code_cell > span {
-    width: 100%;
-}
-
-.user_answer {
-    border-radius: 4px;
-    background-color: var(--surface-c);
-    padding: 0.4rem;
-    display: inline-block;
-    margin: 0.2rem 0;
-}
-
-
-span > div.markdown-cell {
-    padding-left: 0;
-}
 </style>
