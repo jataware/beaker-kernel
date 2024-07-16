@@ -195,8 +195,7 @@ const cellStateChanged = (newState: CellState) => {
 function focusEditor() {
     const child = getSelectedChild();
     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : beakerCellRef;
-    if (cell_type.value === "markdown") {
-        console.log(typedCellRef.value)
+    if (["markdown", "query"].includes(cell_type.value)) {
         typedCellRef.value.enter();
     }
     if (targetRef?.value) {

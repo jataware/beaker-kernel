@@ -25,6 +25,9 @@
                 :childOnClickCallback="selectCell"
             />
         </span>
+        <span v-else-if="props.event?.type === 'error'">
+            <span>{{ `${event.content.ename}: ${event.content.evalue}` }}</span>
+        </span>
     </div>
 </template>
 
@@ -78,7 +81,7 @@ const tabHeader = (outputs) => {
     if (typeof outputs === "undefined") {
         return "";
     }
-    return Object.keys(outputs[0].data);
+    return Object.keys(outputs[0]?.data || {});
 }
 
 function execute() {

@@ -2,34 +2,20 @@
     <div class="llm-query-cell">
         <div class="query-row">
             <div class="query">
-                <div v-if="editing" style="display: flex">
-                    <!-- TODO move ctrl/shift event stop on keyboard controller -->
+                <div v-show="focused">
                     <ContainedTextArea
+                        ref="textarea"
                         style="max-width: 50%; margin-right: 0.75rem; flex: 1;"
-                        @keydown.ctrl.enter.stop
-                        @keydown.shift.enter.stop
-                        v-model="editingContents"
+                        v-model="cell.source"
                     />
-                    <div class="edit-actions">
-                        <Button outlined severity="success" label="Save" size="small" @click="saveEdit"/>
-                        <Button outlined class="cancel-button" @click="cancelEdit" label="Cancel" size="small" />
-                    </div>
                 </div>
-                <div v-else>
+                <div v-show="!focused">
                     <div class="llm-prompt-container">
                         <p class="llm-prompt-text">{{ cell.source }}</p>
-                        <p v-if="savedEdit" style="font-weight: 100;">(edited)</p>
                     </div>
                 </div>
             </div>
             <div class="actions">
-                <Button
-                    text
-                    size="small"
-                    icon="pi pi-pencil"
-                    severity="info"
-                    @click="startEdit"
-                />
                 <Button
                     v-if="cell.status === 'busy'"
                     style="pointer-events: none;"
@@ -37,14 +23,6 @@
                     size="small"
                     severity="info"
                     icon="pi pi-spin pi-spinner"
-                />
-                <Button
-                    v-else
-                    style="pointer-events: none;"
-                    text
-                    size="small"
-                    severity="success"
-                    icon="pi pi-check-circle"
                 />
             </div>
         </div>
@@ -95,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
@@ -110,10 +88,9 @@ const props = defineProps([
 ]);
 
 const cell = shallowRef(props.cell);
-const editing = ref(false);
-const editingContents = ref("");
-const savedEdit = ref("");
+const focused = ref(false);
 const response = ref("");
+const textarea = ref();
 const session: BeakerSession = inject("session");
 
 const taggedCellEvents = computed(() => {
@@ -138,26 +115,6 @@ const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
     "abort": "Abort"
 }
 
-function cancelEdit() {
-    editing.value = false;
-    editingContents.value = savedEdit.value || cell.value.source;
-}
-
-async function startEdit() {
-    if (editing.value === true) {
-        return;
-    } // else [is]editing.value is false
-    editing.value = true;
-    editingContents.value = savedEdit.value || cell.value.source;
-
-}
-
-function saveEdit() {
-    editing.value = false;
-    savedEdit.value = editingContents.value;
-    cell.value.source = editingContents.value;
-}
-
 const respond = () => {
     if (!response.value.trim()) {
         return; // Do nothing unless the reply has contents
@@ -167,10 +124,21 @@ const respond = () => {
 };
 
 function execute() {
+    focused.value = false;
     const future = props.cell.execute(session);
 }
 
-defineExpose({execute});
+function enter() {
+    if (!focused.value) {
+        focused.value = true;
+        nextTick(() => {
+            console.log(textarea);
+            textarea.value.$el.focus();
+        });
+    }
+}
+
+defineExpose({execute, enter});
 
 </script>
 
