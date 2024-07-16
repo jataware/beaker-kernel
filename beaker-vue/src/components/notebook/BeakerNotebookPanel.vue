@@ -19,7 +19,6 @@
             }"
             :drag-enabled="isDragEnabled"
             @move-cell="handleMoveCell"
-            @click="$emit('cell-clicked', cell.id)"
             @keyboard-nav="handleNavAction"
             @dragstart="handleDragStart($event, cell, index)"
             @drop="handleDrop($event, index)"
@@ -55,9 +54,6 @@ const cellMap = inject("cell-component-mapping");
 const props = defineProps([
     'selectedCell',
 
-
-
-
     'selectCell',
     'selectedCellIndex',
 ]);
@@ -72,9 +68,7 @@ const isDeleteprefixActive = ref(false);
 const isDragEnabled = computed(() => session.notebook?.cells.length > 1);
 const cellCount = computed(() => session.notebook?.cells?.length || 0);
 
-const emit = defineEmits([
-    "cell-clicked",
-])
+const emit = defineEmits([]);
 
 function setSelectedRef(el, selected) {
     if (selected) {

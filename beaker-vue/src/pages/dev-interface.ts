@@ -1,9 +1,11 @@
 import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
-import DevInterface from './DevInterface.vue';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
+
+import DevInterface from './DevInterface.vue';
+import { vKeybindings } from '@/util/directives';
 
 import 'primeicons/primeicons.css';
 import '../index.scss';
@@ -35,5 +37,6 @@ const baseUrl = PageConfig.getBaseUrl();
   app.use(ToastService);
   app.directive('tooltip', Tooltip);
   app.directive('focustrap', FocusTrap);
+  app.directive('keybindings', vKeybindings);
   app.mount('#app');
 })();

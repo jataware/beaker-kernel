@@ -1,15 +1,37 @@
 <template>
-  <slot></slot>
+  <div class="beaker-session-container">
+    <slot></slot>
+  </div>
 </template>
 
 <script lang="ts">
-import { defineProps, reactive, ref, inject, provide, defineEmits, onMounted, defineExpose, onBeforeMount, toRef, VNode, isVNode } from 'vue';
+import { reactive, ref, inject, provide, VNode } from 'vue';
+import { ComponentPublicInstance } from '@vue/runtime-core';
 import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
 // import { type IActiveContextInfo } from 'beaker-kernel/util';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import BeakerCell from '@/components/cell/BeakerCell.vue'
 
-const getCellData = (vnode: VNode) => (vnode?.props?.cell || vnode?.component?.setupState?.cell);
+
+export interface IBeakerSession extends ComponentPublicInstance {
+  activeContext: any,
+  connectionSettings: any,
+  defaultKernel: string,
+  renderers,
+  session: BeakerSession,
+  sessionId: string,
+  sessionName: string,
+  status,
+
+  fetchContextInfo: () => any,
+  findNotebookCell: (any) => any,
+  findNotebookCellById: (any) => any,
+  setContext: () => void,
+}
+
+// eslint-disable-next-line
+// @ts-ignore: setupState is not defined in the Vue type definition, but seems to reliably exist, and it's ok if it doesn't.
+const getCellData = (vnode: VNode) => (vnode?.props?.cell || vnode?.component?.setupState?.cell || undefined);
 
 const isCell = (vnode: VNode) => {
   return (
@@ -102,7 +124,7 @@ export default {
     },
 
     findNotebookCellById(id: string): typeof BeakerCell {
-      return this.findNotebookCell((vnode) => (getCellData(vnode).id === id))
+      return this.findNotebookCell((vnode) => (getCellData(vnode).id === id));
     },
 
     async fetchContextInfo() {

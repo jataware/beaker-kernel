@@ -3,12 +3,10 @@
     class="beaker-cell"
     tabindex="0"
     @click="clicked"
+    ref="beakerCellRef"
   >
-    <!-- ref="beakerCellRef" -->
     <!-- @cell-state-changed="cellStateChanged" -->
     <!-- @keyup.enter.exact="focusEditor"
-    @keydown.ctrl.enter.prevent="execute"
-    @keydown.shift.enter.prevent="executeAndMove"
     @keyup.esc="unfocusEditor"
     @keydown.y="(event) => switchCellTypeContextualEvent(event, 'code')"
     @keydown.m="(event) => switchCellTypeContextualEvent(event, 'markdown')"
@@ -56,10 +54,11 @@
 <script setup lang="ts">
 import { defineProps, ref, computed, defineEmits, defineExpose, withDefaults, inject, watch  } from "vue";
 import DraggableMarker from './DraggableMarker.vue';
-import BeakerSession from "../session/BeakerSession.vue";
 import BeakerCodeCell from './BeakerCodeCell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
+import { IBeakerNotebook } from '@/components/notebook/BeakerNotebook.vue';
+import { IBeakerSession } from '@/components/session/BeakerSession.vue';
 
 import BeakerRawCell from './BeakerRawCell.vue';
 import { IBeakerCell } from "beaker-kernel/dist/notebook";
@@ -80,6 +79,8 @@ export interface Props {
 export interface IBeakerCellComponent {
     focus: () => null;
     execute: () => null;
+    enter: () => null;
+    exit: () => null;
 }
 
 const props = defineProps<Props>();
@@ -87,18 +88,17 @@ const props = defineProps<Props>();
 // const emit = defineEmits([
 // ]);
 
-// const session: BeakerSession = inject("session");
-const beakerSession: typeof BeakerSession = inject("beakerSession");
+const beakerSession: IBeakerSession = inject("beakerSession");
+const notebook: IBeakerNotebook = inject("notebook");
 const cellMap = inject("cell-component-mapping");
 
 const clicked = (evt) => {
-    console.log("you clicked on", cell.value.id, "with event", evt);
-    console.log("Searching...", beakerSession.findNotebookCellById(cell.value.id));
+    notebook.selectCell(cell.value);
 };
 
 type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
 
-// const beakerCellRef = ref<HTMLDivElement|null>(null);
+const beakerCellRef = ref<HTMLDivElement|null>(null);
 const typedCellRef = ref<BeakerCellType|null>(null);
 const childrenRef = ref<BeakerCellType|null>(null);
 
@@ -156,12 +156,6 @@ function typeChanged() {
     console.log("changed");
     // cell.value.cell_type = cell_type.value;
 }
-
-// const unfocusEditor = () => {
-//     if (beakerCellRef.value?.focus) {
-//         beakerCellRef.value.focus();
-//     }
-// };
 
 function execute() {
 

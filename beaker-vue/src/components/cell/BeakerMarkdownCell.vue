@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed, onBeforeMount, defineExpose, nextTick} from "vue";
+import { defineProps, ref, inject, computed, onBeforeMount, defineExpose, nextTick, getCurrentInstance} from "vue";
 import { marked } from 'marked';
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';

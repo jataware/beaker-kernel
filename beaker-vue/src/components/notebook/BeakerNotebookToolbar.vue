@@ -3,21 +3,21 @@
         <template #start>
             <slot name="start">
                 <Button
-                    @click="addCell()"
+                    @click="notebook.insertCellAfter()"
                     icon="pi pi-plus"
                     size="small"
                     severity="info"
                     text
                 />
                 <Button
-                    @click="removeCell()"
+                    @click="notebook.removeCell()"
                     icon="pi pi-minus"
                     size="small"
                     severity="info"
                     text
                 />
                 <Button
-                    @click="runCell()"
+                    @click="notebook.selectedCell.execute()"
                     icon="pi pi-play"
                     size="small"
                     severity="info"
@@ -60,6 +60,8 @@ import Button from "primevue/button";
 import Toolbar from "primevue/toolbar";
 
 import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
+// import { addCellAfter, enterCell, executeCell, findCellById, removeCell as removeOp } from "@/util/operations";
+import * as Operations from "@/util/operations"
 
 const session: BeakerSession = inject('session');
 const notebook: typeof BeakerNotebookComponent = inject('notebook');
@@ -81,10 +83,22 @@ const addMarkdownCell = (toIndex?: number) => {
 }
 
 const runCell = (cell?: string | IBeakerCell) => {
-    console.log("selectedCell", notebook.selectedCell);
-    if (!notebook.selectedCell) {
-        return;
-    }
+    // if (cell !== undefined) {
+    //     if (typeof cell === "string") {
+    //         // cell = Operations.findCellById(notebook.beakerSession, cell);
+    //     }
+    //     else if (typeof cell?.id === "string") {
+    //         cell = cell.id;
+    //     }
+    // }
+    // else {
+    //     cell = notebook.selectedCellId;
+    // }
+    // if (!cell) {
+    //     // No cell passed in or selected, so do nothing.
+    //     return;
+    // }
+
     notebook.selectedCell.execute();
 }
 

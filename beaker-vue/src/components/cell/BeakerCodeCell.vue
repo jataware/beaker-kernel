@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, nextTick, defineExpose, ref, shallowRef, computed, inject } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView } from "codemirror";
@@ -64,12 +64,18 @@ const theme = inject('theme');
 const session = inject('session');
 const activeContext = inject('activeContext');
 const codemirrorRef = ref<typeof Codemirror|null>(null);
+const notebook = inject('notebook');
+const inst = getCurrentInstance();
 
 const handleReady = (payload) => {
     // TODO unused, but very useful for future operations.
     // See vue codemirror api/npm docs.
     editorView.value = payload.view;
 };
+
+const emit = defineEmits([
+    'blur-cell',
+])
 
 enum ExecuteStatus {
   Success = 'ok',
@@ -129,14 +135,27 @@ const execute = (evt: any) => {
 }
 
 const enter = () => {
-    if(codemirrorRef.value?.focus) {
-        codemirrorRef.value?.focus();
+    console.log("entering?", editorView.value);
+    if(editorView.value?.focus) {
+        console.log("dddd");
+        editorView.value?.focus();
     }
+}
+
+const exit = () => {
+    inst.parent.refs.beakerCellRef.focus()
+    // emit('blur-cell');
+    // if(editorView.value) {
+        // editorView.value.dom.parentElement.focus();
+    //     console.log("dddd");
+    //     editorView.value?.blur();
+    // }
 }
 
 defineExpose({
     execute,
     enter,
+    exit,
 });
 
 

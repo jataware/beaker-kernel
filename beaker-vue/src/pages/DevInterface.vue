@@ -11,11 +11,8 @@
             @unhandled-msg="unhandledMessage"
             @any-msg="anyMessage"
             @session-status-changed="statusChanged"
+            v-keybindings="sessionKeybindings"
         >
-            <!-- <KeypressController
-                :this="beakerSession"
-                :keyBindings="keyBindings"
-            > -->
             <div class="beaker-dev-interface">
             <header>
                 <BeakerHeader
@@ -41,17 +38,22 @@
                         <BeakerNotebook
                             ref="beakerNotebookRef"
                             :cell-map="cellComponentMapping"
-                            v-on="notebookKeyBindings"
+                            v-keybindings="notebookKeyBindings"
                         >
-                            <template #notebook-background>
-                                <div class="welcome-placeholder">
-                                    <SvgPlaceholder />
-                                </div>
-                            </template>
+                            <BeakerNotebookToolbar/>
+                            <BeakerNotebookPanel
+                                :selected-cell="beakerNotebookRef?.selectedCellId"
+                            >
+                                <template #notebook-background>
+                                    <div class="welcome-placeholder">
+                                        <SvgPlaceholder />
+                                    </div>
+                                </template>
+                            </BeakerNotebookPanel>
+                            <BeakerAgentQuery
+                                class="agent-query-container"
+                            />
                         </BeakerNotebook>
-                        <BeakerAgentQuery
-                            class="agent-query-container"
-                        />
                     </div>
                         <SideMenu
                             position="right"
@@ -96,15 +98,16 @@
                 <FooterDrawer />
             </footer>
             </div>
-            <!-- </KeypressController> -->
             <!-- TODO: Move this to part of session via named slot? -->
-            <BeakerContextSelection
-                :isOpen="contextSelectionOpen"
-                :toggleOpen="toggleContextSelection"
-                :contextProcessing="contextProcessing"
-                @context-changed="(contextData) => {beakerSession.setContext(contextData)}"
-                @close-context-selection="contextSelectionOpen = false"
-            />
+            <slot name="context-selection-popup">
+                <BeakerContextSelection
+                    :isOpen="contextSelectionOpen"
+                    :toggleOpen="toggleContextSelection"
+                    :contextProcessing="contextProcessing"
+                    @context-changed="(contextData) => {beakerSession.setContext(contextData)}"
+                    @close-context-selection="contextSelectionOpen = false"
+                />
+            </slot>
         </BeakerSession>
 
         <!-- Modals, popups and globals -->
@@ -120,7 +123,6 @@ import BeakerNotebookToolbar from '@/components/notebook/BeakerNotebookToolbar.v
 import BeakerNotebookPanel from '@/components/notebook/BeakerNotebookPanel.vue';
 import BeakerSession from '@/components/session/BeakerSession.vue';
 import BeakerHeader from '@/components/dev-interface/BeakerHeader.vue';
-import KeypressController from '@/components/controllers/KeypressController.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
@@ -144,24 +146,12 @@ import BeakerMarkdownCell from '@/components/cell/BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from '@/components/cell/BeakerLLMQueryCell.vue';
 import BeakerRawCell from '@/components/cell/BeakerRawCell.vue';
 
-import { notebookKeyBindings } from './keybindings';
-
-console.log(notebookKeyBindings);
 
 const toast = useToast();
 
 const activeContext = ref();
+const beakerNotebookRef = ref();
 
-// test function for finding cells
-// currently returns a vnode object instead of expecte ref object
-const foo = () => {
-    const id = beakerSession.value.session.notebook.cells[0].id;
-    const cell = beakerSession.value.findNotebookCellById(id);
-    // console.log(id, cell);
-    // if (cell.execute) {
-    //     cell.execute();
-    // }
-}
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
 // Let's only use severity=success|warning|danger(=error) for now
@@ -181,13 +171,11 @@ const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_ses
 
 const props = defineProps([
   "config",
-
   "connectionSettings",
   "sessionName",
   "sessionId",
   "defaultKernel",
   "renderers",
-
 ]);
 
 
@@ -275,6 +263,92 @@ onBeforeMount(() => {
 
 // TODO: See above. Move somewhere better.
 provide('show_toast', showToast);
+
+const notebookKeyBindings = {
+    "keydown.enter.ctrl.prevent.capture": () => {
+        beakerNotebookRef.value.selectedCell.execute();
+    },
+    "keydown.enter.shift.prevent.capture": () => {
+        beakerNotebookRef.value.selectedCell.execute();
+        if (!beakerNotebookRef.value.selectNextCell()) {
+            beakerNotebookRef.value.insertCellAfter();
+        }
+    },
+    "keydown.enter.exact.prevent": () => {
+        if (beakerNotebookRef.value.isEditing) {
+            return;
+        }
+        beakerNotebookRef.value.selectedCell.enter();
+    },
+    "keydown.esc.exact.prevent": () => {
+        beakerNotebookRef.value.selectedCell.exit();
+    },
+    "keydown.up": () => {
+        const selectedCell = beakerNotebookRef.value.selectedCell;
+        if (!selectedCell.isEditing) {
+            beakerNotebookRef.value.selectPrevCell();
+        }
+    },
+    "keydown.j": () => {
+        if (beakerNotebookRef.value.isEditing) {
+            return;
+        }
+        const selectedCell = beakerNotebookRef.value.selectedCell;
+        if (!selectedCell.isEditing) {
+            beakerNotebookRef.value.selectPrevCell();
+        }
+    },
+    "keydown.down": () => {
+        if (beakerNotebookRef.value.isEditing) {
+            return;
+        }
+        const selectedCell = beakerNotebookRef.value.selectedCell;
+        if (!selectedCell.isEditing) {
+            beakerNotebookRef.value.selectNextCell();
+        }
+    },
+    "keydown.k": () => {
+        if (beakerNotebookRef.value.isEditing) {
+            return;
+        }
+        const selectedCell = beakerNotebookRef.value.selectedCell;
+        if (!selectedCell.isEditing) {
+            beakerNotebookRef.value.selectNextCell();
+        }
+    },
+    "keydown.a": (evt) => {
+        //
+        if (beakerNotebookRef.value.isEditing) {
+            return;
+        }
+        const notebook = beakerNotebookRef.value;
+        notebook.insertCellBefore();
+    },
+    "keydown.b": () => {
+        //
+        if (beakerNotebookRef.value.isEditing) {
+            return;
+        }
+        const notebook = beakerNotebookRef.value;
+        notebook.insertCellAfter();
+    },
+    "keydown.d": () => {
+        //
+        // TODO implement double press for action
+
+        // const notebook = beakerNotebookRef.value;
+        // notebook.removeCell();
+
+    },
+}
+
+const sessionKeybindings = {
+  "keydown.a": (evt) => console.log("a", evt),
+  // "keydown.enter.ctrl.prevent.capture": (evt => console.log("enter", evt)),
+  // "keypress.enter.shift.prevent": (evt => console.log("enter", evt)),
+  "keypress.f": () => { console.log("ii", inject("session"), inject("beakerSession"), inject("notebook")) },
+}
+
 
 </script>
 
