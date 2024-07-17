@@ -6,12 +6,15 @@
       rows="1"
       :class="{'scroll-input': allowScroll}"
       class="resizeable-textarea"
+      ref="textarea"
   />
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref, nextTick, inject } from "vue";
+import { defineProps, defineEmits, ref, defineExpose } from "vue";
 import Textarea from 'primevue/textarea';
+
+const textarea = ref();
 
 const props = defineProps({
   maxHeight: {
@@ -34,7 +37,13 @@ const checkSize = (event) => {
   allowScroll.value = event.target.offsetHeight >= 180;
 }
 
+const focus = () => {
+  textarea.value.focus();
+}
+
 const allowScroll = ref(false);
+
+defineExpose(["focus"]);
 </script>
 
 <style lang="scss">

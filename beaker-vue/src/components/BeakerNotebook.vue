@@ -86,6 +86,7 @@
                         @remove-cell="removeCell"
                         @add-code-cell="addCodeCell"
                         @add-markdown-cell="addMarkdownCell"
+                        @set-context="reapplyContext"
                         @reset-nb="resetNB"
                     />
                 <div style="flex: 1; display: flex; position: relative;">
@@ -200,8 +201,7 @@
 <script setup lang="tsx">
 import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
-import { type IBeakerCell } from "beaker-kernel";
-// import { IBeakerCell } from "beaker-kernel/dist/notebook";
+import { IBeakerCell } from "beaker-kernel/dist/notebook";
 
 import Card from 'primevue/card';
 import Button from 'primevue/button';
@@ -723,7 +723,7 @@ function handleDrop(event: DragEvent, index: number) {
 function handleDragStart(event: DragEvent, beakerCell: IBeakerCell, index: number)  {
     if (event.dataTransfer !== null) {
 
-        var paintTarget: HTMLElement|null = (event.target as HTMLElement).closest('.beaker-cell');
+        var paintTarget: HTMLElement|null = (event.target as HTMLElement)?.closest('.beaker-cell');
 
         event.dataTransfer.dropEffect = 'move';
         event.dataTransfer.effectAllowed = 'move';
@@ -769,6 +769,14 @@ onBeforeMount(() => {
 
 onMounted(() => {
     updateContextInfo();
+});
+
+provide('notebookCellExports', {
+    selectCell,
+    selectedCellIndex,
+    runCell, 
+    selectNextCell,
+    getCell: _getCell
 });
 
 defineExpose({

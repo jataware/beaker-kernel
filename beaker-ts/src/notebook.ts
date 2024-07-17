@@ -1,6 +1,6 @@
 import * as nbformat from '@jupyterlab/nbformat';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import { JSONObject, PartialJSONValue } from '@lumino/coreutils';
+import { JSONObject, PartialJSONObject, PartialJSONValue } from '@lumino/coreutils';
 import { IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -72,6 +72,44 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
         this.last_execution = {status: "modified"};
     }
 
+    // convert the notebook cell to another kind of cell:
+    // this is necessary because of the UI state falling out of sync with
+    // serialization and unserialization in the case of saving to ipynb --
+    // without this, a code cell changed to markdown would be code on refresh.
+    //
+    // usage: `cell.convert_inplace_to(session, typeof BeakerNotebookCellType)`
+    //
+    // precondition: must be a parent cell, not a child cell
+    public convert_inplace_to(session: BeakerSession, new_type: BeakerCellType): void {
+        const target_index = session.notebook.cells.findIndex(
+            (cell) => cell.id === this?.id
+        );
+        if (target_index === -1) {
+            console.warn("attempted to convert cell not found in parent cell in place; cell not found");
+            return;
+        }
+        // this is much less readable with a map of strings to extended typing information
+        // compared to just checking individually with branches.
+        let new_cell: IBeakerCell;
+        if (new_type === "markdown") {
+            new_cell = new BeakerMarkdownCell({...this});
+        } 
+        else if (new_type === "code") {
+            new_cell = new BeakerCodeCell({...this});
+        }
+        else if (new_type === "query") {
+            new_cell = new BeakerQueryCell({...this});
+        }
+        else if (new_type === "raw") {
+            new_cell = new BeakerRawCell({...this});
+        } else {
+            console.warn("invalid cell type provided for conversion target");
+            return;
+        }
+        new_cell.cell_type = new_type;
+        session.notebook.cells.splice(target_index, 1, new_cell);
+    }
+
     public fromJSON(obj: any) {
         Object.keys(obj).forEach((key) => {
             this[key] = obj[key];
@@ -99,15 +137,60 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     }
 }
 
-export interface IBeakerQueryEvent extends JSONObject {
-    type: "thought" | "response" | "user_question" | "user_answer" | "error" | "code_cell" | "abort";
-    content: string | PartialJSONValue;
+// Simple payload events
+
+type BeakerQueryTextEventType = 
+    | "thought" 
+    | "response" 
+    | "user_question" 
+    | "user_answer" 
+    | "abort";
+
+export interface IBeakerQueryTextEvent extends PartialJSONObject {
+    type: BeakerQueryTextEventType
+    content: string;
 };
+
+// Specific-payload types
+
+type BeakerQueryCellEventType = "code_cell"
+
+export interface IBeakerQueryCellEvent extends PartialJSONObject{
+    type: BeakerQueryCellEventType
+    content: {
+        cell: IBeakerCell
+        parent_id: string
+        metadata: PartialJSONObject
+    };
+};
+
+type BeakerQueryErrorEventType = "error";
+
+export interface IBeakerQueryErrorEvent extends PartialJSONObject{
+    type: BeakerQueryErrorEventType
+    content: {
+        ename: string
+        evalue: string
+        traceback: string[]
+    };
+}
+
+// umbrella-type for events
+
+export type BeakerQueryEventType =  
+    | BeakerQueryTextEventType
+    | BeakerQueryCellEventType
+    | BeakerQueryErrorEventType;
+
+export type BeakerQueryEvent = 
+    | IBeakerQueryTextEvent
+    | IBeakerQueryCellEvent
+    | IBeakerQueryErrorEvent;
 
 export interface IQueryCell extends nbformat.IBaseCell {
     cell_type: 'query';
     id?: string;
-    events: IBeakerQueryEvent[];
+    events: BeakerQueryEvent[];
 }
 
 export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
@@ -232,7 +315,7 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     declare cell_type: 'query';
     id?: string;
-    events: IBeakerQueryEvent[];
+    events: BeakerQueryEvent[];
 
     _current_input_request_message: messages.IInputRequestMsg;
 
@@ -249,6 +332,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         this.events.splice(0, this.events.length);
         this.children.splice(0, this.children.length);
 
+
         const handleIOPub = async (msg: IBeakerIOPubMessage) => {
             const msg_type = msg.header.msg_type;
             const content = msg.content;
@@ -256,16 +340,21 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 this.status = content.execution_state;
             }
             else if (msg_type === "llm_thought") {
+                if (content.thought === "") {
+                    return;
+                }
+                const prompt = `${content.thought}`;
                 this.events.push({
                     type: "thought",
-                    content: content.thought,
-                });
+                    content: prompt
+                })
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
+                const prompt = `${content.text}`;
                 this.events.push({
                     type: "response",
-                    content: content.text,
-                });
+                    content: prompt
+                })
             }
             else if (msg_type === "code_cell") {
                 const nb = session.notebook;
@@ -301,14 +390,17 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                     status: "pending",
                     checkpoint_index: content.checkpoint_index,
                 }
-                this.children.push(codeCell);
+                // cell is stored in events - we point the children field to the same object
+                // to make selection and execution work
                 this.events.push({
                     type: "code_cell",
                     content: {
-                        id: codeCell.id,
-                        index: this.children?.length - 1
-                    },
+                        parent_id: this.id,
+                        cell: codeCell,
+                        metadata: {}
+                    }
                 });
+                this.children.push(codeCell);
 
                 const reactiveCell = this.children[this.children.length - 1] as BeakerCodeCell;
                 if (autoexecute && content.execute_request_msg) {
@@ -363,10 +455,8 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
 
         const handleStdin = async (msg: messages.IStdinMessage) => {
             if (messages.isInputRequestMsg(msg)) {
-                this.events.push({
-                    type: "user_question",
-                    content: msg.content.prompt,
-                });
+                const prompt = `**User Prompt**: *${msg.content.prompt}*`;
+                this.pushMarkdownChild(prompt, "user_question")
                 this.status = "awaiting_input";
                 this._current_input_request_message = msg;
             }
@@ -390,7 +480,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 };
                 this.events.push({
                     type: "error",
-                    content: msg.content.evalue,
+                    content:{...error_details}
                 });
             }
             else if (msg.content.status === "abort") {
@@ -421,12 +511,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         if (this.status !== "awaiting_input") {
             return;
         }
-
-        this.events.push({
-            type: "user_answer",
-            content: response,
-        });
-
+        this.pushMarkdownChild(`**User Reply**: ${response}`, "user_answer")
         // Send the reply to the kernel
         session.kernel.sendInputReply(
             {
