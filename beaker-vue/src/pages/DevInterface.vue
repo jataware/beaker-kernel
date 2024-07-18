@@ -112,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, provide } from 'vue';
+import { defineProps, ref, onBeforeMount, provide, nextTick } from 'vue';
 import { JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from '@/components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '@/components/notebook/BeakerNotebookToolbar.vue';
@@ -255,6 +255,20 @@ const selectAction = (actionName: string) => {
 
 onBeforeMount(() => {
   document.title = "Beaker Development Interface"
+  var notebookData: {[key: string]: any};
+  try {
+    notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
+  }
+  catch (e) {
+    notebookData = {};
+  }
+  if (notebookData[sessionId]) {
+    nextTick(() => {
+        beakerNotebookRef.value.notebook.loadFromIPynb(notebookData[sessionId]);
+    });
+  }
+  saveInterval.value = setInterval(snapshot, 30000);
+  applyTheme();
 });
 
 // TODO: See above. Move somewhere better.
@@ -319,6 +333,17 @@ const notebookKeyBindings = {
 const sessionKeybindings = {
 }
 
+const snapshot = () => {
+  var notebookData: {[key: string]: any};
+  try {
+    notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
+  }
+  catch (e) {
+    notebookData = {};
+  }
+  notebookData[sessionId] = beakerNotebookRef.value.notebook.toIPynb();
+  localStorage.setItem("notebookData", JSON.stringify(notebookData));
+};
 
 </script>
 
