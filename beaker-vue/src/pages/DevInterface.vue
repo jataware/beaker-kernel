@@ -112,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, provide, nextTick } from 'vue';
+import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted } from 'vue';
 import { JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from '@/components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '@/components/notebook/BeakerNotebookToolbar.vue';
@@ -260,15 +260,27 @@ onBeforeMount(() => {
     notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
   }
   catch (e) {
+    console.error(e);
     notebookData = {};
   }
-  if (notebookData[sessionId]) {
+
+  if (notebookData[sessionId]?.data) {
     nextTick(() => {
-        beakerNotebookRef.value.notebook.loadFromIPynb(notebookData[sessionId]);
+        beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
+        nextTick(() => {
+            beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
+        });
     });
   }
   saveInterval.value = setInterval(snapshot, 30000);
+  window.addEventListener("beforeunload", snapshot);
   applyTheme();
+});
+
+onUnmounted(() => {
+    clearInterval(saveInterval.value);
+    saveInterval.value = null;
+    window.removeEventListener("beforeunload", snapshot);
 });
 
 // TODO: See above. Move somewhere better.
@@ -339,9 +351,13 @@ const snapshot = () => {
     notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
   }
   catch (e) {
+    console.error(e);
     notebookData = {};
   }
-  notebookData[sessionId] = beakerNotebookRef.value.notebook.toIPynb();
+  notebookData[sessionId] = {
+    data: beakerNotebookRef.value?.notebook.toIPynb(),
+    selectedCell: beakerNotebookRef.value?.selectedCellId,
+  };
   localStorage.setItem("notebookData", JSON.stringify(notebookData));
 };
 

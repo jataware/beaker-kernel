@@ -74,10 +74,10 @@ export default {
                 this.selectedCellId = newCellId
                 nextTick(() => {
                     if (enter) {
-                        this.selectedCell().enter();
+                        this.selectedCell()?.enter();
                     }
                     else {
-                        this.selectedCell().exit();
+                        this.selectedCell()?.exit();
                     }
                 });
             }
