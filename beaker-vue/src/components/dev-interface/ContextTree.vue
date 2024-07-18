@@ -1,7 +1,7 @@
 <template>
     <Tree
         :value="contextNodes"
-        :loading="!props.context"
+        :loading="!contextNodes"
         v-model:expandedKeys="contextExpandedKeys"
     >
         <template v-slot:loadingicon>
@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, computed } from "vue";
+import { ref, defineProps, defineEmits, computed, inject } from "vue";
 import Button from 'primevue/button';
 import Tree from 'primevue/tree';
 import { emitError } from "vue-json-pretty/types/utils";
@@ -74,15 +74,12 @@ const toggleContextPanel = () => {
 // TODO easier way for tree to auto-open by default
 const contextExpandedKeys = ref({0: true, 1: true, 2: true, 3: true});
 
-const props = defineProps([
-    "context"
-]);
-
 const emits = defineEmits(['action-selected']);
+const beakerSession = inject("beakerSession");
 
 const contextNodes = computed(() => {
 
-    const { context } = props;
+    const context = beakerSession?.activeContext?.info;
 
     if (!context) {
         return [];

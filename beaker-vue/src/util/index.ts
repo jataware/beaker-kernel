@@ -1,16 +1,9 @@
-
-/**
- * Modifies array in place to move a cell to a new location (or any other elem)
- **/
-export function arrayMove(arr: [any], old_index: number, new_index: number) {
-    arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
-}
-
 /**
  *
  **/
+// TODO: Fix this as to be better null safe
 export function capitalize(s: string) {
-    return s.charAt(0).toUpperCase() + s.slice(1);
+    return s?.charAt(0).toUpperCase() + s.slice(1) || s;
 }
 
 /**
@@ -53,4 +46,19 @@ export function downloadFileDOM(data: string, filename: string, mimeType: string
         elem.click();
         document.body.removeChild(elem);
     }
+}
+const isSelectable = (el: HTMLElement): boolean => {
+    if (typeof el.getAttribute("tabindex") === "string") {
+        return true;
+    }
+};
+
+export function findSelectableParent(target: HTMLElement): HTMLElement {
+    while (target !== undefined && target !== null && target !== document.body) {
+        if (isSelectable(target)) {
+            return target;
+        }
+        target = target.parentElement;
+    }
+    return undefined;
 }

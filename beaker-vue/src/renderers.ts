@@ -4,7 +4,7 @@ import { IBeakerRendererOptions, IMimeRenderer, MimetypeString } from 'beaker-ke
 import { PartialJSONObject } from '@lumino/coreutils';
 import VueJsonPretty from 'vue-json-pretty';
 import katex from 'katex';
-import DecapodePreview from './components/DecapodePreview.vue';
+import DecapodePreview from '@/components/render/DecapodePreview.vue';
 
 export interface BeakerRenderOutput {
     component: Component;

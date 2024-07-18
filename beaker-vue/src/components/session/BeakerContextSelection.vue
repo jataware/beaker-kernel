@@ -77,10 +77,10 @@ import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import Dropdown from 'primevue/dropdown';
 import Checkbox from 'primevue/checkbox';
+import BeakerSession from "./BeakerSession.vue";
 
 const props = defineProps([
     "isOpen",
-    "toggleOpen",
     "contextProcessing"
 ]);
 
@@ -88,17 +88,13 @@ const contextData = ref(undefined);
 const logDebug = ref([]);
 const logVerbose = ref([]);
 const theme = inject("theme");
-const session = inject("session");
-const activeContext = inject('active_context');
-
-const closeDialog = () => {
-    props.toggleOpen();
-};
+const beakerSession: typeof BeakerSession = inject("beakerSession");
+// const activeContext = inject('activeContext');
 
 const emit = defineEmits([
-    "select-cell",
-    "run-cell",
     "update-context-info",
+    "context-changed",
+    "close-context-selection",
 ]);
 
 const selectedContextSlug = ref<string>();
@@ -109,12 +105,17 @@ const contextPayloadData = ref({});
 const codeExtensions = computed(() => {
     const ext = [];
 
-    if (theme.value === 'dark') {
+    if (theme === 'dark') {
         ext.push(oneDark);
     }
     return ext;
 
 });
+
+const closeDialog = () => {
+    emit("close-context-selection")
+};
+
 
 interface IBeakerContext {
     languages: {
@@ -186,28 +187,28 @@ watch(() => props.isOpen, (open /*, oldValue*/) => {
     // Only setup saved context state when opening the dialog (not closing).
     if (open) {
 
-        if (activeContext.value?.language) {
+        if (beakerSession.activeContext.language) {
             // Panel just opened and activeContext data available:
-            selectedLanguage.value = activeContext.value.language.subkernel;
-            selectedContextSlug.value = activeContext.value.slug;
+            selectedLanguage.value = beakerSession.activeContext.language.subkernel;
+            selectedContextSlug.value = beakerSession.activeContext.slug;
 
             // First time we open, if payload empty, load from active context
             const existingContextPayload = contextPayloadData.value[selectedContextSlug.value];
             if (!existingContextPayload) {
-                contextPayloadData.value[selectedContextSlug.value] = JSON.stringify(activeContext.value?.config);
+                contextPayloadData.value[selectedContextSlug.value] = JSON.stringify(beakerSession.activeContext.config);
             }
         }
 
-        if (activeContext.value?.info) {
+        if (beakerSession.activeContext.info) {
         // Panel just opened and activeContext info available (verbose/debug checks)
-            const strDebugValue = activeContext.value.info.debug.toString();
+            const strDebugValue = beakerSession.activeContext.info.debug.toString();
 
             if (logDebug.value.length) {
                 logDebug.value[0] = strDebugValue;
             } else {
                 logDebug.value.push(strDebugValue);
             }
-            const strVerboseValue = activeContext.value.info.verbose.toString();
+            const strVerboseValue = beakerSession.activeContext.info.verbose.toString();
 
             if (logVerbose.value.length) {
                 logVerbose.value[0] = strVerboseValue;
@@ -219,7 +220,7 @@ watch(() => props.isOpen, (open /*, oldValue*/) => {
     }
 });
 
-const setContext = () => {
+const setContext = async () => {
     // TODO determine if there's a better way to work with primevue's checkbox state
     const isDebug = logDebug.value.includes('true');
     const isVerbose = logVerbose.value.includes('true');
@@ -233,7 +234,8 @@ const setContext = () => {
       debug: isDebug,
       verbose: isVerbose,
     };
-    emit("update-context-info", contextMessageContent);
+    emit("context-changed", contextMessageContent);
+    emit("close-context-selection")
 }
 
 /*
@@ -247,9 +249,11 @@ const setContext = () => {
 }
 */
 onMounted(async () => {
-    const contexts = await session.availableContexts();
-    contextData.value = contexts;
-    selectedContextSlug.value = Object.keys(contexts)[0];
+    const contexts = await beakerSession?.session?.availableContexts();
+    if(contexts) {
+        contextData.value = contexts;
+        selectedContextSlug.value = Object.keys(contexts)[0];
+    }
 })
 </script>
 

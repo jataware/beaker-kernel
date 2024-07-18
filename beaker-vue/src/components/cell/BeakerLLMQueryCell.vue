@@ -53,7 +53,7 @@
             <span v-if="event.type ==='code_cell'">
                 <Component
                     v-if="typeof(getChildByCellId(event.content?.id)) !== 'undefined'"
-                    
+
                     :key="event.content.id"
                     :is="BeakerCodeCell"
                     :cell="getChildByCellId(event.content.id)"
@@ -63,8 +63,9 @@
                     }"
                     ref="childrenRef"
                     drag-enabled=false
-                    @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)"
+                    @click.stop="() => notebook.selectCell(cell)"
                 />
+                <!-- @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)" -->
             </span>
             <template v-if="event.type === 'response'" >{{ event.content }}</template>
             <template v-if="event.type === 'abort'" >{{ event.content }}</template>
@@ -94,15 +95,37 @@
         </div>
     </div>
 
+    <!-- <template #child-cells>
+        <div class="cell-children">
+            <Component
+                v-for="(child, subindex) in props.cell?.children"
+                :key="child.id"
+                :is="child.cell_type"
+                :cell="child"
+                :index="`${index}:${subindex}`"
+                :class="{
+                    selected: (index === selectedCellIndex)
+                }"
+                ref="childrenRef"
+                drag-enabled=false
+            /> -->
+                <!-- @click.stop="childOnClickCallback(`${index}:${subindex}`)" -->
+                <!-- :is="cellComponent" -->
+                <!-- @keyup.esc="unfocusEditor" -->
+        <!-- </div>
+
+    </template> -->
+
 </template>
 
 <script setup lang="ts">
 import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
 import Button from "primevue/button";
-import ContainedTextArea from './ContainedTextArea.vue';
-import { IIOPubMessage } from "@jupyterlab/services/lib/kernel/messages";
+import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
-import BeakerCodeCell from './BeakerCodecell.vue';
+import BeakerCodeCell from './BeakerCodeCell.vue';
+import BeakerNotebookComponent from '../notebook/BeakerNotebook.vue';
+import { IBeakerNotebook } from "@/components/notebook/BeakerNotebook.vue"
 
 const props = defineProps([
     'index',
@@ -119,6 +142,7 @@ const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
 const childrenRef = ref<typeof BeakerCodeCell|null>(null);
+const notebook: IBeakerNotebook = inject("notebook");
 
 const getChildByCellId = (child_id: string) : BeakerBaseCell | undefined => {
     const index = cell.value.children?.findIndex((child) => child.id === child_id)
@@ -158,7 +182,25 @@ function execute() {
     const future = props.cell.execute(session);
 }
 
-defineExpose({execute});
+function enter() {
+    // const future = props.cell.execute(session);
+}
+
+const clear = () => {
+    cell.value.source = "";
+    cell.value.outputs.splice(0, cell.value.outputs.length);
+}
+
+const exit = () => {
+    //
+}
+
+defineExpose({
+    execute,
+    enter,
+    exit,
+    clear,
+});
 
 </script>
 

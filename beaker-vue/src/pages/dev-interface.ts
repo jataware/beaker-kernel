@@ -1,12 +1,14 @@
 import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
-import App from './App.vue';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
 
-import 'primeicons/primeicons.css'
-import './index.scss';
+import DevInterface from './DevInterface.vue';
+import { vKeybindings } from '@/util/directives';
+
+import 'primeicons/primeicons.css';
+import '../index.scss';
 
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';
 
@@ -29,11 +31,12 @@ const baseUrl = PageConfig.getBaseUrl();
     config = await configResponse.json();
   }
 
-  const app = createApp(App, {config});
+  const app = createApp(DevInterface, {config});
 
   app.use(PrimeVue);
   app.use(ToastService);
   app.directive('tooltip', Tooltip);
   app.directive('focustrap', FocusTrap);
+  app.directive('keybindings', vKeybindings);
   app.mount('#app');
 })();

@@ -11,6 +11,12 @@ export {
 
 export {
     type BeakerCellType,
+    type IBeakerCell,
+    type IBeakerHeader,
+    type IBeakerIOPubMessage,
+    type IBeakerQueryEvent,
+    type IBeakerShellMessage,
+    type IQueryCell,
     BeakerBaseCell,
     BeakerRawCell,
     BeakerCodeCell,

@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, computed, inject, watch } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, computed, inject, watch } from "vue";
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from '@codemirror/theme-one-dark';
@@ -92,6 +92,8 @@ import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
 
+import { BeakerSession } from 'beaker-kernel';
+import { IBeakerSession } from '@/components/session/BeakerSession.vue';
 
 const props = defineProps([
     "actions",
@@ -103,20 +105,9 @@ const emit = defineEmits([
     "clearSelection",
 ])
 
-const session = inject('session');
-
+const session: BeakerSession = inject('session');
+const beakerSession: IBeakerSession = inject('beakerSession');
 const showToast = inject('show_toast');
-const theme = inject('theme');
-
-const codeExtensions = computed(() => {
-    const ext = [];
-
-    if (theme.value === 'dark') {
-        ext.push(oneDark);
-    }
-    return ext;
-
-});
 
 const actionType = ref<string>();
 const actionPayload = ref<string>("{\n}");
@@ -142,7 +133,7 @@ const executeAction = () => {
         console.log("I'm here!", msg);
         response.value = msg;
     };
-    future.onReply = async (msg: messages.IExecuteReply) => {
+    future.onReply = async (msg: messages.IExecuteReplyMsg) => {
         reply.value = msg;
     }
     future.done.then(() => {
@@ -150,14 +141,21 @@ const executeAction = () => {
     });
 };
 
-const allMessageOptions = computed(() => {
-    return Object.keys(props.actions);
+const actions = computed(() => {
+    if (props.actions !== undefined) {
+        return props.actions;
+    }
+    else {
+        return beakerSession.activeContext?.info.actions;
+    }
 });
+
+const allMessageOptions = computed(() => Object.keys(actions.value));
 
 const search = (event: any) => {
     actionOptions.value = event.query ?
         allMessageOptions.value.filter((item) => item.includes(event.query)) :
-        Object.keys(props.actions);
+        allMessageOptions.value;
 };
 
 const actionSelected = (event: any) => {
@@ -166,7 +164,7 @@ const actionSelected = (event: any) => {
 
 const selectAction = (actionName: string) => {
     selectedActionName.value = actionName;
-    const selectedAction = props.actions[actionName];
+    const selectedAction = actions.value[actionName];
     if (selectedAction === undefined) {
         return;
     }
@@ -189,6 +187,10 @@ watch(() => props.selectedAction, async (newValue: string) => {
         selectAction(newValue);
         emit("clearSelection");
     }
+});
+
+defineExpose({
+    selectAction,
 });
 
 </script>

@@ -7,7 +7,7 @@
       severity="info"
       text
   />
-  <form ref="fileForm">
+  <form id="open-file-form" ref="fileForm">
     <input
       @change="onSelectFile"
       ref="fileInput"
@@ -81,5 +81,8 @@ const onSelectFile = (event) => {
 </script>
 
 <style lang="scss">
+  #open-file-form {
+    display: none;
+  }
 
 </style>

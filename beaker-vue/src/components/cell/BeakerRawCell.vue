@@ -6,69 +6,93 @@
         </div>
         <Codemirror
             v-model="cell.source"
-            ref="codemirrorRef"
+            ref="codeMirrorRef"
             placeholder="Raw cell content..."
             :extensions="rawExtensions"
-            :autofocus="true"
+            :autofocus="false"
             @ready="handleReady"
         />
     </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject } from "vue";
-import CodeCellOutput from "./BeakerCodecellOutput.vue";
+import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance } from "vue";
 import { Codemirror } from "vue-codemirror";
-import { python } from '@codemirror/lang-python';
-import { oneDark } from '@codemirror/theme-one-dark';
-import Badge from 'primevue/badge';
+import { findSelectableParent } from "@/util";
+
 const props = defineProps([
     "cell",
 ]);
+
+const instance = getCurrentInstance();
 const cell = ref(props.cell);
-const isBusy = ref(false);
-const editorView = shallowRef();
-const theme = inject('theme');
-const session = inject('session');
-const activeContext = inject('active_context');
-const codemirrorRef = ref<typeof Codemirror|null>(null);
-const handleReady = (payload) => {
-    // TODO unused, but very useful for future operations.
-    // See vue codemirror api/npm docs.
-    editorView.value = payload.view;
+const codeMirrorRef = ref<typeof Codemirror|null>(null);
+const codeMirrorEditorView = shallowRef();
+const codeMirrorEditorState = shallowRef();
+
+const handleReady = ({view, state}) => {
+    // See vue codemirror api/npm docs: https://codemirror.net/docs/ref/
+    codeMirrorEditorView.value = view;
+    codeMirrorEditorState.value = state;
 };
+
 enum ExecuteStatus {
   Success = 'success',
   Modified = 'modified',
   Error = 'error',
   Pending = 'pending',
 }
-const executeState = ref<ExecuteStatus>(ExecuteStatus.Pending);
+
 const rawExtensions = computed(() => {
     const ext = [];
-    if (theme.value === 'dark') {
-        ext.push(oneDark);
-    }
+    // if (theme.value === 'dark') {
+    //     ext.push(oneDark);
+    // }
     return ext;
+
 });
+
+
 const execute = (evt: any) => {
-    // No op
+    // Nothing to do but exit
+    exit();
 }
+
 const enter = () => {
-    if(codemirrorRef.value?.focus) {
-        codemirrorRef.value?.focus();
+    if(codeMirrorEditorView.value?.focus) {
+        codeMirrorEditorView.value?.focus();
     }
 }
+
+const exit = () => {
+    // Be sure to blur editor even if we don't also refocus below.
+    if(codeMirrorEditorView.value?.blur) {
+        codeMirrorEditorView.value?.blur();
+    }
+    let target: HTMLElement = (instance.vnode.el as HTMLElement);
+    const selectableParent = findSelectableParent(target);
+    selectableParent?.focus();
+}
+
+const clear = () => {
+    cell.value.source = "";
+}
+
 defineExpose({
     execute,
     enter,
+    exit,
+    clear,
 });
+
+
 </script>
 
 
 <style lang="scss">
 .raw-cell {
     padding-left: 0.2rem;
+
     .cm-editor {
         border: 1px solid var(--surface-d);
     }
@@ -82,9 +106,11 @@ defineExpose({
         }
     }
 }
+
 .raw-cell-header {
     margin-bottom: 0.5rem;
 }
+
 .raw-cell-title {
     font-weight: bold;
     font-size: large;

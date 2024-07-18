@@ -8,7 +8,7 @@
                 :legend="name.toString()"
                 :toggleable="true"
             >
-                <BeakerMimeBundle :mimeBundle="item"/>
+                <MimeBundle :mimeBundle="item"/>
             </Fieldset>
         </AccordionTab>
     </Accordion>
@@ -20,7 +20,7 @@ import { defineProps } from "vue";
 import Accordion from 'primevue/accordion';
 import AccordionTab from 'primevue/accordiontab';
 import Fieldset from "primevue/fieldset";
-import BeakerMimeBundle from "./BeakerMimeBundle.vue";
+import MimeBundle from "@/components/render/BeakerMimeBundle.vue";
 
 const props = defineProps<{
     previewData: {[key: string]: {[key: string]: {[key: string]: any}}}
