@@ -74,10 +74,10 @@ export default {
                 this.selectedCellId = newCellId
                 nextTick(() => {
                     if (enter) {
-                        this.selectedCell().enter();
+                        this.selectedCell()?.enter();
                     }
                     else {
-                        this.selectedCell().exit();
+                        this.selectedCell()?.exit();
                     }
                 });
             }
@@ -206,6 +206,7 @@ export default {
     flex: 1;
     flex-direction: column;
     height: 100%;
+    overflow-y: scroll;
 }
 
 .welcome-placeholder  {
