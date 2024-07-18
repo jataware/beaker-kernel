@@ -8,7 +8,6 @@
 import { reactive, ref, inject, provide, VNode } from 'vue';
 import { ComponentPublicInstance } from '@vue/runtime-core';
 import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
-// import { type IActiveContextInfo } from 'beaker-kernel/util';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import BeakerCell from '@/components/cell/BeakerCell.vue'
 
@@ -17,7 +16,7 @@ export interface IBeakerSession extends ComponentPublicInstance {
   activeContext: any,
   connectionSettings: any,
   defaultKernel: string,
-  renderers,
+  renderers: JupyterMimeRenderer[],
   session: BeakerSession,
   sessionId: string,
   sessionName: string,
@@ -112,7 +111,11 @@ export default {
       while (children.length > 0) {
         const child = children.splice(0, 1)[0];
         if (isCell(child) && predicate(child)) {
-          return {...child.component?.proxy, ...child.component?.exposeProxy};
+          return reactive({
+            ...child.component?.ctx,
+            ...child.component?.exposed,
+            $: child.component,
+          });
         }
         if (Array.isArray(child.component?.subTree?.children) ) {
           children.push(...child.component.subTree.children);

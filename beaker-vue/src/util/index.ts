@@ -47,3 +47,18 @@ export function downloadFileDOM(data: string, filename: string, mimeType: string
         document.body.removeChild(elem);
     }
 }
+const isSelectable = (el: HTMLElement): boolean => {
+    if (typeof el.getAttribute("tabindex") === "string") {
+        return true;
+    }
+};
+
+export function findSelectableParent(target: HTMLElement): HTMLElement {
+    while (target !== undefined && target !== null && target !== document.body) {
+        if (isSelectable(target)) {
+            return target;
+        }
+        target = target.parentElement;
+    }
+    return undefined;
+}

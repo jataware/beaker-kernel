@@ -5,12 +5,12 @@
 </template>
 
 <script lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
+import { ref, computed, nextTick, provide, inject } from "vue";
 import { ComponentPublicInstance } from '@vue/runtime-core';
-import { IBeakerCell, BeakerBaseCell, BeakerSession, BeakerNotebook } from 'beaker-kernel';
+import { IBeakerCell, BeakerSession, BeakerNotebook } from 'beaker-kernel';
 
-import BeakerCell from '@/components/cell/BeakerCell.vue';
-import {default as BeakerSessionComponent, IBeakerSession} from "../session/BeakerSession.vue";
+import { IBeakerCellComponent} from '@/components/cell/BeakerCell.vue';
+import { default as BeakerSessionComponent, IBeakerSession} from "../session/BeakerSession.vue";
 
 export interface IBeakerNotebook extends ComponentPublicInstance {
   beakerSession: IBeakerSession
@@ -19,16 +19,13 @@ export interface IBeakerNotebook extends ComponentPublicInstance {
   selectedCellId: string,
   cellCount: number,
 
-  selectedCell: IBeakerCell,
-  isEditing: boolean,
-
-  selectCell: (cell: string | {id: string}) => any,
-  selectNextCell: (referenceCell?: IBeakerCell) => IBeakerCell | null,
-  selectPrevCell: (referenceCell?: IBeakerCell) => IBeakerCell | null,
+  selectCell: (cell: string | {id: string}, enter?: boolean) => string,
+  selectedCell: () => IBeakerCellComponent,
+  selectNextCell: (referenceCell?: IBeakerCell) => string | null,
+  selectPrevCell: (referenceCell?: IBeakerCell) => string | null,
   insertCellBefore: (referenceCell?: IBeakerCell, cellType?: string) => IBeakerCell,
   insertCellAfter: (referenceCell?: IBeakerCell, cellType?: string) => IBeakerCell,
-  removeCell: (cell: IBeakerCell) => IBeakerCell,
-
+  removeCell: (cell?: IBeakerCell) => IBeakerCell,
 }
 
 export default {
@@ -60,24 +57,42 @@ export default {
     },
 
     methods: {
-        selectCell(cell: string | {id: string}): IBeakerCell {
+        selectCell(cell: string | {id: string}, enter=false): string {
+            let newCellId;
             if (typeof cell === 'string') {
-                this.selectedCellId = cell;
+                newCellId = cell;
             }
             else {
-                this.selectedCellId = cell.id;
+                newCellId = cell.id;
             }
-            return this.selectedCell;
+            if (this.selectedCellId !== newCellId) {
+                this.selectedCellId = newCellId
+                nextTick(() => {
+                    if (enter) {
+                        this.selectedCell().enter();
+                    }
+                    else {
+                        this.selectedCell().exit();
+                    }
+                });
+            }
+            return this.selectedCellId;
         },
 
-        selectNextCell(referenceCell?: IBeakerCell): IBeakerCell | null {
+        // This can't/shouldn't be a computed property because it information about the selected cell can change
+        // without the dependencies in the function changing.
+        selectedCell(): IBeakerCell {
+            return this.beakerSession.findNotebookCellById(this.selectedCellId);
+        },
+
+        selectNextCell(referenceCell?: IBeakerCell, enter=false): IBeakerCell | null {
             if (referenceCell === undefined) {
-                referenceCell = this.selectedCell.cell;
+                referenceCell = this.selectedCell().cell;
             }
             let cellIndex = this.notebook.cells.indexOf(referenceCell);
             if (cellIndex >= 0) {
                 if (cellIndex < this.cellCount - 1) {
-                    return this.selectCell(this.notebook.cells[cellIndex+1]);
+                    return this.selectCell(this.notebook.cells[cellIndex+1], enter);
                 }
             }
             else {
@@ -94,7 +109,7 @@ export default {
                         }
                         else {
                             //
-                            return this.selectCell(notebookCell.children[childIndex+1]);
+                            return this.selectCell(notebookCell.children[childIndex+1], enter);
                         }
                     }
                 }
@@ -102,11 +117,11 @@ export default {
             return null;
         },
 
-        selectPrevCell(referenceCell?: IBeakerCell): IBeakerCell | null {
-            let cellIndex = this.notebook.cells.indexOf(this.selectedCell.cell);
+        selectPrevCell(referenceCell?: IBeakerCell, enter=false): IBeakerCell | null {
+            let cellIndex = this.notebook.cells.indexOf(this.selectedCell().cell);
             if (cellIndex >= 0) {
                 if (cellIndex > 0) {
-                    this.selectCell(this.notebook.cells[cellIndex-1]);
+                    this.selectCell(this.notebook.cells[cellIndex-1], enter);
                 }
             }
             else {
@@ -120,9 +135,9 @@ export default {
             return null;
         },
 
-        insertCellBefore(referenceCell?: IBeakerCell, cellType?: string) {
+        insertCellBefore(referenceCell?: IBeakerCell, cellType?: string, enter=false) {
             if (referenceCell === undefined) {
-                referenceCell = this.selectedCell;
+                referenceCell = this.selectedCell();
             }
             if (cellType === undefined) {
                 cellType = "code";
@@ -131,13 +146,13 @@ export default {
             // TODO: Switch this to create same type of cell as selected cell
             const newCell = this.session.addCodeCell("");
             this.notebook.moveCell(this.notebook.cells.length -1, index);
-            nextTick(() => this.selectCell(newCell));
+            nextTick(() => this.selectCell(newCell, enter));
             return newCell;
         },
 
-        insertCellAfter(referenceCell?: IBeakerCell, cellType?: string) {
+        insertCellAfter(referenceCell?: IBeakerCell, cellType?: string, enter=false) {
             if (referenceCell === undefined) {
-                referenceCell = this.selectedCell;
+                referenceCell = this.selectedCell();
             }
             if (cellType === undefined) {
                 cellType = "code";
@@ -145,13 +160,13 @@ export default {
             const index = (referenceCell === undefined ? this.notebook.cells.length-1 : this.notebook.cells.findIndex((cell) => cell === referenceCell.cell));
             const newCell = this.session.addCodeCell("");
             this.notebook.moveCell(this.notebook.cells.length -1, index + 1);
-            nextTick(() => this.selectCell(newCell));
+            nextTick(() => this.selectCell(newCell, enter));
             return newCell;
         },
 
-        removeCell(cell: IBeakerCell): void {
+        removeCell(cell?: IBeakerCell): void {
             if (cell === undefined) {
-                cell = this.selectedCell;
+                cell = this.selectedCell();
             }
             const index = this.notebook.cells.findIndex((cellModel) => cellModel === cell.cell);
             if (!this.selectNextCell()) {
@@ -162,21 +177,20 @@ export default {
     },
 
     computed: {
-        selectedCell(): typeof BeakerCell {
-            return this.beakerSession.findNotebookCellById(this.selectedCellId);
-        },
-        isEditing(): boolean {
-            return true;
-        },
     },
 
     beforeMount() {
         provide('notebook', this);
-        if (this.cellCount <= 0) {
+        if (this.cellCount === 0) {
             const newCell = this.session.addCodeCell("");
-            this.selectCell(newCell.id);
         }
     },
+
+    mounted() {
+        if (!this.selectedCell()) {
+            this.selectCell(this.notebook.cells[0].id);
+        }
+    }
 }
 </script>
 

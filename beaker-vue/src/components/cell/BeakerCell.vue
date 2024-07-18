@@ -5,18 +5,9 @@
     @click="clicked"
     ref="beakerCellRef"
   >
-    <!-- @cell-state-changed="cellStateChanged" -->
-    <!-- @keyup.enter.exact="focusEditor"
-    @keyup.esc="unfocusEditor"
-    @keydown.y="(event) => switchCellTypeContextualEvent(event, 'code')"
-    @keydown.m="(event) => switchCellTypeContextualEvent(event, 'markdown')"
-    @keydown.r="(event) => switchCellTypeContextualEvent(event, 'raw')" -->
     <div class="cell-grid">
       <div
         class="drag-handle"
-        :class="{
-            'drag-disabled': !props.dragEnabled,
-        }"
       >
         <DraggableMarker
             :draggable="props.dragEnabled"
@@ -27,7 +18,6 @@
         v-model="cell.cell_type"
         :options="Object.keys(cellMap || {})"
         dropdown-icon="pi pi-code"
-        @change="typeChanged"
       >
         <template #value="slotProps">
             <span :class="cellIconMap[slotProps.value]"></span>
@@ -61,7 +51,7 @@ import { IBeakerNotebook } from '@/components/notebook/BeakerNotebook.vue';
 import { IBeakerSession } from '@/components/session/BeakerSession.vue';
 
 import BeakerRawCell from './BeakerRawCell.vue';
-import { IBeakerCell } from "beaker-kernel/dist/notebook";
+import { IBeakerCell } from "beaker-kernel";
 import Dropdown from 'primevue/dropdown';
 
 export type CellTypes =
@@ -75,41 +65,27 @@ export interface Props {
     dragEnabled?: boolean;
 }
 
-// TODO: Figure out how to properly extend a base component
 export interface IBeakerCellComponent {
-    focus: () => null;
     execute: () => null;
     enter: () => null;
     exit: () => null;
+    clear: () => null;
 }
+
+const myRef = ref();
 
 const props = defineProps<Props>();
 
-// const emit = defineEmits([
-// ]);
+const cell = ref(props.cell);
 
-const beakerSession: IBeakerSession = inject("beakerSession");
 const notebook: IBeakerNotebook = inject("notebook");
 const cellMap = inject("cell-component-mapping");
 
 const clicked = (evt) => {
-    notebook.selectCell(cell.value);
+    notebook.selectCell(cell.value as {id: string}, );
 };
 
-type BeakerCellType = typeof BeakerCodeCell | typeof BeakerLLMQueryCell | typeof BeakerMarkdownCell;
-
 const beakerCellRef = ref<HTMLDivElement|null>(null);
-const typedCellRef = ref<BeakerCellType|null>(null);
-const childrenRef = ref<BeakerCellType|null>(null);
-
-const isOuterCellFocused = () => document.activeElement.classList.contains("beaker-cell");
-// const switchCellTypeContextualEvent = (event, type) => {
-//     if (isOuterCellFocused()) {
-//         cell_type.value = type;
-//         event.preventDefault();
-//         event.stopPropagation();
-//     }
-// }
 
 
 const cellIconMap = {
@@ -119,14 +95,6 @@ const cellIconMap = {
     "raw": "pi pi-question-circle",
 };
 
-const customChildRendererMap: {[key: string]: boolean} = {
-    'query': true,
-};
-
-const getSelectedChild = (): number | undefined => {
-    return props.selectedCellIndex.split(":").map((part: string) => Number(part))?.[1];
-}
-
 enum CellState {
   Success = 'success',
   Modified = 'modified',
@@ -134,60 +102,9 @@ enum CellState {
   Pending = 'pending',
 }
 
-const cell = ref(props.cell);
-// const cell_type = ref<string>((() => props.cell?.cell_type || 'raw')());
 const cellState = ref<CellState>(CellState.Pending);
 
-// function focusEditor() {
-//     const child = getSelectedChild();
-//     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : beakerCellRef;
-//     if (cell_type.value === "markdown") {
-//         typedCellRef.value.enter();
-//     }
-//     if (targetRef?.value) {
-//         const editor: HTMLElement|null = targetRef.value.querySelector('.cm-content');
-//         if (editor) {
-//             editor.focus();
-//         }
-//     }
-// }
 
-function typeChanged() {
-    console.log("changed");
-    // cell.value.cell_type = cell_type.value;
-}
-
-function execute() {
-
-//     const child = getSelectedChild();
-//     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
-
-//     if (targetRef?.value) {
-//         targetRef.value?.execute(session);
-//     }
-
-//     else {
-//         props.getCell(props.selectedCellIndex).execute(session);
-//     }
-
-//     unfocusEditor();
-//     return true;
-}
-
-// const executeAndMove = () => {
-//     if (execute()) {
-//         emit('keyboard-nav', 'select-next-cell');
-//     }
-// };
-
-// const enter = (event) => {
-//     const child = getSelectedChild();
-//     const targetRef = (typeof(child) !== "undefined") ? childrenRef[child] : typedCellRef;
-
-//     if (targetRef?.value?.enter) {
-//         targetRef.value.enter(event);
-//     }
-// };
 
 </script>
 

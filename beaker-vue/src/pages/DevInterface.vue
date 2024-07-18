@@ -71,11 +71,8 @@
                                     <template #content>
                                         <BeakerExecuteAction
                                             ref="executeActionRef"
-                                            :actions="activeContext?.info?.actions"
                                             :rawMessages="rawMessages"
                                         />
-                                            <!-- :selectedAction="selectedAction" -->
-                                            <!-- @clear-selection="selectedAction = undefined" -->
                                     </template>
                                 </Card>
                             </SideMenuPanel>
@@ -98,7 +95,6 @@
                 <FooterDrawer />
             </footer>
             </div>
-            <!-- TODO: Move this to part of session via named slot? -->
             <slot name="context-selection-popup">
                 <BeakerContextSelection
                     :isOpen="contextSelectionOpen"
@@ -116,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, reactive, ref, onBeforeMount, provide, inject } from 'vue';
+import { defineProps, ref, onBeforeMount, provide } from 'vue';
 import { JupyterMimeRenderer  } from 'beaker-kernel';
 import BeakerNotebook from '@/components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '@/components/notebook/BeakerNotebookToolbar.vue';
@@ -264,75 +260,53 @@ onBeforeMount(() => {
 // TODO: See above. Move somewhere better.
 provide('show_toast', showToast);
 
+const keyBindingState = {};
 const notebookKeyBindings = {
-    "keydown.enter.ctrl.prevent.capture": () => {
-        beakerNotebookRef.value.selectedCell.execute();
+    "keydown.enter.ctrl.prevent.capture.in-cell": () => {
+        beakerNotebookRef.value.selectedCell().execute();
+        beakerNotebookRef.value.selectedCell().exit();
     },
-    "keydown.enter.shift.prevent.capture": () => {
-        beakerNotebookRef.value.selectedCell.execute();
+    "keydown.enter.shift.prevent.capture.in-cell": () => {
+        const targetCell = beakerNotebookRef.value.selectedCell();
+        targetCell.execute();
         if (!beakerNotebookRef.value.selectNextCell()) {
-            beakerNotebookRef.value.insertCellAfter();
+            beakerNotebookRef.value.insertCellAfter(
+                targetCell,
+                targetCell.cell.cell_type,
+                true
+            );
         }
     },
-    "keydown.enter.exact.prevent": () => {
-        if (beakerNotebookRef.value.isEditing) {
-            return;
-        }
-        beakerNotebookRef.value.selectedCell.enter();
+    "keydown.enter.exact.prevent.in-cell.!in-editor": () => {
+        beakerNotebookRef.value.selectedCell().enter();
     },
-    "keydown.esc.exact.prevent": () => {
-        beakerNotebookRef.value.selectedCell.exit();
+    "keydown.esc.exact.prevent.in-cell": () => {
+        beakerNotebookRef.value.selectedCell().exit();
     },
-    "keydown.up": () => {
-        const selectedCell = beakerNotebookRef.value.selectedCell;
-        if (!selectedCell.isEditing) {
-            beakerNotebookRef.value.selectPrevCell();
-        }
+    "keydown.up.in-cell.!in-editor": () => {
+        beakerNotebookRef.value.selectPrevCell();
     },
-    "keydown.j": () => {
-        if (beakerNotebookRef.value.isEditing) {
-            return;
-        }
-        const selectedCell = beakerNotebookRef.value.selectedCell;
-        if (!selectedCell.isEditing) {
-            beakerNotebookRef.value.selectPrevCell();
-        }
+    "keydown.j.in-cell.!in-editor": () => {
+        beakerNotebookRef.value.selectPrevCell();
     },
-    "keydown.down": () => {
-        if (beakerNotebookRef.value.isEditing) {
-            return;
-        }
-        const selectedCell = beakerNotebookRef.value.selectedCell;
-        if (!selectedCell.isEditing) {
-            beakerNotebookRef.value.selectNextCell();
-        }
+    "keydown.down.in-cell.!in-editor": () => {
+        beakerNotebookRef.value.selectNextCell();
     },
-    "keydown.k": () => {
-        if (beakerNotebookRef.value.isEditing) {
-            return;
-        }
-        const selectedCell = beakerNotebookRef.value.selectedCell;
-        if (!selectedCell.isEditing) {
-            beakerNotebookRef.value.selectNextCell();
-        }
+    "keydown.k.in-cell.!in-editor": () => {
+        beakerNotebookRef.value.selectNextCell();
     },
-    "keydown.a": (evt) => {
-        //
-        if (beakerNotebookRef.value.isEditing) {
-            return;
-        }
+    "keydown.a.prevent.in-cell.!in-editor": (evt) => {
         const notebook = beakerNotebookRef.value;
+        notebook.selectedCell().exit();
         notebook.insertCellBefore();
     },
-    "keydown.b": () => {
-        //
-        if (beakerNotebookRef.value.isEditing) {
-            return;
-        }
+    "keydown.b.prevent.in-cell.!in-editor": () => {
         const notebook = beakerNotebookRef.value;
+        notebook.selectedCell().exit();
         notebook.insertCellAfter();
     },
-    "keydown.d": () => {
+    "keydown.d.selected.!in-editor": () => {
+        console.log("delete");
         //
         // TODO implement double press for action
 
@@ -343,10 +317,6 @@ const notebookKeyBindings = {
 }
 
 const sessionKeybindings = {
-  "keydown.a": (evt) => console.log("a", evt),
-  // "keydown.enter.ctrl.prevent.capture": (evt => console.log("enter", evt)),
-  // "keypress.enter.shift.prevent": (evt => console.log("enter", evt)),
-  "keypress.f": () => { console.log("ii", inject("session"), inject("beakerSession"), inject("notebook")) },
 }
 
 

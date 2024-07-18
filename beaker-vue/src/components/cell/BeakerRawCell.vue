@@ -6,40 +6,34 @@
         </div>
         <Codemirror
             v-model="cell.source"
-            ref="codemirrorRef"
+            ref="codeMirrorRef"
             placeholder="Raw cell content..."
             :extensions="rawExtensions"
-            :autofocus="true"
+            :autofocus="false"
             @ready="handleReady"
         />
     </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject } from "vue";
-import CodeCellOutput from "./BeakerCodecellOutput.vue";
+import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance } from "vue";
 import { Codemirror } from "vue-codemirror";
-import { python } from '@codemirror/lang-python';
-import { oneDark } from '@codemirror/theme-one-dark';
-import Badge from 'primevue/badge';
-import BeakerCell from "./BeakerCell.vue";
+import { findSelectableParent } from "@/util";
 
 const props = defineProps([
     "cell",
 ]);
 
+const instance = getCurrentInstance();
 const cell = ref(props.cell);
-const isBusy = ref(false);
-const editorView = shallowRef();
-const theme = inject('theme');
-const session = inject('session');
-const activeContext = inject('activeContext');
-const codemirrorRef = ref<typeof Codemirror|null>(null);
+const codeMirrorRef = ref<typeof Codemirror|null>(null);
+const codeMirrorEditorView = shallowRef();
+const codeMirrorEditorState = shallowRef();
 
-const handleReady = (payload) => {
-    // TODO unused, but very useful for future operations.
-    // See vue codemirror api/npm docs.
-    editorView.value = payload.view;
+const handleReady = ({view, state}) => {
+    // See vue codemirror api/npm docs: https://codemirror.net/docs/ref/
+    codeMirrorEditorView.value = view;
+    codeMirrorEditorState.value = state;
 };
 
 enum ExecuteStatus {
@@ -48,8 +42,6 @@ enum ExecuteStatus {
   Error = 'error',
   Pending = 'pending',
 }
-
-const executeState = ref<ExecuteStatus>(ExecuteStatus.Pending);
 
 const rawExtensions = computed(() => {
     const ext = [];
@@ -60,18 +52,27 @@ const rawExtensions = computed(() => {
 
 });
 
+
 const execute = (evt: any) => {
-    // No op
+    // Nothing to do but exit
+    exit();
 }
 
 const enter = () => {
-    if(codemirrorRef.value?.focus) {
-        codemirrorRef.value?.focus();
+    if(codeMirrorEditorView.value?.focus) {
+        codeMirrorEditorView.value?.focus();
     }
 }
 
 const exit = () => {
-    window.blur();
+    console.log("raw cell exit");
+    // Be sure to blur editor even if we don't also refocus below.
+    if(codeMirrorEditorView.value?.blur) {
+        codeMirrorEditorView.value?.blur();
+    }
+    let target: HTMLElement = (instance.vnode.el as HTMLElement);
+    const selectableParent = findSelectableParent(target);
+    selectableParent?.focus();
 }
 
 const clear = () => {

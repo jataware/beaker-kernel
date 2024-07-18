@@ -1,8 +1,6 @@
 <template>
-    <div
-        class="markdown-cell"
-        @dblclick.stop.prevent="if (!editing) {editing = true};"
-        @keyup.enter.exact.stop.prevent="if (!editing) {editing = true;}; focusEditor();"
+    <div class="markdown-cell"
+        @dblclick="enter()"
     >
         <div v-if="!editing" v-html="renderedMarkdown"></div>
         <div v-else>
@@ -13,11 +11,13 @@
                     :ref="editorRef"
                 >
                     <Codemirror
-                        v-model="cell.source"
+                        v-model="editorContents"
                         placeholder="Your markdown..."
+                        :ref="codeMirrorRef"
                         :extensions="codeExtensions"
-                        :autofocus="true"
+                        :autofocus="false"
                         language="markdown"
+                        @ready="handleReady"
                     />
                 </div>
             </div>
@@ -26,24 +26,27 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed, onBeforeMount, defineExpose, nextTick, getCurrentInstance} from "vue";
+import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, shallowRef} from "vue";
 import { marked } from 'marked';
 import { Codemirror } from "vue-codemirror";
-import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
-import BeakerCell from "./BeakerCell.vue";
+import { findSelectableParent } from '@/util';
 
 const props = defineProps([
     "cell"
 ]);
 
 
+const instance = getCurrentInstance();
 const cell = ref(props.cell);
 const theme = inject('theme');
 const editing = ref(false);
 const editorRef = ref(null);
-const notebook = inject('notebook');
+const codeMirrorRef = ref(null);
+const codeMirrorEditorView = shallowRef();
+const codeMirrorEditorState = shallowRef();
+const editorContents = ref<string>(cell.value.source);
 
 const codeExtensions = computed(() => {
     const ext = [
@@ -51,21 +54,15 @@ const codeExtensions = computed(() => {
         EditorView.lineWrapping,
     ];
 
-    if (theme.value === 'dark') {
-        ext.push(oneDark);
-    }
     return ext;
 
 });
 
-const focusEditor = () => {
-    const editor: HTMLElement|null = editorRef.value.querySelector('.cm-content');
-        if (editor) {
-            editor.focus();
-        }
+const handleReady = ({view, state}) => {
+    // See vue codemirror api/npm docs: https://codemirror.net/docs/ref/
+    codeMirrorEditorView.value = view;
+    codeMirrorEditorState.value = state;
 };
-
-
 
 const renderedMarkdown = computed(() => {
     return marked.parse(props.cell?.source);
@@ -73,19 +70,35 @@ const renderedMarkdown = computed(() => {
 
 const execute = () => {
     editing.value = false;
+    cell.value.source = editorContents.value;
 }
 
-const enter = (evt?: KeyboardEvent) => {
+const enter = () => {
     editing.value = true;
-    if (typeof(evt) !== "undefined") {
-        evt.preventDefault();
-        evt.stopPropagation();
-    }
+
+    nextTick(() => {
+        if(codeMirrorEditorView.value?.focus) {
+            codeMirrorEditorView.value?.focus();
+        }
+    });
+}
+
+const exit = () => {
+    console.log("markdown cell exit");
+    let target: HTMLElement = (instance.vnode.el as HTMLElement);
+    const selectableParent = findSelectableParent(target);
+    selectableParent?.focus();
+}
+
+const clear = () => {
+    cell.value.source = "";
 }
 
 defineExpose({
     execute,
     enter,
+    exit,
+    clear,
 });
 
 onBeforeMount(() => {

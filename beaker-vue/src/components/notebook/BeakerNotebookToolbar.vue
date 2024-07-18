@@ -17,7 +17,7 @@
                     text
                 />
                 <Button
-                    @click="notebook.selectedCell.execute()"
+                    @click="notebook.selectedCell().execute()"
                     icon="pi pi-play"
                     size="small"
                     severity="info"
@@ -52,80 +52,49 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, defineExpose } from "vue";
-import { IBeakerCell, BeakerBaseCell, BeakerSession, BeakerNotebook } from 'beaker-kernel';
-import BeakerNotebookComponent from './BeakerNotebook.vue';
+import { inject } from "vue";
+import { BeakerSession } from 'beaker-kernel';
+import { IBeakerNotebook } from './BeakerNotebook.vue';
 
 import Button from "primevue/button";
 import Toolbar from "primevue/toolbar";
 
 import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
-// import { addCellAfter, enterCell, executeCell, findCellById, removeCell as removeOp } from "@/util/operations";
-import * as Operations from "@/util/operations"
+import { downloadFileDOM, getDateTime } from '@/util';
 
 const session: BeakerSession = inject('session');
-const notebook: typeof BeakerNotebookComponent = inject('notebook');
+const notebook: IBeakerNotebook = inject('notebook');
 
 
-const addCell = (toIndex) => {
-    const newCell = session.addCodeCell("");
-    notebook.selectCell(newCell);
+const addCodeCell = () => {
+    // const newCell = session.addCodeCell("");
+    // notebook.selectCell(newCell);
 }
 
-const addCodeCell = (toIndex?: number) => {
-    const newCell = session.addCodeCell("");
-    notebook.selectCell(newCell);
+const addMarkdownCell = () => {
+    // const newCell = session.addMarkdownCell("");
+    // notebook.selectCell(newCell);
 }
 
-const addMarkdownCell = (toIndex?: number) => {
-    const newCell = session.addMarkdownCell("");
-    notebook.selectCell(newCell);
-}
-
-const runCell = (cell?: string | IBeakerCell) => {
-    // if (cell !== undefined) {
-    //     if (typeof cell === "string") {
-    //         // cell = Operations.findCellById(notebook.beakerSession, cell);
-    //     }
-    //     else if (typeof cell?.id === "string") {
-    //         cell = cell.id;
-    //     }
-    // }
-    // else {
-    //     cell = notebook.selectedCellId;
-    // }
-    // if (!cell) {
-    //     // No cell passed in or selected, so do nothing.
-    //     return;
-    // }
-
-    notebook.selectedCell.execute();
-}
-
-const removeCell = () => {
-    if (!notebook.selectedCell) {
-        return;
-    }
-    // if (session.notebook.cells.includes(notebook.selectedCell))
-    const cellIdx = session.notebook.cells.indexOf(notebook.selectedCell.cell);
-    console.log({cellIdx});
-    if (cellIdx >= 0) {
-        session.notebook.cells.splice(cellIdx, 1);
-    }
-
-    if (notebook.cellCount <= 0) {
-        notebook.selectCell(session.addCodeCell(""));
-    }
-};
 
 const resetNotebook = async () => {
-    notebook.selectNextCell();
-
-    // await session.reset();
-    // if (notebook.cellCount <= 0) {
-    //     notebook.selectCell(session.addCodeCell(""));
-    // }
+    session.reset();
+    if (notebook.cellCount <= 0) {
+        notebook.selectCell(session.addCodeCell("") as {id: string});
+    }
 };
+
+function loadNotebook(notebookJSON) {
+    session.loadNotebook(notebookJSON);
+}
+
+
+function downloadNotebook() {
+    const data = JSON.stringify(session.notebook.toIPynb(), null, 2);
+    const filename = `Beaker-Notebook_${getDateTime()}.ipynb`;
+    const mimeType = 'application/x-ipynb+json';
+    downloadFileDOM(data, filename, mimeType);
+}
 
 </script>
 

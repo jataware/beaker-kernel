@@ -7,12 +7,13 @@
                 >
                     <Codemirror
                         v-model="cell.source"
-                        ref="codemirrorRef"
+                        ref="codeMirrorRef"
                         placeholder="Your code..."
                         :extensions="codeExtensions"
                         :disabled="isBusy"
-                        :autofocus="true"
+                        :autofocus="false"
                         @change="handleCodeChange"
+                        @click="clicked"
                         @ready="handleReady"
                     />
                     <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
@@ -48,33 +49,34 @@ import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView } from "codemirror";
 import { python } from '@codemirror/lang-python';
-import { oneDark } from '@codemirror/theme-one-dark';
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
-import BeakerCell from "./BeakerCell.vue";
-
+import { IBeakerCellComponent } from "./BeakerCell.vue";
+import { findSelectableParent } from "@/util";
+import { IBeakerNotebook } from "@/components/notebook/BeakerNotebook.vue"
+import { IBeakerSession } from "@/components/session/BeakerSession.vue"
 
 const props = defineProps([
     "cell",
 ]);
 
 const cell = ref(props.cell);
-const editorView = shallowRef();
 const theme = inject('theme');
-const session = inject('session');
-const activeContext = inject('activeContext');
-const codemirrorRef = ref<typeof Codemirror|null>(null);
-const notebook = inject('notebook');
-const inst = getCurrentInstance();
+const session: IBeakerSession = inject('session');
+const codeMirrorRef = ref<typeof Codemirror|null>(null);
+const codeMirrorEditorView = shallowRef();
+const codeMirrorEditorState = shallowRef();
+const notebook: IBeakerNotebook = inject('notebook');
+const instance = getCurrentInstance();
 
-const handleReady = (payload) => {
-    // TODO unused, but very useful for future operations.
-    // See vue codemirror api/npm docs.
-    editorView.value = payload.view;
+const handleReady = ({view, state}) => {
+    // See vue codemirror api/npm docs: https://codemirror.net/docs/ref/
+    codeMirrorEditorView.value = view;
+    codeMirrorEditorState.value = state;
 };
 
 const emit = defineEmits([
-    'blur-cell',
+    'blur',
 ])
 
 enum ExecuteStatus {
@@ -106,6 +108,10 @@ const badgeSeverity = computed(() => {
     return mappings[cell.value?.last_execution?.status];
 });
 
+const clicked = (evt) => {
+    notebook.selectCell(cell.value, true);
+    evt.stopPropagation();
+};
 
 function handleCodeChange() {
     cell.value.reset_execution_state();
@@ -123,39 +129,42 @@ const codeExtensions = computed(() => {
     if (isPython) {
         ext.push(python());
     }
-    // if (theme.value === 'dark') {
-    //     ext.push(oneDark);
-    // }
     return ext;
 
 });
 
 const execute = (evt: any) => {
     const future = props.cell.execute(session);
+
 }
 
 const enter = () => {
-    console.log("entering?", editorView.value);
-    if(editorView.value?.focus) {
-        console.log("dddd");
-        editorView.value?.focus();
+    if(codeMirrorEditorView.value?.focus) {
+        codeMirrorEditorView.value?.focus();
     }
 }
 
 const exit = () => {
-    inst.parent.refs.beakerCellRef.focus()
-    // emit('blur-cell');
-    // if(editorView.value) {
-        // editorView.value.dom.parentElement.focus();
-    //     console.log("dddd");
-    //     editorView.value?.blur();
-    // }
+    console.log("code cell exit");
+    // Be sure to blur editor even if we don't also refocus below.
+    if(codeMirrorEditorView.value?.blur) {
+        codeMirrorEditorView.value?.blur();
+    }
+    let target: HTMLElement = (instance.vnode.el as HTMLElement);
+    const selectableParent = findSelectableParent(target);
+    selectableParent?.focus();
+}
+
+const clear = () => {
+    cell.value.source = "";
+    cell.value.outputs.splice(0, cell.value.outputs.length);
 }
 
 defineExpose({
     execute,
     enter,
     exit,
+    clear,
 });
 
 

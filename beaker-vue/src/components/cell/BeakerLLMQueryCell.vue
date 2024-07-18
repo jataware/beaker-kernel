@@ -122,11 +122,10 @@
 import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
 import Button from "primevue/button";
 import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
-import { IIOPubMessage } from "@jupyterlab/services/lib/kernel/messages";
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 import BeakerCodeCell from './BeakerCodeCell.vue';
-import BeakerCell from "./BeakerCell.vue";
 import BeakerNotebookComponent from '../notebook/BeakerNotebook.vue';
+import { IBeakerNotebook } from "@/components/notebook/BeakerNotebook.vue"
 
 const props = defineProps([
     'index',
@@ -143,7 +142,7 @@ const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
 const childrenRef = ref<typeof BeakerCodeCell|null>(null);
-const notebook: typeof BeakerNotebookComponent = inject("notebook");
+const notebook: IBeakerNotebook = inject("notebook");
 
 const getChildByCellId = (child_id: string) : BeakerBaseCell | undefined => {
     const index = cell.value.children?.findIndex((child) => child.id === child_id)
@@ -188,9 +187,21 @@ function enter() {
     // const future = props.cell.execute(session);
 }
 
+const clear = () => {
+    cell.value.source = "";
+    cell.value.outputs.splice(0, cell.value.outputs.length);
+}
+
+const exit = () => {
+    //
+    console.log("llm query exit")
+}
+
 defineExpose({
     execute,
     enter,
+    exit,
+    clear,
 });
 
 </script>
