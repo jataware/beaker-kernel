@@ -151,6 +151,7 @@ defineExpose({
     flex-direction: column;
     background-color: var(--surface-a);
     z-index: 3;
+    overflow: auto;
 }
 
 .drop-overflow-catcher {

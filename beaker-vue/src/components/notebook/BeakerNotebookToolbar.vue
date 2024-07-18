@@ -102,5 +102,6 @@ function downloadNotebook() {
 <style lang="scss">
 .beaker-toolbar {
     padding: 0.25rem 0.5rem;
+    align-self: flex-start;
 }
 </style>
