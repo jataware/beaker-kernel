@@ -41,14 +41,14 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
-import { defineProps, ref, computed, defineEmits, defineExpose, withDefaults, inject, watch  } from "vue";
+import { defineProps, ref, inject } from "vue";
 import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodeCell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import { IBeakerNotebook } from '@/components/notebook/BeakerNotebook.vue';
-import { IBeakerSession } from '@/components/session/BeakerSession.vue';
 
 import BeakerRawCell from './BeakerRawCell.vue';
 import { IBeakerCell } from "beaker-kernel";
@@ -63,13 +63,6 @@ export type CellTypes =
 export interface Props {
     cell: IBeakerCell;
     dragEnabled?: boolean;
-}
-
-export interface IBeakerCellComponent {
-    execute: () => null;
-    enter: () => null;
-    exit: () => null;
-    clear: () => null;
 }
 
 const myRef = ref();
@@ -103,9 +96,6 @@ enum CellState {
 }
 
 const cellState = ref<CellState>(CellState.Pending);
-
-
-
 </script>
 
 <style lang="scss">

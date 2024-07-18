@@ -84,7 +84,6 @@ const enter = () => {
 }
 
 const exit = () => {
-    console.log("markdown cell exit");
     let target: HTMLElement = (instance.vnode.el as HTMLElement);
     const selectableParent = findSelectableParent(target);
     selectableParent?.focus();

@@ -65,7 +65,6 @@ const enter = () => {
 }
 
 const exit = () => {
-    console.log("raw cell exit");
     // Be sure to blur editor even if we don't also refocus below.
     if(codeMirrorEditorView.value?.blur) {
         codeMirrorEditorView.value?.blur();

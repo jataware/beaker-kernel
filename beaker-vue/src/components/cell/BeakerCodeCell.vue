@@ -51,7 +51,6 @@ import { EditorView } from "codemirror";
 import { python } from '@codemirror/lang-python';
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
-import { IBeakerCellComponent } from "./BeakerCell.vue";
 import { findSelectableParent } from "@/util";
 import { IBeakerNotebook } from "@/components/notebook/BeakerNotebook.vue"
 import { IBeakerSession } from "@/components/session/BeakerSession.vue"
@@ -145,7 +144,6 @@ const enter = () => {
 }
 
 const exit = () => {
-    console.log("code cell exit");
     // Be sure to blur editor even if we don't also refocus below.
     if(codeMirrorEditorView.value?.blur) {
         codeMirrorEditorView.value?.blur();

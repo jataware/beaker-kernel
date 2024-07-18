@@ -183,7 +183,6 @@ function execute() {
 }
 
 function enter() {
-    console.log("entered");
     // const future = props.cell.execute(session);
 }
 
@@ -194,7 +193,6 @@ const clear = () => {
 
 const exit = () => {
     //
-    console.log("llm query exit")
 }
 
 defineExpose({

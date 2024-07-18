@@ -8,9 +8,14 @@
 import { ref, computed, nextTick, provide, inject } from "vue";
 import { ComponentPublicInstance } from '@vue/runtime-core';
 import { IBeakerCell, BeakerSession, BeakerNotebook } from 'beaker-kernel';
-
-import { IBeakerCellComponent} from '@/components/cell/BeakerCell.vue';
 import { default as BeakerSessionComponent, IBeakerSession} from "../session/BeakerSession.vue";
+
+export interface IBeakerCellComponent {
+    execute: () => null;
+    enter: () => null;
+    exit: () => null;
+    clear: () => null;
+}
 
 export interface IBeakerNotebook extends ComponentPublicInstance {
   beakerSession: IBeakerSession
