@@ -266,10 +266,12 @@ onBeforeMount(() => {
 
   if (notebookData[sessionId]?.data) {
     nextTick(() => {
-        beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
-        nextTick(() => {
-            beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
-        });
+        if (beakerNotebookRef.value?.notebook) {
+            beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
+            nextTick(() => {
+                beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
+            });
+        }
     });
   }
   saveInterval.value = setInterval(snapshot, 30000);
@@ -354,11 +356,14 @@ const snapshot = () => {
     console.error(e);
     notebookData = {};
   }
-  notebookData[sessionId] = {
-    data: beakerNotebookRef.value?.notebook.toIPynb(),
-    selectedCell: beakerNotebookRef.value?.selectedCellId,
-  };
-  localStorage.setItem("notebookData", JSON.stringify(notebookData));
+  // Only save state if there is state to save
+  if (beakerNotebookRef.value?.notebook) {
+    notebookData[sessionId] = {
+        data: beakerNotebookRef.value?.notebook.toIPynb(),
+        selectedCell: beakerNotebookRef.value?.selectedCellId,
+    };
+    localStorage.setItem("notebookData", JSON.stringify(notebookData));
+  }
 };
 
 </script>
