@@ -206,7 +206,6 @@ export default {
     flex: 1;
     flex-direction: column;
     height: 100%;
-    overflow-y: scroll;
 }
 
 .welcome-placeholder  {
