@@ -71,6 +71,7 @@ const handleQuery = (e: any) => {
     nextTick(() => {
         notebook.selectCell(cell.id);
         beakerSession.findNotebookCellById(cell.id).execute();
+        props.runCellCallback?.(e);
     });
 }
 
