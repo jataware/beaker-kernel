@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+    <div id="app">
         <BeakerSession
             ref="beakerSession"
             :connectionSettings="props.config"
@@ -108,12 +108,12 @@
 
         <!-- Modals, popups and globals -->
         <Toast position="bottom-right" />
-  </div>
+    </div>
 </template>
 
 <script setup lang="ts">
 import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted } from 'vue';
-import { JupyterMimeRenderer  } from 'beaker-kernel';
+import { JupyterMimeRenderer } from 'beaker-kernel';
 import BeakerNotebook from '@/components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '@/components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '@/components/notebook/BeakerNotebookPanel.vue';
@@ -166,20 +166,20 @@ const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
 
 const props = defineProps([
-  "config",
-  "connectionSettings",
-  "sessionName",
-  "sessionId",
-  "defaultKernel",
-  "renderers",
+    "config",
+    "connectionSettings",
+    "sessionName",
+    "sessionId",
+    "defaultKernel",
+    "renderers",
 ]);
 
 
 const renderers = [
-  ...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
-  JSONRenderer,
-  LatexRenderer,
-  DecapodeRenderer,
+    ...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
+    JSONRenderer,
+    LatexRenderer,
+    DecapodeRenderer,
 ];
 
 const cellComponentMapping = {
@@ -217,35 +217,35 @@ const toggleDarkMode = () => {
 
 
 const iopubMessage = (msg) => {
-  if (msg.header.msg_type === "preview") {
-    previewData.value = msg.content;
-  } else if (msg.header.msg_type === "debug_event") {
-    debugLogs.value.push({
-      type: msg.content.event,
-      body: msg.content.body,
-      timestamp: msg.header.date,
-    });
-  }
+    if (msg.header.msg_type === "preview") {
+        previewData.value = msg.content;
+    } else if (msg.header.msg_type === "debug_event") {
+        debugLogs.value.push({
+            type: msg.content.event,
+            body: msg.content.body,
+            timestamp: msg.header.date,
+        });
+    }
 };
 
 const anyMessage = (msg, direction) => {
-  rawMessages.value.push({
-    type: direction,
-    body: msg,
-    timestamp: msg.header.date,
-  });
+    rawMessages.value.push({
+        type: direction,
+        body: msg,
+        timestamp: msg.header.date,
+    });
 };
 
 const unhandledMessage = (msg) => {
-  console.log("Unhandled message recieved", msg);
+    console.log("Unhandled message recieved", msg);
 }
 
 const statusChanged = (newStatus) => {
-  connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
+    connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
 };
 
 const toggleContextSelection = () => {
-  contextSelectionOpen.value = !contextSelectionOpen.value;
+    contextSelectionOpen.value = !contextSelectionOpen.value;
 };
 
 const selectAction = (actionName: string) => {
@@ -254,29 +254,29 @@ const selectAction = (actionName: string) => {
 };
 
 onBeforeMount(() => {
-  document.title = "Beaker Development Interface"
-  var notebookData: {[key: string]: any};
-  try {
-    notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-  }
-  catch (e) {
-    console.error(e);
-    notebookData = {};
-  }
+    document.title = "Beaker Development Interface"
+    var notebookData: {[key: string]: any};
+    try {
+        notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
+    }
+    catch (e) {
+        console.error(e);
+        notebookData = {};
+    }
 
-  if (notebookData[sessionId]?.data) {
-    nextTick(() => {
-        if (beakerNotebookRef.value?.notebook) {
-            beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
-            nextTick(() => {
-                beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
-            });
-        }
-    });
-  }
-  saveInterval.value = setInterval(snapshot, 30000);
-  window.addEventListener("beforeunload", snapshot);
-  applyTheme();
+    if (notebookData[sessionId]?.data) {
+        nextTick(() => {
+            if (beakerNotebookRef.value?.notebook) {
+                beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
+                nextTick(() => {
+                    beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
+                });
+            }
+        });
+    }
+    saveInterval.value = setInterval(snapshot, 30000);
+    window.addEventListener("beforeunload", snapshot);
+    applyTheme();
 });
 
 onUnmounted(() => {
@@ -348,32 +348,32 @@ const sessionKeybindings = {
 }
 
 const snapshot = () => {
-  var notebookData: {[key: string]: any};
-  try {
-    notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-  }
-  catch (e) {
-    console.error(e);
-    notebookData = {};
-  }
-  // Only save state if there is state to save
-  if (beakerNotebookRef.value?.notebook) {
-    notebookData[sessionId] = {
-        data: beakerNotebookRef.value?.notebook.toIPynb(),
-        selectedCell: beakerNotebookRef.value?.selectedCellId,
-    };
-    localStorage.setItem("notebookData", JSON.stringify(notebookData));
-  }
+    var notebookData: {[key: string]: any};
+    try {
+        notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
+    }
+    catch (e) {
+        console.error(e);
+        notebookData = {};
+    }
+    // Only save state if there is state to save
+    if (beakerNotebookRef.value?.notebook) {
+        notebookData[sessionId] = {
+            data: beakerNotebookRef.value?.notebook.toIPynb(),
+            selectedCell: beakerNotebookRef.value?.selectedCellId,
+        };
+        localStorage.setItem("notebookData", JSON.stringify(notebookData));
+    }
 };
 
 </script>
 
 <style lang="scss">
 #app {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background-color: var(--surface-b);
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--surface-b);
 }
 
 header {

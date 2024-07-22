@@ -32,15 +32,15 @@ import Button from 'primevue/button';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
 
 import { BeakerSession } from 'beaker-kernel';
-import { IBeakerSession } from '@/components/session/BeakerSession.vue';
-import { IBeakerNotebook } from '@/components/notebook/BeakerNotebook.vue';
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
 const props = defineProps([
     "runCellCallback"
 ]);
 
-const beakerSession: IBeakerSession = inject("beakerSession");
-const notebook: IBeakerNotebook = inject("notebook");
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+const notebook = inject<BeakerNotebookComponentType>("notebook");
 
 const query = ref("");
 const emit = defineEmits([

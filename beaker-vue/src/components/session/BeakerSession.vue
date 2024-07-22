@@ -5,28 +5,12 @@
 </template>
 
 <script lang="ts">
-import { reactive, ref, inject, provide, VNode } from 'vue';
+import { reactive, ref, inject, provide, VNode, defineComponent, PropType} from 'vue';
 import { ComponentPublicInstance } from '@vue/runtime-core';
-import { BeakerSession, JupyterMimeRenderer  } from 'beaker-kernel';
+import { BeakerSession, IBeakerRendererOptions, JupyterMimeRenderer } from 'beaker-kernel';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import BeakerCell from '@/components/cell/BeakerCell.vue'
 
-
-export interface IBeakerSession extends ComponentPublicInstance {
-  activeContext: any,
-  connectionSettings: any,
-  defaultKernel: string,
-  renderers: JupyterMimeRenderer[],
-  session: BeakerSession,
-  sessionId: string,
-  sessionName: string,
-  status,
-
-  fetchContextInfo: () => any,
-  findNotebookCell: (any) => any,
-  findNotebookCellById: (any) => any,
-  setContext: () => void,
-}
 
 // eslint-disable-next-line
 // @ts-ignore: setupState is not defined in the Vue type definition, but seems to reliably exist, and it's ok if it doesn't.
@@ -40,13 +24,13 @@ const isCell = (vnode: VNode) => {
   )
 }
 
-export default {
+export const BeakerSessionComponent = defineComponent({
   props: {
       "connectionSettings": Object,
       "sessionName": String,
       "sessionId": String,
       "defaultKernel": String,
-      "renderers": Object,
+      "renderers": (Object as PropType<JupyterMimeRenderer[]>),
   },
 
   emits: [
@@ -62,7 +46,6 @@ export default {
     const status = ref("unknown");
 
 
-    // const activeContext = ref<IActiveContextInfo | undefined>(undefined);
     const activeContext = ref();
 
     const rawSession = new BeakerSession(
@@ -72,7 +55,7 @@ export default {
         sessionId: props.sessionId,
         kernelName: props.defaultKernel,
         rendererOptions: {
-          renderers: props.renderers || []
+          renderers: props.renderers || [],
         }
       }
     );
@@ -193,7 +176,12 @@ export default {
   mounted() {
     this.fetchContextInfo();
   },
-}
+});
+
+export type BeakerSessionComponentType = InstanceType<typeof BeakerSessionComponent>;
+
+export default BeakerSessionComponent;
+
 </script>
 
 <style lang="scss">

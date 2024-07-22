@@ -93,7 +93,7 @@ import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
 
 import { BeakerSession } from 'beaker-kernel';
-import { IBeakerSession } from '@/components/session/BeakerSession.vue';
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
 
 const props = defineProps([
     "actions",
@@ -105,8 +105,8 @@ const emit = defineEmits([
     "clearSelection",
 ])
 
-const session: BeakerSession = inject('session');
-const beakerSession: IBeakerSession = inject('beakerSession');
+const session = inject<BeakerSession>('session');
+const beakerSession = inject<BeakerSessionComponentType>('beakerSession');
 const showToast = inject('show_toast');
 
 const actionType = ref<string>();

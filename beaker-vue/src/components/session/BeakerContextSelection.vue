@@ -77,7 +77,7 @@ import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import Dropdown from 'primevue/dropdown';
 import Checkbox from 'primevue/checkbox';
-import BeakerSession from "./BeakerSession.vue";
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
 
 const props = defineProps([
     "isOpen",
@@ -88,8 +88,7 @@ const contextData = ref(undefined);
 const logDebug = ref([]);
 const logVerbose = ref([]);
 const theme = inject("theme");
-const beakerSession: typeof BeakerSession = inject("beakerSession");
-// const activeContext = inject('activeContext');
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const emit = defineEmits([
     "update-context-info",

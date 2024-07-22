@@ -43,11 +43,11 @@
 import { ref, inject, computed, defineExpose, defineEmits } from 'vue';
 import { BeakerSession, IBeakerCell } from 'beaker-kernel';
 import BeakerCell from '../cell/BeakerCell.vue';
-import { IBeakerNotebook } from '@/components/notebook/BeakerNotebook.vue';
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
-const session: BeakerSession = inject('session');
+const session = inject<BeakerSession>('session');
 const cellMap = inject("cell-component-mapping");
-const notebook: IBeakerNotebook = inject("notebook");
+const notebook = inject<BeakerNotebookComponentType>("notebook");
 
 const cellsContainerRef = ref(null);
 const isDragActive = ref(false);

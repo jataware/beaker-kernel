@@ -124,8 +124,7 @@ import Button from "primevue/button";
 import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 import BeakerCodeCell from './BeakerCodeCell.vue';
-import BeakerNotebookComponent from '../notebook/BeakerNotebook.vue';
-import { IBeakerNotebook } from "@/components/notebook/BeakerNotebook.vue"
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
 const props = defineProps([
     'index',
@@ -142,7 +141,7 @@ const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
 const childrenRef = ref<typeof BeakerCodeCell|null>(null);
-const notebook: IBeakerNotebook = inject("notebook");
+const notebook = inject<BeakerNotebookComponentType>("notebook");
 
 const getChildByCellId = (child_id: string) : BeakerBaseCell | undefined => {
     const index = cell.value.children?.findIndex((child) => child.id === child_id)

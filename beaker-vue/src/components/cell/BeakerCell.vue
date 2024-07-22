@@ -48,7 +48,7 @@ import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodeCell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
-import { IBeakerNotebook } from '@/components/notebook/BeakerNotebook.vue';
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
 import BeakerRawCell from './BeakerRawCell.vue';
 import { IBeakerCell } from "beaker-kernel";
@@ -71,7 +71,7 @@ const props = defineProps<Props>();
 
 const cell = ref(props.cell);
 
-const notebook: IBeakerNotebook = inject("notebook");
+const notebook = inject<BeakerNotebookComponentType>("notebook");
 const cellMap = inject("cell-component-mapping");
 
 const clicked = (evt) => {

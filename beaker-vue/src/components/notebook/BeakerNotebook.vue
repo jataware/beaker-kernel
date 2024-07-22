@@ -5,10 +5,9 @@
 </template>
 
 <script lang="tsx">
-import { ref, computed, nextTick, provide, inject } from "vue";
-import { ComponentPublicInstance } from '@vue/runtime-core';
+import { defineComponent, ref, computed, nextTick, provide, inject } from "vue";
 import { IBeakerCell, BeakerSession, BeakerNotebook } from 'beaker-kernel';
-import { default as BeakerSessionComponent, IBeakerSession} from "../session/BeakerSession.vue";
+import { BeakerSessionComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 export interface IBeakerCellComponent {
     execute: () => null;
@@ -17,37 +16,19 @@ export interface IBeakerCellComponent {
     clear: () => null;
 }
 
-export interface IBeakerNotebook extends ComponentPublicInstance {
-  beakerSession: IBeakerSession
-  session: BeakerSession,
-  notebook: BeakerNotebook,
-  selectedCellId: string,
-  cellCount: number,
-
-  selectCell: (cell: string | {id: string}, enter?: boolean) => string,
-  selectedCell: () => IBeakerCellComponent,
-  selectNextCell: (referenceCell?: IBeakerCell) => string | null,
-  selectPrevCell: (referenceCell?: IBeakerCell) => string | null,
-  insertCellBefore: (referenceCell?: IBeakerCell, cellType?: string) => IBeakerCell,
-  insertCellAfter: (referenceCell?: IBeakerCell, cellType?: string) => IBeakerCell,
-  removeCell: (cell?: IBeakerCell) => IBeakerCell,
-}
-
-export default {
+export const BeakerNotebookComponent = defineComponent({
     props: [
         "cellMap",
     ],
-    emits: [
-    ],
 
-    setup(props, { emit }) {
+    setup(props) {
 
         const session: BeakerSession = inject('session');
-        const beakerSession: typeof BeakerSessionComponent = inject('beakerSession');
+        const beakerSession = inject<BeakerSessionComponentType>('beakerSession');
         const notebook = ref<BeakerNotebook>(session.notebook);
 
         // TODO: Clear up session/beakerSession confusion. sessionContext? sessionController?
-        const selectedCellId = ref<string>("");
+        const selectedCellId = ref<string | null>(null);
         provide('cell-component-mapping', props.cellMap);
 
         const cellCount = computed(() => session?.notebook?.cells?.length || 0);
@@ -196,7 +177,12 @@ export default {
             this.selectCell(this.notebook.cells[0].id);
         }
     }
-}
+});
+
+export type BeakerNotebookComponentType = InstanceType<typeof BeakerNotebookComponent>;
+
+export default BeakerNotebookComponent;
+
 </script>
 
 

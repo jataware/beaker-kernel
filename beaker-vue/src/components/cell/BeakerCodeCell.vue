@@ -52,8 +52,9 @@ import { python } from '@codemirror/lang-python';
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 import { findSelectableParent } from "@/util";
-import { IBeakerNotebook } from "@/components/notebook/BeakerNotebook.vue"
-import { IBeakerSession } from "@/components/session/BeakerSession.vue"
+import { BeakerSession } from "beaker-kernel";
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
 const props = defineProps([
     "cell",
@@ -61,11 +62,12 @@ const props = defineProps([
 
 const cell = ref(props.cell);
 const theme = inject('theme');
-const session: IBeakerSession = inject('session');
+const session = inject<BeakerSession>('session');
 const codeMirrorRef = ref<typeof Codemirror|null>(null);
 const codeMirrorEditorView = shallowRef();
 const codeMirrorEditorState = shallowRef();
-const notebook: IBeakerNotebook = inject('notebook');
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+const notebook = inject<BeakerNotebookComponentType>("notebook");
 const instance = getCurrentInstance();
 
 const handleReady = ({view, state}) => {

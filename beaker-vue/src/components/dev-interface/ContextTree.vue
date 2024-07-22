@@ -63,6 +63,7 @@ import { ref, defineProps, defineEmits, computed, inject } from "vue";
 import Button from 'primevue/button';
 import Tree from 'primevue/tree';
 import { emitError } from "vue-json-pretty/types/utils";
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
 
 const contextPanelOpen = ref(true);
 const toggleContextPanel = () => {
@@ -75,7 +76,7 @@ const toggleContextPanel = () => {
 const contextExpandedKeys = ref({0: true, 1: true, 2: true, 3: true});
 
 const emits = defineEmits(['action-selected']);
-const beakerSession = inject("beakerSession");
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const contextNodes = computed(() => {
 
