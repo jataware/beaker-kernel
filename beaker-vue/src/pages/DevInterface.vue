@@ -22,7 +22,7 @@
                     @select-kernel="toggleContextSelection"
                 />
             </header>
-            <main style="display: flex;">
+            <main style="display: flex; overflow: auto;">
                 <SideMenu
                     position="left"
                     :show-label="true"
