@@ -65,8 +65,16 @@ const handleReady = ({view, state}) => {
 };
 
 const renderedMarkdown = computed(() => {
-    return marked.parse(props.cell?.source);
+    return marked.parse(props.cell?.source || "");
 });
+
+// TODO: migrate to enter/exit
+const focusEditor = () => {
+    const editor: HTMLElement|null = editorRef?.value?.querySelector('.cm-content');
+        if (editor) {
+            editor.focus();
+        }
+};
 
 const execute = () => {
     editing.value = false;

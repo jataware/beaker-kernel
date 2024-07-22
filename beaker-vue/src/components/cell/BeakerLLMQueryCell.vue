@@ -2,33 +2,20 @@
     <div class="llm-query-cell">
         <div class="query-row">
             <div class="query">
-                <div v-if="editing" style="display: flex">
-                    <!-- TODO move ctrl/shift event stop on keyboard controller -->
+                <div v-show="focused">
                     <ContainedTextArea
+                        ref="textarea"
                         style="max-width: 50%; margin-right: 0.75rem; flex: 1;"
-                        @keydown.ctrl.enter.stop
-                        @keydown.shift.enter.stop
-                        v-model="editingContents"
+                        v-model="cell.source"
                     />
-                    <div class="edit-actions">
-                        <Button outlined severity="success" label="Save" size="small" @click="saveEdit"/>
-                        <Button outlined class="cancel-button" @click="cancelEdit" label="Cancel" size="small" />
-                    </div>
                 </div>
-                <div v-else>
-                    <div>
-                        {{ cell.source }} <span v-if="savedEdit" style="font-weight: 100;">(edited)</span>
+                <div v-show="!focused">
+                    <div class="llm-prompt-container">
+                        <p class="llm-prompt-text">{{ cell.source }}</p>
                     </div>
                 </div>
             </div>
             <div class="actions">
-                <Button
-                    text
-                    size="small"
-                    icon="pi pi-pencil"
-                    severity="info"
-                    @click="startEdit"
-                />
                 <Button
                     v-if="cell.status === 'busy'"
                     style="pointer-events: none;"
@@ -37,38 +24,25 @@
                     severity="info"
                     icon="pi pi-spin pi-spinner"
                 />
-                <Button
-                    v-else
-                    style="pointer-events: none;"
-                    text
-                    size="small"
-                    severity="success"
-                    icon="pi pi-check-circle"
-                />
             </div>
         </div>
-        <div class="events" :class="event.type" v-for="event of cell.events" :key="event">
-            <span v-if="event.type === 'thought'">Thought:&nbsp;</span>
-            <template v-if="event.type === 'thought'" >{{ event.content }}</template>
-            <span v-if="event.type ==='code_cell'">
-                <Component
-                    v-if="typeof(getChildByCellId(event.content?.id)) !== 'undefined'"
-
-                    :key="event.content.id"
-                    :is="BeakerCodeCell"
-                    :cell="getChildByCellId(event.content.id)"
-                    :index="`${index}:${event.content.index}`"
-                    :class="{
-                        selected: (index === selectedCellIndex)
-                    }"
-                    ref="childrenRef"
-                    drag-enabled=false
-                    @click.stop="() => notebook.selectCell(cell)"
-                />
-                <!-- @click.stop="props.childOnClickCallback(`${index}:${event.content.index}`)" -->
-            </span>
-            <template v-if="event.type === 'response'" >{{ event.content }}</template>
-            <template v-if="event.type === 'abort'" >{{ event.content }}</template>
+        <div class="event-container" v-if="taggedCellEvents.length > 0">
+            <div class="events">
+                <Accordion :multiple="true" :class="'query-accordion'">
+                    <AccordionTab 
+                        v-for="[eventIndex, event] of taggedCellEvents.entries()" 
+                        :header="queryEventNameMap[event.type]"
+                        :key="eventIndex"
+                        :class="'query-accordiontab'"
+                    >
+                        <BeakerLLMQueryEvent
+                            :key="eventIndex"
+                            :event="event"
+                            :parentQueryCell="cell"
+                        />
+                    </AccordionTab>
+                </Accordion>
+            </div>
         </div>
         <div
             class="input-request"
@@ -95,79 +69,51 @@
         </div>
     </div>
 
-    <!-- <template #child-cells>
-        <div class="cell-children">
-            <Component
-                v-for="(child, subindex) in props.cell?.children"
-                :key="child.id"
-                :is="child.cell_type"
-                :cell="child"
-                :index="`${index}:${subindex}`"
-                :class="{
-                    selected: (index === selectedCellIndex)
-                }"
-                ref="childrenRef"
-                drag-enabled=false
-            /> -->
-                <!-- @click.stop="childOnClickCallback(`${index}:${subindex}`)" -->
-                <!-- :is="cellComponent" -->
-                <!-- @keyup.esc="unfocusEditor" -->
-        <!-- </div>
-
-    </template> -->
-
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick } from "vue";
 import Button from "primevue/button";
-import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
-import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
-import BeakerCodeCell from './BeakerCodeCell.vue';
-import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import Accordion from "primevue/accordion";
+import AccordionTab from "primevue/accordiontab";
+import BeakerLLMQueryEvent from "./BeakerLLMQueryEvent.vue";
+import { BeakerQueryEvent, BeakerQueryEventType } from "beaker-kernel/dist/notebook";
+import ContainedTextArea from "../misc/ContainedTextArea.vue";
+import { BeakerSession } from "beaker-kernel";
 
 const props = defineProps([
     'index',
     'cell',
-    'selectedCellIndex',
-    'childOnClickCallback',
-    'selectNext'
 ]);
 
-const cell = ref(props.cell);
-const editing = ref(false);
-const editingContents = ref("");
-const savedEdit = ref("");
+const cell = shallowRef(props.cell);
+const focused = ref(false);
 const response = ref("");
-const session: BeakerSession = inject("session");
-const childrenRef = ref<typeof BeakerCodeCell|null>(null);
-const notebook = inject<BeakerNotebookComponentType>("notebook");
+const textarea = ref();
 
-const getChildByCellId = (child_id: string) : BeakerBaseCell | undefined => {
-    const index = cell.value.children?.findIndex((child) => child.id === child_id)
-    return cell.value?.children?.[index]
+const session = inject<BeakerSession>('session');
+
+const taggedCellEvents = computed(() => {
+    let index = 0;
+    let events: BeakerQueryEvent[] = [...props.cell.events];
+    for (const queryEvent of events) {
+        if (queryEvent.type == "code_cell") {
+            queryEvent.content.metadata.subindex = index;
+            index += 1;
+        }
+    }
+    return events;
+});
+
+const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
+    "thought": "Agent Thought",
+    "response": "Agent Response",
+    "code_cell": "Code",
+    "user_answer": "User Input",
+    "user_question": "User Input",
+    "error": "Error",
+    "abort": "Abort"
 }
-
-function cancelEdit() {
-    editing.value = false;
-    editingContents.value = savedEdit.value || cell.value.source;
-}
-
-async function startEdit() {
-    if (editing.value === true) {
-        return;
-    } // else [is]editing.value is false
-    editing.value = true;
-    editingContents.value = savedEdit.value || cell.value.source;
-
-}
-
-function saveEdit() {
-    editing.value = false;
-    savedEdit.value = editingContents.value;
-    cell.value.source = editingContents.value;
-}
-
 
 const respond = () => {
     if (!response.value.trim()) {
@@ -178,27 +124,32 @@ const respond = () => {
 };
 
 function execute() {
+    focused.value = false;
     const future = props.cell.execute(session);
 }
 
 function enter() {
-    // const future = props.cell.execute(session);
+    if (!focused.value) {
+        focused.value = true;
+        nextTick(() => {
+            textarea.value.$el.focus();
+        });
+    }
 }
 
-const clear = () => {
-    cell.value.source = "";
-    cell.value.outputs.splice(0, cell.value.outputs.length);
+function exit() {
+    // TODO
 }
 
-const exit = () => {
-    //
+function clear() {
+    // TODO
 }
 
 defineExpose({
-    execute,
-    enter,
-    exit,
-    clear,
+    execute, 
+    enter, 
+    exit, 
+    clear
 });
 
 </script>
@@ -206,7 +157,7 @@ defineExpose({
 
 <style lang="scss">
 .llm-query-cell {
-    padding: 0.5rem 0.35rem 1rem 1.2rem;
+    padding: 0rem 0.35rem 1rem 1.2rem;
 }
 
 .query-row {
@@ -217,25 +168,13 @@ defineExpose({
 
 .events {
     padding: 0.25rem 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .query {
-    font-weight: bold;
     flex: 1;
-    line-height: 2.5rem;
     margin-bottom: 0.25rem;
-}
-
-.user_question {
-    font-style: italic;
-}
-
-.user_answer {
-    border-radius: 4px;
-    background-color: var(--surface-c);
-    padding: 0.4rem;
-    display: inline-block;
-    margin: 0.2rem 0;
 }
 
 .thought {
@@ -273,6 +212,38 @@ defineExpose({
 .cancel-button {
     border-color: var(--surface-100);
     color: var(--primary-text-color);
+}
+
+
+.llm-prompt-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.llm-prompt-text {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.event-container {
+    margin-top: 1.25rem;
+    padding: 0rem;
+    border-radius: 6px;
+    //background-color: var(--surface-c);
+}
+
+.query-events-header {
+    background-color: var(--surface-b);
+    border-radius: 6px 6px 0 0;
+}
+
+.query-events-header {
+    font-weight: 600;
+}
+
+.query-accordion .p-accordion-content {
+    padding-top: 0.25rem;
+    padding-bottom: 0rem;
 }
 
 </style>

@@ -14,7 +14,7 @@ export {
     type IBeakerCell,
     type IBeakerHeader,
     type IBeakerIOPubMessage,
-    type IBeakerQueryEvent,
+    type BeakerQueryEvent,
     type IBeakerShellMessage,
     type IQueryCell,
     BeakerBaseCell,

@@ -173,7 +173,7 @@ defineExpose({
 
 <style lang="scss">
 .code-cell {
-    padding-left: 0.2rem;
+    padding-left: 16px;
 }
 
 .code-cell-grid {

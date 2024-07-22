@@ -6,7 +6,7 @@
 
 <script lang="tsx">
 import { defineComponent, ref, computed, nextTick, provide, inject } from "vue";
-import { IBeakerCell, BeakerSession, BeakerNotebook } from 'beaker-kernel';
+import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell } from 'beaker-kernel';
 import { BeakerSessionComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 export interface IBeakerCellComponent {
@@ -160,6 +160,29 @@ export const BeakerNotebookComponent = defineComponent({
             }
             return this.notebook.cutCell(index);
         },
+
+        convertCellType(cell: IBeakerCell, cellType: string) {
+            const cellIndex = this.notebook.cells.indexOf(cell);
+            if (cellIndex === -1) {
+                console.warn("attempted to convert cell not found in parent cell in place; cell not found");
+                return;
+            }
+            const mapping = {
+                "markdown": BeakerMarkdownCell,
+                "code": BeakerCodeCell,
+                "query": BeakerQueryCell,
+                "raw": BeakerRawCell
+            };
+            if (!Object.keys(mapping).includes(cellType)) {
+                console.warn("invalid cell type provided for conversion target");
+                return;
+            }
+            const newCell = new mapping[cellType]({...cell});
+            console.log(newCell);
+            console.log(cell);
+            newCell.cell_type = cellType;
+            this.notebook.cells.splice(cellIndex, 1, newCell);
+        }
     },
 
     computed: {
