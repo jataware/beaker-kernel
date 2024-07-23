@@ -14,6 +14,7 @@ import { Codemirror } from "vue-codemirror";
 import { EditorView } from "codemirror";
 import { Extension } from "@codemirror/state";
 import { python } from "@codemirror/lang-python";
+import { r } from 'codemirror-lang-r';
 import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { json } from "@codemirror/lang-json";
@@ -31,6 +32,9 @@ const languageMap: {[key: string]: (options: any) => Extension} = {
     markdown,
     json,
     javascript,
+    rlang: r,
+    r,
+    ir: r,
 }
 
 declare interface Props {
