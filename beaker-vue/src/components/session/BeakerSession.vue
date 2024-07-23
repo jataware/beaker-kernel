@@ -45,6 +45,7 @@ export const BeakerSessionComponent = defineComponent({
 
     const status = ref("unknown");
 
+    const cellRegistry = ref<({[key: string]: VNode})>({});
 
     const activeContext = ref();
 
@@ -84,33 +85,32 @@ export const BeakerSessionComponent = defineComponent({
       activeContext,
       session: beakerSession,
       status,
+      cellRegistry,
     }
   },
 
   methods: {
     findNotebookCell(predicate: ((BeakerCell) => boolean)) {
-      const subtree = this.$.subTree;
-      const children = [...subtree.dynamicChildren];
-      while (children.length > 0) {
-        const child = children.splice(0, 1)[0];
-        if (isCell(child) && predicate(child)) {
+      for (const cell of this.cellRegistry) {
+        if (predicate(cell)) {
           return reactive({
-            ...child.component?.ctx,
-            ...child.component?.exposed,
-            $: child.component,
+            ...cell.component?.ctx,
+            ...cell.component?.exposed,
+            $: cell.component,
           });
-        }
-        if (Array.isArray(child.component?.subTree?.children) ) {
-          children.push(...child.component.subTree.children);
-        }
-        if (Array.isArray(child.children)) {
-          children.push(...child.children);
         }
       }
     },
 
     findNotebookCellById(id: string): typeof BeakerCell {
-      return this.findNotebookCell((vnode) => (getCellData(vnode).id === id));
+      const cellVnode = this.cellRegistry[id];
+      if (cellVnode !== undefined) {
+        return reactive({
+            ...cellVnode.component?.ctx,
+            ...cellVnode.component?.exposed,
+            $: cellVnode.component,
+          })
+      }
     },
 
     async fetchContextInfo() {

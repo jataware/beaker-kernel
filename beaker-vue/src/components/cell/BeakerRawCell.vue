@@ -16,9 +16,10 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance, inject, onBeforeMount, onUnmounted } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { findSelectableParent } from "@/util";
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
 
 const props = defineProps([
     "cell",
@@ -29,6 +30,7 @@ const cell = ref(props.cell);
 const codeMirrorRef = ref<typeof Codemirror|null>(null);
 const codeMirrorEditorView = shallowRef();
 const codeMirrorEditorState = shallowRef();
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const handleReady = ({view, state}) => {
     // See vue codemirror api/npm docs: https://codemirror.net/docs/ref/
@@ -83,6 +85,14 @@ defineExpose({
     enter,
     exit,
     clear,
+});
+
+onBeforeMount(() => {
+    beakerSession.cellRegistry[cell.value.id] = instance.vnode;
+});
+
+onUnmounted(() => {
+    delete beakerSession.cellRegistry[cell.value.id];
 });
 
 

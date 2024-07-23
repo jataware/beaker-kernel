@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onUnmounted } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView } from "codemirror";
@@ -167,6 +167,13 @@ defineExpose({
     clear,
 });
 
+onBeforeMount(() => {
+    beakerSession.cellRegistry[cell.value.id] = instance.vnode;
+});
+
+onUnmounted(() => {
+    delete beakerSession.cellRegistry[cell.value.id];
+});
 
 </script>
 
