@@ -7,7 +7,7 @@
             <div class="markdown-edit-cell-grid">
                 <div
                     class="markdown-edit-data"
-                    :class="{'dark-mode': theme === 'dark'}"
+                    :class="{'dark-mode': theme.mode === 'dark'}"
                     :ref="editorRef"
                 >
                     <CodeEditor
@@ -17,6 +17,7 @@
                         :autofocus="false"
                         language="markdown"
                         display-mode="dark"
+                        @click="clicked"
                     />
                 </div>
             </div>
@@ -25,10 +26,11 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, shallowRef, onBeforeUnmount, onUnmounted} from "vue";
+import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, onUnmounted} from "vue";
 import { marked } from 'marked';
 import { findSelectableParent } from '@/util';
 import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 import CodeEditor from '@/components/misc/CodeEditor.vue';
 
 const props = defineProps([
@@ -38,15 +40,21 @@ const props = defineProps([
 const instance = getCurrentInstance();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const cell = ref(props.cell);
-const theme = inject('theme');
+const { theme } = inject('theme');
 const editing = ref(false);
 const editorRef = ref(null);
 const codeEditorRef = ref(null);
+const notebook = inject<BeakerNotebookComponentType>("notebook");
 const editorContents = ref<string>(cell.value.source);
 
 const renderedMarkdown = computed(() => {
     return marked.parse(props.cell?.source);
 });
+
+const clicked = (evt) => {
+    notebook.selectCell(cell.value, true);
+    evt.stopPropagation();
+};
 
 const execute = () => {
     editing.value = false;

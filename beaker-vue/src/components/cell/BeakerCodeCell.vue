@@ -3,7 +3,7 @@
             <div class="code-cell-grid">
                 <div
                     class="code-data"
-                    :class="{'dark-mode': theme === 'dark'}"
+                    :class="{'dark-mode': theme.mode === 'dark'}"
                 >
                     <CodeEditor
                         display-mode="dark"
@@ -58,7 +58,7 @@ const props = defineProps([
 ]);
 
 const cell = ref(props.cell);
-const theme = inject('theme');
+const { theme } = inject('theme');
 const session = inject<BeakerSession>('session');
 const codeEditorRef = ref<InstanceType<typeof CodeEditor>>();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
