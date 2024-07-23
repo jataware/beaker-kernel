@@ -119,12 +119,13 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, nextTick, inject } from "vue";
+import { defineProps, defineExpose, ref, nextTick, inject, onBeforeMount, onUnmounted, getCurrentInstance } from "vue";
 import Button from "primevue/button";
 import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
 import { BeakerBaseCell, BeakerSession } from 'beaker-kernel';
 import BeakerCodeCell from './BeakerCodeCell.vue';
 import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
 
 const props = defineProps([
     'index',
@@ -134,12 +135,14 @@ const props = defineProps([
     'selectNext'
 ]);
 
+const instance = getCurrentInstance();
 const cell = ref(props.cell);
 const editing = ref(false);
 const editingContents = ref("");
 const savedEdit = ref("");
 const response = ref("");
 const session: BeakerSession = inject("session");
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const childrenRef = ref<typeof BeakerCodeCell|null>(null);
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 
@@ -199,6 +202,14 @@ defineExpose({
     enter,
     exit,
     clear,
+});
+
+onBeforeMount(() => {
+    beakerSession.cellRegistry[cell.value.id] = instance.vnode;
+});
+
+onUnmounted(() => {
+    delete beakerSession.cellRegistry[cell.value.id];
 });
 
 </script>

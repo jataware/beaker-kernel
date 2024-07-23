@@ -26,12 +26,13 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, shallowRef} from "vue";
+import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, shallowRef, onBeforeUnmount, onUnmounted} from "vue";
 import { marked } from 'marked';
 import { Codemirror } from "vue-codemirror";
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
 import { findSelectableParent } from '@/util';
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
 
 const props = defineProps([
     "cell"
@@ -39,6 +40,7 @@ const props = defineProps([
 
 
 const instance = getCurrentInstance();
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const cell = ref(props.cell);
 const theme = inject('theme');
 const editing = ref(false);
@@ -106,7 +108,12 @@ onBeforeMount(() => {
        sanitize: false,
        langPrefix: `language-`,
      });
+    beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 })
+
+onUnmounted(() => {
+    delete beakerSession.cellRegistry[cell.value.id];
+});
 
 </script>
 
