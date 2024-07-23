@@ -202,19 +202,6 @@ const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const executeActionRef = ref<typeof BeakerExecuteAction>();
-const selectedTheme = ref(localStorage.getItem('theme') || 'light');
-
-const applyTheme = () => {
-    const themeLink = document.querySelector('#primevue-theme');
-    themeLink.href = `/themes/soho-${selectedTheme.value}/theme.css`;
-}
-
-const toggleDarkMode = () => {
-    selectedTheme.value = selectedTheme.value === 'light' ? 'dark' : 'light'
-    localStorage.setItem('theme', selectedTheme.value);
-    applyTheme();
-};
-
 
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
@@ -276,7 +263,6 @@ onBeforeMount(() => {
     }
     saveInterval.value = setInterval(snapshot, 30000);
     window.addEventListener("beforeunload", snapshot);
-    applyTheme();
 });
 
 onUnmounted(() => {

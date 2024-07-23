@@ -3,18 +3,17 @@
             <div class="code-cell-grid">
                 <div
                     class="code-data"
-                    :class="{'dark-mode': theme === 'dark'}"
+                    :class="{'dark-mode': theme.mode === 'dark'}"
                 >
-                    <Codemirror
+                    <CodeEditor
+                        display-mode="dark"
+                        :language="language"
                         v-model="cell.source"
-                        ref="codeMirrorRef"
+                        ref="codeEditorRef"
                         placeholder="Your code..."
-                        :extensions="codeExtensions"
                         :disabled="isBusy"
-                        :autofocus="false"
                         @change="handleCodeChange"
                         @click="clicked"
-                        @ready="handleReady"
                     />
                     <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
                 </div>
@@ -46,13 +45,11 @@
 <script setup lang="ts">
 import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onUnmounted } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
-import { Codemirror } from "vue-codemirror";
-import { EditorView } from "codemirror";
-import { python } from '@codemirror/lang-python';
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 import { findSelectableParent } from "@/util";
 import { BeakerSession } from "beaker-kernel";
+import CodeEditor from "@/components/misc/CodeEditor.vue";
 import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
 import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
@@ -61,20 +58,12 @@ const props = defineProps([
 ]);
 
 const cell = ref(props.cell);
-const theme = inject('theme');
+const { theme } = inject('theme');
 const session = inject<BeakerSession>('session');
-const codeMirrorRef = ref<typeof Codemirror|null>(null);
-const codeMirrorEditorView = shallowRef();
-const codeMirrorEditorState = shallowRef();
+const codeEditorRef = ref<InstanceType<typeof CodeEditor>>();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const instance = getCurrentInstance();
-
-const handleReady = ({view, state}) => {
-    // See vue codemirror api/npm docs: https://codemirror.net/docs/ref/
-    codeMirrorEditorView.value = view;
-    codeMirrorEditorState.value = state;
-};
 
 const emit = defineEmits([
     'blur',
@@ -116,23 +105,9 @@ const clicked = (evt) => {
 
 function handleCodeChange() {
     cell.value.reset_execution_state();
-    // TODO See codemirror view API for future keyboard navigation
-    // eg to know if we're at the top or bottom
-    // of editor and user presser up/down arrows keys to navigate
-    // to another cell
 }
 
-const codeExtensions = computed(() => {
-    const ext = [EditorView.lineWrapping];
-
-    const subkernel = session.activeContext?.value?.language?.subkernel || '';
-    const isPython = subkernel.includes('python');
-    if (isPython) {
-        ext.push(python());
-    }
-    return ext;
-
-});
+const language = computed(() => (beakerSession.activeContext?.language?.slug || undefined));
 
 const execute = (evt: any) => {
     const future = props.cell.execute(session);
@@ -140,16 +115,12 @@ const execute = (evt: any) => {
 }
 
 const enter = () => {
-    if(codeMirrorEditorView.value?.focus) {
-        codeMirrorEditorView.value?.focus();
-    }
+    codeEditorRef.value?.focus();
 }
 
 const exit = () => {
     // Be sure to blur editor even if we don't also refocus below.
-    if(codeMirrorEditorView.value?.blur) {
-        codeMirrorEditorView.value?.blur();
-    }
+    codeEditorRef.value?.blur();
     let target: HTMLElement = (instance.vnode.el as HTMLElement);
     const selectableParent = findSelectableParent(target);
     selectableParent?.focus();
