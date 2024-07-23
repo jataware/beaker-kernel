@@ -28,7 +28,7 @@
         </div>
         <div class="event-container" v-if="taggedCellEvents.length > 0">
             <div class="events">
-                <Accordion :multiple="true" :class="'query-accordion'">
+                <Accordion :multiple="true" :class="'query-accordion'" v-model:active-index="lastEvent">
                     <AccordionTab 
                         v-for="[eventIndex, event] of taggedCellEvents.entries()" 
                         :header="queryEventNameMap[event.type]"
@@ -104,6 +104,14 @@ const taggedCellEvents = computed(() => {
     }
     return events;
 });
+
+
+const lastEvent = computed(() => {
+    if (taggedCellEvents.value.length == 0) {
+        return [0];
+    }
+    return [taggedCellEvents.value.length - 1];
+})
 
 const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
     "thought": "Agent Thought",

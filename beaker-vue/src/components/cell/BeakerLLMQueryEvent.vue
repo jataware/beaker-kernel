@@ -1,12 +1,12 @@
 <template>
     <div class="llm-query-event">
         <span v-if="isMarkdownRef" v-html="markdownBody" />
-        <span v-if="event.type === 'response'">
-            <Accordion :multiple="true">
+        <span v-if="props.event?.type === 'response'">
+            <Accordion :multiple="true" :active-index="lastOutput">
                 <AccordionTab 
                     v-for="[index, child] in parentQueryCell?.children?.entries()" 
                     :key="index"
-                    :header="`${tabHeader(child?.outputs)}`"
+                    :header="`Code Output: ${tabHeader(child?.outputs)}`"
                 >
                     <BeakerCodecellOutput :outputs="child?.outputs" />
                 </AccordionTab>
@@ -14,8 +14,8 @@
         </span>
         <span v-else-if="props.event?.type === 'code_cell'">
             <BeakerCodeCell
-                @click="notebook.selectCell(event.content.cell)"
-                :cell="event.content.cell"
+                @click="notebook.selectCell(props.event?.content.cell)"
+                :cell="props?.event.content.cell"
                 :drag-enabled="false"
                 :class="{
                     selected: (parentIndex.toString() === notebook.selectedCellId),
@@ -24,7 +24,7 @@
             />
         </span>
         <span v-else-if="props.event?.type === 'error'">
-            <span>{{ `${event.content.ename}: ${event.content.evalue}` }}</span>
+            <span>{{ `${props?.event.content.ename}: ${props?.event.content.evalue}` }}</span>
         </span>
     </div>
 </template>
@@ -57,6 +57,13 @@ onBeforeMount(() => {
      });
 })
 
+const lastOutput = computed(() => {
+    if (props.parentQueryCell?.children?.length == 0) {
+        return [0]
+    }
+    return [props.parentQueryCell?.children?.length - 1];
+})
+
 const parentIndex = computed(() => 
     notebook.notebook.cells.indexOf(props.parentQueryCell.value));
 
@@ -75,7 +82,12 @@ const tabHeader = (outputs) => {
     if (typeof outputs === "undefined") {
         return "";
     }
-    return Object.keys(outputs[0]?.data || {});
+    const values = Object.keys(outputs[0]?.data || {});
+    const userFacingNames = {
+        "text/plain": "Text",
+        "image/png": "Image"
+    };
+    return values.sort().map((format) => Object.keys(userFacingNames).includes(format) ? userFacingNames[format] : format).join(", ");
 }
 
 function execute() {
