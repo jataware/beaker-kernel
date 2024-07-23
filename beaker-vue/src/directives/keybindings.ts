@@ -1,10 +1,10 @@
 import { withModifiers, withKeys, ObjectDirective, DirectiveBinding } from "vue";
 
 const modifierKeys = [
-  "ctrl",
-  "alt",
-  "shift",
-  "meta",
+    "ctrl",
+    "alt",
+    "shift",
+    "meta",
 ];
 
 const eventModifiersValues = [

@@ -65,7 +65,6 @@ import { downloadFileDOM, getDateTime } from '@/util';
 const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
 
-
 const addCodeCell = () => {
     // const newCell = session.addCodeCell("");
     // notebook.selectCell(newCell);

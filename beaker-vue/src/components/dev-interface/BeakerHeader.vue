@@ -29,7 +29,7 @@
             <nav>
                 <Button
                     text
-                    @click="props.toggleDarkMode"
+                    @click="toggleDarkMode"
                     style="margin: 0; color: var(--gray-500);"
                     :icon="themeIcon"
                 />
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject } from "vue";
+import { defineProps, defineEmits, computed, inject, getCurrentInstance } from "vue";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { capitalize } from '../../util';
@@ -77,9 +77,8 @@ const props = defineProps([
 
 const emit = defineEmits(["selectKernel"]);
 
-const theme = inject('theme');
+const { theme, toggleDarkMode } = inject('theme');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-console.log(beakerSession);
 
 function selectKernel() {
     emit('select-kernel');

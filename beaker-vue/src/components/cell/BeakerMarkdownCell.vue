@@ -10,14 +10,13 @@
                     :class="{'dark-mode': theme === 'dark'}"
                     :ref="editorRef"
                 >
-                    <Codemirror
+                    <CodeEditor
                         v-model="editorContents"
                         placeholder="Your markdown..."
-                        :ref="codeMirrorRef"
-                        :extensions="codeExtensions"
+                        :ref="codeEditorRef"
                         :autofocus="false"
                         language="markdown"
-                        @ready="handleReady"
+                        display-mode="dark"
                     />
                 </div>
             </div>
@@ -28,16 +27,13 @@
 <script setup lang="ts">
 import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, shallowRef, onBeforeUnmount, onUnmounted} from "vue";
 import { marked } from 'marked';
-import { Codemirror } from "vue-codemirror";
-import { markdown } from '@codemirror/lang-markdown';
-import { EditorView } from '@codemirror/view';
 import { findSelectableParent } from '@/util';
 import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import CodeEditor from '@/components/misc/CodeEditor.vue';
 
 const props = defineProps([
     "cell"
 ]);
-
 
 const instance = getCurrentInstance();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
@@ -45,26 +41,8 @@ const cell = ref(props.cell);
 const theme = inject('theme');
 const editing = ref(false);
 const editorRef = ref(null);
-const codeMirrorRef = ref(null);
-const codeMirrorEditorView = shallowRef();
-const codeMirrorEditorState = shallowRef();
+const codeEditorRef = ref(null);
 const editorContents = ref<string>(cell.value.source);
-
-const codeExtensions = computed(() => {
-    const ext = [
-        markdown(),
-        EditorView.lineWrapping,
-    ];
-
-    return ext;
-
-});
-
-const handleReady = ({view, state}) => {
-    // See vue codemirror api/npm docs: https://codemirror.net/docs/ref/
-    codeMirrorEditorView.value = view;
-    codeMirrorEditorState.value = state;
-};
 
 const renderedMarkdown = computed(() => {
     return marked.parse(props.cell?.source);
@@ -79,13 +57,12 @@ const enter = () => {
     editing.value = true;
 
     nextTick(() => {
-        if(codeMirrorEditorView.value?.focus) {
-            codeMirrorEditorView.value?.focus();
-        }
+        codeEditorRef.value?.focus();
     });
 }
 
 const exit = () => {
+    codeEditorRef.value?.blur();
     let target: HTMLElement = (instance.vnode.el as HTMLElement);
     const selectableParent = findSelectableParent(target);
     selectableParent?.focus();

@@ -4,20 +4,20 @@
             <span class="raw-cell-title">Raw cell</span>
             <span v-if="props.cell.cell_type !== 'raw'"> - (Unrenderable cell type '{{ props.cell.cell_type }}')</span>
         </div>
-        <Codemirror
+        <CodeEditor
+            display-mode="dark"
+            language="julia"
             v-model="cell.source"
-            ref="codeMirrorRef"
+            ref="codeEditorRef"
             placeholder="Raw cell content..."
-            :extensions="rawExtensions"
             :autofocus="false"
-            @ready="handleReady"
         />
     </div>
 </template>
 
 <script setup lang="ts">
 import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance, inject, onBeforeMount, onUnmounted } from "vue";
-import { Codemirror } from "vue-codemirror";
+import CodeEditor from "@/components/misc/CodeEditor.vue";
 import { findSelectableParent } from "@/util";
 import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
 
@@ -27,16 +27,8 @@ const props = defineProps([
 
 const instance = getCurrentInstance();
 const cell = ref(props.cell);
-const codeMirrorRef = ref<typeof Codemirror|null>(null);
-const codeMirrorEditorView = shallowRef();
-const codeMirrorEditorState = shallowRef();
+const codeEditorRef = ref<InstanceType<typeof CodeEditor>>(null);
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-
-const handleReady = ({view, state}) => {
-    // See vue codemirror api/npm docs: https://codemirror.net/docs/ref/
-    codeMirrorEditorView.value = view;
-    codeMirrorEditorState.value = state;
-};
 
 enum ExecuteStatus {
   Success = 'success',
@@ -61,16 +53,12 @@ const execute = (evt: any) => {
 }
 
 const enter = () => {
-    if(codeMirrorEditorView.value?.focus) {
-        codeMirrorEditorView.value?.focus();
-    }
+    codeEditorRef.value?.focus();
 }
 
 const exit = () => {
     // Be sure to blur editor even if we don't also refocus below.
-    if(codeMirrorEditorView.value?.blur) {
-        codeMirrorEditorView.value?.blur();
-    }
+    codeEditorRef.value.blur();
     let target: HTMLElement = (instance.vnode.el as HTMLElement);
     const selectableParent = findSelectableParent(target);
     selectableParent?.focus();

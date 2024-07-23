@@ -30,8 +30,7 @@
         <h4 class="h-less-pad">Context Info</h4>
 
         <div class="code-container">
-            <Codemirror
-                :extensions="codeExtensions"
+            <CodeEditor
                 :tab-size="2"
                 language="javascript"
                 v-model="contextPayloadData[selectedContextSlug]"
@@ -70,14 +69,13 @@
 <script setup lang="ts">
 
 import { defineProps, defineEmits, ref, onMounted, computed, watch, inject } from "vue";
-import { Codemirror } from "vue-codemirror";
-import { oneDark } from '@codemirror/theme-one-dark';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import Dropdown from 'primevue/dropdown';
 import Checkbox from 'primevue/checkbox';
 import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import CodeEditor from '@/components/misc/CodeEditor.vue';
 
 const props = defineProps([
     "isOpen",
@@ -87,7 +85,6 @@ const props = defineProps([
 const contextData = ref(undefined);
 const logDebug = ref([]);
 const logVerbose = ref([]);
-const theme = inject("theme");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const emit = defineEmits([
@@ -100,16 +97,6 @@ const selectedContextSlug = ref<string>();
 const selectedLanguage = ref<string | undefined>(undefined);
 const contextPayloadData = ref({});
 
-
-const codeExtensions = computed(() => {
-    const ext = [];
-
-    if (theme === 'dark') {
-        ext.push(oneDark);
-    }
-    return ext;
-
-});
 
 const closeDialog = () => {
     emit("close-context-selection")

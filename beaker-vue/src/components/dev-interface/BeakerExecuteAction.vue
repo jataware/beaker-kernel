@@ -22,9 +22,8 @@
 
         <div class="code">
             Action Payload
-            <Codemirror
+            <CodeEditor
                 :tab-size="2"
-                :extensions="codeExtensions"
                 language="javascript"
                 v-model="actionPayload"
             />
@@ -83,8 +82,6 @@
 <script setup lang="ts">
 import { defineProps, defineEmits, defineExpose, ref, computed, inject, watch } from "vue";
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import { Codemirror } from "vue-codemirror";
-import { oneDark } from '@codemirror/theme-one-dark';
 import Button from 'primevue/button';
 import AutoComplete from 'primevue/autocomplete';
 import Fieldset from 'primevue/fieldset';
@@ -94,6 +91,7 @@ import Panel from 'primevue/panel';
 
 import { BeakerSession } from 'beaker-kernel';
 import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import CodeEditor from '@/components/misc/CodeEditor.vue';
 
 const props = defineProps([
     "actions",

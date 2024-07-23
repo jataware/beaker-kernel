@@ -90,6 +90,7 @@ export const BeakerSessionComponent = defineComponent({
 
     const beakerSession = reactive(rawSession);
 
+
     return {
       activeContext,
       session: beakerSession,
