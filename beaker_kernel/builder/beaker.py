@@ -9,8 +9,6 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 from hatchling.plugin import hookimpl
 from pathlib import Path
 
-from beaker_kernel.lib.context import BaseContext
-from beaker_kernel.lib.subkernels.base import BaseSubkernel
 
 
 class BuildError(Exception):
@@ -23,13 +21,15 @@ class BeakerBuildHook(BuildHookInterface):
     def find_package_classes(self, packages):
         class_map = {}
         for package in packages:
+            package: str = package.replace('/', '.')
             base_mod = importlib.import_module(package)
-            base_paths = base_mod.__path__
+            base_paths = map(Path, base_mod.__path__)
 
             # Walking the file tree ensures we are collecting the classes only from where they are actually defined and
             # not where they may happen to be imported. If we just inspected all of the modules, we would find the
             # classes, but wouldn't be able to differentiate imports from in-file definition.
             for base_path in base_paths:
+                import_path = base_path.parent
                 for dirpath, _, filenames in os.walk(base_path):
                     path = Path(dirpath)
                     if path.name.startswith("_"):
@@ -46,9 +46,9 @@ class BeakerBuildHook(BuildHookInterface):
                         for symbol in symbols.body:
                             if isinstance(symbol, ast.ClassDef):
                                 class_name = symbol.name
-                                relpath = Path(fullpath).relative_to(Path(base_path).parent)
+                                relpath = fullpath.relative_to(import_path)
                                 mod_str = str(relpath).removesuffix('.py').replace('/', '.')
-                                class_map[class_name] = mod_str
+                                class_map[class_name] = (mod_str, str(import_path))
         return class_map
 
     def find_slugged_subclasses_of(self, subclass, packages=None):
@@ -60,12 +60,15 @@ class BeakerBuildHook(BuildHookInterface):
 
         # Actually import all of the modules, so we can inspect the classes to see if they are indeed the classes we
         # are looking for and, if so, extract any important information defined on them.
-        for class_name, mod_str in class_map.items():
+        for class_name, (mod_str, import_path) in class_map.items():
             try:
+                if import_path not in sys.path:
+                    sys.path.insert(0, import_path)
                 mod = importlib.import_module(mod_str)
             except ModuleNotFoundError as err:
                 sys.stderr.write(f"Warning: Module {mod_str} not found. There may be an issue with your "
                                     "configuration.\n")
+                sys.stderr.write(str(err) + "\n")
                 sys.stderr.flush()
                 continue
             cls = getattr(mod, class_name)
@@ -84,8 +87,12 @@ class BeakerBuildHook(BuildHookInterface):
         if self.target_name != "wheel":
             return
 
+        from beaker_kernel.lib.context import BaseContext
+        from beaker_kernel.lib.subkernels.base import BaseSubkernel
+
         # Ensure needed structure is intact
         build_config = self.build_config.build_config
+
         if "targets" not in build_config:
             build_config["targets"] = {}
         if "wheel" not in build_config["targets"]:
@@ -102,6 +109,9 @@ class BeakerBuildHook(BuildHookInterface):
 
         contexts = self.config.get("contexts", [])
         subkernels = self.config.get("subkernels", [])
+
+        # TODO: controls for explicit definition of contexts/subkernels
+        # TODO: controls for setting context/subkernel directory to search
 
         # if not context_paths or True:
         #     context_paths = self.find_contexts_in_packages(self.build_config.packages)
