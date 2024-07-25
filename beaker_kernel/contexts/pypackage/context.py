@@ -13,6 +13,8 @@ class PyPackageContext(BaseContext):
 
     agent_cls: "BaseAgent" = PyPackageAgent
 
+    SLUG: str = "pypackage"
+
     def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]):
         super().__init__(beaker_kernel, self.agent_cls, config)
         if not isinstance(self.subkernel, PythonSubkernel):

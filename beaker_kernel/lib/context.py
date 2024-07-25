@@ -40,6 +40,7 @@ class BaseContext:
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
 
+    SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
     def __init__(self, beaker_kernel: "LLMKernel", agent_cls: "BaseAgent", config: Dict[str, Any]):
@@ -258,9 +259,15 @@ class BaseContext:
     @property
     def slug(self) -> Optional[str]:
         """
-        The slug should always be the same as the package that contains the class.
-        I.e. For "beaker_kernel.contexts.pypackage" the slug should be "pypackage"
+        A short, white-space-free label used to identify the context programatically.
+
+        If it is not defined on the context class as cls.SLUG, default to look at the name of the package that contains
+        the context.
+        E.g. For "beaker_kernel.contexts.pypackage" the slug would be "pypackage"
         """
+        if self.SLUG:
+            return self.SLUG
+
         package_str = inspect.getmodule(self).__package__
         if package_str:
             return package_str.split(".")[-1]
