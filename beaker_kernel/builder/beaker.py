@@ -62,8 +62,6 @@ class BeakerBuildHook(BuildHookInterface):
         # are looking for and, if so, extract any important information defined on them.
         for class_name, (mod_str, import_path) in class_map.items():
             try:
-                if import_path not in sys.path:
-                    sys.path.insert(0, import_path)
                 mod = importlib.import_module(mod_str)
             except ModuleNotFoundError as err:
                 sys.stderr.write(f"Warning: Module {mod_str} not found. There may be an issue with your "
@@ -79,6 +77,24 @@ class BeakerBuildHook(BuildHookInterface):
                 contexts[slug] = (mod_str, class_name)
         return contexts
 
+    def add_packages_to_path(self, paths=None):
+        self.inserted_paths = set()
+        if paths is None:
+            paths = self.build_config.packages
+
+        for package_path in paths:
+            import_path = str(Path(package_path).absolute().parent)
+            if import_path not in sys.path:
+                sys.path.insert(0, import_path)
+                self.inserted_paths.add(import_path)
+        sys.path.insert(0, self.root)
+        self.inserted_paths.add(self.root)
+
+    def remove_packages_from_path(self):
+        paths = getattr(self, "inserted_paths", set())
+        for added_path in paths:
+            sys.path.remove(added_path)
+
 
     def initialize(self, version, build_data):
         """Initialize the hook."""
@@ -89,14 +105,6 @@ class BeakerBuildHook(BuildHookInterface):
 
         from beaker_kernel.lib.context import BaseContext
         from beaker_kernel.lib.subkernels.base import BaseSubkernel
-
-        # Ensure needed structure is intact
-        build_config = self.build_config.build_config
-
-        if "targets" not in build_config:
-            build_config["targets"] = {}
-        if "wheel" not in build_config["targets"]:
-            build_config["targets"]["wheel"] = {}
 
         dest = os.path.join(self.root, "build", "data_share_beaker")
         search_paths = self.build_config.packages or []
@@ -118,23 +126,26 @@ class BeakerBuildHook(BuildHookInterface):
         #     print("contexts:")
         #     pprint.pprint(context_paths)
 
+        self.add_packages_to_path()
         context_classes = self.find_slugged_subclasses_of(BaseContext)
         subkernel_classes = self.find_slugged_subclasses_of(BaseSubkernel)
+        self.remove_packages_from_path()
+
+        if context_classes:
+            print( "Found the following contexts:")
+            for slug, (pkg, cls) in context_classes.items():
+                print(f"  '{slug}': {cls} in package {pkg}")
+            print()
+        if subkernel_classes:
+            print( "Found the following subkernels:")
+            for slug, (pkg, cls) in subkernel_classes.items():
+                print(f"  '{slug}': {cls} in package {pkg}")
+            print()
 
         # Recreate the destination directory, clearing any existing build artifacts
         if os.path.exists(dest):
            shutil.rmtree(dest)
         os.makedirs(dest)
-
-        if "shared-data" in build_config["targets"]["wheel"]:
-            shared_data = build_config["targets"]["wheel"]["shared-data"]
-        else:
-            shared_data = {}
-            build_config["targets"]["wheel"]["shared-data"] = shared_data
-
-        # Map the main beaker kernel for inclusion/installation
-        kernel_json_file = os.path.join(self.root, "beaker_kernel", "kernel.json")
-        shared_data[kernel_json_file] = f"share/jupyter/kernels/beaker_kernel/kernel.json"
 
         # Write out mappings for each context and subkernel to an individual json file
         for typename, src in [("contexts", context_classes), ("subkernels", subkernel_classes)]:
@@ -144,8 +155,8 @@ class BeakerBuildHook(BuildHookInterface):
                 dest_file = os.path.join(dest_dir, f"{slug}.json")
                 with open(dest_file, "w") as f:
                     json.dump({"slug": slug, "package": package_name, "class_name": class_name}, f, indent=2)
-                # Add wheel.shared-data mappings for each file so it is installed to the correct location
-                shared_data[dest_file] = f"share/beaker/{typename}/{slug}.json"
+                # Add shared-data mappings for each file so it is installed to the correct location
+                self.build_config.shared_data[dest_file] = f"share/beaker/{typename}/{slug}.json"
 
 
 @hookimpl

@@ -66,6 +66,9 @@ artifacts = [
 [tool.hatch.build.targets.wheel.hooks.custom]
 path = "beaker_kernel/builder/beaker.py"
 
+[tool.hatch.build.targets.wheel.shared-data]
+"beaker_kernel/kernel.json" = "share/jupyter/kernels/beaker_kernel/kernel.json"
+
 [project.urls]
 Documentation = "https://github.com/jataware/beaker-kernel#readme"
 Issues = "https://github.com/jataware/beaker-kernel/issues"
