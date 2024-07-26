@@ -62,7 +62,7 @@
                         />
                     </AccordionTab>
                 </Accordion>
-                <div class="query-answer">
+                <div class="query-answer" v-if="isLastEventTerminal()" >
                     <h3 class="query-steps">Agent Response:</h3>
                     <BeakerLLMQueryEvent 
                         v-if="isLastEventTerminal()" 
