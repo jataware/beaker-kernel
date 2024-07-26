@@ -11,7 +11,7 @@
                 </div>
                 <div v-show="!focused">
                     <div class="llm-prompt-container">
-                        <p class="llm-prompt-text">{{ cell.source }}</p>
+                        <h2 class="llm-prompt-text">{{ cell.source }}</h2>
                     </div>
                 </div>
             </div>
@@ -28,13 +28,33 @@
         </div>
         <div class="event-container" v-if="taggedCellEvents.length > 0">
             <div class="events">
-                <Accordion :multiple="true" :class="'query-accordion'" v-model:active-index="lastEvent">
+                <h3 class="query-steps">Agent Steps:</h3>
+                <div class="query-horizontal-br" />
+                <Accordion :multiple="true" :class="'query-accordion'" v-model:active-index="selectedEvents">
                     <AccordionTab 
                         v-for="[eventIndex, event] of taggedCellEvents.entries()" 
-                        :header="queryEventNameMap[event.type]"
                         :key="eventIndex"
-                        :class="'query-accordiontab'"
+                        :pt="{
+                            header: {
+                                class: [`query-tab`, `query-tab-${event.type}`]
+                            },
+                            headerAction: {
+                                class: [`query-tab-headeraction`, `query-tab-headeraction-${event.type}`]
+                            },
+                            content: {
+                                class: [`query-tab-content-${event.type}`]
+                            },
+                            headerIcon: {
+                                class: [`query-tab-icon-${event.type}`]
+                            }
+                        }"
                     >
+                        <template #header>
+                            <span class="flex align-items-center gap-2 w-full">
+                                <span :class="eventIconMap[event.type]"/>
+                                <span class="font-bold white-space-nowrap">{{ queryEventNameMap[event.type] }}</span>
+                            </span>
+                        </template>
                         <BeakerLLMQueryEvent
                             :key="eventIndex"
                             :event="event"
@@ -42,6 +62,14 @@
                         />
                     </AccordionTab>
                 </Accordion>
+                <div class="query-answer">
+                    <h3 class="query-steps">Agent Response:</h3>
+                    <BeakerLLMQueryEvent 
+                        v-if="isLastEventTerminal()" 
+                        :event="cell?.events[cell?.events.length - 1]" 
+                        :parent-query-cell="cell"
+                    />
+                </div>
             </div>
         </div>
         <div
@@ -86,6 +114,16 @@ const props = defineProps([
     'cell',
 ]);
 
+const eventIconMap = {
+    "code_cell": "pi pi-align-left",
+    "thought": "pi pi-comment"
+}
+
+const terminalEvents = [
+    "error",
+    "response"
+]
+
 const cell = shallowRef(props.cell);
 const focused = ref(false);
 const response = ref("");
@@ -95,22 +133,35 @@ const session = inject<BeakerSession>('session');
 
 const taggedCellEvents = computed(() => {
     let index = 0;
-    let events: BeakerQueryEvent[] = [...props.cell.events];
+    const events: BeakerQueryEvent[] = [...props.cell.events];
     for (const queryEvent of events) {
         if (queryEvent.type == "code_cell") {
             queryEvent.content.metadata.subindex = index;
             index += 1;
         }
     }
-    return events;
+    return events.filter((e) => !terminalEvents.includes(e.type));
 });
 
+const isLastEventTerminal = () => {
+    const events: BeakerQueryEvent[] = props.cell.events;
+    return terminalEvents.includes(events[events.length - 1].type);
+};
 
-const lastEvent = computed(() => {
+// behavior: temporarily show last event and all code cells, until terminal, in which case,
+// only show code cells
+const selectedEvents = computed(() => {
     if (taggedCellEvents.value.length == 0) {
         return [0];
     }
-    return [taggedCellEvents.value.length - 1];
+    const events: BeakerQueryEvent[] = [...props.cell.events];
+    const codeCellIndices = events
+        .map((e, index) => e.type === "code_cell" ? index : null)
+        .filter(e => e);
+    if (isLastEventTerminal()) {
+        return codeCellIndices;
+    }
+    return [...codeCellIndices, taggedCellEvents.value.length - 1];
 })
 
 const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
@@ -226,15 +277,21 @@ defineExpose({
 .llm-prompt-container {
     display: flex;
     flex-direction: column;
+    //background-color: var(--surface-c);
+}
+
+h3.query-steps {
+    margin-bottom: 0rem;
 }
 
 .llm-prompt-text {
     margin-top: 0;
     margin-bottom: 0;
+    font-weight: 400;
 }
 
 .event-container {
-    margin-top: 1.25rem;
+    //margin-top: 1.25rem;
     padding: 0rem;
     border-radius: 6px;
     //background-color: var(--surface-c);
@@ -253,5 +310,68 @@ defineExpose({
     padding-top: 0.25rem;
     padding-bottom: 0rem;
 }
+
+.query-steps {
+    font-weight: 400;
+}
+
+div.query-tab a.p-accordion-header-link.p-accordion-header-action{
+    padding-left: 0px;
+    background: none;
+    border: none;
+    padding-top: 1rem;
+    padding-bottom: 0;
+}
+
+div.query-tab-thought a.p-accordion-header-link.p-accordion-header-action {
+    background: none;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+div.p-accordion-content.query-tab-content-thought {
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    padding-left: 2.5rem;
+}
+
+div.p-accordion-content.query-tab-content-code_cell {
+    background: none;
+    border: none;
+    padding-left: 2.5rem;
+}
+
+div.code-cell.query-event-code-cell {
+    padding-left: 0;
+}
+
+svg.query-tab-icon-thought {
+    width: 1rem;
+    height: 0.7rem; 
+}
+
+a.query-tab-headeraction > span > span.pi {
+    align-items: center;
+    margin: auto; 
+    padding-right: 0.25rem;
+}
+
+a.query-tab-headeraction > span > span.pi-align-left {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin: auto;
+    padding-right: 0.6rem;
+}
+
+.query-answer {
+    background-color: var(--surface-c);
+    padding-left: 1rem;
+    padding-bottom: 1rem;
+    border-radius: 12px;
+    margin-top: 1rem;
+}
+
 
 </style>

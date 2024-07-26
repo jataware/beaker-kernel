@@ -16,7 +16,7 @@
                         @click="clicked"
                         @ready="handleReady"
                     />
-                    <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
+                    <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" v-show="!hideOutput" />
                 </div>
                 <div class="state-info">
                     <div class="execution-count-badge">
@@ -58,6 +58,7 @@ import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNoteboo
 
 const props = defineProps([
     "cell",
+    "hideOutput"
 ]);
 
 const cell = ref(props.cell);
