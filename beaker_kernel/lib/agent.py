@@ -9,18 +9,18 @@ from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, to
 from beaker_kernel.lib.utils import env_enabled
 
 if typing.TYPE_CHECKING:
-    from .context import BaseContext
+    from .context import BeakerContext
 
 logger = logging.getLogger(__name__)
 
-class BaseAgent(ReActAgent):
+class BeakerAgent(ReActAgent):
 
-    context: "BaseContext"
+    context: "BeakerContext"
     MODEL: str = "gpt-4-turbo-preview"
 
     def __init__(
         self,
-        context: "BaseContext" = None,
+        context: "BeakerContext" = None,
         tools: list = None,
         **kwargs,
     ):
@@ -41,7 +41,7 @@ class BaseAgent(ReActAgent):
             thought_handler=context.beaker_kernel.handle_thoughts,
             **kwargs
         )
-        
+
 
     def get_info(self):
         """
@@ -88,3 +88,6 @@ class BaseAgent(ReActAgent):
             str: The user's response to the query.
         """
         return await self.context.beaker_kernel.prompt_user(query, parent_message=react_context.get("message", None))
+
+# Provided for backwards compatibility
+BaseAgent = BeakerAgent

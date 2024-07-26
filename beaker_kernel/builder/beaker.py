@@ -110,8 +110,8 @@ class BeakerBuildHook(BuildHookInterface):
             sys.path.insert(0, local_path)
             self.inserted_paths.add(local_path)
 
-        from beaker_kernel.lib.context import BaseContext
-        from beaker_kernel.lib.subkernels.base import BaseSubkernel
+        from beaker_kernel.lib.context import BeakerContext
+        from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 
         dest = os.path.join(self.root, "build", "data_share_beaker")
         search_paths = self.build_config.packages or []
@@ -134,8 +134,8 @@ class BeakerBuildHook(BuildHookInterface):
         #     pprint.pprint(context_paths)
 
         self.add_packages_to_path()
-        context_classes = self.find_slugged_subclasses_of(BaseContext)
-        subkernel_classes = self.find_slugged_subclasses_of(BaseSubkernel)
+        context_classes = self.find_slugged_subclasses_of(BeakerContext)
+        subkernel_classes = self.find_slugged_subclasses_of(BeakerSubkernel)
         self.remove_packages_from_path()
 
         if context_classes:

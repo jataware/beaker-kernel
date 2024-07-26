@@ -12,7 +12,7 @@ from archytas.tool_utils import AgentRef, tool, LoopControllerRef, ReactContextR
 from ..utils import env_enabled, action, ExecutionTask
 from ..jupyter_kernel_proxy import ProxyKernelClient
 from ..config import config
-from ..context import BaseContext
+from ..context import BeakerContext
 
 Checkpoint = dict[str, str]
 
@@ -25,7 +25,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class BaseSubkernel(abc.ABC):
+class BeakerSubkernel(abc.ABC):
     DISPLAY_NAME: str
     SLUG: str
     KERNEL_NAME: str
@@ -45,7 +45,7 @@ class BaseSubkernel(abc.ABC):
     def tools(self):
         return [tool for tool, condition in self.TOOLS if condition]
 
-    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context: BaseContext):
+    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context: BeakerContext):
         self.jupyter_id = jupyter_id
         self.connected_kernel = ProxyKernelClient(subkernel_configuration, session_id=context.beaker_kernel.session_id)
         self.context = context
@@ -193,8 +193,10 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
 
     return format_execution_context(execution_context)
 
+# Provided for backwards compatibility
+BaseSubkernel = BeakerSubkernel
 
-class BaseCheckpointableSubkernel(BaseSubkernel):
+class CheckpointableBeakerSubkernel(BeakerSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"
 
     TOOLS = [
@@ -278,3 +280,6 @@ class BaseCheckpointableSubkernel(BaseSubkernel):
         result = await self.context.execute(code, surpress_messages=surpress_messages, parent_header=parent_header, identities=identities)
         await self.rollback(checkpoint_index)
         return str(result["return"])
+
+# Provided for backwards compatibility
+BaseCheckpointableSubkernel = CheckpointableBeakerSubkernel

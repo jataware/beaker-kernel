@@ -1,21 +1,21 @@
 from typing import TYPE_CHECKING, Any, Dict, List
 
-from beaker_kernel.lib.context import BaseContext
+from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernels.python import PythonSubkernel
 
 from .agent import PyPackageAgent
 
 if TYPE_CHECKING:
-    from beaker_kernel.kernel import LLMKernel
-    from beaker_kernel.lib.agent import BaseAgent
+    from beaker_kernel.kernel import BeakerKernel
+    from beaker_kernel.lib.agent import BeakerAgent
 
-class PyPackageContext(BaseContext):
+class PyPackageContext(BeakerContext):
 
-    agent_cls: "BaseAgent" = PyPackageAgent
+    agent_cls: "BeakerAgent" = PyPackageAgent
 
     SLUG: str = "pypackage"
 
-    def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]):
+    def __init__(self, beaker_kernel: "BeakerKernel", config: Dict[str, Any]):
         super().__init__(beaker_kernel, self.agent_cls, config)
         if not isinstance(self.subkernel, PythonSubkernel):
             raise ValueError("This context is only valid for Python.")
