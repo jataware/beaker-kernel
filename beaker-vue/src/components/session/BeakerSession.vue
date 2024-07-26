@@ -5,23 +5,32 @@
 </template>
 
 <script lang="ts">
-import { reactive, ref, inject, provide, VNode, defineComponent, PropType} from 'vue';
-import { ComponentPublicInstance } from '@vue/runtime-core';
-import { BeakerSession, IBeakerRendererOptions, JupyterMimeRenderer } from 'beaker-kernel';
+import { reactive, ref, inject, provide, VNode, defineComponent, PropType, ComponentInternalInstance } from 'vue';
+import { BeakerSession, IBeakerRendererOptions, JupyterMimeRenderer, IBeakerCell } from 'beaker-kernel';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import BeakerCell from '@/components/cell/BeakerCell.vue'
 
 
-// eslint-disable-next-line
-// @ts-ignore: setupState is not defined in the Vue type definition, but seems to reliably exist, and it's ok if it doesn't.
-const getCellData = (vnode: VNode) => (vnode?.props?.cell || vnode?.component?.setupState?.cell || undefined);
+export interface ICellRepr {
+  [key: string]: any,
+  $: ComponentInternalInstance,
+  cell: IBeakerCell,
+  enter: () => void,
+  exit: () => void,
+  execute: () => void,
+  clear: () => void,
+}
 
-const isCell = (vnode: VNode) => {
-  return (
-    getCellData(vnode) !== undefined
-    && vnode.component.exposed?.execute !== undefined
-    && vnode.component.exposed?.enter !== undefined
-  )
+
+export const CellRepr = (vnode: VNode): ICellRepr => {
+  const component: ComponentInternalInstance = vnode?.component;
+  if (component === undefined) {
+    return undefined;
+  }
+  return reactive({
+    ...component.proxy as unknown as {cell: IBeakerCell},
+    ...component.exposed as {enter: ()=>void, exit: ()=>void, execute: ()=>void, clear: ()=>void},
+    $: component,
+  });
 }
 
 export const BeakerSessionComponent = defineComponent({
@@ -45,6 +54,7 @@ export const BeakerSessionComponent = defineComponent({
 
     const status = ref("unknown");
 
+    const cellRegistry = ref<({[key: string]: VNode})>({});
 
     const activeContext = ref();
 
@@ -80,37 +90,29 @@ export const BeakerSessionComponent = defineComponent({
 
     const beakerSession = reactive(rawSession);
 
+
     return {
       activeContext,
       session: beakerSession,
       status,
+      cellRegistry,
     }
   },
 
   methods: {
-    findNotebookCell(predicate: ((BeakerCell) => boolean)) {
-      const subtree = this.$.subTree;
-      const children = [...subtree.dynamicChildren];
-      while (children.length > 0) {
-        const child = children.splice(0, 1)[0];
-        if (isCell(child) && predicate(child)) {
-          return reactive({
-            ...child.component?.ctx,
-            ...child.component?.exposed,
-            $: child.component,
-          });
-        }
-        if (Array.isArray(child.component?.subTree?.children) ) {
-          children.push(...child.component.subTree.children);
-        }
-        if (Array.isArray(child.children)) {
-          children.push(...child.children);
+    findNotebookCell(predicate: ((cell: ICellRepr) => boolean)): ICellRepr {
+      for (const cellVnode of this.cellRegistry) {
+        if (predicate(cellVnode)) {
+          return CellRepr(cellVnode)
         }
       }
     },
 
-    findNotebookCellById(id: string): typeof BeakerCell {
-      return this.findNotebookCell((vnode) => (getCellData(vnode).id === id));
+    findNotebookCellById(id: string): ICellRepr {
+      const cellVnode = this.cellRegistry[id];
+      if (cellVnode !== undefined) {
+        return CellRepr(cellVnode);
+      }
     },
 
     async fetchContextInfo() {

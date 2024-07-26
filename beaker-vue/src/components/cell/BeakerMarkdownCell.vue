@@ -7,17 +7,17 @@
             <div class="markdown-edit-cell-grid">
                 <div
                     class="markdown-edit-data"
-                    :class="{'dark-mode': theme === 'dark'}"
+                    :class="{'dark-mode': theme.mode === 'dark'}"
                     :ref="editorRef"
                 >
-                    <Codemirror
+                    <CodeEditor
                         v-model="editorContents"
                         placeholder="Your markdown..."
-                        :ref="codeMirrorRef"
-                        :extensions="codeExtensions"
+                        :ref="codeEditorRef"
                         :autofocus="false"
                         language="markdown"
-                        @ready="handleReady"
+                        display-mode="dark"
+                        @click="clicked"
                     />
                 </div>
             </div>
@@ -26,54 +26,34 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, shallowRef} from "vue";
+import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, onUnmounted} from "vue";
 import { marked } from 'marked';
-import { Codemirror } from "vue-codemirror";
-import { markdown } from '@codemirror/lang-markdown';
-import { EditorView } from '@codemirror/view';
 import { findSelectableParent } from '@/util';
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import CodeEditor from '@/components/misc/CodeEditor.vue';
 
 const props = defineProps([
     "cell"
 ]);
 
-
 const instance = getCurrentInstance();
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const cell = ref(props.cell);
-const theme = inject('theme');
+const { theme } = inject('theme');
 const editing = ref(false);
 const editorRef = ref(null);
-const codeMirrorRef = ref(null);
-const codeMirrorEditorView = shallowRef();
-const codeMirrorEditorState = shallowRef();
+const codeEditorRef = ref(null);
+const notebook = inject<BeakerNotebookComponentType>("notebook");
 const editorContents = ref<string>(cell.value.source);
-
-const codeExtensions = computed(() => {
-    const ext = [
-        markdown(),
-        EditorView.lineWrapping,
-    ];
-
-    return ext;
-
-});
-
-const handleReady = ({view, state}) => {
-    // See vue codemirror api/npm docs: https://codemirror.net/docs/ref/
-    codeMirrorEditorView.value = view;
-    codeMirrorEditorState.value = state;
-};
 
 const renderedMarkdown = computed(() => {
     return marked.parse(props.cell?.source || "");
 });
 
-// TODO: migrate to enter/exit
-const focusEditor = () => {
-    const editor: HTMLElement|null = editorRef?.value?.querySelector('.cm-content');
-        if (editor) {
-            editor.focus();
-        }
+const clicked = (evt) => {
+    notebook.selectCell(cell.value, true);
+    evt.stopPropagation();
 };
 
 const execute = () => {
@@ -85,13 +65,12 @@ const enter = () => {
     editing.value = true;
 
     nextTick(() => {
-        if(codeMirrorEditorView.value?.focus) {
-            codeMirrorEditorView.value?.focus();
-        }
+        codeEditorRef.value?.focus();
     });
 }
 
 const exit = () => {
+    codeEditorRef.value?.blur();
     let target: HTMLElement = (instance.vnode.el as HTMLElement);
     const selectableParent = findSelectableParent(target);
     selectableParent?.focus();
@@ -114,7 +93,12 @@ onBeforeMount(() => {
        sanitize: false,
        langPrefix: `language-`,
      });
+    beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 })
+
+onUnmounted(() => {
+    delete beakerSession.cellRegistry[cell.value.id];
+});
 
 </script>
 

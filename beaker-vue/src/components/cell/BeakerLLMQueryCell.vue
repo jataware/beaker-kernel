@@ -100,14 +100,16 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, onUnmounted, getCurrentInstance } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerLLMQueryEvent from "./BeakerLLMQueryEvent.vue";
 import { BeakerQueryEvent, BeakerQueryEventType } from "beaker-kernel/dist/notebook";
-import ContainedTextArea from "../misc/ContainedTextArea.vue";
-import { BeakerSession } from "beaker-kernel";
+import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
+import { BeakerSession } from 'beaker-kernel';
+import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+
 
 const props = defineProps([
     'index',
@@ -128,8 +130,9 @@ const cell = shallowRef(props.cell);
 const focused = ref(false);
 const response = ref("");
 const textarea = ref();
-
-const session = inject<BeakerSession>('session');
+const session: BeakerSession = inject("session");
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+const instance = getCurrentInstance();
 
 const taggedCellEvents = computed(() => {
     let index = 0;
@@ -209,6 +212,14 @@ defineExpose({
     enter, 
     exit, 
     clear
+});
+
+onBeforeMount(() => {
+    beakerSession.cellRegistry[cell.value.id] = instance.vnode;
+});
+
+onUnmounted(() => {
+    delete beakerSession.cellRegistry[cell.value.id];
 });
 
 </script>

@@ -5,7 +5,9 @@ import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
 
 import DevInterface from './DevInterface.vue';
-import { vKeybindings } from '@/util/directives';
+import { vKeybindings } from '@/directives/keybindings';
+import BeakerThemePlugin from '@/plugins/theme';
+// import { vTheme } from '@/directives/theme';
 
 import 'primeicons/primeicons.css';
 import '../index.scss';
@@ -35,6 +37,7 @@ const baseUrl = PageConfig.getBaseUrl();
 
   app.use(PrimeVue);
   app.use(ToastService);
+  app.use(BeakerThemePlugin);
   app.directive('tooltip', Tooltip);
   app.directive('focustrap', FocusTrap);
   app.directive('keybindings', vKeybindings);

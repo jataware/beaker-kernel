@@ -39,14 +39,7 @@ Execute selected cell                       - Ctrl-Enter
 
 import { ref, computed, defineProps, inject } from "vue";
 
-// import VueJsonPretty from 'vue-json-pretty';
-// import 'vue-json-pretty/lib/styles.css1rem;
-
-// import Button from 'primevue/button';
 import Menubar from 'primevue/menubar';
-// import InputText from 'primevue/inputtext';
-// import { Codemirror } from "vue-codemirror";
-// import { oneDark } from '@codemirror/theme-one-dark';
 
 // TODO MenuBar has a pass-through (pt) prop where can can
 // pass in context and set/fix the `active` tab to logging permanently
