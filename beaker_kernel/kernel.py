@@ -14,7 +14,7 @@ import requests
 from tornado import ioloop
 
 from .contexts.default.context import DefaultContext
-from .lib.context import BaseContext, autodiscover_contexts
+from .lib.context import BeakerContext, autodiscover_contexts
 from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
@@ -22,8 +22,8 @@ from .lib.utils import (message_handler, LogMessageEncoder, magic,
                         handle_message, get_socket)
 
 if TYPE_CHECKING:
-    from .lib.agent import BaseAgent
-    from .lib.subkernels.base import BaseSubkernel
+    from .lib.agent import BeakerAgent
+    from .lib.subkernels.base import BeakerSubkernel
 
 USER_RESPONSE_WAIT_TIME = 100
 
@@ -40,7 +40,7 @@ MESSAGE_STREAMS = {
 AVAILABLE_CONTEXTS = autodiscover_contexts()
 
 
-class LLMKernel(KernelProxyManager):
+class BeakerKernel(KernelProxyManager):
     implementation = "beaker-kernel"
     implementation_version = "0.1"
     banner = "Beaker Kernel"
@@ -53,7 +53,7 @@ class LLMKernel(KernelProxyManager):
 
     kernel_id: Optional[str]
     connection_file: Optional[str]
-    context: Optional[BaseContext]
+    context: Optional[BeakerContext]
     internal_executions: set[str]
     subkernel_execution_tracking: dict[str, str]
     user_responses: dict[str, str]
@@ -507,8 +507,11 @@ class LLMKernel(KernelProxyManager):
         parent_id = message.parent_header["msg_id"]
         self.user_responses[parent_id] = content["value"]
 
+# Provided for backwards compatibility
+LLMKernel = BeakerKernel
 
-def cleanup(kernel: LLMKernel):
+
+def cleanup(kernel: BeakerKernel):
     try:
         kernel.context.cleanup()
     except requests.exceptions.ConnectionError:
@@ -525,7 +528,7 @@ def start(connection_file):
 
     _, kernel_file = os.path.split(connection_file)
     kernel_id = os.path.basename(kernel_file)[7:-5]  # Remove 'kernel-' and '.json' from the beginning and end of the filename.
-    kernel = LLMKernel(notebook_config, kernel_id=kernel_id, connection_file=connection_file)
+    kernel = BeakerKernel(notebook_config, kernel_id=kernel_id, connection_file=connection_file)
 
     try:
         loop.start()
