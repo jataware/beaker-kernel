@@ -78,7 +78,6 @@ class BeakerBuildHook(BuildHookInterface):
         return contexts
 
     def add_packages_to_path(self, paths=None):
-        self.inserted_paths = set()
         if paths is None:
             paths = self.build_config.packages
 
@@ -98,10 +97,18 @@ class BeakerBuildHook(BuildHookInterface):
 
     def initialize(self, version, build_data):
         """Initialize the hook."""
+        self.inserted_paths = set()
 
         # Run for wheel building only
         if self.target_name != "wheel":
             return
+
+        # If we are building beaker_kernel itself, we need to make sure the source is on the Python path so it can be
+        # loaded.
+        if any("beaker_kernel" in pkg for pkg in self.build_config.packages):
+            local_path = os.path.abspath(os.curdir)
+            sys.path.insert(0, local_path)
+            self.inserted_paths.add(local_path)
 
         from beaker_kernel.lib.context import BaseContext
         from beaker_kernel.lib.subkernels.base import BaseSubkernel
