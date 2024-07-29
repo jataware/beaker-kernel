@@ -34,8 +34,8 @@
         </span>
         <span v-else-if="props.event?.type === 'code_cell'">
             <BeakerCodeCell
-                @click="notebook.selectCell(props.event?.content.cell)"
-                :cell="props?.event.content.cell"
+                @click="notebook.selectCell(props.event?.content.cell_id)"
+                :cell="getCellModelById(props?.event.content.cell_id)"
                 :drag-enabled="false"
                 :class="{
                     selected: (parentIndex.toString() === notebook.selectedCellId),
@@ -53,8 +53,7 @@
 
 <script setup lang="ts">
 import { defineProps, defineExpose, inject, onBeforeMount, computed, shallowRef } from "vue";
-import { BeakerSession } from 'beaker-kernel';
-import { BeakerQueryEvent, BeakerQueryEventType } from "beaker-kernel/dist/notebook";
+import { BeakerQueryEvent, BeakerQueryEventType, IBeakerCell } from "beaker-kernel/dist/notebook";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";
 import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
@@ -63,7 +62,6 @@ import AccordionTab from "primevue/accordiontab";
 
 import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
-const session: BeakerSession = inject("session");
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 
 const props = defineProps([
@@ -88,6 +86,18 @@ const lastOutput = computed(() => {
 
 const parentIndex = computed(() => 
     notebook.notebook.cells.indexOf(props.parentQueryCell.value));
+
+const getCellModelById = (id): IBeakerCell | undefined => {
+    for (const cell of notebook.notebook.cells) {
+        const target = (cell.children as IBeakerCell | undefined)?.find(
+            child => child.id === id
+        );
+        if (typeof target !== "undefined") {
+            return target;
+        }
+    }
+    return undefined;    
+}
 
 const isMarkdown = (event: BeakerQueryEvent) => {
     const markdownTypes: BeakerQueryEventType[] = ["thought", "response", "user_answer", "user_question"];

@@ -178,8 +178,6 @@ export const BeakerNotebookComponent = defineComponent({
                 return;
             }
             const newCell = new mapping[cellType]({...cell});
-            console.log(newCell);
-            console.log(cell);
             newCell.cell_type = cellType;
             this.notebook.cells.splice(cellIndex, 1, newCell);
         }

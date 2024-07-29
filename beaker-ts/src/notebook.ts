@@ -120,7 +120,7 @@ type BeakerQueryCellEventType = "code_cell"
 export interface IBeakerQueryCellEvent extends PartialJSONObject {
     type: BeakerQueryCellEventType
     content: {
-        cell: IBeakerCell
+        cell_id: string
         parent_id: string
         metadata: PartialJSONObject
     };
@@ -357,7 +357,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                     type: "code_cell",
                     content: {
                         parent_id: this.id,
-                        cell: codeCell,
+                        cell_id: codeCell.id,
                         metadata: {}
                     }
                 });
