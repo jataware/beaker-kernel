@@ -75,8 +75,7 @@ function handleMoveCell(fromIndex, toIndex) {
  * As well as dataTransfer so that drop target knows which one was dropped
  **/
 function handleDragStart(event, beakerCell, index)  {
-    if (event.dataTransfer !== null) {
-
+    if (event.dataTransfer !== null && typeof event?.target?.closest !== "undefined") {
         var paintTarget = event.target.closest('.beaker-cell');
 
         event.dataTransfer.dropEffect = 'move';
