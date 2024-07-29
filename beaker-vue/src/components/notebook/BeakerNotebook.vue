@@ -143,7 +143,12 @@ export const BeakerNotebookComponent = defineComponent({
             if (cellType === undefined) {
                 cellType = "code";
             }
-            const index = (referenceCell === undefined ? this.notebook.cells.length-1 : this.notebook.cells.findIndex((cell) => cell === referenceCell.cell));
+            let index = (referenceCell === undefined ? this.notebook.cells.length-1 : this.notebook.cells.findIndex((cell) => cell === referenceCell.cell));
+            // if reference cell is a child
+            const parentId = referenceCell?.cell?.metadata?.beaker_child_of;
+            if (index === -1 && parentId) {
+                index = this.notebook.cells.findIndex(cell => cell.id === parentId);
+            }
             const newCell = this.session.addCodeCell("");
             this.notebook.moveCell(this.notebook.cells.length -1, index + 1);
             nextTick(() => this.selectCell(newCell, enter));
