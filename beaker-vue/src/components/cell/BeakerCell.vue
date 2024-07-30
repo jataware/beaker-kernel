@@ -15,7 +15,7 @@
             </div>
             <Dropdown
                 class="cell-type-selector"
-                :model-value="cell.cell_type" 
+                :model-value="cell.cell_type"
                 @update:model-value="(value) => notebook.convertCellType(props.cell, value)"
                 :options="Object.keys(cellMap || {})"
                 :dropdown-icon="cellIconMap[cell.cell_type]"
@@ -100,6 +100,7 @@ const cellState = ref<CellState>(CellState.Pending);
 <style lang="scss">
 
 .beaker-cell {
+    position: relative;
     padding: 1rem 0 1rem 0.2rem;
     border-right: 5px solid transparent;
     background-color: var(--surface-a);
@@ -133,6 +134,7 @@ const cellState = ref<CellState>(CellState.Pending);
     grid-area: drag-handle;
     margin-left: auto;
     margin-right: auto;
+    z-index: 10;
 
     .draggable-wrapper {
         height: 3rem;
@@ -152,10 +154,15 @@ const cellState = ref<CellState>(CellState.Pending);
 }
 
 .drag-source {
-    background-color: #222;
-    > * {
-        opacity: 0.5;
-        background-color: #222;
+    &:after {
+        content: "";
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        bottom: 0px;
+        right: 0px;
+        z-index: 0;
+        background-color: rgba(128, 128, 128, 0.33);
     }
 }
 
