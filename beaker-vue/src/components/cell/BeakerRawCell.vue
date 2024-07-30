@@ -86,6 +86,13 @@ onBeforeUnmount(() => {
 
 </script>
 
+<script lang="ts">
+import { BeakerRawCell } from "beaker-kernel";
+export default {
+    modelClass: BeakerRawCell
+};
+</script>
+
 
 <style lang="scss">
 .raw-cell {

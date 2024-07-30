@@ -149,6 +149,12 @@ onBeforeUnmount(() => {
 
 </script>
 
+<script lang="ts">
+import { BeakerCodeCell } from "beaker-kernel";
+export default {
+    modelClass: BeakerCodeCell
+};
+</script>
 
 <style lang="scss">
 .code-cell {

@@ -89,7 +89,7 @@ export const BeakerNotebookComponent = defineComponent({
                             continue;
                         }
                         // If trying to go past last child cell
-                        if (childIndex < notebookCell.children.length-1) {
+                        if (childIndex <= notebookCell.children.length-1) {
                             // Select the next outer cell, if it exists
                             return this.selectNextCell(notebookCell);
                         }
@@ -172,17 +172,11 @@ export const BeakerNotebookComponent = defineComponent({
                 console.warn("attempted to convert cell not found in parent cell in place; cell not found");
                 return;
             }
-            const mapping = {
-                "markdown": BeakerMarkdownCell,
-                "code": BeakerCodeCell,
-                "query": BeakerQueryCell,
-                "raw": BeakerRawCell
-            };
-            if (!Object.keys(mapping).includes(cellType)) {
+            if (!Object.keys(this.cellMap).includes(cellType)) {
                 console.warn("invalid cell type provided for conversion target");
                 return;
             }
-            const newCell = new mapping[cellType]({...cell});
+            const newCell = new this.cellMap[cellType].modelClass({...cell});
             newCell.cell_type = cellType;
             this.notebook.cells.splice(cellIndex, 1, newCell);
         }

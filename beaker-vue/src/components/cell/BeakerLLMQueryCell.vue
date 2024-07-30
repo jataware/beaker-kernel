@@ -110,7 +110,6 @@ import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
-
 const props = defineProps([
     'index',
     'cell',
@@ -222,6 +221,13 @@ onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
 
+</script>
+
+<script lang="ts">
+import { BeakerQueryCell } from "beaker-kernel";
+export default {
+    modelClass: BeakerQueryCell
+};
 </script>
 
 

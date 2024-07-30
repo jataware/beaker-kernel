@@ -102,6 +102,13 @@ onBeforeUnmount(() => {
 
 </script>
 
+<script lang="ts">
+import { BeakerMarkdownCell } from "beaker-kernel";
+export default {
+    modelClass: BeakerMarkdownCell
+};
+</script>
+
 <style lang="scss">
 
 .markdown-cell {
