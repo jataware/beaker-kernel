@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance, inject, onBeforeMount, onUnmounted } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance, inject, onBeforeMount, onBeforeUnmount } from "vue";
 import CodeEditor from "@/components/misc/CodeEditor.vue";
 import { findSelectableParent } from "@/util";
 import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
@@ -79,7 +79,7 @@ onBeforeMount(() => {
     beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
 

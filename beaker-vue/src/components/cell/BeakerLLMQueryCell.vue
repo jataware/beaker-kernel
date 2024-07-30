@@ -100,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, onUnmounted, getCurrentInstance } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
@@ -218,7 +218,7 @@ onBeforeMount(() => {
     beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
 

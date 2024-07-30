@@ -16,9 +16,9 @@
             <Dropdown
                 class="cell-type-selector"
                 :model-value="cell.cell_type"
-                @update:model-value="(value) => notebook.convertCellType(props.cell, value)"
+                @update:model-value="(value) => notebook.convertCellType(cell, value)"
                 :options="Object.keys(cellMap || {})"
-                :dropdown-icon="cellIconMap[cell.cell_type]"
+                :dropdown-icon="cellIcon"
             >
                 <template #value="slotProps">
                     <span :class="cellIconMap[slotProps.value]"></span>
@@ -44,7 +44,7 @@
 
 
 <script setup lang="ts">
-import { defineProps, ref, inject } from "vue";
+import { defineProps, ref, inject, computed } from "vue";
 import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodeCell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
@@ -68,17 +68,14 @@ export interface Props {
 
 const props = defineProps<Props>();
 
-const cell = ref(props.cell);
-
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const cellMap = inject("cell-component-mapping");
 
 const clicked = (evt) => {
-    notebook.selectCell(cell.value as {id: string}, );
+    notebook.selectCell(props.cell as {id: string}, );
 };
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
-
 
 const cellIconMap = {
     "code": "pi pi-code",
@@ -86,6 +83,8 @@ const cellIconMap = {
     "query": "pi pi-sparkles",
     "raw": "pi pi-question-circle",
 };
+
+const cellIcon = computed(() => cellIconMap[props.cell.cell_type]);
 
 enum CellState {
     Success = 'success',

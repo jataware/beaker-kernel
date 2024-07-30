@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onUnmounted } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
@@ -143,7 +143,7 @@ onBeforeMount(() => {
     beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
 
