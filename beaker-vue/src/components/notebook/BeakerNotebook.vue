@@ -6,7 +6,7 @@
 
 <script lang="tsx">
 import { defineComponent, ref, computed, nextTick, provide, inject } from "vue";
-import { IBeakerCell, BeakerSession, BeakerNotebook } from 'beaker-kernel';
+import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell } from 'beaker-kernel';
 import { BeakerSessionComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 export interface IBeakerCellComponent {
@@ -89,7 +89,7 @@ export const BeakerNotebookComponent = defineComponent({
                             continue;
                         }
                         // If trying to go past last child cell
-                        if (childIndex < notebookCell.children.length-1) {
+                        if (childIndex <= notebookCell.children.length-1) {
                             // Select the next outer cell, if it exists
                             return this.selectNextCell(notebookCell);
                         }
@@ -143,7 +143,12 @@ export const BeakerNotebookComponent = defineComponent({
             if (cellType === undefined) {
                 cellType = "code";
             }
-            const index = (referenceCell === undefined ? this.notebook.cells.length-1 : this.notebook.cells.findIndex((cell) => cell === referenceCell.cell));
+            let index = (referenceCell === undefined ? this.notebook.cells.length-1 : this.notebook.cells.findIndex((cell) => cell === referenceCell.cell));
+            // if reference cell is a child
+            const parentId = referenceCell?.cell?.metadata?.beaker_child_of;
+            if (index === -1 && parentId) {
+                index = this.notebook.cells.findIndex(cell => cell.id === parentId);
+            }
             const newCell = this.session.addCodeCell("");
             this.notebook.moveCell(this.notebook.cells.length -1, index + 1);
             nextTick(() => this.selectCell(newCell, enter));
@@ -160,6 +165,21 @@ export const BeakerNotebookComponent = defineComponent({
             }
             return this.notebook.cutCell(index);
         },
+
+        convertCellType(cell: IBeakerCell, cellType: string) {
+            const cellIndex = this.notebook.cells.indexOf(cell);
+            if (cellIndex === -1) {
+                console.warn("attempted to convert cell not found in parent cell in place; cell not found");
+                return;
+            }
+            if (!Object.keys(this.cellMap).includes(cellType)) {
+                console.warn("invalid cell type provided for conversion target");
+                return;
+            }
+            const newCell = new this.cellMap[cellType].modelClass({...cell});
+            newCell.cell_type = cellType;
+            this.notebook.cells.splice(cellIndex, 1, newCell);
+        }
     },
 
     computed: {

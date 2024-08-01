@@ -74,15 +74,16 @@ function handleMoveCell(fromIndex, toIndex) {
  * Sets call to item being moved
  * As well as dataTransfer so that drop target knows which one was dropped
  **/
-function handleDragStart(event, beakerCell, index)  {
-    if (event.dataTransfer !== null) {
-
+function handleDragStart(event: DragEvent, beakerCell, index)  {
+    if (event.target instanceof HTMLElement && event.dataTransfer !== null && event.target.matches(".drag-handle *")) {
         var paintTarget = event.target.closest('.beaker-cell');
 
         event.dataTransfer.dropEffect = 'move';
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('cellID', beakerCell.id);
-        event.dataTransfer.setData('cellIndex', index.toString());
+        event.dataTransfer.setData('x-beaker/cell', JSON.stringify({
+            id: beakerCell.id,
+            index: index,
+        }));
         if (paintTarget !== null) {
             event.dataTransfer.setDragImage(paintTarget, 0, 0);
         }
@@ -97,15 +98,17 @@ function handleDragStart(event, beakerCell, index)  {
  * as well as preventing the animation where the dragged cell animates back to
  * its place when dropped into a proper target.
  **/
-function handleDragOver(event, beakerCell, index) {
-    dragOverIndex.value = index;
-    event.preventDefault(); // Allow dropping
+function handleDragOver(event: DragEvent, beakerCell, index) {
+    if (event?.dataTransfer?.types.includes("x-beaker/cell")) {
+        dragOverIndex.value = index;
+        event.preventDefault(); // Allow dropping
+    }
 }
 
 /**
  * Handles reordering of cells if dropped within the sort-enabled cells area.
  **/
-function handleDrop(event, index) {
+function handleDrop(event: DragEvent, index) {
 
     const target = event.target;
     const allowedDropArea = target.closest('.drag-sort-enable');
@@ -114,8 +117,9 @@ function handleDrop(event, index) {
         return;
     }
 
-    const sourceId = event.dataTransfer?.getData("cellID");
-    const sourceIndex =  Number.parseInt(event.dataTransfer?.getData("cellIndex") || "-1");
+    const cellData = JSON.parse(event.dataTransfer?.getData('x-beaker/cell') || 'null');
+    const sourceId = cellData.id;
+    const sourceIndex = cellData.index;
     const targetId = session.notebook.cells[index].id
 
     if (sourceId !== targetId){

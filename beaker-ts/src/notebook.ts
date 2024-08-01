@@ -1,6 +1,6 @@
 import * as nbformat from '@jupyterlab/nbformat';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import { JSONObject, PartialJSONValue } from '@lumino/coreutils';
+import { JSONObject, PartialJSONValue, PartialJSONObject } from '@lumino/coreutils';
 import { IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -99,15 +99,62 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     }
 }
 
-export interface IBeakerQueryEvent extends JSONObject {
-    type: "thought" | "response" | "user_question" | "user_answer" | "error" | "code_cell" | "abort";
-    content: string | PartialJSONValue;
+// Simple payload events
+
+type BeakerQueryTextEventType = 
+    | "thought" 
+    | "response" 
+    | "user_question" 
+    | "user_answer" 
+    | "abort";
+
+export interface IBeakerQueryTextEvent extends PartialJSONObject {
+    type: BeakerQueryTextEventType
+    content: string;
 };
+
+// Specific-payload types
+
+type BeakerQueryCellEventType = "code_cell"
+
+export interface IBeakerQueryCellEvent extends PartialJSONObject {
+    type: BeakerQueryCellEventType
+    content: {
+        cell_id: string
+        parent_id: string
+        metadata: PartialJSONObject
+    };
+};
+
+type BeakerQueryErrorEventType = "error";
+
+export interface IBeakerQueryErrorEvent extends PartialJSONObject {
+    type: BeakerQueryErrorEventType
+    content: {
+        ename: string
+        evalue: string
+        traceback: string[]
+    };
+}
+
+// umbrella-type for events
+
+export type BeakerQueryEventType =  
+    | BeakerQueryTextEventType
+    | BeakerQueryCellEventType
+    | BeakerQueryErrorEventType;
+
+export type BeakerQueryEvent = 
+    | IBeakerQueryTextEvent
+    | IBeakerQueryCellEvent
+    | IBeakerQueryErrorEvent;
+
+
 
 export interface IQueryCell extends nbformat.IBaseCell {
     cell_type: 'query';
     id?: string;
-    events: IBeakerQueryEvent[];
+    events: BeakerQueryEvent[];
 }
 
 export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
@@ -232,7 +279,7 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     declare cell_type: 'query';
     id?: string;
-    events: IBeakerQueryEvent[];
+    events: BeakerQueryEvent[];
 
     _current_input_request_message: messages.IInputRequestMsg;
 
@@ -256,6 +303,9 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 this.status = content.execution_state;
             }
             else if (msg_type === "llm_thought") {
+                if (content.thought === "") {
+                    return;
+                }
                 this.events.push({
                     type: "thought",
                     content: content.thought,
@@ -301,14 +351,17 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                     status: "pending",
                     checkpoint_index: content.checkpoint_index,
                 }
-                this.children.push(codeCell);
+                // cell is stored in events - we point the children field to the same object
+                // to make selection and execution work
                 this.events.push({
                     type: "code_cell",
                     content: {
-                        id: codeCell.id,
-                        index: this.children?.length - 1
-                    },
+                        parent_id: this.id,
+                        cell_id: codeCell.id,
+                        metadata: {}
+                    }
                 });
+                this.children.push(codeCell);
 
                 const reactiveCell = this.children[this.children.length - 1] as BeakerCodeCell;
                 if (autoexecute && content.execute_request_msg) {
@@ -390,7 +443,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 };
                 this.events.push({
                     type: "error",
-                    content: msg.content.evalue,
+                    content: {...msg.content}
                 });
             }
             else if (msg.content.status === "abort") {

@@ -15,7 +15,7 @@
                         @change="handleCodeChange"
                         @click="clicked"
                     />
-                    <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" />
+                    <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" v-show="!hideOutput" />
                 </div>
                 <div class="state-info">
                     <div class="execution-count-badge">
@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onUnmounted } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
@@ -55,6 +55,7 @@ import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNoteboo
 
 const props = defineProps([
     "cell",
+    "hideOutput"
 ]);
 
 const cell = ref(props.cell);
@@ -142,16 +143,22 @@ onBeforeMount(() => {
     beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
 
 </script>
 
+<script lang="ts">
+import { BeakerCodeCell } from "beaker-kernel";
+export default {
+    modelClass: BeakerCodeCell
+};
+</script>
 
 <style lang="scss">
 .code-cell {
-    padding-left: 0.2rem;
+    padding-left: 16px;
 }
 
 .code-cell-grid {

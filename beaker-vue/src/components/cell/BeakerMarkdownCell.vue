@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, onUnmounted} from "vue";
+import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, onBeforeUnmount} from "vue";
 import { marked } from 'marked';
 import { findSelectableParent } from '@/util';
 import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
@@ -48,7 +48,7 @@ const notebook = inject<BeakerNotebookComponentType>("notebook");
 const editorContents = ref<string>(cell.value.source);
 
 const renderedMarkdown = computed(() => {
-    return marked.parse(props.cell?.source);
+    return marked.parse(props.cell?.source || "");
 });
 
 const clicked = (evt) => {
@@ -96,10 +96,17 @@ onBeforeMount(() => {
     beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
 
+</script>
+
+<script lang="ts">
+import { BeakerMarkdownCell } from "beaker-kernel";
+export default {
+    modelClass: BeakerMarkdownCell
+};
 </script>
 
 <style lang="scss">

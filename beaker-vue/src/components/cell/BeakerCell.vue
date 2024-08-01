@@ -1,49 +1,50 @@
 <template>
-  <div
-    class="beaker-cell"
-    tabindex="0"
-    @click="clicked"
-    ref="beakerCellRef"
-  >
-    <div class="cell-grid">
-      <div
-        class="drag-handle"
-      >
-        <DraggableMarker
-            :draggable="props.dragEnabled"
-        />
-      </div>
-      <Dropdown
-        class="cell-type-selector"
-        v-model="cell.cell_type"
-        :options="Object.keys(cellMap || {})"
-        dropdown-icon="pi pi-code"
-      >
-        <template #value="slotProps">
-            <span :class="cellIconMap[slotProps.value]"></span>
-        </template>
-
-        <template #option="slotProps">
-            <div class="cell-type-dropdown-item">
-                <span :class="cellIconMap[slotProps.option]"></span>
-                <span>{{ slotProps.option }}</span>
+    <div
+        class="beaker-cell"
+        tabindex="0"
+        @click="clicked"
+        ref="beakerCellRef"
+    >
+        <div class="cell-grid">
+            <div
+                class="drag-handle"
+            >
+                <DraggableMarker
+                    :draggable="props.dragEnabled"
+                />
             </div>
-        </template>
-      </Dropdown>
-      <div class="cell-contents">
-        <slot name="default">
-        </slot>
+            <Dropdown
+                class="cell-type-selector"
+                :model-value="cell.cell_type"
+                @update:model-value="(value) => notebook.convertCellType(cell, value)"
+                :options="Object.keys(cellMap || {})"
+                :dropdown-icon="cellIcon"
+            >
+                <template #value="slotProps">
+                    <span :class="cellIconMap[slotProps.value]"></span>
+                </template>
 
-        <slot name="child-cells">
-        </slot>
-      </div>
+                <template #option="slotProps">
+                    <div class="cell-type-dropdown-item">
+                        <span :class="cellIconMap[slotProps.option]"></span>
+                        <span>{{ slotProps.option }}</span>
+                    </div>
+                </template>
+            </Dropdown>
+            <div class="cell-contents">
+                <slot name="default">
+                </slot>
+
+                <slot name="child-cells">
+                </slot>
+            </div>
+        </div>
     </div>
-  </div>
 </template>
 
 
 <script setup lang="ts">
-import { defineProps, ref, inject } from "vue";
+import { defineProps, ref, inject, computed } from "vue";
 import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodeCell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
@@ -51,7 +52,7 @@ import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
 import BeakerRawCell from './BeakerRawCell.vue';
-import { IBeakerCell } from "beaker-kernel";
+import { BeakerBaseCell, IBeakerCell } from "beaker-kernel";
 import Dropdown from 'primevue/dropdown';
 
 export type CellTypes =
@@ -65,21 +66,16 @@ export interface Props {
     dragEnabled?: boolean;
 }
 
-const myRef = ref();
-
 const props = defineProps<Props>();
-
-const cell = ref(props.cell);
 
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const cellMap = inject("cell-component-mapping");
 
 const clicked = (evt) => {
-    notebook.selectCell(cell.value as {id: string}, );
+    notebook.selectCell(props.cell as {id: string}, );
 };
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
-
 
 const cellIconMap = {
     "code": "pi pi-code",
@@ -88,11 +84,13 @@ const cellIconMap = {
     "raw": "pi pi-question-circle",
 };
 
+const cellIcon = computed(() => cellIconMap[props.cell.cell_type]);
+
 enum CellState {
-  Success = 'success',
-  Modified = 'modified',
-  Error = 'error',
-  Pending = 'pending',
+    Success = 'success',
+    Modified = 'modified',
+    Error = 'error',
+    Pending = 'pending',
 }
 
 const cellState = ref<CellState>(CellState.Pending);
@@ -101,6 +99,7 @@ const cellState = ref<CellState>(CellState.Pending);
 <style lang="scss">
 
 .beaker-cell {
+    position: relative;
     padding: 1rem 0 1rem 0.2rem;
     border-right: 5px solid transparent;
     background-color: var(--surface-a);
@@ -131,20 +130,21 @@ const cellState = ref<CellState>(CellState.Pending);
 }
 
 .drag-handle {
-  grid-area: drag-handle;
-  margin-left: auto;
-  margin-right: auto;
+    grid-area: drag-handle;
+    margin-left: auto;
+    margin-right: auto;
+    z-index: 10;
 
-  .draggable-wrapper {
-    height: 3rem;
-    width: 1rem;
-    background-position: 0.5rem 0.5rem;
-    background-size: 0.5rem 0.5rem;
+    .draggable-wrapper {
+        height: 3rem;
+        width: 1rem;
+        background-position: 0.5rem 0.5rem;
+        background-size: 0.5rem 0.5rem;
 
-    &:hover {
-        opacity: 0.9;
+        &:hover {
+            opacity: 0.9;
+        }
     }
-  }
 }
 
 .drag-disabled {
@@ -153,10 +153,15 @@ const cellState = ref<CellState>(CellState.Pending);
 }
 
 .drag-source {
-    background-color: #222;
-    > * {
-        opacity: 0.5;
-        background-color: #222;
+    &:after {
+        content: "";
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        bottom: 0px;
+        right: 0px;
+        z-index: 0;
+        background-color: rgba(128, 128, 128, 0.33);
     }
 }
 
