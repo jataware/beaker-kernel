@@ -1,7 +1,7 @@
 <template>
     <div class="llm-query-event">
         <span v-if="isMarkdownRef" v-html="markdownBody" />
-        <span v-if="props.event?.type === 'response'">
+        <span v-if="props.event?.type === 'response' && parentQueryCell?.children?.length !== 0">
             <h4 class="agent-outputs">Outputs:</h4>
             <Accordion :multiple="true" :active-index="lastOutput">
                 <AccordionTab 

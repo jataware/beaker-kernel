@@ -117,7 +117,9 @@ const props = defineProps([
 
 const eventIconMap = {
     "code_cell": "pi pi-align-left",
-    "thought": "pi pi-comment"
+    "thought": "pi pi-comment",
+    "user_answer": "pi pi-reply",
+    "user_question": "pi pi-question-circle"
 }
 
 const terminalEvents = [
@@ -170,8 +172,8 @@ const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
     "thought": "Agent Thought",
     "response": "Agent Response",
     "code_cell": "Code",
-    "user_answer": "User Input",
-    "user_question": "User Input",
+    "user_answer": "Answer",
+    "user_question": "Question",
     "error": "Error",
     "abort": "Abort"
 }
@@ -340,14 +342,18 @@ div.query-tab a.p-accordion-header-link.p-accordion-header-action{
     padding-bottom: 0;
 }
 
-div.query-tab-thought a.p-accordion-header-link.p-accordion-header-action {
+div.query-tab-thought a.p-accordion-header-link.p-accordion-header-action,
+div.query-tab-user_question a.p-accordion-header-link.p-accordion-header-action,
+div.query-tab-user_answer a.p-accordion-header-link.p-accordion-header-action {
     background: none;
     border: none;
     font-size: 0.75rem;
     font-weight: 400;
 }
 
-div.p-accordion-content.query-tab-content-thought {
+div.p-accordion-content.query-tab-content-thought,
+div.p-accordion-content.query-tab-content-user_question,
+div.p-accordion-content.query-tab-content-user_answer {
     background: none;
     border: none;
     font-size: 0.9rem;
@@ -364,7 +370,9 @@ div.code-cell.query-event-code-cell {
     padding-left: 0;
 }
 
-svg.query-tab-icon-thought {
+svg.query-tab-icon-thought,
+svg.query-tab-icon-user_answer,
+svg.query-tab-icon-user_question {
     width: 1rem;
     height: 0.7rem; 
 }
