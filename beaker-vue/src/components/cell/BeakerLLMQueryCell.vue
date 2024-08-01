@@ -201,11 +201,13 @@ function enter() {
 }
 
 function exit() {
-    // TODO
+    if (focused.value) {
+        focused.value = false;
+    }
 }
 
 function clear() {
-    // TODO
+   cell.value.source = "";
 }
 
 defineExpose({
