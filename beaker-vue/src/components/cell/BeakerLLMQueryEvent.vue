@@ -234,7 +234,7 @@ a.agent-response-headeraction > span > span.pi {
 }
 
 .agent-response-content .code-cell-output > div > div > .mime-select-container {
-    display:none
+    justify-content: flex-start
 }
 
 
