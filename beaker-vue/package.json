@@ -1,6 +1,6 @@
 {
   "name": "beaker-vue",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "scripts": {
     "serve": "vue-cli-service serve",
     "start": "npm run serve",
