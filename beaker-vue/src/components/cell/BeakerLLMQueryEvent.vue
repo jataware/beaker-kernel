@@ -4,8 +4,8 @@
         <span v-if="props.event?.type === 'response' && parentQueryCell?.children?.length !== 0">
             <h4 class="agent-outputs">Outputs:</h4>
             <Accordion :multiple="true" :active-index="lastOutput">
-                <AccordionTab 
-                    v-for="[index, child] in parentQueryCell?.children?.entries()" 
+                <AccordionTab
+                    v-for="[index, child] in parentQueryCell?.children?.entries()"
                     :key="index"
                     :pt="{
                         header: {
@@ -24,8 +24,8 @@
                 >
                         <template #header>
                             <span class="flex align-items-center gap-2 w-full">
-                                <span :class="outputTypeIconMap[findMeaningfulTypeFromOutputs(child?.outputs)]"/>
-                                <span class="font-bold white-space-nowrap">{{ tabHeaderShortened(child?.outputs) }}</span>
+                                <span :class="chooseOutputIcon(child?.outputs)"/>
+                                <span class="font-bold white-space-nowrap">{{ formatOutputs(child?.outputs, ["execute_result"]) }}</span>
                             </span>
                         </template>
                     <BeakerCodecellOutput :outputs="child?.outputs" />
@@ -84,7 +84,7 @@ const lastOutput = computed(() => {
     return [props.parentQueryCell?.children?.length - 1];
 })
 
-const parentIndex = computed(() => 
+const parentIndex = computed(() =>
     notebook.notebook.cells.indexOf(props.parentQueryCell.value));
 
 const getCellModelById = (id): IBeakerCell | undefined => {
@@ -96,7 +96,7 @@ const getCellModelById = (id): IBeakerCell | undefined => {
             return target;
         }
     }
-    return undefined;    
+    return undefined;
 }
 
 const isMarkdown = (event: BeakerQueryEvent) => {
@@ -106,51 +106,79 @@ const isMarkdown = (event: BeakerQueryEvent) => {
 
 const isMarkdownRef = computed(() => isMarkdown(props.event))
 
-const markdownBody = computed(() => 
+const markdownBody = computed(() =>
     isMarkdown(props.event) ? marked.parse(props.event.content) : "");
 
-const outputTypes = (outputs) : string[] => {
-    if (typeof outputs === "undefined") {
-        return [];
-    }
-    return Object.keys(outputs[0]?.data || {});
+type OutputType = "stream" | "error" | "execute_result" | "display_data";
+
+
+const formatStream = (output, shortened: boolean): string => {
+    return shortened ? output.name : `stream: ${output.name}`;
 }
 
-const tabHeader = (outputs) : string => {
-    const values = outputTypes(outputs);
+const formatError = (output, shortened: boolean): string => {
+    return shortened ? output?.ename : `${output?.ename}: ${output?.evalue}`;
+}
+
+const formatExecuteResult = (output, shortened: boolean): string => {
+    const values = Object.keys(output?.data || {});
     const userFacingNames = {
         "text/plain": "Text",
         "image/png": "Image"
     };
-    return values.sort().map(
+    const result = values.sort().map(
         (format) => Object.keys(userFacingNames)
             .includes(format) ? userFacingNames[format] : format)
             .join(", ");
-};
-
-const tabHeaderShortened = (outputs) : string => {
-    return tabHeader(outputs).split(",")[0];
+    return shortened ? result.split(",")[0] : result;
 }
 
-// get the most meaningful icon for a given list of outputs; e.g. plaintext is less than image/png
-const findMeaningfulTypeFromOutputs = (outputs) => {
+const formatOutputs = (outputs: {output_type: OutputType}[], shorten: OutputType[]): string => {
+    const formatters: {[key in OutputType]: (output: object, shortened: boolean) => string} = {
+        "stream": formatStream,
+        "error": formatError,
+        "execute_result": formatExecuteResult,
+        "display_data": formatExecuteResult
+    };
+    const headers: string[] = outputs.map(output =>
+        formatters[output.output_type](output, shorten.includes(output.output_type)));
+    return headers.join(", ");
+}
+
+// get the most meaningful icon for an execute_result; e.g. plaintext is less than image/png
+const executeResultIcon = (output) => {
+    const outputTypeIconMap = {
+        "image/png": "pi pi-chart-bar",
+        "text/html": "pi pi-table",
+        "text/plain": "pi pi-align-left",
+        "": "pi pi-code",
+    };
     const precedenceList = ["image/png", "text/html", "text/plain"];
-    const values = outputTypes(outputs);
+    const values = Object.keys(output?.data || {});
     for (const desiredType of precedenceList) {
         if (values.includes(desiredType)) {
-            return desiredType;
+            return outputTypeIconMap[desiredType];
         }
     }
     return ""
 };
 
-const outputTypeIconMap = {
-    "image/png": "pi pi-chart-bar",
-    "text/html": "pi pi-table",
-    "text/plain": "pi pi-align-left",
-    "": "pi pi-code",
-};
+const chooseOutputIcon = (outputs: {output_type: OutputType}[]) => {
+    const outputTypes = outputs.map(output => output.output_type);
 
+    const result = outputs.find(output =>
+        output.output_type === "execute_result"
+        || output.output_type === "display_data");
+    if (result !== undefined) {
+        return executeResultIcon(result);
+    }
+
+    if (outputTypes.includes("error")) {
+        return "pi pi-times-circle"
+    }
+
+    return "pi-pen-to-square"
+}
 
 function execute() {
     //const future = props.cell.execute(session);
@@ -190,7 +218,7 @@ defineExpose({execute});
 
 a.agent-response-headeraction > span > span.pi {
     align-items: center;
-    margin: auto; 
+    margin: auto;
     padding-right: 0.25rem;
 }
 
@@ -205,9 +233,11 @@ a.agent-response-headeraction > span > span.pi {
     padding: 0;
 }
 
+/*
 .agent-response-content .code-cell-output > div > div > .mime-select-container {
-    display:none
+    justify-content: flex-start
 }
+*/
 
 
 .agent-outputs {

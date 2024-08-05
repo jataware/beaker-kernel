@@ -40,9 +40,9 @@ const rebundleError = (errorOutput) => {
 
 
 <style lang="scss">
-@import url('@jupyterlab/notebook/style/index.css');
-@import url('@jupyterlab/outputarea/style/index.css');
-@import url('@jupyterlab/rendermime/style/index.css');
+@import url('@jupyterlab/outputarea/style/base.css');
+@import url('@jupyterlab/rendermime/style/base.css');
+@import url('@jupyterlab/notebook/style/base.css');
 
 .code-cell-output {
     padding: 1rem;
