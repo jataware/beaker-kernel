@@ -4,8 +4,8 @@
         <span v-if="props.event?.type === 'response' && parentQueryCell?.children?.length !== 0">
             <h4 class="agent-outputs">Outputs:</h4>
             <Accordion :multiple="true" :active-index="lastOutput">
-                <AccordionTab 
-                    v-for="[index, child] in parentQueryCell?.children?.entries()" 
+                <AccordionTab
+                    v-for="[index, child] in parentQueryCell?.children?.entries()"
                     :key="index"
                     :pt="{
                         header: {
@@ -84,7 +84,7 @@ const lastOutput = computed(() => {
     return [props.parentQueryCell?.children?.length - 1];
 })
 
-const parentIndex = computed(() => 
+const parentIndex = computed(() =>
     notebook.notebook.cells.indexOf(props.parentQueryCell.value));
 
 const getCellModelById = (id): IBeakerCell | undefined => {
@@ -96,7 +96,7 @@ const getCellModelById = (id): IBeakerCell | undefined => {
             return target;
         }
     }
-    return undefined;    
+    return undefined;
 }
 
 const isMarkdown = (event: BeakerQueryEvent) => {
@@ -106,7 +106,7 @@ const isMarkdown = (event: BeakerQueryEvent) => {
 
 const isMarkdownRef = computed(() => isMarkdown(props.event))
 
-const markdownBody = computed(() => 
+const markdownBody = computed(() =>
     isMarkdown(props.event) ? marked.parse(props.event.content) : "");
 
 type OutputType = "stream" | "error" | "execute_result" | "display_data";
@@ -165,18 +165,18 @@ const executeResultIcon = (output) => {
 
 const chooseOutputIcon = (outputs: {output_type: OutputType}[]) => {
     const outputTypes = outputs.map(output => output.output_type);
-    
-    const result = outputs.find(output => 
+
+    const result = outputs.find(output =>
         output.output_type === "execute_result"
         || output.output_type === "display_data");
     if (result !== undefined) {
         return executeResultIcon(result);
     }
-    
+
     if (outputTypes.includes("error")) {
         return "pi pi-times-circle"
     }
-    
+
     return "pi-pen-to-square"
 }
 
@@ -218,7 +218,7 @@ defineExpose({execute});
 
 a.agent-response-headeraction > span > span.pi {
     align-items: center;
-    margin: auto; 
+    margin: auto;
     padding-right: 0.25rem;
 }
 
@@ -233,9 +233,11 @@ a.agent-response-headeraction > span > span.pi {
     padding: 0;
 }
 
+/*
 .agent-response-content .code-cell-output > div > div > .mime-select-container {
     justify-content: flex-start
 }
+*/
 
 
 .agent-outputs {
