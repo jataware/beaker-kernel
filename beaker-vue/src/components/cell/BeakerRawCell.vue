@@ -73,6 +73,7 @@ defineExpose({
     enter,
     exit,
     clear,
+    model: cell,
 });
 
 onBeforeMount(() => {

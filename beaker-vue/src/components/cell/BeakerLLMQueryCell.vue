@@ -31,8 +31,8 @@
                 <h3 class="query-steps">Agent Steps:</h3>
                 <div class="query-horizontal-br" />
                 <Accordion :multiple="true" :class="'query-accordion'" v-model:active-index="selectedEvents">
-                    <AccordionTab 
-                        v-for="[eventIndex, event] of taggedCellEvents.entries()" 
+                    <AccordionTab
+                        v-for="[eventIndex, event] of taggedCellEvents.entries()"
                         :key="eventIndex"
                         :pt="{
                             header: {
@@ -64,9 +64,9 @@
                 </Accordion>
                 <div class="query-answer" v-if="isLastEventTerminal()" >
                     <h3 class="query-steps">Agent Response:</h3>
-                    <BeakerLLMQueryEvent 
-                        v-if="isLastEventTerminal()" 
-                        :event="cell?.events[cell?.events.length - 1]" 
+                    <BeakerLLMQueryEvent
+                        v-if="isLastEventTerminal()"
+                        :event="cell?.events[cell?.events.length - 1]"
                         :parent-query-cell="cell"
                     />
                 </div>
@@ -209,10 +209,11 @@ function clear() {
 }
 
 defineExpose({
-    execute, 
-    enter, 
-    exit, 
-    clear
+    execute,
+    enter,
+    exit,
+    clear,
+    model: cell,
 });
 
 onBeforeMount(() => {
@@ -374,12 +375,12 @@ svg.query-tab-icon-thought,
 svg.query-tab-icon-user_answer,
 svg.query-tab-icon-user_question {
     width: 1rem;
-    height: 0.7rem; 
+    height: 0.7rem;
 }
 
 a.query-tab-headeraction > span > span.pi {
     align-items: center;
-    margin: auto; 
+    margin: auto;
     padding-right: 0.25rem;
 }
 

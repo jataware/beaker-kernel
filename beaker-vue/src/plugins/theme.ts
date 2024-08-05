@@ -36,6 +36,8 @@ export const BeakerThemePlugin: Plugin = {
             }
             catch (e) {
                 console.error("Error when trying to parse saved them json string.", e);
+                theme = {...ThemeDefaults};
+                localStorage.setItem('theme', JSON.stringify(theme));
             }
         }
         theme = reactive(theme);

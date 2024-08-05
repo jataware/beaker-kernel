@@ -137,6 +137,7 @@ defineExpose({
     enter,
     exit,
     clear,
+    cell,
 });
 
 onBeforeMount(() => {
