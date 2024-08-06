@@ -177,7 +177,7 @@ const chooseOutputIcon = (outputs: {output_type: OutputType}[]) => {
         return "pi pi-times-circle"
     }
 
-    return "pi-pen-to-square"
+    return "pi pi-pen-to-square"
 }
 
 function execute() {
