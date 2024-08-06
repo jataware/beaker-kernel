@@ -16,6 +16,12 @@ export interface IBeakerCellComponent {
     clear: () => null;
 }
 
+export enum SelectCellOperation {
+    enter,
+    exit,
+    none
+}
+
 export const BeakerNotebookComponent = defineComponent({
     props: [
         "cellMap",
@@ -43,7 +49,7 @@ export const BeakerNotebookComponent = defineComponent({
     },
 
     methods: {
-        selectCell(cell: string | {id: string}, enter=false): string {
+        selectCell(cell: string | {id: string}, operation?: SelectCellOperation): string {
             let newCellId;
             if (typeof cell === 'string') {
                 newCellId = cell;
@@ -53,15 +59,15 @@ export const BeakerNotebookComponent = defineComponent({
             }
             if (this.selectedCellId !== newCellId) {
                 this.selectedCellId = newCellId
-                nextTick(() => {
-                    if (enter) {
-                        this.selectedCell()?.enter();
-                    }
-                    else {
-                        this.selectedCell()?.exit();
-                    }
-                });
             }
+            nextTick(() => {
+                if (operation === SelectCellOperation.enter) {
+                    this.selectedCell()?.enter();
+                } 
+                else if (operation === SelectCellOperation.exit) {
+                    this.selectedCell()?.exit();
+                }
+            });
             return this.selectedCellId;
         },
 

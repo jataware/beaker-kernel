@@ -3,6 +3,7 @@
         class="beaker-cell"
         tabindex="0"
         @click="clicked"
+        @dblclick="doubleClicked"
         ref="beakerCellRef"
     >
         <div class="cell-grid">
@@ -49,7 +50,7 @@ import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodeCell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
-import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import { BeakerNotebookComponentType, SelectCellOperation } from '@/components/notebook/BeakerNotebook.vue';
 
 import BeakerRawCell from './BeakerRawCell.vue';
 import { BeakerBaseCell, IBeakerCell } from "beaker-kernel";
@@ -72,7 +73,11 @@ const notebook = inject<BeakerNotebookComponentType>("notebook");
 const cellMap = inject("cell-component-mapping");
 
 const clicked = (evt) => {
-    notebook.selectCell(props.cell as {id: string}, );
+    notebook.selectCell(props.cell as {id: string}, SelectCellOperation.none);
+};
+
+const doubleClicked = (evt) => {
+    notebook.selectCell(props.cell as {id: string}, SelectCellOperation.enter);
 };
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
