@@ -42,6 +42,7 @@
                         >
                             <BeakerNotebookToolbar/>
                             <BeakerNotebookPanel
+                                ref="beakerNotebookPanelRef"
                                 :selected-cell="beakerNotebookRef?.selectedCellId"
                             >
                                 <template #notebook-background>
@@ -52,6 +53,7 @@
                             </BeakerNotebookPanel>
                             <BeakerAgentQuery
                                 class="agent-query-container"
+                                :run-cell-callback="queryCallback"
                             />
                         </BeakerNotebook>
                     </div>
@@ -147,6 +149,12 @@ const toast = useToast();
 
 const activeContext = ref();
 const beakerNotebookRef = ref();
+
+// TODO(DESIGN): Scroll functionality is often going to be used outside of a `BeakerPanel`.
+//               e.g. Analyst UI. The least intrusive changes to fix scrolling were added
+//               as a minimal fix for now. 
+const beakerNotebookPanelRef = ref();
+const queryCallback = (e) => beakerNotebookPanelRef?.value?.scrollBottomCellContainer(e)
 
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
