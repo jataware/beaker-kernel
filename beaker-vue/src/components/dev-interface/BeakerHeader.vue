@@ -3,7 +3,7 @@
         <template #start>
             <div class="status-bar">
                 <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
-                {{capitalize(beakerSession?.status || "Huh?")}}
+                {{ statusLabel }}
             </div>
             <Button
                 outlined
@@ -81,52 +81,42 @@ const { theme, toggleDarkMode } = inject('theme');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 function selectKernel() {
-    emit('select-kernel');
+    emit('selectKernel');
 }
 
 const themeIcon = computed(() => {
     return `pi pi-${theme === 'dark' ? 'sun' : 'moon'}`;
 });
 
-
-// TODO export/import from ts-lib utils.ts
-// enum KernelState {
-// 	unknown = 'unknown',
-// 	starting = 'starting',
-// 	idle = 'idle',
-// 	busy = 'busy',
-// 	terminating = 'terminating',
-// 	restarting = 'restarting',
-// 	autorestarting = 'autorestarting',
-// 	dead = 'dead',
-//   // This extends kernel status for now.
-//   connected = 'connected',
-//   connecting = 'connecting'
-// }
-
-const KernelState = {
-	unknown: 'unknown',
-	starting: 'starting',
-	idle: 'idle',
-	busy: 'busy',
-	terminating: 'terminating',
-	restarting: 'restarting',
-	autorestarting: 'autorestarting',
-	dead: 'dead',
-  //:his extends kernel status for now.
-  connected: 'connected',
-  connecting: 'connecting'
+const statusLabels = {
+    unknown: 'Unknown',
+    starting: 'Starting',
+    idle: 'Ready',
+    busy: 'Busy',
+    terminating: 'Terminating',
+    restarting: 'Restarting',
+    autorestarting: 'Autorestarting',
+    dead: 'Dead',
+    // This extends kernel status for now.
+    connected: 'Connected',
+    connecting: 'Connecting'
 }
 
-const connectionStatusColorMap = {
-    [KernelState.connected]: 'green-400',
-    // [KernelState.idle]: 'green-400',
-    [KernelState.connecting]: 'green-200',
-    [KernelState.busy]: 'orange-400',
+const statusColors = {
+    connected: 'green-300',
+    idle: 'green-400',
+    connecting: 'green-200',
+    busy: 'orange-400',
 };
 
+const statusLabel = computed(() => {
+    return statusLabels[beakerSession.status] || "unknown";
+
+});
+
 const connectionColor = computed(() => {
-    return connectionStatusColorMap[beakerSession.status];
+    // return connectionStatusColorMap[beakerSession.status];
+    return statusColors[beakerSession.status] || "grey-200"
 });
 
 </script>

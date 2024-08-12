@@ -372,6 +372,8 @@ header {
 
 main {
     grid-area: main;
+    padding-top: 2px;
+    padding-bottom: 2px;
 }
 
 footer {
@@ -394,7 +396,7 @@ footer {
 }
 
 .beaker-dev-interface {
-    padding-bottom: 1rem;
+    padding-bottom: 2px;
     height: 100vh;
     width: 100vw;
     display: grid;
@@ -407,6 +409,10 @@ footer {
 
     grid-template-columns: 1fr 1fr 1fr 1fr;
     grid-template-rows: auto 1fr auto;
+}
+
+.beaker-dev-interface .p-toolbar {
+    border: none;
 }
 
 </style>
