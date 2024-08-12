@@ -79,11 +79,11 @@
                             </SideMenuPanel>
 
                             <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
-                                <LoggingPane :entries="debugLogs" v-autoscroll />
+                                <LoggingPane :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
                             </SideMenuPanel>
 
                             <SideMenuPanel label="Messages" icon="pi pi-comments">
-                                <LoggingPane :entries="rawMessages" v-autoscroll />
+                                <LoggingPane :entries="rawMessages" @clear-logs="rawMessages.splice(0, rawMessages.length)" v-autoscroll />
                             </SideMenuPanel>
 
                             <SideMenuPanel label="Files" icon="pi pi-file-export">

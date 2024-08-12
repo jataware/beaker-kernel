@@ -68,6 +68,7 @@
           label="Clear Logs"
           severity="warning"
           size="small"
+          @click="$emit('clearLogs')"
         />
         <p v-else>
         <!-- We could detect if context debug is disabled and add a button here-->
@@ -80,7 +81,7 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, inject, defineProps } from "vue";
+import { ref, computed, defineEmits, defineProps } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import VueJsonPretty from 'vue-json-pretty';
@@ -92,6 +93,10 @@ const props = defineProps([
   "entries",
   "sortby",
 ])
+
+const emit = defineEmits([
+  'clearLogs'
+]);
 
 const filterValue = ref("");
 const sortDirection = ref("asc");
@@ -122,6 +127,7 @@ const filteredLogs = computed(() => {
     return filtered.sort(desc);
   }
 });
+
 
 </script>
 
