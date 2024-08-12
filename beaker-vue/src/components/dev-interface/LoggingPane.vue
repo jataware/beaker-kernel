@@ -1,6 +1,6 @@
 <template>
   <div class="data-container">
-    <div style="padding: 0.5rem;">
+    <div class="log-container">
 
       <!-- Some dev options to format json body display
       <div style="padding-bottom: 0.5rem; display: none;">
@@ -132,6 +132,13 @@ const filteredLogs = computed(() => {
   .vjs-tree-node:hover{
     background-color: var(--surface-b);
   }
+  flex: 1;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow-y: auto;
 }
 
 .ml-2 {
@@ -144,6 +151,10 @@ const filteredLogs = computed(() => {
   margin-bottom: 0.5rem;
   justify-content: space-between;
   flex-wrap: wrap;
+}
+
+.log-container {
+  padding: 0.5rem;
 }
 
 .log-panel {

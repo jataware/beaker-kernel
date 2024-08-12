@@ -43,6 +43,7 @@
                             <BeakerNotebookToolbar/>
                             <BeakerNotebookPanel
                                 :selected-cell="beakerNotebookRef?.selectedCellId"
+                                v-autoscroll
                             >
                                 <template #notebook-background>
                                     <div class="welcome-placeholder">
@@ -78,11 +79,11 @@
                             </SideMenuPanel>
 
                             <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
-                                <LoggingPane :entries="debugLogs" />
+                                <LoggingPane :entries="debugLogs" v-autoscroll />
                             </SideMenuPanel>
 
                             <SideMenuPanel label="Messages" icon="pi pi-comments">
-                                <LoggingPane :entries="rawMessages" />
+                                <LoggingPane :entries="rawMessages" v-autoscroll />
                             </SideMenuPanel>
 
                             <SideMenuPanel label="Files" icon="pi pi-file-export">

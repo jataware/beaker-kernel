@@ -26,6 +26,7 @@ const emit = defineEmits([
 
 <style lang="scss">
 .sidemenu-panel {
+    display: flex;
     position: absolute;
     top:0;
     bottom: 0;
@@ -33,5 +34,16 @@ const emit = defineEmits([
     left: 0;
     overflow-y: auto;
 
+}
+
+.sidemenu-panel .p-card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+.sidemenu-panel .p-card-content {
+    flex: 1;
+    position: relative;
 }
 </style>

@@ -2,16 +2,22 @@
     <div class="llm-query-cell">
         <div class="query-row">
             <div class="query">
-                <div v-show="focused">
-                    <ContainedTextArea
-                        ref="textarea"
-                        style="max-width: 50%; margin-right: 0.75rem; flex: 1;"
-                        v-model="cell.source"
-                    />
-                </div>
-                <div v-show="!focused">
-                    <div class="llm-prompt-container">
-                        <h2 class="llm-prompt-text">{{ cell.source }}</h2>
+                <div class="query-steps">User Query:</div>
+                <div class="llm-prompt-container">
+                    <div v-show="isEditing" class="prompt-input-container">
+                        <ContainedTextArea
+                            ref="textarea"
+                            class="prompt-input"
+                            v-model="promptText"
+                            :style="{minHeight: `${promptEditorMinHeight}px`}"
+                        />
+                        <div class="prompt-controls" style="">
+                            <Button label="Submit" @click="execute()"/>
+                            <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
+                        </div>
+                    </div>
+                    <div v-show="!isEditing" @dblclick="console.log($event.target.clientHeight); promptEditorMinHeight = $event.target.clientHeight; isEditing = true">
+                        <div class="llm-prompt-text">{{ cell.source }}</div>
                     </div>
                 </div>
             </div>
@@ -28,7 +34,7 @@
         </div>
         <div class="event-container" v-if="taggedCellEvents.length > 0">
             <div class="events">
-                <h3 class="query-steps">Agent Steps:</h3>
+                <h3 class="query-steps">Agent actions:</h3>
                 <div class="query-horizontal-br" />
                 <Accordion :multiple="true" :class="'query-accordion'" v-model:active-index="selectedEvents">
                     <AccordionTab
@@ -63,7 +69,7 @@
                     </AccordionTab>
                 </Accordion>
                 <div class="query-answer" v-if="isLastEventTerminal()" >
-                    <h3 class="query-steps">Agent Response:</h3>
+                    <h3 class="query-steps">Result</h3>
                     <BeakerLLMQueryEvent
                         v-if="isLastEventTerminal()"
                         :event="cell?.events[cell?.events.length - 1]"
@@ -71,6 +77,9 @@
                     />
                 </div>
             </div>
+        </div>
+        <div class="thinking-indicator" v-if="cell.status === 'busy'">
+            <span class="pi pi-comment"></span> Thinking <span class="thinking-animation"></span>
         </div>
         <div
             class="input-request"
@@ -128,7 +137,9 @@ const terminalEvents = [
 ]
 
 const cell = shallowRef(props.cell);
-const focused = ref(false);
+const isEditing = ref<boolean>(cell.value.source === "");
+const promptEditorMinHeight = ref<number>(100);
+const promptText = ref<string>(cell.value.source);
 const response = ref("");
 const textarea = ref();
 const session: BeakerSession = inject("session");
@@ -187,13 +198,14 @@ const respond = () => {
 };
 
 function execute() {
-    focused.value = false;
+    cell.value.source = promptText.value;
+    isEditing.value = false;
     const future = props.cell.execute(session);
 }
 
 function enter() {
-    if (!focused.value) {
-        focused.value = true;
+    if (!isEditing.value) {
+        isEditing.value = true;
         nextTick(() => {
             textarea.value.$el.focus();
         });
@@ -297,7 +309,13 @@ export default {
 .llm-prompt-container {
     display: flex;
     flex-direction: column;
-    //background-color: var(--surface-c);
+    background-color: var(--surface-c);
+    border-radius: var(--border-radius);
+    margin-right: 2em;
+}
+
+div.query-steps {
+    margin-bottom: 1rem;
 }
 
 h3.query-steps {
@@ -305,9 +323,12 @@ h3.query-steps {
 }
 
 .llm-prompt-text {
-    margin-top: 0;
-    margin-bottom: 0;
+    // margin-top: 0;
+    // margin-bottom: 0;
+    padding: 1em;
     font-weight: 400;
+    font-size: larger;
+    white-space: pre-wrap;
 }
 
 .event-container {
@@ -333,6 +354,7 @@ h3.query-steps {
 
 .query-steps {
     font-weight: 400;
+    font-size: large;
 }
 
 div.query-tab a.p-accordion-header-link.p-accordion-header-action{
@@ -394,9 +416,56 @@ a.query-tab-headeraction > span > span.pi-align-left {
 .query-answer {
     background-color: var(--surface-c);
     padding-left: 1rem;
+    margin-right: 2rem;
     padding-bottom: 1rem;
-    border-radius: 12px;
+    border-radius: var(--border-radius);
     margin-top: 1rem;
+}
+
+.prompt-input-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.prompt-input {
+    flex: 1;
+}
+
+.prompt-controls {
+    display: flex;
+    align-self: end;
+    flex-direction: column;
+    gap: 0.5em;
+    margin: 0.5em;
+}
+
+.thinking-indicator {
+    opacity: 0.7;
+    vertical-align: middle;
+}
+
+.thinking-animation {
+    font-size: x-large;
+    clip-path: view-box;
+}
+
+.thinking-animation:after {
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: bottom;
+    position: relative;
+    animation: thinking-ellipsis 2000ms steps(48, end) infinite;
+    content: "\2026\2026\2026\2026"; /* ascii code for the ellipsis character */
+    width: 4em;
+}
+
+@keyframes thinking-ellipsis {
+  from {
+    right: 4em;
+  }
+  to {
+    right: -4em;
+  }
 }
 
 
