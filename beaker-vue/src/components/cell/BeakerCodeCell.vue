@@ -33,7 +33,7 @@
                         v-if="hasRollback"
                         class="rollback-button"
                         :severity="badgeSeverity"
-                        icon="pi pi-refresh"
+                        icon="pi pi-undo"
                         size="small"
                         @click="rollback"
                     />

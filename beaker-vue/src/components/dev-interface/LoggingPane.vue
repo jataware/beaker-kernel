@@ -1,6 +1,6 @@
 <template>
   <div class="data-container">
-    <div style="padding: 0.5rem;">
+    <div class="log-container">
 
       <!-- Some dev options to format json body display
       <div style="padding-bottom: 0.5rem; display: none;">
@@ -68,6 +68,7 @@
           label="Clear Logs"
           severity="warning"
           size="small"
+          @click="$emit('clearLogs')"
         />
         <p v-else>
         <!-- We could detect if context debug is disabled and add a button here-->
@@ -80,7 +81,7 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, inject, defineProps } from "vue";
+import { ref, computed, defineEmits, defineProps } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import VueJsonPretty from 'vue-json-pretty';
@@ -92,6 +93,10 @@ const props = defineProps([
   "entries",
   "sortby",
 ])
+
+const emit = defineEmits([
+  'clearLogs'
+]);
 
 const filterValue = ref("");
 const sortDirection = ref("asc");
@@ -123,6 +128,7 @@ const filteredLogs = computed(() => {
   }
 });
 
+
 </script>
 
 <style lang="scss">
@@ -132,6 +138,13 @@ const filteredLogs = computed(() => {
   .vjs-tree-node:hover{
     background-color: var(--surface-b);
   }
+  flex: 1;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow-y: auto;
 }
 
 .ml-2 {
@@ -144,6 +157,10 @@ const filteredLogs = computed(() => {
   margin-bottom: 0.5rem;
   justify-content: space-between;
   flex-wrap: wrap;
+}
+
+.log-container {
+  padding: 0.5rem;
 }
 
 .log-panel {

@@ -43,6 +43,7 @@
                             <BeakerNotebookToolbar/>
                             <BeakerNotebookPanel
                                 :selected-cell="beakerNotebookRef?.selectedCellId"
+                                v-autoscroll
                             >
                                 <template #notebook-background>
                                     <div class="welcome-placeholder">
@@ -78,11 +79,11 @@
                             </SideMenuPanel>
 
                             <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
-                                <LoggingPane :entries="debugLogs" />
+                                <LoggingPane :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
                             </SideMenuPanel>
 
                             <SideMenuPanel label="Messages" icon="pi pi-comments">
-                                <LoggingPane :entries="rawMessages" />
+                                <LoggingPane :entries="rawMessages" @clear-logs="rawMessages.splice(0, rawMessages.length)" v-autoscroll />
                             </SideMenuPanel>
 
                             <SideMenuPanel label="Files" icon="pi pi-file-export">
@@ -371,6 +372,8 @@ header {
 
 main {
     grid-area: main;
+    padding-top: 2px;
+    padding-bottom: 2px;
 }
 
 footer {
@@ -393,7 +396,7 @@ footer {
 }
 
 .beaker-dev-interface {
-    padding-bottom: 1rem;
+    padding-bottom: 2px;
     height: 100vh;
     width: 100vw;
     display: grid;
@@ -406,6 +409,10 @@ footer {
 
     grid-template-columns: 1fr 1fr 1fr 1fr;
     grid-template-rows: auto 1fr auto;
+}
+
+.beaker-dev-interface .p-toolbar {
+    border: none;
 }
 
 </style>

@@ -65,10 +65,6 @@ const dragStartPos = ref<number|null>(null);
 const dragStartWidth = ref<number|null>(null);
 const dragDistance = ref<number|null>(null);
 
-const activePanel = computed(() => {
-    return panels.value[selectedTabIndex.value];
-});
-
 const expanded = computed(() => {
     return selectedTabIndex.value > -1;
 });
