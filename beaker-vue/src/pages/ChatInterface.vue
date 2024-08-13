@@ -44,15 +44,15 @@
                             :cell-map="cellComponentMapping"
                             v-keybindings="notebookKeyBindings"
                         >
-                            <AnalystPanel
-                                ref="analystPanel"
+                            <ChatPanel
+                                ref="chatPanelRef"
                                 :selected-cell="beakerNotebookRef?.selectedCellId"
                             >
                                 <template #notebook-background>
                                     <div class="welcome-placeholder">
                                     </div>
                                 </template>
-                            </AnalystPanel>
+                            </ChatPanel>
                             <AgentQuery
                                 class="agent-query-container"
                             />
@@ -68,12 +68,12 @@
 </template>
 
 <script setup lang="ts">
-import AgentQuery from '@/components/analyst-interface/AgentQuery.vue';
-import AnalystPanel from '@/components/analyst-interface/AnalystPanel.vue';
-import ResetButton from '@/components/analyst-interface/ResetButton.vue';
-import DarkModeButton from '@/components/analyst-interface/DarkModeButton.vue';
-import HelpSidebar from '@/components/analyst-interface/HelpSidebar.vue';
-import VerticalToolbar from '@/components/analyst-interface/VerticalToolbar.vue';
+import AgentQuery from '@/components/chat-interface/AgentQuery.vue';
+import ChatPanel from '@/components/chat-interface/ChatPanel.vue';
+import ResetButton from '@/components/chat-interface/ResetButton.vue';
+import DarkModeButton from '@/components/chat-interface/DarkModeButton.vue';
+import HelpSidebar from '@/components/chat-interface/HelpSidebar.vue';
+import VerticalToolbar from '@/components/chat-interface/VerticalToolbar.vue';
 
 import BeakerCodeCell from '@/components/cell/BeakerCodeCell.vue';
 import BeakerLLMQueryCell from '@/components/cell/BeakerLLMQueryCell.vue';
@@ -101,7 +101,7 @@ import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } fr
 
 const { theme, toggleDarkMode } = inject('theme');
 const toast = useToast();
-const analystPanel = ref();
+const chatPanelRef = ref();
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 
 // NOTE: Right now, we don't want the context changing

@@ -5,7 +5,7 @@ module.exports = defineConfig({
   // publicPath: "/dev_ui/",
   pages: {
     index: 'src/pages/dev-interface.ts',
-    analyst: 'src/pages/analyst.ts',
+    chat: 'src/pages/chat-interface.ts',
     admin: 'src/pages/admin.ts',
     notebook: 'src/pages/notebook.ts',
     cell: 'src/pages/cell.ts',

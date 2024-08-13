@@ -5,7 +5,7 @@ import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
 
 import BeakerThemePlugin from '@/plugins/theme';
-import AnalystInterface from './AnalystInterface.vue';
+import ChatInterface from './ChatInterface.vue';
 import { vKeybindings } from '@/directives/keybindings';
 
 import 'primeicons/primeicons.css';
@@ -32,7 +32,7 @@ const baseUrl = PageConfig.getBaseUrl();
     config = await configResponse.json();
   }
 
-  const app = createApp(AnalystInterface, {config});
+  const app = createApp(ChatInterface, {config});
 
   app.use(PrimeVue);
   app.use(ToastService);

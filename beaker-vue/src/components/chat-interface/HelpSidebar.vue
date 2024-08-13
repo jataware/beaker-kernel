@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import VerticalToolbar from '@/components/analyst-interface/VerticalToolbar.vue';
+import VerticalToolbar from '@/components/chat-interface/VerticalToolbar.vue';
 import Button from 'primevue/button';
 import { ref } from "vue";
 const isAboutOpen = ref(false);
