@@ -47,8 +47,10 @@ const handleQuery = (e: any) => {
     if (notebook.notebook.cells.length === 1) {
         const existingCell = notebook.notebook.cells[0];
         if (
-            existingCell.cell_type === "code" && existingCell.source === ""
-            && existingCell.execution_count === null && existingCell.outputs.length === 0
+            existingCell.cell_type === "code" 
+            && existingCell.source === ""
+            && existingCell.execution_count === null 
+            && (existingCell.outputs as object[]).length === 0
         ) {
             notebook.notebook.removeCell(0);
         }
