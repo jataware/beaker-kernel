@@ -1,6 +1,6 @@
 <template>
     <div class="llm-query-event">
-        <span v-if="isMarkdownRef" v-html="markdownBody" />
+        <span v-if="isMarkdown(event) && isValidResponse(event)" v-html="markdownBody" />
         <span v-if="props.event?.type === 'response' && parentQueryCell?.children?.length !== 0">
             <h4 class="agent-outputs">Outputs:</h4>
             <Accordion :multiple="true" :active-index="lastOutput">
@@ -104,7 +104,16 @@ const isMarkdown = (event: BeakerQueryEvent) => {
     return markdownTypes.includes(event.type);
 }
 
-const isMarkdownRef = computed(() => isMarkdown(props.event))
+// if the agent response is 'None' rather than any plain text,
+// we can assume that was the result of LOOP_SUCCESS returning None,
+// in which case the side effect was the main desired output,
+// and the agent 'None' can safely be ignored and hidden from the user.
+const isValidResponse = (event: BeakerQueryEvent) => {
+    if (event.type === "response" && event.content === "None") {
+        return false;
+    }
+    return true;
+}
 
 const markdownBody = computed(() =>
     isMarkdown(props.event) ? marked.parse(props.event.content) : "");
