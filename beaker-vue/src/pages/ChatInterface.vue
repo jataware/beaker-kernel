@@ -434,9 +434,16 @@ div.llm-prompt-container h2.llm-prompt-text {
 
 div.llm-prompt-container {
     text-align: right;
+    max-width: 60%;
+    align-self: end;
 }
 
-h3.query-steps {
+div.query {
+    display: flex;
+    flex-direction: column;
+}
+
+div.query-steps {
     display: none;
 }
 
