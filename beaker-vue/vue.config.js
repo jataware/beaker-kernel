@@ -2,7 +2,23 @@ const { defineConfig } = require('@vue/cli-service')
 const path = require('path');
 
 module.exports = defineConfig({
-  // publicPath: "/dev_ui/",
+  chainWebpack: config => {
+    config.module.rule('ts').uses.delete('thread-loader');
+    config.module.rule('ts').use('babel-loader');
+    config.module
+      .rule('ts')
+      .use('ts-loader')
+      .tap(options => {
+        options.transpileOnly = false;
+        options.happyPackMode = false;
+        options.compilerOptions = {
+          declaration: true,
+          noEmit: false,
+          outDir: 'lib'
+        };
+        return options;
+      });
+  },
   pages: {
     index: 'src/pages/dev-interface.ts',
     admin: 'src/pages/admin.ts',
@@ -13,11 +29,17 @@ module.exports = defineConfig({
   assetsDir: "static/",
   transpileDependencies: true,
   configureWebpack: {
+    // entry: "./src/index.ts",
     resolve: {
       alias: {
         // "beaker-kernel": path.resolve(__dirname, "../beaker-ts/src/")
       }
-    }
+    },
+    output: {
+      library: "beaker_vue",
+    },
+    module: {
+    },
   },
   devServer: {
     proxy: {

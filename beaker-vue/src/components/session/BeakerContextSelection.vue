@@ -107,6 +107,7 @@ interface IBeakerContext {
     languages: {
         slug: string,
         kernel: string,
+        subkernel: string,
     }[],
     defaultPayload: string,
 }
@@ -129,7 +130,7 @@ const selectedContext = computed<IBeakerContext | undefined>(() => {
         return undefined;
     }
 });
-const languageOptions = computed<{slug: string, kernel: string}[]>(() => {
+const languageOptions = computed<{slug: string, kernel: string, subkernel: string}[]>(() => {
     if (!contextData.value || selectedContext.value === undefined) {
         return [];
     }

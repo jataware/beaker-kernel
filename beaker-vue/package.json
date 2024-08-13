@@ -1,14 +1,34 @@
 {
   "name": "beaker-vue",
   "version": "1.6.1",
+  "declaration": true,
   "scripts": {
     "serve": "vue-cli-service serve",
     "start": "npm run serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
   "repository": {
     "url": "https://github.com/jataware/beaker-kernel"
+  },
+  "exports": {
+    "components/sidemenu": "./src/components/sidemenu/index.ts",
+    "components/misc": "./src/components/misc/index.ts",
+    "components/render": "./src/components/render/index.ts",
+    "components/notebook": "./src/components/notebook/index.ts",
+    "components/dev-interface": "./src/components/dev-interface/index.ts",
+    "components/cell": "./src/components/cell/index.ts",
+    "components/agent": "./src/components/agent/index.ts",
+    "components/session": "./src/components/session/index.ts",
+    "pages/admin": "./src/pages/admin.ts",
+    "pages/playground": "./src/pages/playground.ts",
+    "pages/dev-interface": "./src/pages/dev-interface.ts",
+    "pages/notebook": "./src/pages/notebook.ts",
+    "pages/cell": "./src/pages/cell.ts"
   },
   "dependencies": {
     "@codemirror/lang-python": "^6.1.3",

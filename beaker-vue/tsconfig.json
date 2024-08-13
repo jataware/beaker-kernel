@@ -5,6 +5,7 @@
     "strict": false,
     "jsx": "preserve",
     "moduleResolution": "node",
+    "declaration": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -34,7 +35,7 @@
     "tests/**/*.ts",
     "tests/**/*.tsx"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  // "exclude": [
+  //   "node_modules"
+  // ]
 }

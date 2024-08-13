@@ -59,7 +59,7 @@
         >
             <Panel
                 class="log-panel"
-                :class="{odd: index % 2 !== 0}"
+                :class="{odd: ((index as number) % 2) !== 0}"
                 :data-index="logEntry.timestamp"
                 v-for="(logEntry,index) in logEntries" :key="`${logEntry.type}-${logEntry.timestamp}`"
                 :header="logEntry.type"
@@ -105,14 +105,14 @@ const emit = defineEmits([
 
 const session = inject<BeakerSession>('session');
 const beakerSession = inject<BeakerSessionComponentType>('beakerSession');
-const showToast = inject('show_toast');
+const showToast = inject<any>('show_toast');
 
 const actionType = ref<string>();
 const actionPayload = ref<string>("{\n}");
 const actionOptions = ref([]);
 const actionDocs = ref<string|undefined>();
 const selectedActionName = ref<string|undefined>()
-const messageNum = ref(1)
+const messageNum = ref<number>(1)
 const messageId = ref<string|undefined>(undefined);
 const response = ref<any>();
 const result = ref<any>();

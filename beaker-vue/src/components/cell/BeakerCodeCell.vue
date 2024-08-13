@@ -50,8 +50,8 @@ import Button from 'primevue/button';
 import { findSelectableParent } from "@/util";
 import { BeakerSession } from "beaker-kernel";
 import CodeEditor from "@/components/misc/CodeEditor.vue";
-import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
-import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import { type BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import { type BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
 const props = defineProps([
     "cell",

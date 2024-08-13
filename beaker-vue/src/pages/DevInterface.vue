@@ -152,14 +152,14 @@ const beakerNotebookRef = ref();
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
 // Let's only use severity=success|warning|danger(=error) for now
-const showToast = ({title, detail, life=3000, severity='success', position='bottom-right'}) => {
+const showToast = ({title, detail, life=3000, severity=('success' as undefined), position='bottom-right'}) => {
     toast.add({
         summary: title,
         detail,
         life,
         // for options, seee https://primevue.org/toast/
         severity,
-        position
+        // position
     });
 };
 
