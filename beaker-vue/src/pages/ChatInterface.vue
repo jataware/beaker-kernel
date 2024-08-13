@@ -1,7 +1,7 @@
 <template>
     <div id="app">
         <BeakerSession
-            ref="beakerSession"
+            ref="beakerSessionRef"
             :connectionSettings="props.config"
             sessionName="dev_interface"
             :sessionId="sessionId"
@@ -11,13 +11,28 @@
             @unhandled-msg="unhandledMessage"
             @any-msg="anyMessage"
             @session-status-changed="statusChanged"
-            @context-changed="setContext"
             v-keybindings="sessionKeybindings"
         >
             <div class="beaker-dev-interface">
                 <header style="justify-content: center;">
                     <VerticalToolbar style="align-self: flex-start;">
                         <template #start>
+                            <Button
+                                outlined
+                                size="small"
+                                icon="pi pi-angle-down"
+                                iconPos="right"
+                                class="connection-button"
+                                @click="() => {contextSelectionOpen = !contextSelectionOpen}"
+                                v-tooltip.right="{
+                                    value: `${statusLabel}: ${beakerSessionRef?.activeContext?.slug || ''}`, 
+                                    showDelay: 300
+                                }"
+                                :label="beakerSessionRef?.activeContext?.slug"
+                                :loading="!(beakerSessionRef?.activeContext?.slug)"
+                            >
+                                <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
+                            </Button>
                             <ResetButton :on-reset-callback="() => setContext({})"/>
                             <Button
                                 @click="toggleFileMenu"
@@ -61,6 +76,12 @@
                     <HelpSidebar></HelpSidebar>
                 </main>
             </div>
+            <BeakerContextSelection
+                :isOpen="contextSelectionOpen"
+                :contextProcessing="contextProcessing"
+                @context-changed="(contextData) => {beakerSessionRef.setContext(contextData)}"
+                @close-context-selection="contextSelectionOpen = false"
+            />
         </BeakerSession>
         <!-- Modals, popups and globals -->
         <Toast position="bottom-right" />
@@ -96,20 +117,25 @@ import OverlayPanel from 'primevue/overlaypanel';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 
-import { defineProps, inject, nextTick, onBeforeMount, onUnmounted, provide, ref } from 'vue';
+import { defineProps, inject, nextTick, onBeforeMount, onUnmounted, provide, ref, defineEmits, computed } from 'vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
 const { theme, toggleDarkMode } = inject('theme');
 const toast = useToast();
 const chatPanelRef = ref();
 const notebook = inject<BeakerNotebookComponentType>("notebook");
+const contextSelectionOpen = ref(false);
+const contextProcessing = ref(false);
+import BeakerContextSelection from '@/components/session/BeakerContextSelection.vue';
+
+
 
 // NOTE: Right now, we don't want the context changing
-const activeContext = {"context": "biome", "language": "python3", "slug": "python3"};
+const activeContext = ref();
 const beakerNotebookRef = ref();
 const setContext = (contextInfo) => {
-    if (contextInfo?.slug !== 'biome') {
-        beakerSession.value.setContext(activeContext);
+    if (contextInfo?.slug !== 'default') {
+        beakerSessionRef.value.setContext(activeContext);
     }
 }
 
@@ -166,7 +192,38 @@ const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
 const saveInterval = ref();
-const beakerSession = ref<typeof BeakerSession>();
+const beakerSessionRef = ref<typeof BeakerSession>();
+
+const statusLabels = {
+    unknown: 'Unknown',
+    starting: 'Starting',
+    idle: 'Ready',
+    busy: 'Busy',
+    terminating: 'Terminating',
+    restarting: 'Restarting',
+    autorestarting: 'Autorestarting',
+    dead: 'Dead',
+    // This extends kernel status for now.
+    connected: 'Connected',
+    connecting: 'Connecting'
+}
+
+const statusColors = {
+    connected: 'green-300',
+    idle: 'green-400',
+    connecting: 'green-200',
+    busy: 'orange-400',
+};
+
+const statusLabel = computed(() => {
+    return statusLabels[beakerSessionRef?.value?.status] || "unknown";
+
+});
+
+const connectionColor = computed(() => {
+    // return connectionStatusColorMap[beakerSession.status];
+    return statusColors[beakerSessionRef?.value?.status] || "grey-200"
+});
 
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
@@ -178,7 +235,7 @@ const iopubMessage = (msg) => {
             timestamp: msg.header.date,
         });
     } else if (msg.header.msg_type === "job_response") {
-        beakerSession.value.session.addMarkdownCell(msg.content.response);
+        beakerSessionRef.value.session.addMarkdownCell(msg.content.response);
     }
 };
 
@@ -398,4 +455,9 @@ div.beaker-toolbar div {
 div.central-panel, div.beaker-notebook {
     height: 100%;
 }
+
+button.connection-button {
+    border: none;
+}
+
 </style>
