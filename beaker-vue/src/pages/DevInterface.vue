@@ -115,33 +115,33 @@
 <script setup lang="ts">
 import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted } from 'vue';
 import { JupyterMimeRenderer } from 'beaker-kernel';
-import BeakerNotebook from '@/components/notebook/BeakerNotebook.vue';
-import BeakerNotebookToolbar from '@/components/notebook/BeakerNotebookToolbar.vue';
-import BeakerNotebookPanel from '@/components/notebook/BeakerNotebookPanel.vue';
-import BeakerSession from '@/components/session/BeakerSession.vue';
-import BeakerHeader from '@/components/dev-interface/BeakerHeader.vue';
+import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
+import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
+import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
+import BeakerSession from '../components/session/BeakerSession.vue';
+import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Card from 'primevue/card';
-import LoggingPane from '@/components/dev-interface/LoggingPane.vue';
-import BeakerAgentQuery from '@/components/agent/BeakerAgentQuery.vue';
-import BeakerContextSelection from "@/components/session/BeakerContextSelection.vue";
-import BeakerExecuteAction from "@/components/dev-interface/BeakerExecuteAction.vue";
-import ContextTree from '@/components/dev-interface/ContextTree.vue';
-import BeakerFilePane from '@/components/dev-interface/BeakerFilePane.vue';
-import PreviewPane from '@/components/dev-interface/PreviewPane.vue';
-import SvgPlaceholder from '@/components/misc/SvgPlaceholder.vue';
-import SideMenu from "@/components/sidemenu/SideMenu.vue";
-import SideMenuPanel from "@/components/sidemenu/SideMenuPanel.vue";
-import FooterDrawer from '@/components/dev-interface/FooterDrawer.vue';
+import LoggingPane from '../components/dev-interface/LoggingPane.vue';
+import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
+import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
+import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
+import ContextTree from '../components/dev-interface/ContextTree.vue';
+import BeakerFilePane from '../components/dev-interface/BeakerFilePane.vue';
+import PreviewPane from '../components/dev-interface/PreviewPane.vue';
+import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
+import SideMenu from "../components/sidemenu/SideMenu.vue";
+import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
+import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
 
-import BeakerCodeCell from '@/components/cell/BeakerCodeCell.vue';
-import BeakerMarkdownCell from '@/components/cell/BeakerMarkdownCell.vue';
-import BeakerLLMQueryCell from '@/components/cell/BeakerLLMQueryCell.vue';
-import BeakerRawCell from '@/components/cell/BeakerRawCell.vue';
+import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
+import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
+import BeakerLLMQueryCell from '../components/cell/BeakerLLMQueryCell.vue';
+import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
 
 const toast = useToast();

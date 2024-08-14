@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, onBeforeMount, onMounted, defineProps, computed, nextTick, provide, inject, defineEmits, useSlots } from "vue";
+import { defineProps, defineEmits } from "vue";
 
 import Card from "primevue/card";
 

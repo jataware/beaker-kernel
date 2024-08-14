@@ -4,9 +4,9 @@ import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
 
-import BeakerThemePlugin from '@/plugins/theme';
+import BeakerThemePlugin from '../plugins/theme';
 import ChatInterface from './ChatInterface.vue';
-import { vKeybindings } from '@/directives/keybindings';
+import { vKeybindings } from '../directives/keybindings';
 
 import 'primeicons/primeicons.css';
 import '../index.scss';

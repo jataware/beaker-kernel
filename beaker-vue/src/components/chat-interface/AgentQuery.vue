@@ -26,8 +26,8 @@ import Card from 'primevue/card';
 import Button from 'primevue/button';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel';
-import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
-import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 const props = defineProps([
     "runCellCallback"
 ]);

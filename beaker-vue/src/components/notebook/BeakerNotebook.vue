@@ -6,8 +6,8 @@
 
 <script lang="tsx">
 import { defineComponent, ref, computed, nextTick, provide, inject } from "vue";
-import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell } from 'beaker-kernel';
-import { BeakerSessionComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import { IBeakerCell, BeakerSession, BeakerNotebook } from 'beaker-kernel';
+import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 export interface IBeakerCellComponent {
     execute: () => null;

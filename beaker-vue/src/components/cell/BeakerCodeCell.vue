@@ -47,11 +47,11 @@ import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inje
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
-import { findSelectableParent } from "@/util";
+import { findSelectableParent } from "../../util";
 import { BeakerSession } from "beaker-kernel";
-import CodeEditor from "@/components/misc/CodeEditor.vue";
-import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
-import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import CodeEditor from "../misc/CodeEditor.vue";
+import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 const props = defineProps([
     "cell",

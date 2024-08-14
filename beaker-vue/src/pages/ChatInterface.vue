@@ -89,24 +89,24 @@
 </template>
 
 <script setup lang="ts">
-import AgentQuery from '@/components/chat-interface/AgentQuery.vue';
-import ChatPanel from '@/components/chat-interface/ChatPanel.vue';
-import ResetButton from '@/components/chat-interface/ResetButton.vue';
-import DarkModeButton from '@/components/chat-interface/DarkModeButton.vue';
-import HelpSidebar from '@/components/chat-interface/HelpSidebar.vue';
-import VerticalToolbar from '@/components/chat-interface/VerticalToolbar.vue';
+import AgentQuery from '../components/chat-interface/AgentQuery.vue';
+import ChatPanel from '../components/chat-interface/ChatPanel.vue';
+import ResetButton from '../components/chat-interface/ResetButton.vue';
+import DarkModeButton from '../components/chat-interface/DarkModeButton.vue';
+import HelpSidebar from '../components/chat-interface/HelpSidebar.vue';
+import VerticalToolbar from '../components/chat-interface/VerticalToolbar.vue';
 
-import BeakerCodeCell from '@/components/cell/BeakerCodeCell.vue';
-import BeakerLLMQueryCell from '@/components/cell/BeakerLLMQueryCell.vue';
-import BeakerMarkdownCell from '@/components/cell/BeakerMarkdownCell.vue';
-import BeakerRawCell from '@/components/cell/BeakerRawCell.vue';
+import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
+import BeakerLLMQueryCell from '../components/cell/BeakerLLMQueryCell.vue';
+import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
+import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
-import BeakerFilePane from '@/components/dev-interface/BeakerFilePane.vue';
+import BeakerFilePane from '../components/dev-interface/BeakerFilePane.vue';
 
-import BeakerNotebook from '@/components/notebook/BeakerNotebook.vue';
-import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
+import { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
 
-import BeakerSession from '@/components/session/BeakerSession.vue';
+import BeakerSession from '../components/session/BeakerSession.vue';
 
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
@@ -126,7 +126,7 @@ const chatPanelRef = ref();
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const contextSelectionOpen = ref(false);
 const contextProcessing = ref(false);
-import BeakerContextSelection from '@/components/session/BeakerContextSelection.vue';
+import BeakerContextSelection from '../components/session/BeakerContextSelection.vue';
 
 
 

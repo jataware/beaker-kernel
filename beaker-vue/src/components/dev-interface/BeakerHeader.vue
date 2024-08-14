@@ -63,11 +63,10 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject, getCurrentInstance } from "vue";
+import { defineProps, defineEmits, computed, inject } from "vue";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
-import { capitalize } from '../../util';
-import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 // TODO too many granular props- use a slot instead?
 const props = defineProps([

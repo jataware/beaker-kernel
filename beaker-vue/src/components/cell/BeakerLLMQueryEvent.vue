@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, inject, onBeforeMount, computed, shallowRef } from "vue";
+import { defineProps, defineExpose, inject, onBeforeMount, computed } from "vue";
 import { BeakerQueryEvent, BeakerQueryEventType, IBeakerCell } from "beaker-kernel/dist/notebook";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";
@@ -60,7 +60,7 @@ import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 
-import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 
