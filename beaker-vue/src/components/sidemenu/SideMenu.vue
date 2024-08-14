@@ -27,7 +27,7 @@
 import { ref, defineProps, defineExpose, computed, defineEmits, useSlots, isVNode, nextTick, withDefaults } from "vue";
 
 import Button from 'primevue/button';
-import SideMenuPanel from "@/components/sidemenu/SideMenuPanel.vue";
+import SideMenuPanel from "./SideMenuPanel.vue";
 
 export type MenuPosition = "right" | "left";
 export type HighlightType = "full" | "shadow" | "line";

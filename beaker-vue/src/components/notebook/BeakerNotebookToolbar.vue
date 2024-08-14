@@ -60,7 +60,7 @@ import Button from "primevue/button";
 import Toolbar from "primevue/toolbar";
 
 import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
-import { downloadFileDOM, getDateTime } from '@/util';
+import { downloadFileDOM, getDateTime } from '../../util';
 
 const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');

@@ -90,8 +90,8 @@ import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
 
 import { BeakerSession } from 'beaker-kernel';
-import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
-import CodeEditor from '@/components/misc/CodeEditor.vue';
+import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import CodeEditor from '../misc/CodeEditor.vue';
 
 const props = defineProps([
     "actions",

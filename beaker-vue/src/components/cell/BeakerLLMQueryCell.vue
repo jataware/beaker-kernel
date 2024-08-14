@@ -115,7 +115,7 @@ import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerLLMQueryEvent from "./BeakerLLMQueryEvent.vue";
 import { BeakerQueryEvent, BeakerQueryEventType } from "beaker-kernel/dist/notebook";
-import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
+import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 

@@ -5,10 +5,10 @@ import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
 
 import DevInterface from './DevInterface.vue';
-import { vKeybindings } from '@/directives/keybindings';
-import { vAutoScroll } from '@/directives/autoscroll';
-import BeakerThemePlugin from '@/plugins/theme';
-// import { vTheme } from '@/directives/theme';
+import { vKeybindings } from '../directives/keybindings';
+import { vAutoScroll } from '../directives/autoscroll';
+import BeakerThemePlugin from '../plugins/theme';
+// import { vTheme } from '../directives/theme';
 
 import 'primeicons/primeicons.css';
 import '../index.scss';

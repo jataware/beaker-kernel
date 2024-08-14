@@ -74,8 +74,8 @@ import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import Dropdown from 'primevue/dropdown';
 import Checkbox from 'primevue/checkbox';
-import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
-import CodeEditor from '@/components/misc/CodeEditor.vue';
+import { BeakerSessionComponentType } from './BeakerSession.vue';
+import CodeEditor from '../misc/CodeEditor.vue';
 
 const props = defineProps([
     "isOpen",
