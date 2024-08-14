@@ -5,12 +5,15 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "start": "npm run serve",
-    "build": "vue-cli-service build",
+    "build": "vue-cli-service build --lib && tsc",
     "lint": "vue-cli-service lint"
   },
+  "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "/dist"
+    "./dist",
+    "./lib",
+    "./src"
   ],
   "repository": {
     "url": "https://github.com/jataware/beaker-kernel"

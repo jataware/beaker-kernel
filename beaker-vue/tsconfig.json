@@ -1,17 +1,17 @@
 {
   "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Node",
     "target": "esnext",
-    "module": "esnext",
     "strict": false,
     "jsx": "preserve",
-    "moduleResolution": "node",
     "declaration": true,
+    "outDir": "./dist",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "useDefineForClassFields": true,
-    "sourceMap": true,
     "baseUrl": ".",
     "types": [
       "webpack-env"
@@ -21,12 +21,12 @@
         "src/*"
       ]
     },
-    "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable",
-      "scripthost"
-    ]
+  //   "lib": [
+  //     "esnext",
+  //     "dom",
+  //     "dom.iterable",
+  //     "scripthost"
+  //   ]
   },
   "include": [
     "src/**/*.ts",
@@ -35,7 +35,7 @@
     "tests/**/*.ts",
     "tests/**/*.tsx"
   ],
-  // "exclude": [
-  //   "node_modules"
-  // ]
+  "exclude": [
+    "node_modules"
+  ]
 }

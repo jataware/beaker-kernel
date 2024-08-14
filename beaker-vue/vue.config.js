@@ -3,8 +3,8 @@ const path = require('path');
 
 module.exports = defineConfig({
   chainWebpack: config => {
+    // config.devtool("inline-source-map");
     config.module.rule('ts').uses.delete('thread-loader');
-    config.module.rule('ts').use('babel-loader');
     config.module
       .rule('ts')
       .use('ts-loader')
@@ -13,8 +13,15 @@ module.exports = defineConfig({
         options.happyPackMode = false;
         options.compilerOptions = {
           declaration: true,
+          decalarationMap: true,
+          declarationDir: "lib",
           noEmit: false,
-          outDir: 'lib'
+          emitDeclarationOnly: false,
+          include: [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.vue",
+          ],
         };
         return options;
       });
@@ -28,17 +35,13 @@ module.exports = defineConfig({
   },
   assetsDir: "static/",
   transpileDependencies: true,
+  outputDir: path.resolve(__dirname, 'dist/html'),
   configureWebpack: {
-    // entry: "./src/index.ts",
     resolve: {
-      alias: {
-        // "beaker-kernel": path.resolve(__dirname, "../beaker-ts/src/")
-      }
+      extensions: ['.ts', '.tsx', '.vue'],
     },
     output: {
       library: "beaker_vue",
-    },
-    module: {
     },
   },
   devServer: {
