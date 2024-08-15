@@ -1,0 +1,124 @@
+<template>
+    <div class="raw-cell">
+        <div class="raw-cell-header">
+            <span class="raw-cell-title">Raw cell</span>
+            <span v-if="props.cell.cell_type !== 'raw'"> - (Unrenderable cell type '{{ props.cell.cell_type }}')</span>
+        </div>
+        <CodeEditor
+            display-mode="dark"
+            language="julia"
+            v-model="cell.source"
+            ref="codeEditorRef"
+            placeholder="Raw cell content..."
+            :autofocus="false"
+        />
+    </div>
+</template>
+
+<script setup lang="ts">
+import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance, inject, onBeforeMount, onBeforeUnmount } from "vue";
+import CodeEditor from "@/components/misc/CodeEditor.vue";
+import { findSelectableParent } from "@/util";
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+
+const props = defineProps([
+    "cell",
+]);
+
+const instance = getCurrentInstance();
+const cell = ref(props.cell);
+const codeEditorRef = ref<InstanceType<typeof CodeEditor>>(null);
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+
+enum ExecuteStatus {
+  Success = 'success',
+  Modified = 'modified',
+  Error = 'error',
+  Pending = 'pending',
+}
+
+const rawExtensions = computed(() => {
+    const ext = [];
+    // if (theme.value === 'dark') {
+    //     ext.push(oneDark);
+    // }
+    return ext;
+
+});
+
+
+const execute = (evt: any) => {
+    // Nothing to do but exit
+    exit();
+}
+
+const enter = () => {
+    codeEditorRef.value?.focus();
+}
+
+const exit = () => {
+    // Be sure to blur editor even if we don't also refocus below.
+    codeEditorRef.value.blur();
+    let target: HTMLElement = (instance.vnode.el as HTMLElement);
+    const selectableParent = findSelectableParent(target);
+    selectableParent?.focus();
+}
+
+const clear = () => {
+    cell.value.source = "";
+}
+
+defineExpose({
+    execute,
+    enter,
+    exit,
+    clear,
+    model: cell,
+});
+
+onBeforeMount(() => {
+    beakerSession.cellRegistry[cell.value.id] = instance.vnode;
+});
+
+onBeforeUnmount(() => {
+    delete beakerSession.cellRegistry[cell.value.id];
+});
+
+
+</script>
+
+<script lang="ts">
+import { BeakerRawCell } from "beaker-kernel";
+export default {
+    modelClass: BeakerRawCell
+};
+</script>
+
+
+<style lang="scss">
+.raw-cell {
+    padding-left: 0.2rem;
+
+    .cm-editor {
+        border: 1px solid var(--surface-d);
+    }
+    .cm-focused {
+        outline: none;
+        border: 1px solid var(--purple-200);
+    }
+    &.dark-mode {
+        .cm-focused {
+            border-color: #5b3c5b;
+        }
+    }
+}
+
+.raw-cell-header {
+    margin-bottom: 0.5rem;
+}
+
+.raw-cell-title {
+    font-weight: bold;
+    font-size: large;
+}
+</style>

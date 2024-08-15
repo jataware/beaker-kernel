@@ -9,7 +9,7 @@ on:
     tags: ['v*']
 
 jobs:
-    build:
+    build-python:
         name: Build & Publish
         runs-on: ubuntu-22.04
         permissions:
@@ -22,7 +22,7 @@ jobs:
                   sudo apt install -y nodejs npm python3-pip || true
                   pip install hatch
             - name: Checkout
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
               with:
                 ref: ${{ github.event.workflow_run.head_branch }}
 
@@ -34,7 +34,37 @@ jobs:
             - name: Publish package distributions to PyPI
               uses: pypa/gh-action-pypi-publish@release/v1
 
-            # - name: hatch publish
-            #   shell: bash
-            #   run: |
-            #       hatch publish
+    build-deploy-npm:
+        name: Build & Publish
+        runs-on: ubuntu-22.04
+        permissions:
+            id-token: write
+        steps:
+            - uses: actions/setup-node@v4
+              with:
+                node-version: '20.x'
+                registry-url: 'https://registry.npmjs.org'
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                ref: ${{ github.event.workflow_run.head_branch }}
+
+            - name: npm build beaker-ts
+              working-directory: beaker-ts
+              shell: bash
+              run: |
+                npm ci
+                npm run build
+                npm publish --provenance --access public
+              env:
+                NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: npm build beaker-vue
+              working-directory: beaker-vue
+              shell: bash
+              run: |
+                npm ci
+                npm run build
+                npm publish --provenance --access public
+              env:
+                NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
