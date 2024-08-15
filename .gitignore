@@ -57,8 +57,6 @@ nb-configuration.xml
 node_modules
 dist
 build
-beaker-ts/lib
-beaker-vue/lib
 
 # MISC
 create.sql
