@@ -53,7 +53,7 @@
 
 <script setup lang="ts">
 import { defineProps, defineExpose, inject, onBeforeMount, computed, shallowRef } from "vue";
-import { BeakerQueryEvent, BeakerQueryEventType, IBeakerCell } from "beaker-kernel/dist/notebook";
+import { BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel/src/notebook";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";
 import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
@@ -71,9 +71,9 @@ const props = defineProps([
 
 onBeforeMount(() => {
     marked.setOptions({
-       gfm: true,
-       sanitize: false,
-       langPrefix: `language-`,
+    //    gfm: true,
+    //    sanitize: false,
+    //    langPrefix: `language-`,
      });
 })
 

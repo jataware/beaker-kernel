@@ -126,13 +126,13 @@ export const vKeybindings: KeybindingDefinition = {
             }
             let callback = action;
             if (keyModifiers.length) {
-                callback = withModifiers(callback, keyModifiers);
+                callback = withModifiers(callback, keyModifiers as any);
             }
 
             callback = withKeys(callback, [key]);
 
             if (customModifiers.length) {
-                callback = withBeakerModifiers(callback, customModifiers);
+                callback = withBeakerModifiers(callback as any, customModifiers);
             }
 
             const eventOptions = eventModifiers.reduce((obj, val) => {obj[val] = true; return obj;}, {});

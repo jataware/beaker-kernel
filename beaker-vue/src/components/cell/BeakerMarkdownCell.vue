@@ -93,9 +93,9 @@ defineExpose({
 
 onBeforeMount(() => {
     marked.setOptions({
-       gfm: true,
-       sanitize: false,
-       langPrefix: `language-`,
+    //    gfm: true,
+    //    sanitize: false,
+    //    langPrefix: `language-`,
      });
     beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 })
