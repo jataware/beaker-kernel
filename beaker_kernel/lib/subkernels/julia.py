@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Any
 
-from .base import BaseSubkernel
+from .base import BeakerSubkernel
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ def get_kernel_name():
     return None
 
 
-class JuliaSubkernel(BaseSubkernel):
+class JuliaSubkernel(BeakerSubkernel):
     DISPLAY_NAME = "Julia"
     SLUG = "julia"
     KERNEL_NAME = get_kernel_name()

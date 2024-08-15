@@ -1,13 +1,13 @@
 import ast
 from typing import Any
 
-from .base import BaseCheckpointableSubkernel, Checkpoint
+from .base import CheckpointableBeakerSubkernel, Checkpoint
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-class PythonSubkernel(BaseCheckpointableSubkernel):
+class PythonSubkernel(CheckpointableBeakerSubkernel):
     DISPLAY_NAME = "Python 3"
     SLUG = "python3"
     KERNEL_NAME = "python3"

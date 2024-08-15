@@ -41,6 +41,9 @@ dependencies = [
   "openpyxl",
 ]
 
+[project.entry-points.hatch]
+beaker = "beaker_kernel.builder.beaker"
+
 [project.scripts]
 beaker = "beaker_kernel.scripts.beaker:cli"
 
@@ -49,20 +52,22 @@ allow-direct-references = true
 
 [tool.hatch.build]
 require-runtime-dependencies = true
-include = [
+packages = [
   "beaker_kernel",
+]
+include = [
   "beaker_kernel/server/ui",
 ]
 artifacts = [
   "beaker_kernel/server/ui",
 ]
 
+# Beaker builder, loaded as a custom hook since it's not yet registered.
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "beaker_kernel/builder/beaker.py"
 
-# Used to call hatch_build.py
-[tool.hatch.build.hooks.custom]
-
-# Copies the files created in the custom action
 [tool.hatch.build.targets.wheel.shared-data]
+"beaker_kernel/kernel.json" = "share/jupyter/kernels/beaker_kernel/kernel.json"
 
 
 [tool.bumpversion]

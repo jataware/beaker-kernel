@@ -19,19 +19,19 @@ from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
 if TYPE_CHECKING:
     from archytas.react import ReActAgent
 
-    from beaker_kernel.kernel import LLMKernel
+    from beaker_kernel.kernel import BeakerKernel
 
-    from .agent import BaseAgent
-    from .subkernels.base import BaseSubkernel
+    from .agent import BeakerAgent
+    from .subkernels.base import BeakerSubkernel
 
 logger = logging.getLogger(__name__)
 
 TOOL_TOGGLE_PREFIX = "TOOL_ENABLED_"
 
 
-class BaseContext:
-    beaker_kernel: "LLMKernel"
-    subkernel: "BaseSubkernel"
+class BeakerContext:
+    beaker_kernel: "BeakerKernel"
+    subkernel: "BeakerSubkernel"
     config: Dict[str, Any]
     agent: "ReActAgent"
     current_llm_query: str | None
@@ -40,9 +40,10 @@ class BaseContext:
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
 
+    SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
-    def __init__(self, beaker_kernel: "LLMKernel", agent_cls: "BaseAgent", config: Dict[str, Any]):
+    def __init__(self, beaker_kernel: "BeakerKernel", agent_cls: "BeakerAgent", config: Dict[str, Any]):
         self.intercepts = []
         self.jinja_env = None
         self.templates = {}
@@ -149,8 +150,8 @@ class BaseContext:
 
 
     @classmethod
-    def available_subkernels(cls) -> List["BaseSubkernel"]:
-        subkernels: Dict[str, BaseSubkernel] = autodiscover("subkernels")
+    def available_subkernels(cls) -> List["BeakerSubkernel"]:
+        subkernels: Dict[str, BeakerSubkernel] = autodiscover("subkernels")
 
         class_dir = inspect.getfile(cls)
         proc_dir = os.path.join(os.path.dirname(class_dir), "procedures")
@@ -258,9 +259,15 @@ class BaseContext:
     @property
     def slug(self) -> Optional[str]:
         """
-        The slug should always be the same as the package that contains the class.
-        I.e. For "beaker_kernel.contexts.pypackage" the slug should be "pypackage"
+        A short, white-space-free label used to identify the context programatically.
+
+        If it is not defined on the context class as cls.SLUG, default to look at the name of the package that contains
+        the context.
+        E.g. For "beaker_kernel.contexts.pypackage" the slug would be "pypackage"
         """
+        if self.SLUG:
+            return self.SLUG
+
         package_str = inspect.getmodule(self).__package__
         if package_str:
             return package_str.split(".")[-1]
@@ -468,6 +475,9 @@ class BaseContext:
             logger.error("Unable to parse result.")
             logger.debug("Subkernel: %s\nResult:\n%s", self.subkernel.connected_kernel, result)
         return result
+
+# Provided for backwards compatibility
+BaseContext = BeakerContext
 
 def autodiscover_contexts():
     return autodiscover("contexts")

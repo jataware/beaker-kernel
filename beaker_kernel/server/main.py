@@ -19,8 +19,8 @@ from tornado import web, httputil
 from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTPError
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.context import BaseContext
-from beaker_kernel.lib.subkernels.base import BaseSubkernel
+from beaker_kernel.lib.context import BeakerContext
+from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
 from beaker_kernel.server import admin_utils
 
@@ -147,8 +147,8 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
     def get(self):
         """Get the main page for the application's interface."""
         ksm = self.kernel_spec_manager
-        contexts: Dict[str, BaseContext] = autodiscover("contexts")
-        possible_subkernels: Dict[str, BaseSubkernel] = autodiscover("subkernels")
+        contexts: Dict[str, BeakerContext] = autodiscover("contexts")
+        possible_subkernels: Dict[str, BeakerSubkernel] = autodiscover("subkernels")
         subkernel_by_kernel_index = {subkernel.KERNEL_NAME: subkernel for subkernel in possible_subkernels.values()}
         installed_kernels = [
             subkernel_by_kernel_index[kernel_name] for kernel_name in ksm.find_kernel_specs().keys()
