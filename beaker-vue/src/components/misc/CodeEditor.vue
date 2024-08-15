@@ -5,6 +5,7 @@
         :disabled="props.disabled"
         :autofocus="props.autofocus"
         @ready="handleReady"
+        @update:modelValue="modelUpdate"
     />
 </template>
 
@@ -41,6 +42,7 @@ declare interface Props {
     displayMode: DisplayMode,
     language?: Language,
     languageOptions?: any,
+    modelValue: string,
 
     autofocus?: boolean,
     disabled?: boolean,
@@ -52,10 +54,11 @@ const props = withDefaults(defineProps<Props>(), {
     disabled: false,
 });
 
-const model = defineModel<string>();
+const model = ref<string>(props.modelValue);
 
 const emit = defineEmits([
-        'submit'
+        'submit',
+        "update:modelValue",
 ]);
 const { theme, toggleDarkMode } = inject('theme');
 
@@ -67,6 +70,10 @@ const handleReady = ({view, state}) => {
     codeMirrorView.value = view;
     codeMirrorState.value = state;
 };
+
+const modelUpdate = (newValue: string): void => {
+    emit("update:modelValue", newValue);
+}
 
 const displayMode = computed<DisplayMode>(() => {
     if (theme.mode === 'default') {
