@@ -1,12 +1,19 @@
 {
   "name": "beaker-vue",
   "version": "1.6.3",
+  "declaration": true,
   "scripts": {
     "serve": "vue-cli-service serve",
     "start": "npm run serve",
-    "build": "vue-cli-service build",
+    "build": "vue-cli-service build --lib && vue-tsc",
     "lint": "vue-cli-service lint"
   },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "./dist",
+    "./src"
+  ],
   "repository": {
     "url": "https://github.com/jataware/beaker-kernel"
   },

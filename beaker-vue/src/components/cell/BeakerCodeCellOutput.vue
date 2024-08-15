@@ -17,8 +17,8 @@
 
 <script setup lang="ts">
 import { defineProps, inject } from "vue";
-import BeakerMimeBundle from "@/components/render/BeakerMimeBundle.vue";
-import { IMimeBundle } from 'beaker-kernel/render';
+import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
+// import { IMimeBundle } from 'beaker-kernel';
 
 const session = inject('session');
 

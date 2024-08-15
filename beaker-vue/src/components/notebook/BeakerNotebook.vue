@@ -5,12 +5,12 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, computed, nextTick, provide, inject } from "vue";
+import { defineComponent, ref, computed, nextTick, provide, inject, DefineComponent } from "vue";
 import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell } from 'beaker-kernel';
 import { IBeakerCellComponent, BeakerSessionComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import scrollIntoView from 'scroll-into-view-if-needed';
 
-export const BeakerNotebookComponent = defineComponent({
+export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineComponent({
     props: [
         "cellMap",
     ],

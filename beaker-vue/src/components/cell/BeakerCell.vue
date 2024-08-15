@@ -49,7 +49,7 @@ import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodeCell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
-import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 import BeakerRawCell from './BeakerRawCell.vue';
 import { BeakerBaseCell, IBeakerCell } from "beaker-kernel";
