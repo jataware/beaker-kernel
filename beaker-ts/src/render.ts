@@ -99,7 +99,7 @@ export class BeakerRenderer {
         return mimetypes;
     }
 
-    public render(mimeType: MimetypeString, data: PartialJSONObject, metadata?: PartialJSONObject): any {
+    public render(mimeType: MimetypeString, data: PartialJSONObject, metadata?: PartialJSONObject) {
         const renderer = this._renderers[mimeType];
         if (renderer) {
             return renderer.render(mimeType, data, metadata);

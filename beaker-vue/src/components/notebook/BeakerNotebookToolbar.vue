@@ -54,13 +54,13 @@
 <script setup lang="tsx">
 import { inject } from "vue";
 import { BeakerSession } from 'beaker-kernel';
-import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
+import { BeakerNotebookComponentType } from './BeakerNotebook.vue';
 
 import Button from "primevue/button";
 import Toolbar from "primevue/toolbar";
 
 import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
-import { downloadFileDOM, getDateTime } from '../../util';
+import { downloadFileDOM, getDateTime } from '@/util';
 
 const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');

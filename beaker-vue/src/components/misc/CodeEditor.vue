@@ -1,5 +1,6 @@
 <template>
     <Codemirror
+        :model="$props.model"
         :extensions="extensions"
         :disabled="props.disabled"
         :autofocus="props.autofocus"
@@ -19,7 +20,6 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { json } from "@codemirror/lang-json";
 import { javascript } from "@codemirror/lang-javascript";
 import { julia } from "@plutojl/lang-julia";
-import { IBeakerTheme } from '../../plugins/theme';
 
 declare type DisplayMode = "light" | "dark";
 declare type Language = "python" | "julia" | "markdown" | "json" | "javascript" | string;
@@ -44,6 +44,7 @@ declare interface Props {
 
     autofocus?: boolean,
     disabled?: boolean,
+    model: string,
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -55,7 +56,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits([
         'submit'
 ]);
-const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
+const { theme, toggleDarkMode } = inject('theme');
 
 const codeMirrorView = shallowRef<EditorView>();
 const codeMirrorState = shallowRef();

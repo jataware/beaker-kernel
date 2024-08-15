@@ -60,7 +60,7 @@ import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 
-import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 

@@ -5,9 +5,8 @@
 </template>
 
 <script lang="ts">
-import { reactive, ref, inject, provide, VNode, defineComponent, PropType, ComponentInternalInstance, DefineComponent } from 'vue';
-import { BeakerSession, IBeakerRendererOptions, IMimeRenderer, IBeakerCell } from 'beaker-kernel';
-import { BeakerRenderOutput } from '../../renderers';
+import { reactive, ref, inject, provide, VNode, defineComponent, PropType, ComponentInternalInstance } from 'vue';
+import { BeakerSession, IBeakerRendererOptions, JupyterMimeRenderer, IBeakerCell } from 'beaker-kernel';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 
 
@@ -34,13 +33,13 @@ export const CellRepr = (vnode: VNode): ICellRepr => {
   });
 }
 
-export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComponent({
+export const BeakerSessionComponent = defineComponent({
   props: {
       "connectionSettings": Object,
       "sessionName": String,
       "sessionId": String,
       "defaultKernel": String,
-      "renderers": (Object as any as PropType<IMimeRenderer<HTMLElement>[]>),
+      "renderers": (Object as PropType<JupyterMimeRenderer[]>),
   },
 
   emits: [

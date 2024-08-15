@@ -154,7 +154,7 @@ const toast = useToast();
 
 const baseUrl = PageConfig.getBaseUrl();
 
-const adminStats = ref<{[key: string]: any}>({});
+const adminStats = ref({});
 const intervalRef = ref();
 const lastUpdated = ref("never");
 const sessionAction = ref<string>("---");

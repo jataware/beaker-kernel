@@ -34,7 +34,7 @@
 import { defineProps, defineEmits, inject } from 'vue';
 import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
-// import OpenNotebookButton from '../dev-interface/OpenNotebookButton.vue';
+// import OpenNotebookButton from '@/components/dev-interface/OpenNotebookButton.vue';
 // import NotebookControls from '../lib/UINotebookControls.vue';
 import { downloadFileDOM, getDateTime } from '../../util';
 
