@@ -200,7 +200,9 @@ const respond = () => {
 function execute() {
     cell.value.source = promptText.value;
     isEditing.value = false;
-    const future = props.cell.execute(session);
+    nextTick(() => {
+        const future = props.cell.execute(session);
+    });
 }
 
 function enter() {

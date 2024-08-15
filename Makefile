@@ -36,7 +36,6 @@ dev:
 	fi
 
 beaker-vue/node_modules:beaker-vue/package*.json
-	export `cat .env` && \
 	(cd beaker-vue && npm install --dev) && \
 	touch beaker-vue/node_modules
 

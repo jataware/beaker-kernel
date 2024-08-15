@@ -1,6 +1,6 @@
 <template>
     <Codemirror
-        :model="props.model"
+        v-model="model"
         :extensions="extensions"
         :disabled="props.disabled"
         :autofocus="props.autofocus"
@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
+import { defineProps, defineModel, ref, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView } from "codemirror";
 import { Extension } from "@codemirror/state";
@@ -44,7 +44,6 @@ declare interface Props {
 
     autofocus?: boolean,
     disabled?: boolean,
-    model: string,
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -52,6 +51,8 @@ const props = withDefaults(defineProps<Props>(), {
     autofocus: false,
     disabled: false,
 });
+
+const model = defineModel<string>();
 
 const emit = defineEmits([
         'submit'
