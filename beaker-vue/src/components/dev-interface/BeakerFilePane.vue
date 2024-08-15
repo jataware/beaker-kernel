@@ -84,7 +84,7 @@ const contentManager = new ContentsManager({});
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
 
-const showToast = inject<any>('show_toast');
+const showToast = inject('show_toast');
 
 const fileInput = ref<HTMLInputElement|undefined>(undefined);
 const uploadForm = ref<HTMLFormElement|undefined>(undefined);

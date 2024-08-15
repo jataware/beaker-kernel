@@ -2,6 +2,7 @@ const { defineConfig } = require('@vue/cli-service')
 const path = require('path');
 
 module.exports = defineConfig({
+  // publicPath: "/dev_ui/",
   pages: {
     index: 'src/pages/dev-interface.ts',
     admin: 'src/pages/admin.ts',
@@ -11,14 +12,12 @@ module.exports = defineConfig({
   },
   assetsDir: "static/",
   transpileDependencies: true,
-  outputDir: path.resolve(__dirname, 'dist/html'),
   configureWebpack: {
     resolve: {
-      extensions: ['.ts', '.tsx', '.vue'],
-    },
-    output: {
-      library: "beaker_vue",
-    },
+      alias: {
+        // "beaker-kernel": path.resolve(__dirname, "../beaker-ts/src/")
+      }
+    }
   },
   devServer: {
     proxy: {

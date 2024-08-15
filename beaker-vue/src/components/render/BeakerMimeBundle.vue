@@ -21,17 +21,15 @@
 <script lang="ts" setup>
 import { ref, defineProps, inject, computed } from "vue";
 import SelectButton from "primevue/selectbutton";
-import { BeakerSession } from "beaker-kernel";
-import { BeakerRenderOutput } from "../../renderers";
 
 const props = defineProps([
     "mimeBundle",
     "collapse",
 ]);
 
-const session = inject<BeakerSession>('session');
+const session = inject('session');
 
-const renderedBundle = computed<{[key: string]: BeakerRenderOutput}>(() => {return session.renderer.renderMimeBundle(props.mimeBundle) as any as {[key: string]: BeakerRenderOutput}});
+const renderedBundle = computed(() => {return session.renderer.renderMimeBundle(props.mimeBundle)});
 const sortedMimetypes = computed(() => {return session.renderer.rankedMimetypesInBundle(props.mimeBundle)});
 
 const selectedMimeType = ref<string>(sortedMimetypes.value[0]);

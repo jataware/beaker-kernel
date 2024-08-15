@@ -45,7 +45,7 @@
 
       <Panel
         class="log-panel"
-        :class="{odd: ((index as number) % 2) !== 0}"
+        :class="{odd: index % 2 !== 0}"
         :data-index="logEntry.timestamp"
         v-for="(logEntry,index) in filteredLogs" :key="`${logEntry.type}-${logEntry.timestamp}`"
         :header="logEntry.type"
@@ -113,9 +113,9 @@ const linenum = computed(() => {
 
 // TODO debounce for quick typing
 const filteredLogs = computed(() => {
-  const sortby: (arg: any) => number = props.sortby || ((entry) => entry.timestamp);
-  const asc = (a: any, b: any) => (sortby(a) > sortby(b) ? 1 : (sortby(a) < sortby(b)) ? -1 : 0);
-  const desc = (a: any, b: any) => (sortby(a) < sortby(b) ? 1 : (sortby(a) > sortby(b)) ? -1 : 0);
+  const sortby = props.sortby || ((entry) => entry.timestamp);
+  const asc = (a, b) => (sortby(a) > sortby(b) ? 1 : (sortby(a) < sortby(b)) ? -1 : 0);
+  const desc = (a, b) => (sortby(a) < sortby(b) ? 1 : (sortby(a) > sortby(b)) ? -1 : 0);
 
   const filtered = props.entries?.filter(entry => entry.type.includes(filterValue.value));
 

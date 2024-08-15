@@ -43,7 +43,7 @@
 import { ref, inject, computed, defineExpose, defineEmits } from 'vue';
 import { BeakerSession, IBeakerCell } from 'beaker-kernel';
 import BeakerCell from '../cell/BeakerCell.vue';
-import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
 
 const session = inject<BeakerSession>('session');
 const cellMap = inject("cell-component-mapping");
@@ -110,7 +110,7 @@ function handleDragOver(event: DragEvent, beakerCell, index) {
  **/
 function handleDrop(event: DragEvent, index) {
 
-    const target = event.target as HTMLElement;
+    const target = event.target;
     const allowedDropArea = target.closest('.drag-sort-enable');
 
     if (!allowedDropArea) {

@@ -28,11 +28,10 @@
 <script setup lang="ts">
 import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, onBeforeUnmount} from "vue";
 import { marked } from 'marked';
-import { findSelectableParent } from '../../util';
-import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
-import CodeEditor from '../misc/CodeEditor.vue';
-import { IBeakerTheme } from '../../plugins/theme';
+import { findSelectableParent } from '@/util';
+import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
+import { BeakerNotebookComponentType } from '@/components/notebook/BeakerNotebook.vue';
+import CodeEditor from '@/components/misc/CodeEditor.vue';
 
 const props = defineProps([
     "cell"
@@ -41,7 +40,7 @@ const props = defineProps([
 const instance = getCurrentInstance();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const cell = ref(props.cell);
-const { theme } = inject<IBeakerTheme>('theme');
+const { theme } = inject('theme');
 const editing = ref(false);
 const editorRef = ref(null);
 const codeEditorRef = ref(null);
