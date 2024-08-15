@@ -8,7 +8,7 @@
                     <CodeEditor
                         display-mode="dark"
                         :language="language"
-                        v-model="cell.source"
+                        :model="cell.source"
                         ref="codeEditorRef"
                         placeholder="Your code..."
                         :disabled="isBusy"

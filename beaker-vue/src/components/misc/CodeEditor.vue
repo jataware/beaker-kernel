@@ -1,6 +1,6 @@
 <template>
     <Codemirror
-        :model="$props.model"
+        :model="props.model"
         :extensions="extensions"
         :disabled="props.disabled"
         :autofocus="props.autofocus"
