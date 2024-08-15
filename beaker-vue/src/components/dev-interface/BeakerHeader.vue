@@ -68,16 +68,16 @@ import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { capitalize } from '../../util';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { IBeakerTheme } from '../../plugins/theme';
 
 // TODO too many granular props- use a slot instead?
 const props = defineProps([
-    "toggleDarkMode",
     "kernel"
 ]);
 
 const emit = defineEmits(["selectKernel"]);
 
-const { theme, toggleDarkMode } = inject('theme');
+const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 function selectKernel() {
@@ -85,7 +85,7 @@ function selectKernel() {
 }
 
 const themeIcon = computed(() => {
-    return `pi pi-${theme === 'dark' ? 'sun' : 'moon'}`;
+    return `pi pi-${theme.mode === 'dark' ? 'sun' : 'moon'}`;
 });
 
 const statusLabels = {

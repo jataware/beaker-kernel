@@ -5,33 +5,17 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "start": "npm run serve",
-    "build": "vue-cli-service build --lib && tsc",
+    "build": "vue-cli-service build --lib && vue-tsc",
     "lint": "vue-cli-service lint"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "./dist",
-    "./lib",
     "./src"
   ],
   "repository": {
     "url": "https://github.com/jataware/beaker-kernel"
-  },
-  "exports": {
-    "components/sidemenu": "./src/components/sidemenu/index.ts",
-    "components/misc": "./src/components/misc/index.ts",
-    "components/render": "./src/components/render/index.ts",
-    "components/notebook": "./src/components/notebook/index.ts",
-    "components/dev-interface": "./src/components/dev-interface/index.ts",
-    "components/cell": "./src/components/cell/index.ts",
-    "components/agent": "./src/components/agent/index.ts",
-    "components/session": "./src/components/session/index.ts",
-    "pages/admin": "./src/pages/admin.ts",
-    "pages/playground": "./src/pages/playground.ts",
-    "pages/dev-interface": "./src/pages/dev-interface.ts",
-    "pages/notebook": "./src/pages/notebook.ts",
-    "pages/cell": "./src/pages/cell.ts"
   },
   "dependencies": {
     "@codemirror/lang-python": "^6.1.3",
@@ -87,6 +71,7 @@
     "eslint-plugin-vue": "^8.0.3",
     "sass": "^1.32.7",
     "sass-loader": "^12.0.0",
-    "typescript": "~4.5.5"
+    "typescript": "~5.2.2",
+    "vue-tsc": "^2.0.29"
   }
 }

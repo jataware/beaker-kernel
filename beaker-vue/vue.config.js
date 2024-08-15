@@ -2,30 +2,6 @@ const { defineConfig } = require('@vue/cli-service')
 const path = require('path');
 
 module.exports = defineConfig({
-  chainWebpack: config => {
-    // config.devtool("inline-source-map");
-    config.module.rule('ts').uses.delete('thread-loader');
-    config.module
-      .rule('ts')
-      .use('ts-loader')
-      .tap(options => {
-        options.transpileOnly = false;
-        options.happyPackMode = false;
-        options.compilerOptions = {
-          declaration: true,
-          decalarationMap: true,
-          declarationDir: "lib",
-          noEmit: false,
-          emitDeclarationOnly: false,
-          include: [
-            "src/**/*.ts",
-            "src/**/*.tsx",
-            "src/**/*.vue",
-          ],
-        };
-        return options;
-      });
-  },
   pages: {
     index: 'src/pages/dev-interface.ts',
     admin: 'src/pages/admin.ts',

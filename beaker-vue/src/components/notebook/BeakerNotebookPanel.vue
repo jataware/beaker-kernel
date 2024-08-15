@@ -110,7 +110,7 @@ function handleDragOver(event: DragEvent, beakerCell, index) {
  **/
 function handleDrop(event: DragEvent, index) {
 
-    const target = event.target;
+    const target = event.target as HTMLElement;
     const allowedDropArea = target.closest('.drag-sort-enable');
 
     if (!allowedDropArea) {
