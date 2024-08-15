@@ -20,7 +20,7 @@ import { defineProps } from "vue";
 import Accordion from 'primevue/accordion';
 import AccordionTab from 'primevue/accordiontab';
 import Fieldset from "primevue/fieldset";
-import MimeBundle from "@/components/render/BeakerMimeBundle.vue";
+import MimeBundle from "../render/BeakerMimeBundle.vue";
 
 const props = defineProps<{
     previewData: {[key: string]: {[key: string]: {[key: string]: any}}}

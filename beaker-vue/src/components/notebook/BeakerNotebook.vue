@@ -5,18 +5,12 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, computed, nextTick, provide, inject } from "vue";
+import { defineComponent, ref, computed, nextTick, provide, inject, DefineComponent } from "vue";
 import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell } from 'beaker-kernel';
-import { BeakerSessionComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import { BeakerSessionComponent } from "../session/BeakerSession.vue";
+import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
-export interface IBeakerCellComponent {
-    execute: () => null;
-    enter: () => null;
-    exit: () => null;
-    clear: () => null;
-}
-
-export const BeakerNotebookComponent = defineComponent({
+export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineComponent({
     props: [
         "cellMap",
     ],
