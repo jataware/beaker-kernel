@@ -188,6 +188,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
     constructor(content: nbformat.ICell) {
         super();
         Object.keys(content).forEach((key) => {this[key] = content[key] });
+        this.outputs = this.outputs ?? [];
         if (this.id === undefined) {
             this.id = uuidv4();
         }

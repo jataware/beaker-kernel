@@ -54,7 +54,7 @@
 <script setup lang="tsx">
 import { inject } from "vue";
 import { BeakerSession } from 'beaker-kernel';
-import { BeakerNotebookComponentType } from './BeakerNotebook.vue';
+import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
 
 import Button from "primevue/button";
 import Toolbar from "primevue/toolbar";

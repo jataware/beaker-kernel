@@ -61,6 +61,8 @@
 <script setup lang="ts">
 import { ref, defineEmits, computed, inject } from "vue";
 import Tree from 'primevue/tree';
+import { TreeNode } from 'primevue/treenode';
+import { emitError } from "vue-json-pretty/types/utils";
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 const contextPanelOpen = ref(true);
@@ -76,7 +78,7 @@ const contextExpandedKeys = ref({0: true, 1: true, 2: true, 3: true});
 const emits = defineEmits(['action-selected']);
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
-const contextNodes = computed(() => {
+const contextNodes = computed<TreeNode[]>(() => {
 
     const context = beakerSession?.activeContext?.info;
 
@@ -84,8 +86,8 @@ const contextNodes = computed(() => {
         return [];
     }
 
-    const displayableNodes = [{
-        key: 0,
+    const displayableNodes: TreeNode[] = [{
+        key: "0",
         label: 'Kernel',
         icon: 'pi pi-fw pi-cog',
         expanded: true,
@@ -94,7 +96,7 @@ const contextNodes = computed(() => {
             label: `${context.subkernel} (${context.language})`,
         }]
     }, {
-        key: 1,
+        key: "1",
         label: 'Actions',
         icon: 'pi pi-fw pi-send',
         expanded: true,
@@ -114,7 +116,7 @@ const contextNodes = computed(() => {
 
     if (context.procedures.length) {
         displayableNodes.push({
-            key: 2,
+            key: "2",
             label: 'Procedures',
             icon: 'pi pi-fw pi-tablet',
             expanded: true,
@@ -126,7 +128,7 @@ const contextNodes = computed(() => {
     }
 
     displayableNodes.push({
-        key: 3,
+        key: "3",
         label: 'Tools',
         icon: 'pi pi-fw pi-wrench',
         expanded: true,
@@ -141,7 +143,7 @@ const contextNodes = computed(() => {
 
     if (Object.keys(context.custom_messages).length) {
         displayableNodes.push({
-            key: 4,
+            key: "4",
             label: 'Custom Messages',
             icon: 'pi pi-fw pi-comment',
             expanded: false,

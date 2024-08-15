@@ -4,14 +4,14 @@ import re
 
 from archytas.tool_utils import AgentRef, LoopControllerRef, tool
 
-from beaker_kernel.lib.agent import BaseAgent
-from beaker_kernel.lib.context import BaseContext
+from beaker_kernel.lib.agent import BeakerAgent
+from beaker_kernel.lib.context import BeakerContext
 
 
 logger = logging.getLogger(__name__)
 
 
-class PyPackageAgent(BaseAgent):
+class PyPackageAgent(BeakerAgent):
     """
     You are an programming assistant to aid a developer working in a Jupyter notebook by answering their questions and helping write code for them based on their
     prompt.
@@ -25,7 +25,7 @@ class PyPackageAgent(BaseAgent):
     Please feel free to step through several iterations of using tools to fetch more information until you are able to fully satisfy the request or feel like you
     are getting stuck.
     """
-    def __init__(self, context: BaseContext = None, tools: list = None, **kwargs):
+    def __init__(self, context: BeakerContext = None, tools: list = None, **kwargs):
         libraries = {
         }
         super().__init__(context, tools, **kwargs)

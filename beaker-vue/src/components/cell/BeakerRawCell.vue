@@ -19,7 +19,7 @@
 import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance, inject, onBeforeMount, onBeforeUnmount } from "vue";
 import CodeEditor from "../misc/CodeEditor.vue";
 import { findSelectableParent } from "../../util";
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 const props = defineProps([
     "cell",

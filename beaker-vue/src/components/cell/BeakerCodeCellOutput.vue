@@ -18,6 +18,7 @@
 <script setup lang="ts">
 import { defineProps, inject } from "vue";
 import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
+// import { IMimeBundle } from 'beaker-kernel';
 
 const props = defineProps([
     "outputs",

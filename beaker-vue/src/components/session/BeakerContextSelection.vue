@@ -74,7 +74,7 @@ import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import Dropdown from 'primevue/dropdown';
 import Checkbox from 'primevue/checkbox';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { BeakerSessionComponentType } from './BeakerSession.vue';
 import CodeEditor from '../misc/CodeEditor.vue';
 
 const props = defineProps([
@@ -107,6 +107,7 @@ interface IBeakerContext {
     languages: {
         slug: string,
         kernel: string,
+        subkernel: string,
     }[],
     defaultPayload: string,
 }
@@ -129,7 +130,7 @@ const selectedContext = computed<IBeakerContext | undefined>(() => {
         return undefined;
     }
 });
-const languageOptions = computed<{slug: string, kernel: string}[]>(() => {
+const languageOptions = computed<{slug: string, kernel: string, subkernel: string}[]>(() => {
     if (!contextData.value || selectedContext.value === undefined) {
         return [];
     }

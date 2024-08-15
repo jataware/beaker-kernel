@@ -17,7 +17,6 @@
             <header>
                 <BeakerHeader
                     :connectionStatus="connectionStatus"
-                    :toggleDarkMode="toggleDarkMode"
                     :loading="!activeContext?.slug"
                     @select-kernel="toggleContextSelection"
                 />
@@ -114,7 +113,7 @@
 
 <script setup lang="ts">
 import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted } from 'vue';
-import { JupyterMimeRenderer } from 'beaker-kernel';
+import { JupyterMimeRenderer, IMimeRenderer } from 'beaker-kernel';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
@@ -122,7 +121,7 @@ import BeakerSession from '../components/session/BeakerSession.vue';
 import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
+import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Card from 'primevue/card';
@@ -152,14 +151,14 @@ const beakerNotebookRef = ref();
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
 // Let's only use severity=success|warning|danger(=error) for now
-const showToast = ({title, detail, life=3000, severity='success', position='bottom-right'}) => {
+const showToast = ({title, detail, life=3000, severity=('success' as undefined), position='bottom-right'}) => {
     toast.add({
         summary: title,
         detail,
         life,
         // for options, seee https://primevue.org/toast/
         severity,
-        position
+        // position
     });
 };
 
@@ -176,7 +175,7 @@ const props = defineProps([
 ]);
 
 
-const renderers = [
+const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     ...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
     JSONRenderer,
     LatexRenderer,

@@ -2,28 +2,29 @@ from typing import TYPE_CHECKING, Any, Dict, List
 import logging
 logger = logging.getLogger(__name__)
 
-from beaker_kernel.lib.context import BaseContext
+from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.autodiscovery import autodiscover
 
 from .agent import DefaultAgent
 
 if TYPE_CHECKING:
-    from beaker_kernel.kernel import LLMKernel
-    from beaker_kernel.lib.agent import BaseAgent
-    from beaker_kernel.lib.subkernels.base import BaseSubkernel
+    from beaker_kernel.kernel import BeakerKernel
+    from beaker_kernel.lib.agent import BeakerAgent
+    from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 
-class DefaultContext(BaseContext):
+class DefaultContext(BeakerContext):
 
-    agent_cls: "BaseAgent" = DefaultAgent
+    agent_cls: "BeakerAgent" = DefaultAgent
 
     WEIGHT: 10
+    SLUG: str = "default"
 
-    def __init__(self, beaker_kernel: "LLMKernel", config: Dict[str, Any]):
+    def __init__(self, beaker_kernel: "BeakerKernel", config: Dict[str, Any]):
         super().__init__(beaker_kernel, self.agent_cls, config)
 
     @classmethod
-    def available_subkernels(cls) -> List["BaseSubkernel"]:
-        subkernels: Dict[str, BaseSubkernel] = autodiscover("subkernels")
+    def available_subkernels(cls) -> List["BeakerSubkernel"]:
+        subkernels: Dict[str, BeakerSubkernel] = autodiscover("subkernels")
         subkernel_list = sorted(subkernels.values(), key=lambda subkernel: (subkernel.WEIGHT, subkernel.SLUG))
         subkernel_slugs = [subkernel.SLUG for subkernel in subkernel_list]
         return subkernel_slugs

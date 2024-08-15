@@ -4,14 +4,14 @@ import re
 
 from archytas.tool_utils import AgentRef, LoopControllerRef, tool
 
-from beaker_kernel.lib.agent import BaseAgent
-from beaker_kernel.lib.context import BaseContext
+from beaker_kernel.lib.agent import BeakerAgent
+from beaker_kernel.lib.context import BeakerContext
 
 
 logger = logging.getLogger(__name__)
 
 
-class DefaultAgent(BaseAgent):
+class DefaultAgent(BeakerAgent):
     """
     You are an programming assistant to aid a developer working in a Jupyter notebook by answering their questions and helping write code for them based on their
     prompt.

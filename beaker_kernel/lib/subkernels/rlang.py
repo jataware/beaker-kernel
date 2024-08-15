@@ -4,12 +4,12 @@ import logging
 import re
 from typing import Any
 
-from .base import BaseSubkernel
+from .base import BeakerSubkernel
 
 logger = logging.getLogger(__name__)
 
 
-class RSubkernel(BaseSubkernel):
+class RSubkernel(BeakerSubkernel):
     DISPLAY_NAME = "R"
     SLUG = "rlang"
     KERNEL_NAME = "ir"

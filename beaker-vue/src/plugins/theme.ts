@@ -11,6 +11,12 @@ export declare interface IThemeConfig {
     saveTheme?: boolean,
 }
 
+export declare interface IBeakerTheme {
+    theme: IThemeConfig;
+    setTheme: (name: string, mode: ThemeMode) => void;
+    toggleDarkMode: () => void;
+}
+
 export const ThemeDefaults: IThemeConfig = {
     name: 'soho',
     lightTheme: "soho-light",
@@ -65,7 +71,7 @@ export const BeakerThemePlugin: Plugin = {
             applyTheme();
         };
 
-        app.config.globalProperties.$beakerTheme = {
+        app.config.globalProperties.$beakerTheme = <IBeakerTheme>{
             theme,
             setTheme,
             toggleDarkMode,
