@@ -8,6 +8,7 @@
 import { defineComponent, ref, computed, nextTick, provide, inject } from "vue";
 import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell } from 'beaker-kernel';
 import { IBeakerCellComponent, BeakerSessionComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import scrollIntoView from 'scroll-into-view-if-needed';
 
 export const BeakerNotebookComponent = defineComponent({
     props: [
@@ -47,7 +48,25 @@ export const BeakerNotebookComponent = defineComponent({
             if (this.selectedCellId !== newCellId) {
                 this.selectedCellId = newCellId
             }
+
+            nextTick(() => {
+                this.scrollCellIntoView(this.selectedCell());
+            })
+
             return this.selectedCellId;
+        },
+
+        scrollCellIntoView(cell: IBeakerCellComponent): void {
+            const el = cell?.$?.vnode?.el;
+            if (!el) {
+                return;
+            }
+            const target = el.closest('.beaker-cell') ?? el;
+            scrollIntoView(target, {
+                scrollMode: "if-needed",
+                block: "nearest",
+                inline: "nearest",
+            })
         },
 
         // This can't/shouldn't be a computed property because it information about the selected cell can change

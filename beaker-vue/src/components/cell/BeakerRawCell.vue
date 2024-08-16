@@ -59,9 +59,6 @@ const enter = () => {
 const exit = () => {
     // Be sure to blur editor even if we don't also refocus below.
     codeEditorRef.value.blur();
-    let target: HTMLElement = (instance.vnode.el as HTMLElement);
-    const selectableParent = findSelectableParent(target);
-    selectableParent?.focus();
 }
 
 const clear = () => {

@@ -124,6 +124,7 @@ import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
+import scrollIntoView from 'scroll-into-view-if-needed';
 
 import Card from 'primevue/card';
 import LoggingPane from '@/components/dev-interface/LoggingPane.vue';
@@ -195,7 +196,7 @@ const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
 const saveInterval = ref();
-const copiedCell = ref<IBeakerCell | null>()
+const copiedCell = ref<IBeakerCell | null>(null);
 const notebookRef = ref<typeof BeakerNotebook>();
 const beakerSession = ref<typeof BeakerSession>();
 
@@ -278,8 +279,8 @@ provide('show_toast', showToast);
 
 const prevCellKey = () => {
     beakerNotebookRef.value?.selectPrevCell();
-
 };
+
 const nextCellKey = () => {
     beakerNotebookRef.value?.selectNextCell();
 };
@@ -300,6 +301,9 @@ const notebookKeyBindings = {
                 true
             );
         }
+        nextTick(() => {
+            beakerNotebookRef.value?.selectedCell().enter();
+        })
     },
     "keydown.enter.exact.prevent.stop.!in-editor": () => {
         beakerNotebookRef.value?.selectedCell().enter();
