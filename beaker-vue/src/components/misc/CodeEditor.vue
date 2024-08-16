@@ -1,15 +1,16 @@
 <template>
     <Codemirror
-        :model="$props.model"
+        v-model="model"
         :extensions="extensions"
         :disabled="props.disabled"
         :autofocus="props.autofocus"
         @ready="handleReady"
+        @update:modelValue="modelUpdate"
     />
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
+import { defineProps, defineModel, ref, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView } from "codemirror";
 import { Extension } from "@codemirror/state";
@@ -41,10 +42,10 @@ declare interface Props {
     displayMode: DisplayMode,
     language?: Language,
     languageOptions?: any,
+    modelValue: string,
 
     autofocus?: boolean,
     disabled?: boolean,
-    model: string,
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -53,8 +54,11 @@ const props = withDefaults(defineProps<Props>(), {
     disabled: false,
 });
 
+const model = ref<string>(props.modelValue);
+
 const emit = defineEmits([
-        'submit'
+        'submit',
+        "update:modelValue",
 ]);
 const { theme, toggleDarkMode } = inject('theme');
 
@@ -66,6 +70,10 @@ const handleReady = ({view, state}) => {
     codeMirrorView.value = view;
     codeMirrorState.value = state;
 };
+
+const modelUpdate = (newValue: string): void => {
+    emit("update:modelValue", newValue);
+}
 
 const displayMode = computed<DisplayMode>(() => {
     if (theme.mode === 'default') {

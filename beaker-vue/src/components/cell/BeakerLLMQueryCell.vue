@@ -12,7 +12,7 @@
                             :style="{minHeight: `${promptEditorMinHeight}px`}"
                         />
                         <div class="prompt-controls" style="">
-                            <Button label="Submit" @click="execute()"/>
+                            <Button label="Submit" @click="execute"/>
                             <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
                         </div>
                     </div>
@@ -200,24 +200,30 @@ const respond = () => {
 function execute() {
     cell.value.source = promptText.value;
     isEditing.value = false;
-    const future = props.cell.execute(session);
+    nextTick(() => {
+        const future = props.cell.execute(session);
+    });
 }
 
 function enter() {
     if (!isEditing.value) {
         isEditing.value = true;
-        nextTick(() => {
-            textarea.value.$el.focus();
-        });
     }
+    nextTick(() => {
+        textarea.value?.$el?.focus();
+    });
 }
 
 function exit() {
-    // TODO
+    textarea.value?.$el?.blur();
 }
 
 function clear() {
-    // TODO
+    cell.value.source = "";
+    isEditing.value = true;
+    promptEditorMinHeight.value = 100;
+    promptText.value = "";
+    response.value = "";
 }
 
 defineExpose({
@@ -225,7 +231,7 @@ defineExpose({
     enter,
     exit,
     clear,
-    model: cell,
+    cell
 });
 
 onBeforeMount(() => {

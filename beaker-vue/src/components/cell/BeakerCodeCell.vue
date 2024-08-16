@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
@@ -100,7 +100,7 @@ const badgeSeverity = computed(() => {
 });
 
 const clicked = (evt) => {
-    notebook.selectCell(cell.value, true);
+    notebook.selectCell(cell.value);
     evt.stopPropagation();
 };
 
@@ -112,7 +112,7 @@ const language = computed(() => (beakerSession.activeContext?.language?.slug || 
 
 const execute = (evt: any) => {
     const future = props.cell.execute(session);
-
+    exit();
 }
 
 const enter = () => {
