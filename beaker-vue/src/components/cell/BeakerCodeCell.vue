@@ -47,6 +47,7 @@ import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inje
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
+import { findSelectableParent } from "@/util";
 import { BeakerSession } from "beaker-kernel";
 import CodeEditor from "@/components/misc/CodeEditor.vue";
 import { BeakerSessionComponentType } from '@/components/session/BeakerSession.vue';
@@ -121,6 +122,9 @@ const enter = () => {
 const exit = () => {
     // Be sure to blur editor even if we don't also refocus below.
     codeEditorRef.value?.blur();
+    let target: HTMLElement = (instance.vnode.el as HTMLElement);
+    const selectableParent = findSelectableParent(target);
+    selectableParent?.focus();
 }
 
 const clear = () => {

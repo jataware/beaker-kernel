@@ -295,15 +295,17 @@ const notebookKeyBindings = {
         const targetCell = beakerNotebookRef.value?.selectedCell();
         targetCell.execute();
         if (!beakerNotebookRef.value?.selectNextCell()) {
+            // Create a new cell after the current cell if one doesn't exist.
             beakerNotebookRef.value?.insertCellAfter(
                 targetCell,
                 targetCell.cell.cell_type,
                 true
             );
+            // Focus the editor only if we are creating a new cell.
+            nextTick(() => {
+                beakerNotebookRef.value?.selectedCell().enter();
+            });
         }
-        nextTick(() => {
-            beakerNotebookRef.value?.selectedCell().enter();
-        })
     },
     "keydown.enter.exact.prevent.stop.!in-editor": () => {
         beakerNotebookRef.value?.selectedCell().enter();
