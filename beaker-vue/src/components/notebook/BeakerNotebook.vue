@@ -7,14 +7,7 @@
 <script lang="tsx">
 import { defineComponent, ref, computed, nextTick, provide, inject } from "vue";
 import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell } from 'beaker-kernel';
-import { BeakerSessionComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
-
-export interface IBeakerCellComponent {
-    execute: () => null;
-    enter: () => null;
-    exit: () => null;
-    clear: () => null;
-}
+import { IBeakerCellComponent, BeakerSessionComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 export const BeakerNotebookComponent = defineComponent({
     props: [
@@ -43,7 +36,7 @@ export const BeakerNotebookComponent = defineComponent({
     },
 
     methods: {
-        selectCell(cell: string | {id: string}, enter=false): string {
+        selectCell(cell: string | {id: string}): string {
             let newCellId;
             if (typeof cell === 'string') {
                 newCellId = cell;
@@ -53,21 +46,13 @@ export const BeakerNotebookComponent = defineComponent({
             }
             if (this.selectedCellId !== newCellId) {
                 this.selectedCellId = newCellId
-                nextTick(() => {
-                    if (enter) {
-                        this.selectedCell()?.enter();
-                    }
-                    else {
-                        this.selectedCell()?.exit();
-                    }
-                });
             }
             return this.selectedCellId;
         },
 
         // This can't/shouldn't be a computed property because it information about the selected cell can change
         // without the dependencies in the function changing.
-        selectedCell(): IBeakerCell {
+        selectedCell(): IBeakerCellComponent  {
             return this.beakerSession.findNotebookCellById(this.selectedCellId);
         },
 

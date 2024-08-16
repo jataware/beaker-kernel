@@ -12,7 +12,7 @@
                             :style="{minHeight: `${promptEditorMinHeight}px`}"
                         />
                         <div class="prompt-controls" style="">
-                            <Button label="Submit" @click="execute()"/>
+                            <Button label="Submit" @click="execute"/>
                             <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
                         </div>
                     </div>
@@ -208,18 +208,22 @@ function execute() {
 function enter() {
     if (!isEditing.value) {
         isEditing.value = true;
-        nextTick(() => {
-            textarea.value.$el.focus();
-        });
     }
+    nextTick(() => {
+        textarea.value?.$el?.focus();
+    });
 }
 
 function exit() {
-    // TODO
+    textarea.value?.$el?.blur();
 }
 
 function clear() {
-    // TODO
+    cell.value.source = "";
+    isEditing.value = true;
+    promptEditorMinHeight.value = 100;
+    promptText.value = "";
+    response.value = "";
 }
 
 defineExpose({

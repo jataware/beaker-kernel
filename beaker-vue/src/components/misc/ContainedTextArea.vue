@@ -2,6 +2,7 @@
   <Textarea
       @keyup="checkSize"
       @keydown.enter.exact.prevent="emit('submit')"
+      @keydown.escape.prevent.stop="$event.target.blur()"
       autoResize
       rows="1"
       :class="{'scroll-input': allowScroll}"
@@ -52,4 +53,3 @@ const allowScroll = ref(false);
   max-height: v-bind('props.maxHeight');
 }
 </style>
-
