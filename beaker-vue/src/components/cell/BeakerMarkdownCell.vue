@@ -2,7 +2,7 @@
     <div class="markdown-cell"
         @dblclick="enter()"
     >
-        <div v-if="!editing" v-html="renderedMarkdown"></div>
+        <div v-if="!isEditing" v-html="renderedMarkdown"></div>
         <div v-else>
             <div class="markdown-edit-cell-grid">
                 <div
@@ -13,7 +13,7 @@
                     <CodeEditor
                         v-model="editorContents"
                         placeholder="Your markdown..."
-                        :ref="codeEditorRef"
+                        ref="codeEditorRef"
                         :autofocus="false"
                         language="markdown"
                         display-mode="dark"
@@ -42,7 +42,7 @@ const instance = getCurrentInstance();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const cell = ref(props.cell);
 const { theme } = inject<IBeakerTheme>('theme');
-const editing = ref(false);
+const isEditing = ref(false);
 const editorRef = ref(null);
 const codeEditorRef = ref(null);
 const notebook = inject<BeakerNotebookComponentType>("notebook");
@@ -53,17 +53,19 @@ const renderedMarkdown = computed(() => {
 });
 
 const clicked = (evt) => {
-    notebook.selectCell(cell.value, true);
+    notebook.selectCell(cell.value);
     evt.stopPropagation();
 };
 
 const execute = () => {
-    editing.value = false;
+    isEditing.value = false;
     cell.value.source = editorContents.value;
 }
 
 const enter = () => {
-    editing.value = true;
+    if (!isEditing.value) {
+        isEditing.value = true;
+    }
 
     nextTick(() => {
         codeEditorRef.value?.focus();
@@ -91,9 +93,9 @@ defineExpose({
 
 onBeforeMount(() => {
     marked.setOptions({
-       gfm: true,
-       sanitize: false,
-       langPrefix: `language-`,
+    //    gfm: true,
+    //    sanitize: false,
+    //    langPrefix: `language-`,
      });
     beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 })

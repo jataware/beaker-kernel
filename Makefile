@@ -6,13 +6,14 @@ init:
 	make .env beaker-vue/node_modules
 
 .PHONY:build
-build:
+build:beaker_kernel/server/ui/index.html
 	make beaker_kernel/server/ui/index.html
 	hatch build
 
 .PHONY:clean
 clean:
-	rm -r build/* dist/* beaker_kernel/server/ui/*
+	rm -r beaker-ts/dist/* beaker-vue/dist/* build/* dist/* beaker_kernel/server/ui/* || true
+
 
 .PHONY:docs-up
 docs-up:
@@ -24,7 +25,7 @@ docs-down:
 	(cd docs && docker compose down)
 
 .PHONY:dev
-dev:
+dev:beaker_kernel/server/ui/index.html
 	docker compose up -d --build && \
 	(sleep 1; python -m webbrowser "http://localhost:8888/"); \
 	docker compose logs -f jupyter || true; \
@@ -36,15 +37,15 @@ dev:
 	fi
 
 beaker-vue/node_modules:beaker-vue/package*.json
-	export `cat .env` && \
-	(cd beaker-vue && npm install --dev) && \
+	(cd beaker-ts/ && npm install --include=dev && npm run build) && \
+	(cd beaker-vue && npm install --include=dev) && \
 	touch beaker-vue/node_modules
 
 beaker_kernel/server/ui/index.html:beaker-vue/node_modules beaker-vue/**
-	rm -r beaker_kernel/server/ui/* ; \
+	rm -r beaker_kernel/server/ui/* || true; \
 	(cd beaker-ts/ && npm install && npm run build) && \
 	(cd beaker-vue/ && npm run build) && \
-	cp -r beaker-vue/dist/* beaker_kernel/server/ui/
+	cp -r beaker-vue/dist/html/* beaker_kernel/server/ui/
 
 .PHONY:changed-files
 changed-files:

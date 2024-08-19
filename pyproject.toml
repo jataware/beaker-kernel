@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "beaker-kernel"
-version = "1.6.1"
+version = "1.6.4"
 description = ""
 readme = "README.md"
 requires-python = ">=3.10"
@@ -71,7 +71,7 @@ path = "beaker_kernel/builder/beaker.py"
 
 
 [tool.bumpversion]
-current_version="1.6.1"
+current_version="1.6.4"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"
@@ -92,6 +92,11 @@ commit_args = ""
 filename = "pyproject.toml"
 search = 'version = "{current_version}"'
 replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+glob = "beaker-vue/package.json"
+search = """beaker-kernel": "^{current_version}"""
+replace = """beaker-kernel": "^{new_version}"""
 
 [[tool.bumpversion.files]]
 glob = "beaker-*/package*.json"

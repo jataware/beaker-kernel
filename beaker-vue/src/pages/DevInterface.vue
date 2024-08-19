@@ -37,7 +37,7 @@
                         <BeakerNotebook
                             ref="beakerNotebookRef"
                             :cell-map="cellComponentMapping"
-                            v-keybindings="notebookKeyBindings"
+                            v-keybindings.top="notebookKeyBindings"
                         >
                             <BeakerNotebookToolbar/>
                             <BeakerNotebookPanel
@@ -113,7 +113,7 @@
 
 <script setup lang="ts">
 import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted } from 'vue';
-import { JupyterMimeRenderer, IMimeRenderer } from 'beaker-kernel';
+import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer } from 'beaker-kernel';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
@@ -123,6 +123,7 @@ import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
+import scrollIntoView from 'scroll-into-view-if-needed';
 
 import Card from 'primevue/card';
 import LoggingPane from '../components/dev-interface/LoggingPane.vue';
@@ -174,9 +175,8 @@ const props = defineProps([
     "renderers",
 ]);
 
-
 const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
-    ...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
+    ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
     JSONRenderer,
     LatexRenderer,
     DecapodeRenderer,
@@ -194,6 +194,7 @@ const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
 const saveInterval = ref();
+const copiedCell = ref<IBeakerCell | null>(null);
 const notebookRef = ref<typeof BeakerNotebook>();
 const beakerSession = ref<typeof BeakerSession>();
 
@@ -274,59 +275,119 @@ onUnmounted(() => {
 // TODO: See above. Move somewhere better.
 provide('show_toast', showToast);
 
+const prevCellKey = () => {
+    beakerNotebookRef.value?.selectPrevCell();
+};
+
+const nextCellKey = () => {
+    beakerNotebookRef.value?.selectNextCell();
+};
+
 const keyBindingState = {};
 const notebookKeyBindings = {
     "keydown.enter.ctrl.prevent.capture.in-cell": () => {
-        beakerNotebookRef.value.selectedCell().execute();
-        beakerNotebookRef.value.selectedCell().exit();
+        beakerNotebookRef.value?.selectedCell().execute();
+        beakerNotebookRef.value?.selectedCell().exit();
     },
     "keydown.enter.shift.prevent.capture.in-cell": () => {
-        const targetCell = beakerNotebookRef.value.selectedCell();
+        const targetCell = beakerNotebookRef.value?.selectedCell();
         targetCell.execute();
-        if (!beakerNotebookRef.value.selectNextCell()) {
-            beakerNotebookRef.value.insertCellAfter(
+        if (!beakerNotebookRef.value?.selectNextCell()) {
+            // Create a new cell after the current cell if one doesn't exist.
+            beakerNotebookRef.value?.insertCellAfter(
                 targetCell,
                 targetCell.cell.cell_type,
                 true
             );
+            // Focus the editor only if we are creating a new cell.
+            nextTick(() => {
+                beakerNotebookRef.value?.selectedCell().enter();
+            });
         }
     },
-    "keydown.enter.exact.prevent.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectedCell().enter();
+    "keydown.enter.exact.prevent.stop.!in-editor": () => {
+        beakerNotebookRef.value?.selectedCell().enter();
     },
-    "keydown.esc.exact.prevent.in-cell": () => {
-        beakerNotebookRef.value.selectedCell().exit();
+    "keydown.esc.exact.prevent": () => {
+        beakerNotebookRef.value?.selectedCell().exit();
     },
-    "keydown.up.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectPrevCell();
-    },
-    "keydown.j.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectPrevCell();
-    },
-    "keydown.down.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectNextCell();
-    },
-    "keydown.k.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectNextCell();
-    },
-    "keydown.a.prevent.in-cell.!in-editor": (evt) => {
+    "keydown.up.!in-editor.prevent": prevCellKey,
+    "keydown.k.!in-editor": prevCellKey,
+    "keydown.down.!in-editor.prevent": nextCellKey,
+    "keydown.j.!in-editor": nextCellKey,
+    "keydown.a.prevent.!in-editor": (evt) => {
         const notebook = beakerNotebookRef.value;
-        notebook.selectedCell().exit();
-        notebook.insertCellBefore();
+        notebook?.selectedCell().exit();
+        notebook?.insertCellBefore();
     },
-    "keydown.b.prevent.in-cell.!in-editor": () => {
+    "keydown.b.prevent.!in-editor": () => {
         const notebook = beakerNotebookRef.value;
-        notebook.selectedCell().exit();
-        notebook.insertCellAfter();
+        notebook?.selectedCell().exit();
+        notebook?.insertCellAfter();
     },
-    "keydown.d.selected.!in-editor": () => {
-        console.log("delete");
-        //
-        // TODO implement double press for action
+    "keydown.d.!in-editor": () => {
+        const notebook = beakerNotebookRef.value;
+        const cell = notebook.selectedCell();
+        const deleteCallback = () => {
+            delete keyBindingState['d'];
+        };
+        const state = keyBindingState['d'];
 
-        // const notebook = beakerNotebookRef.value;
-        // notebook.removeCell();
+        if (state === undefined) {
+            const timeoutId = setTimeout(deleteCallback, 1000);
+            keyBindingState['d'] = {
+                cell_id: cell.id,
+                timeout: timeoutId,
+            }
+        }
+        else {
+            const {cell_id, timeout} = keyBindingState['d'];
+            if (cell_id === cell.id) {
+                notebook?.removeCell(cell);
+                copiedCell.value = cell.cell;
+                delete keyBindingState['d'];
+            }
+            if (timeout) {
+                window.clearTimeout(timeout);
+            }
+        }
+    },
+    "keydown.y.!in-editor": () => {
+        const notebook = beakerNotebookRef.value;
+        const cell = notebook.selectedCell();
+        const copyCallback = () => {
+            delete keyBindingState['y'];
+        };
+        const state = keyBindingState['y'];
 
+        if (state === undefined) {
+            const timeoutId = setTimeout(copyCallback, 1000);
+            keyBindingState['y'] = {
+                cell_id: cell.id,
+                timeout: timeoutId,
+            }
+        }
+        else {
+            const {cell_id, timeout} = keyBindingState['y'];
+            if (cell_id === cell.id) {
+                copiedCell.value = cell.cell;
+                delete keyBindingState['y'];
+            }
+            if (timeout) {
+                window.clearTimeout(timeout);
+            }
+        }
+    },
+    "keydown.p.!in-editor": () => {
+        const notebook = beakerNotebookRef.value;
+        const oldCell = copiedCell.value;
+        if (oldCell !== null) {
+            const newCell: IBeakerCell = notebook?.insertCellAfter(notebook.selectedCell(), oldCell);
+            for (const key of Object.keys(oldCell).filter((k) => k !== "id")) {
+                newCell[key] = oldCell[key];
+            }
+            copiedCell.value = null;
+        }
     },
 }
 

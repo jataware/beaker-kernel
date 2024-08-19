@@ -12,7 +12,7 @@
                             :style="{minHeight: `${promptEditorMinHeight}px`}"
                         />
                         <div class="prompt-controls" style="">
-                            <Button label="Submit" @click="execute()"/>
+                            <Button label="Submit" @click="execute"/>
                             <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
                         </div>
                     </div>
@@ -114,7 +114,7 @@ import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerLLMQueryEvent from "./BeakerLLMQueryEvent.vue";
-import { BeakerQueryEvent, BeakerQueryEventType } from "beaker-kernel/dist/notebook";
+import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
@@ -206,24 +206,30 @@ const respond = () => {
 function execute() {
     cell.value.source = promptText.value;
     isEditing.value = false;
-    const future = props.cell.execute(session);
+    nextTick(() => {
+        const future = props.cell.execute(session);
+    });
 }
 
 function enter() {
     if (!isEditing.value) {
         isEditing.value = true;
-        nextTick(() => {
-            textarea.value.$el.focus();
-        });
     }
+    nextTick(() => {
+        textarea.value?.$el?.focus();
+    });
 }
 
 function exit() {
-    // TODO
+    textarea.value?.$el?.blur();
 }
 
 function clear() {
-    // TODO
+    cell.value.source = "";
+    isEditing.value = true;
+    promptEditorMinHeight.value = 100;
+    promptText.value = "";
+    response.value = "";
 }
 
 defineExpose({
@@ -231,7 +237,7 @@ defineExpose({
     enter,
     exit,
     clear,
-    model: cell,
+    cell
 });
 
 onBeforeMount(() => {

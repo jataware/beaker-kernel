@@ -1,6 +1,6 @@
 {
   "name": "beaker-vue",
-  "version": "1.6.1",
+  "version": "1.6.4",
   "declaration": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -71,7 +71,8 @@
     "eslint-plugin-vue": "^8.0.3",
     "sass": "^1.32.7",
     "sass-loader": "^12.0.0",
-    "typescript": "~5.2.2",
-    "vue-tsc": "^2.0.29"
+    "scroll-into-view-if-needed": "^3.1.0",
+    "typescript": "^5.5.4",
+    "vue-tsc": "~2.0.20"
   }
 }

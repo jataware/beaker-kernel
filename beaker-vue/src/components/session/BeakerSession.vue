@@ -11,7 +11,7 @@ import { BeakerRenderOutput } from '../../renderers';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 
 
-export interface ICellRepr {
+export interface IBeakerCellComponent {
   [key: string]: any,
   $: ComponentInternalInstance,
   cell: IBeakerCell,
@@ -22,7 +22,7 @@ export interface ICellRepr {
 }
 
 
-export const CellRepr = (vnode: VNode): ICellRepr => {
+export const toBeakerCellComponent = (vnode: VNode): IBeakerCellComponent => {
   const component: ComponentInternalInstance = vnode?.component;
   if (component === undefined) {
     return undefined;
@@ -101,18 +101,18 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
   },
 
   methods: {
-    findNotebookCell(predicate: ((cell: ICellRepr) => boolean)): ICellRepr {
+    findNotebookCell(predicate: ((cell: IBeakerCellComponent) => boolean)): IBeakerCellComponent {
       for (const cellVnode of this.cellRegistry) {
         if (predicate(cellVnode)) {
-          return CellRepr(cellVnode)
+          return toBeakerCellComponent(cellVnode)
         }
       }
     },
 
-    findNotebookCellById(id: string): ICellRepr {
+    findNotebookCellById(id: string): IBeakerCellComponent {
       const cellVnode = this.cellRegistry[id];
       if (cellVnode !== undefined) {
-        return CellRepr(cellVnode);
+        return toBeakerCellComponent(cellVnode);
       }
     },
 

@@ -1,5 +1,7 @@
 import { withModifiers, withKeys, ObjectDirective, DirectiveBinding } from "vue";
 
+const keybindingKey = Symbol("_v_keybinding");
+
 const modifierKeys = [
     "ctrl",
     "alt",
@@ -124,13 +126,13 @@ export const vKeybindings: KeybindingDefinition = {
             }
             let callback = action;
             if (keyModifiers.length) {
-                callback = withModifiers(callback, keyModifiers);
+                callback = withModifiers(callback, keyModifiers as any);
             }
 
             callback = withKeys(callback, [key]);
 
             if (customModifiers.length) {
-                callback = withBeakerModifiers(callback, customModifiers);
+                callback = withBeakerModifiers(callback as any, customModifiers);
             }
 
             const eventOptions = eventModifiers.reduce((obj, val) => {obj[val] = true; return obj;}, {});
@@ -147,17 +149,23 @@ export const vKeybindings: KeybindingDefinition = {
     beforeMount(el, binding, vnode) {
         // Bindings
         const eventListeners = vKeybindings.parseEventDefinitions(binding);
+        const targetEl = (binding.modifiers.top === true ? window : el);
+        el[keybindingKey] = {
+            targetEl,
+            eventListeners,
+        };
         eventListeners.forEach((eventDefinition) => {
             const {eventType, eventOptions, callback} = eventDefinition;
-            el.addEventListener(eventType, callback, eventOptions);
+            targetEl.addEventListener(eventType, callback, eventOptions);
         });
     },
     unmounted(el: HTMLElement, binding, vnode) {
         // Cleanup
-        const eventListeners = vKeybindings.parseEventDefinitions(binding);
+        const {targetEl, eventListeners} = el[keybindingKey];
         eventListeners.forEach((eventDefinition) => {
             const {eventType, eventOptions, callback} = eventDefinition;
-            el.removeEventListener(eventType, callback, eventOptions);
+            targetEl.removeEventListener(eventType, callback, eventOptions);
         });
+        delete el[keybindingKey];
     },
 }
