@@ -10,6 +10,7 @@ module.exports = defineConfig({
     cell: 'src/pages/cell.ts',
     playground: 'src/pages/playground.ts',
   },
+  css: { extract: false },
   assetsDir: "static/",
   transpileDependencies: true,
   outputDir: path.resolve(__dirname, 'dist/html'),

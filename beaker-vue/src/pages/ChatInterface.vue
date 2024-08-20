@@ -120,7 +120,9 @@ import { useToast } from 'primevue/usetoast';
 import { defineProps, inject, nextTick, onBeforeMount, onUnmounted, provide, ref, defineEmits, computed } from 'vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
-const { theme, toggleDarkMode } = inject('theme');
+import { IBeakerTheme } from '../plugins/theme';
+
+const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const toast = useToast();
 const chatPanelRef = ref();
 const notebook = inject<BeakerNotebookComponentType>("notebook");
@@ -141,14 +143,13 @@ const setContext = (contextInfo) => {
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
 // Let's only use severity=success|warning|danger(=error) for now
-const showToast = ({title, detail, life=3000, severity='success', position='bottom-right'}) => {
+const showToast = ({title, detail, life=3000, severity='success' as any}) => {
     toast.add({
         summary: title,
         detail,
         life,
         // for options, seee https://primevue.org/toast/
         severity,
-        position
     });
 };
 
