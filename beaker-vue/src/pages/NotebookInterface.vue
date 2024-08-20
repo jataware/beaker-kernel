@@ -24,9 +24,9 @@
 <script setup lang="ts">
 import { defineProps, reactive, ref, onBeforeMount, provide } from 'vue';
 import { JupyterMimeRenderer  } from 'beaker-kernel';
-import BeakerNotebook from '@/components/notebook/BeakerNotebook.vue';
-import BeakerSession from '@/components/session/BeakerSession.vue';
-import BeakerHeader from '@/components/dev-interface/BeakerHeader.vue';
+import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
+import BeakerSession from '../components/session/BeakerSession.vue';
+import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
@@ -35,14 +35,14 @@ import { standardRendererFactories } from '@jupyterlab/rendermime';
 const toast = useToast();
 
 // Let's only use severity=success|warning|danger(=error) for now
-const showToast = ({title, detail, life=3000, severity='success', position='bottom-right'}) => {
+const showToast = ({title, detail, life=3000, severity=('success' as any), position='bottom-right'}) => {
     toast.add({
       summary: title,
       detail,
       life,
       // for options, seee https://primevue.org/toast/
       severity,
-      position
+      // position
     });
 };
 
@@ -56,12 +56,12 @@ const props = defineProps([
 ]);
 
 
-const renderers = [
-  ...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
-  JSONRenderer,
-  LatexRenderer,
-  DecapodeRenderer,
-]
+// const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
+//     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
+//     JSONRenderer,
+//     LatexRenderer,
+//     DecapodeRenderer,
+// ];
 
 const connectionStatus = ref('connecting');
 

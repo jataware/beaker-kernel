@@ -16,7 +16,7 @@
                             <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
                         </div>
                     </div>
-                    <div v-show="!isEditing" @dblclick="console.log($event.target.clientHeight); promptEditorMinHeight = $event.target.clientHeight; isEditing = true">
+                    <div v-show="!isEditing" @dblclick="promptEditorMinHeight = ($event.target as HTMLElement).clientHeight; isEditing = true">
                         <div class="llm-prompt-text">{{ cell.source }}</div>
                     </div>
                 </div>
@@ -114,8 +114,8 @@ import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerLLMQueryEvent from "./BeakerLLMQueryEvent.vue";
-import { BeakerQueryEvent, BeakerQueryEventType } from "beaker-kernel/dist/notebook";
-import ContainedTextArea from '@/components/misc/ContainedTextArea.vue';
+import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
+import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
@@ -165,18 +165,24 @@ const isLastEventTerminal = () => {
 
 // behavior: temporarily show last event and all code cells, until terminal, in which case,
 // only show code cells
-const selectedEvents = computed(() => {
-    if (taggedCellEvents.value.length == 0) {
-        return [0];
-    }
-    const events: BeakerQueryEvent[] = [...props.cell.events];
-    const codeCellIndices = events
-        .map((e, index) => e.type === "code_cell" ? index : null)
-        .filter(e => e);
-    if (isLastEventTerminal()) {
-        return codeCellIndices;
-    }
-    return [...codeCellIndices, taggedCellEvents.value.length - 1];
+const selectedEvents = computed({
+    get() {
+        if (taggedCellEvents.value.length == 0) {
+            return [0];
+        }
+        const events: BeakerQueryEvent[] = [...props.cell.events];
+        const codeCellIndices = events
+            .map((e, index) => e.type === "code_cell" ? index : null)
+            .filter(e => e);
+        if (isLastEventTerminal()) {
+            return codeCellIndices;
+        }
+        return [...codeCellIndices, taggedCellEvents.value.length - 1];
+    },
+    set(newValue) {
+        // no operation,
+    },
+
 })
 
 const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {

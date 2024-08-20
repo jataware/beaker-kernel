@@ -67,6 +67,7 @@ import { defineProps, defineEmits, computed, inject } from "vue";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { capitalize } from '../../util';
+import { IBeakerTheme } from '../../plugins/theme';
 
 // TODO too many granular props- use a slot instead?
 const props = defineProps([
@@ -78,7 +79,7 @@ const props = defineProps([
 
 const emit = defineEmits(["selectKernel"]);
 
-const theme = inject('theme');
+const theme = inject<IBeakerTheme>('theme');
 
 function selectKernel() {
     emit('select-kernel');
