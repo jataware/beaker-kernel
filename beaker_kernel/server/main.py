@@ -22,6 +22,7 @@ from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
+from beaker_kernel.lib.config import config, JUPYTER_SERVER_DEFAULT
 from beaker_kernel.server import admin_utils
 
 logger = logging.getLogger(__file__)
@@ -121,20 +122,24 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
     """
 
     def get(self):
-        """
-        """
-        base_url = f"{self.request.protocol}://{self.request.host}"
-        if self.request.protocol.endswith("s"):
-            ws_proto = "wss"
+        # If BASE_URL is not provided in the environment, assume that the base url is the same location that
+        # is handling this request, as reported by the request headers.
+        # If APP_URL is not provided, assume it is the same as BASE_URL.
+
+        base_url = os.environ.get("JUPYTER_BASE_URL", f"{self.request.protocol}://{self.request.host}")
+
+        base_scheme = urllib.parse.urlparse(base_url).scheme
+        if base_scheme.endswith("s"):
+            ws_scheme = "wss"
         else:
-            ws_proto = "ws"
-        ws_url = f"{ws_proto}://{self.request.host}"
+            ws_scheme = "ws"
+        ws_url = base_url.replace(base_scheme, ws_scheme)
 
         config_data = {
             "appUrl": os.environ.get("APP_URL", base_url),
-            "baseUrl": os.environ.get("JUPYTER_BASE_URL", base_url),
+            "baseUrl": base_url,
             "wsUrl": os.environ.get("JUPYTER_WS_URL", ws_url),
-            "token": os.environ.get("JUPYTER_TOKEN", "89f73481102c46c0bc13b2998f9a4fce"),
+            "token": config.JUPYTER_TOKEN,
         }
         return self.write(config_data)
 
@@ -350,6 +355,12 @@ class BeakerJupyterApp(LabServerApp):
     @classmethod
     def get_extension_package(cls):
         return cls.__module__
+
+    @classmethod
+    def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
+        # TODO: catch and handle any custom command line arguments here
+        app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
+        return app
 
     def initialize_handlers(self):
         """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""

@@ -6,6 +6,7 @@ import typing
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
+from beaker_kernel.lib.config import config
 from beaker_kernel.lib.utils import env_enabled
 
 if typing.TYPE_CHECKING:
@@ -32,7 +33,7 @@ class BeakerAgent(ReActAgent):
         })
         super().__init__(
             model=self.MODEL,  # Use default
-            # api_key=api_key,  # TODO: get this from configuration
+            api_key=config.LLM_SERVICE_TOKEN,  # TODO: get this from configuration
             tools=tools,
             verbose=self.context.beaker_kernel.verbose,
             spinner=None,

@@ -3,7 +3,7 @@ import inspect
 import json
 import logging
 import os.path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar
 import requests
 import uuid
 
@@ -11,7 +11,7 @@ from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, ExecutionTask
-from beaker_kernel.lib.config import config
+from beaker_kernel.lib.config import config as beaker_config
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -35,6 +35,7 @@ class BeakerContext:
     config: Dict[str, Any]
     agent: "ReActAgent"
     current_llm_query: str | None
+    compatible_subkernels: ClassVar[list[str] | None] = None
 
     intercepts: List[Tuple[str, Callable, str]]
     jinja_env: Optional[Environment]
@@ -121,6 +122,7 @@ class BeakerContext:
             self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
 
     def get_subkernel(self):
+        config = beaker_config
         language = self.config.get("language", "python3")
         self.beaker_kernel.debug("new_kernel", f"Setting new kernel of `{language}`")
         kernel_opts = {
@@ -152,6 +154,9 @@ class BeakerContext:
     @classmethod
     def available_subkernels(cls) -> List["BeakerSubkernel"]:
         subkernels: Dict[str, BeakerSubkernel] = autodiscover("subkernels")
+
+        if cls.compatible_subkernels:
+            return [subkernel for subkernel in cls.compatible_subkernels if subkernel in subkernels]
 
         class_dir = inspect.getfile(cls)
         proc_dir = os.path.join(os.path.dirname(class_dir), "procedures")

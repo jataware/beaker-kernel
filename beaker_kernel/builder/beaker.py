@@ -165,7 +165,3 @@ class BeakerBuildHook(BuildHookInterface):
                 # Add shared-data mappings for each file so it is installed to the correct location
                 self.build_config.shared_data[dest_file] = f"share/beaker/{typename}/{slug}.json"
 
-
-@hookimpl
-def hatch_register_build_hook():
-    return BeakerBuildHook

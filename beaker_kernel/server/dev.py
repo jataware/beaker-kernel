@@ -12,6 +12,7 @@ from watchdog import events as watchdog_events
 import beaker_kernel
 from beaker_kernel.server.main import BeakerJupyterApp
 from beaker_kernel.lib.autodiscovery import autodiscover
+from beaker_kernel.lib.config import config
 
 
 # Global notebook storage for notebook that lives for lifetime of service
