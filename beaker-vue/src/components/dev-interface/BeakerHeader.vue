@@ -27,6 +27,16 @@
 
         <template #end>
             <nav>
+                <a  
+                    href="/chat" 
+                    v-tooltip.right="{value: 'To Chat View', showDelay: 300}"
+                >
+                    <Button
+                        icon="pi pi-comment"
+                        text
+                        style="margin: 0; color: var(--gray-500);"
+                    />
+                </a>
                 <Button
                     text
                     @click="toggleDarkMode"

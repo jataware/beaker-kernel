@@ -41,12 +41,17 @@ const checkInEditor = (event: Event): boolean => {
     return false;
 }
 
+const containsCellClass = (target: HTMLElement) => {
+    const BeakerCellClass = 'beaker-cell'
+    const BeakerChatCellClass = 'beaker-chat-cell';
+    return target.classList.contains(BeakerCellClass) || target.classList.contains(BeakerChatCellClass);
+}
+
 const checkInCell = (event: Event): boolean => {
     let target: HTMLElement = (event.target as HTMLElement);
     const docElement = (event.target as HTMLElement).ownerDocument.documentElement;
-    const BeakerCellClass = 'beaker-cell';
     while (target !== null && target !== docElement) {
-        if (target.classList.contains(BeakerCellClass)) {
+        if (containsCellClass(target)) {
             return true;
         }
         target = target.parentElement;
@@ -57,17 +62,14 @@ const checkInCell = (event: Event): boolean => {
 const selected = (event: Event): boolean => {
     let target: HTMLElement = (event.target as HTMLElement);
     const docElement = (event.target as HTMLElement).ownerDocument.documentElement;
-    const BeakerCellClass = 'beaker-cell';
     while (target !== null && target !== docElement) {
-        if (target.classList.contains(BeakerCellClass) && target.classList.contains("selected")) {
+        if (containsCellClass(target) && target.classList.contains("selected")) {
             return true;
         }
         target = target.parentElement;
     }
     return false;
 }
-
-
 
 const beakerModifiersMappings: {[key: string]: (event: Event) => boolean} = {
     'in-editor': checkInEditor,

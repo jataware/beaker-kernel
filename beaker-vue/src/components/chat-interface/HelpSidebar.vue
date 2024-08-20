@@ -12,10 +12,16 @@
         </template>
     </VerticalToolbar>
     <transition name="slide">
-        <div class="help-pane" v-if="isAboutOpen">
+        <div class="help-pane" v-if="isAboutOpen" :class="isAboutOpen ? 'help-pane-open' : 'help-pane-closed'">
             <div>
+                <h3>Beaker Chat</h3>
+                <h3>Help</h3>
+                <h4>Setting the Context:</h4>
+                <p>Use the filled circle in the top left to open context selection.</p>
+                <h4>Changing to Notebook View:</h4>
+                <p>Use the last button on the left toolbar to switch back and forth in different views.</p>
                 <h3>About</h3>
-                <p>TODO - Add some kind of description</p>
+                <p>Placeholder text here.</p>
             </div>
         </div>
     </transition>
@@ -30,88 +36,46 @@ const isAboutOpen = ref(false);
 
 <style lang="scss" scoped>
 
-.help-menu-bar {
-    &.p-menubar {
-        padding: 0 0.5rem;
-    }
-}
-
 .help-pane {
     display: flex;
     flex-direction: row;
     gap: 4rem;
-    width: 100%;
-    height: 15rem;
     padding: 0.5rem;
     margin: 0;
     & > div {
+        min-width: 24rem;
+        overflow: hidden;
         position: relative;
     }
-    & > div:not(:first-child)::before {
-        content: ' ';
-        width: 0.2rem;
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: -2.1rem;
-        background-color: var(--surface-b);
-        box-shadow: var(--surface-b) 0px 0px 4px;
-    }
 }
 
-.data-container {
-    position: relative;
-    flex: 1;
-    padding: 0.25rem 0;
-    margin: 0;
+.help-pane-closed {
+    width: 0rem;
 }
 
-.scroller-area {
-    display: block;
-    position: absolute;
-    top: 0;
-    bottom: 1rem;
-    left: 0;
-    right: 0;
-    overflow: auto;
-    padding: 0.5rem;
-    margin-top: 0.5rem;
-    border: 1px solid lightgray;
-    border-radius: 3px;
-    color: var(--text-color-secondary);
+.help-pane-open {
+    width: 24rem;
 }
+
 
 .slide-enter-active {
-    transition: height 0.6s ease-out;
+    transition: width 0.1s ease-out;
 }
 
 .slide-leave-active {
-    transition: height 0.4s linear;
+    transition: width 0.1s ease-out;
 }
 
 .slide-enter-from {
-    height: 0;
+    width: 0;
 }
 
 .slide-enter-to {
-    height: 15rem;
+    width: 24rem;
 }
 
 .slide-leave-to {
-    height: 0;
+    width: 0;
 }
 
-.pane-contents {
-    display: flex;
-    flex-direction: column;
-    height: inherit;
-}
-
-.actions {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    padding-bottom: 0;
-    margin-bottom: 0;
-}
 </style>

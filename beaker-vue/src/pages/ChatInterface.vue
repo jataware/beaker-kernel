@@ -47,21 +47,36 @@
                             </OverlayPanel>
                             <DarkModeButton :toggle-dark-mode="toggleDarkMode"/>
                         </template>
+                        <template #center>
+                            <div class="vertical-toolbar-divider" />
+                        </template>
                         <template #end>
-
+                            <a  
+                                href="/index" 
+                                v-tooltip.right="{value: 'To Notebook View', showDelay: 300}"
+                            >
+                                <Button
+                                    icon="pi pi-book"
+                                    size="small"
+                                    severity="info"
+                                    text
+                                />
+                            </a>
                         </template>
                     </VerticalToolbar>
                 </header>
-                <main style="display: flex; overflow: auto;">
+                <main style="display: flex; overflow-y: auto; overflow-x: hidden;">
                     <div class="central-panel">
                         <BeakerNotebook
                             ref="beakerNotebookRef"
                             :cell-map="cellComponentMapping"
                             v-keybindings="notebookKeyBindings"
+                            :noEmptyStartingCell="true"
                         >
                             <ChatPanel
                                 ref="chatPanelRef"
                                 :selected-cell="beakerNotebookRef?.selectedCellId"
+                                v-autoscroll
                             >
                                 <template #notebook-background>
                                     <div class="welcome-placeholder">
@@ -295,11 +310,12 @@ const notebookKeyBindings = {
         const targetCell = beakerNotebookRef.value.selectedCell();
         targetCell.execute();
         if (!beakerNotebookRef.value.selectNextCell()) {
-            beakerNotebookRef.value.insertCellAfter(
-                targetCell,
-                targetCell.cell.cell_type,
-                true
-            );
+            // beakerNotebookRef.value.insertCellAfter(
+            //     targetCell,
+            //     targetCell.cell.cell_type,
+            //     true
+            // );
+            // don't make cell in chat
         }
     },
     "keydown.enter.exact.prevent.in-cell.!in-editor": () => {
@@ -466,6 +482,10 @@ div.central-panel, div.beaker-notebook {
 
 button.connection-button {
     border: none;
+}
+
+div.code-cell {
+    margin-bottom: 2rem;
 }
 
 </style>

@@ -13,6 +13,7 @@
                 selected: (cell.id === notebook.selectedCellId),
             }"
             @click="(evt)=>clicked(cell)"
+            class="beaker-chat-cell"
         />
         <div class="drop-overflow-catcher">
             <slot name="notebook-background" />
@@ -22,8 +23,8 @@
 
 <script setup lang="tsx">
 
-import { ref, inject, computed, defineExpose, defineEmits } from 'vue';
-import { BeakerSession, IBeakerCell } from 'beaker-kernel';
+import { ref, inject, computed } from 'vue';
+import { BeakerSession } from 'beaker-kernel';
 import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 const session = inject<BeakerSession>('session');
@@ -34,18 +35,6 @@ const cellsContainerRef = ref(null);
 const clicked = (cell) => (evt) => {
     notebook.selectCell(cell.value as {id: string}, );
 };
-
-const emit = defineEmits([]);
-
-function scrollBottomCellContainer(event) {
-    if (cellsContainerRef.value) {
-        cellsContainerRef.value.scrollTop = cellsContainerRef.value.scrollHeight;
-    }
-}
-
-defineExpose({
-    scrollBottomCellContainer,
-});
 
 </script>
 

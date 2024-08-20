@@ -6,6 +6,7 @@ import FocusTrap from 'primevue/focustrap';
 
 import BeakerThemePlugin from '../plugins/theme';
 import ChatInterface from './ChatInterface.vue';
+import { vAutoScroll } from '../directives/autoscroll';
 import { vKeybindings } from '../directives/keybindings';
 
 import 'primeicons/primeicons.css';
@@ -40,5 +41,6 @@ const baseUrl = PageConfig.getBaseUrl();
   app.directive('tooltip', Tooltip);
   app.directive('focustrap', FocusTrap);
   app.directive('keybindings', vKeybindings);
+  app.directive('autoscroll', vAutoScroll);
   app.mount('#app');
 })();
