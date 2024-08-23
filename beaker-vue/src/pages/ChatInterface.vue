@@ -11,7 +11,6 @@
             @unhandled-msg="unhandledMessage"
             @any-msg="anyMessage"
             @session-status-changed="statusChanged"
-            v-keybindings="sessionKeybindings"
         >
             <div class="beaker-dev-interface">
                 <header style="justify-content: center;">
@@ -25,7 +24,7 @@
                                 class="connection-button"
                                 @click="() => {contextSelectionOpen = !contextSelectionOpen}"
                                 v-tooltip.right="{
-                                    value: `${statusLabel}: ${beakerSessionRef?.activeContext?.slug || ''}`, 
+                                    value: `${statusLabel}: ${beakerSessionRef?.activeContext?.slug || ''}`,
                                     showDelay: 300
                                 }"
                                 :label="beakerSessionRef?.activeContext?.slug"
@@ -58,8 +57,8 @@
                             <div class="vertical-toolbar-divider" />
                         </template>
                         <template #end>
-                            <a  
-                                :href="`/${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`" 
+                            <a
+                                :href="`/${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`"
                                 v-tooltip.right="{value: 'To Notebook View', showDelay: 300}"
                             >
                                 <Button
@@ -75,14 +74,14 @@
                 <main style="display: flex; overflow-y: auto; overflow-x: hidden;">
                     <div class="central-panel">
                         <ChatPanel
-                            ref="chatPanelRef"
+                            :cell-map="cellComponentMapping"
                             v-autoscroll
                         >
                             <template #help-text>
                                 <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
                                 <p>Feel free to ask me about whatever the context specializes in..</p>
                                 <p>
-                                    On top of answering questions, I can actually run code in a python environment, and evaluate the results. 
+                                    On top of answering questions, I can actually run code in a python environment, and evaluate the results.
                                     This lets me do some pretty awesome things like: web scraping, or plotting and exploring data.
                                     Just shoot me a message when you're ready to get started.
                                 </p>
@@ -143,12 +142,9 @@ import { IBeakerTheme } from '../plugins/theme';
 
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const toast = useToast();
-const chatPanelRef = shallowRef();
 const contextSelectionOpen = ref(false);
 const contextProcessing = ref(false);
 import BeakerContextSelection from '../components/session/BeakerContextSelection.vue';
-
-const beakerNotebookRef = ref();
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
 // Let's only use severity=success|warning|danger(=error) for now
@@ -190,8 +186,6 @@ const cellComponentMapping = {
     'query': BeakerLLMQueryCell,
     'raw': BeakerRawCell,
 }
-
-provide('cell-component-mapping', cellComponentMapping);
 
 const isFileMenuOpen = ref();
 
@@ -299,39 +293,6 @@ onUnmounted(() => {
     saveInterval.value = null;
     window.removeEventListener("beforeunload", snapshot);
 });
-
-// no state to track selection - find code editor divs and compare to evt
-const executeActiveCell = (editorSourceElement) => {
-    const panel = chatPanelRef?.value;
-    const queryCellComponents = panel?.cellsContainerRef;
-    queryCellComponents.forEach(cell => {
-        const events = cell?.queryEventsRef;
-        if (!events) {
-            return;
-        }
-        events.forEach(eventRef => {
-            const codeCellRef = eventRef?.codeCellRef;
-            const codeEditor = codeCellRef?.codeEditorRef;
-            if (!codeEditor) {
-                return;
-            }
-            if (codeEditor.view._root.activeElement == editorSourceElement) {
-                codeCellRef.execute();
-            }
-        });
-    });
-}
-
-const sessionKeybindings = {
-    "keydown.enter.ctrl.prevent.capture.in-editor": (evt) => {
-        executeActiveCell(evt.srcElement);
-        // execute
-    },
-    "keydown.enter.shift.prevent.capture.in-editor": (evt) => {
-        // execute
-        executeActiveCell(evt.srcElement);
-    }
-}
 
 const snapshot = () => {
     var notebookData: {[key: string]: any};

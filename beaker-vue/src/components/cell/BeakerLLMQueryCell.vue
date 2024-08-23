@@ -65,7 +65,6 @@
                             :key="eventIndex"
                             :event="event"
                             :parentQueryCell="cell"
-                            ref="queryEventsRef"
                         />
                     </AccordionTab>
                 </Accordion>
@@ -146,7 +145,6 @@ const textarea = ref();
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
-const queryEventsRef = ref();
 
 const taggedCellEvents = computed(() => {
     let index = 0;
@@ -243,7 +241,6 @@ defineExpose({
     exit,
     clear,
     cell,
-    queryEventsRef
 });
 
 onBeforeMount(() => {

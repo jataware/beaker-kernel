@@ -141,7 +141,6 @@ defineExpose({
     exit,
     clear,
     cell,
-    codeEditorRef
 });
 
 onBeforeMount(() => {

@@ -1,21 +1,20 @@
 <template>
     <div
-        class="cell-container drag-sort-enable"
+        class="cell-container"
     >
-        <span v-if="session.notebook.cells.length == 0" class="chat-help-text-display">
+        <div class="flex-background">
+            <slot name="notebook-background" />
+        </div>
+        <span class="chat-help-text-display">
             <slot name="help-text"></slot>
         </span>
         <component
             v-for="(cell, index) in session.notebook.cells"
-            ref="cellsContainerRef"
             :cell="cell"
             :key="index"
-            :is="cellMap[cell.cell_type]"
+            :is="props.cellMap[cell.cell_type]"
             class="beaker-chat-cell"
         />
-        <div class="drop-overflow-catcher">
-            <slot name="notebook-background" />
-        </div>
     </div>
 </template>
 
@@ -24,12 +23,10 @@ import { ref, inject, defineProps, defineExpose } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
 
 const session = inject<BeakerSession>('session');
-const cellMap = inject("cell-component-mapping");
-const cellsContainerRef = ref(null);
 
-defineExpose({
-    cellsContainerRef
-});
+const props = defineProps([
+    "cellMap"
+])
 
 </script>
 
@@ -45,7 +42,7 @@ defineExpose({
     margin-top: 1rem;
 }
 
-.drop-overflow-catcher {
+.flex-background {
     flex: 1;
 }
 

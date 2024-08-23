@@ -43,6 +43,14 @@
                 }"
                 :hide-output="true"
                 ref="codeCellRef"
+                v-keybindings="{
+                    'keydown.enter.ctrl.prevent.capture.in-editor': (evt) => {
+                        codeCellRef.execute();
+                    },
+                    'keydown.enter.shift.prevent.capture.in-editor': (evt) => {
+                        codeCellRef.execute();
+                    }
+                }"
             />
             <span class="output-hide-text">(Output hidden -- shown in full response below.)</span>
         </span>
@@ -251,7 +259,6 @@ function execute() {
 
 defineExpose({
     execute,
-    codeCellRef
 });
 
 </script>
@@ -308,15 +315,15 @@ a.agent-response-headeraction > span > span.pi {
 }
 
 /* specifically within query cell outputs, make the width hand off to overflow */
-/* note - this selector specifically matches the jupyter div, from inside the output, 
+/* note - this selector specifically matches the jupyter div, from inside the output,
    only in query cells. not needed anywhere else. preserves highlighting, etc. */
-div.agent-response-content 
-div.code-cell-output 
-div 
-div.error 
-div 
-div 
-div 
+div.agent-response-content
+div.code-cell-output
+div
+div.error
+div
+div
+div
 div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     width: 1px;
     font-size: 0.7rem;
@@ -329,7 +336,7 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
 */
 
 .query-error-text {
-    white-space: pre-line; 
+    white-space: pre-line;
 }
 
 .agent-outputs {
