@@ -28,7 +28,7 @@
         <template #end>
             <nav>
                 <a  
-                    href="/chat" 
+                    :href="`/chat${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`" 
                     v-tooltip.right="{value: 'To Chat View', showDelay: 300}"
                 >
                     <Button
@@ -78,6 +78,9 @@ import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { IBeakerTheme } from '../../plugins/theme';
+
+const urlParams = new URLSearchParams(window.location.search);
+const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
 
 // TODO too many granular props- use a slot instead?
 const props = defineProps([

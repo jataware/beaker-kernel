@@ -59,7 +59,7 @@
                         </template>
                         <template #end>
                             <a  
-                                href="/" 
+                                :href="`/${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`" 
                                 v-tooltip.right="{value: 'To Notebook View', showDelay: 300}"
                             >
                                 <Button
