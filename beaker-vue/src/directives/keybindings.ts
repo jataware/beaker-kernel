@@ -43,8 +43,7 @@ const checkInEditor = (event: Event): boolean => {
 
 const containsCellClass = (target: HTMLElement) => {
     const BeakerCellClass = 'beaker-cell'
-    const BeakerChatCellClass = 'beaker-chat-cell';
-    return target.classList.contains(BeakerCellClass) || target.classList.contains(BeakerChatCellClass);
+    return target.classList.contains(BeakerCellClass);
 }
 
 const checkInCell = (event: Event): boolean => {
