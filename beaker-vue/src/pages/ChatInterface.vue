@@ -178,7 +178,7 @@ const props = defineProps([
 ]);
 
 const renderers = [
-    ...standardRendererFactories.map((factory) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
+    ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
     JSONRenderer,
     LatexRenderer,
     DecapodeRenderer,
