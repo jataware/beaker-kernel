@@ -50,7 +50,6 @@
     "katex": "^0.16.9",
     "node-fetch": "^2.6.6",
     "primeicons": "^7.0.0",
-    "primevue": "^3.46.0",
     "scroll-into-view-if-needed": "^3.1.0",
     "vue": "^3.2.13",
     "vue-codemirror": "^6.1.1",
@@ -74,5 +73,8 @@
     "sass-loader": "^12.0.0",
     "typescript": "^5.5.4",
     "vue-tsc": "~2.0.20"
+  },
+  "peerDependencies": {
+    "primevue": "~3.46.0"
   }
 }
