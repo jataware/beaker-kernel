@@ -1,18 +1,16 @@
 <template>
     <div
         class="cell-container drag-sort-enable"
-        ref="cellsContainerRef"
     >
+        <span v-if="session.notebook.cells.length == 0" class="chat-help-text-display">
+            <slot name="help-text"></slot>
+        </span>
         <component
             v-for="(cell, index) in session.notebook.cells"
+            ref="cellsContainerRef"
             :cell="cell"
-            :selected="cell.id === notebook.selectedCellId"
             :key="index"
             :is="cellMap[cell.cell_type]"
-            :class="{
-                selected: (cell.id === notebook.selectedCellId),
-            }"
-            @click="(evt)=>clicked(cell)"
             class="beaker-chat-cell"
         />
         <div class="drop-overflow-catcher">
@@ -22,19 +20,16 @@
 </template>
 
 <script setup lang="tsx">
-
-import { ref, inject, computed } from 'vue';
+import { ref, inject, defineProps, defineExpose } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
-import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 const session = inject<BeakerSession>('session');
 const cellMap = inject("cell-component-mapping");
-const notebook = inject<BeakerNotebookComponentType>("notebook");
 const cellsContainerRef = ref(null);
 
-const clicked = (cell) => (evt) => {
-    notebook.selectCell(cell.value as {id: string}, );
-};
+defineExpose({
+    cellsContainerRef
+});
 
 </script>
 
@@ -47,8 +42,17 @@ const clicked = (cell) => (evt) => {
     background-color: var(--surface-a);
     z-index: 3;
     overflow: auto;
+    margin-top: 1rem;
 }
+
 .drop-overflow-catcher {
     flex: 1;
+}
+
+.chat-help-text-display {
+    background-color: var(--surface-c);
+    padding: 0 1rem 0 1rem;
+    margin: 0 1rem 1rem 1rem;
+    border-radius: var(--border-radius);
 }
 </style>

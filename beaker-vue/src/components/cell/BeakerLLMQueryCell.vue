@@ -32,7 +32,7 @@
                 />
             </div>
         </div>
-        <div class="event-container" v-if="taggedCellEvents.length > 0">
+        <div class="event-container" v-if="taggedCellEvents.length > 0 || isLastEventTerminal()">
             <div class="events">
                 <h3 class="query-steps">Agent actions:</h3>
                 <div class="query-horizontal-br" />
@@ -65,6 +65,7 @@
                             :key="eventIndex"
                             :event="event"
                             :parentQueryCell="cell"
+                            ref="queryEventsRef"
                         />
                     </AccordionTab>
                 </Accordion>
@@ -145,6 +146,7 @@ const textarea = ref();
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
+const queryEventsRef = ref();
 
 const taggedCellEvents = computed(() => {
     let index = 0;
@@ -160,7 +162,10 @@ const taggedCellEvents = computed(() => {
 
 const isLastEventTerminal = () => {
     const events: BeakerQueryEvent[] = props.cell.events;
-    return terminalEvents.includes(events[events.length - 1].type);
+    if (events?.length > 0) {
+        return terminalEvents.includes(events[events.length - 1].type);
+    }
+    return false;
 };
 
 // behavior: temporarily show last event and all code cells, until terminal, in which case,
@@ -237,7 +242,8 @@ defineExpose({
     enter,
     exit,
     clear,
-    cell
+    cell,
+    queryEventsRef
 });
 
 onBeforeMount(() => {

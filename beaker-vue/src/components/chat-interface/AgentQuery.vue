@@ -21,44 +21,42 @@
 
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, nextTick, inject } from "vue";
+import { defineEmits, ref, nextTick, inject } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
-const props = defineProps([
-    "runCellCallback"
-]);
+
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-const notebook = inject<BeakerNotebookComponentType>("notebook");
+
 const query = ref("");
 const emit = defineEmits([
     "select-cell",
     "run-cell",
 ]);
+
 const session: BeakerSession = inject("session");
 const handleQuery = (e: any) => {
+    const notebook = session.notebook;
     if (!query.value.trim()) {
         return; // TODO notify user that they're missing the agent query?
     }
     // Remove the top cell if it is blank/not used.
-    if (notebook.notebook.cells.length === 1) {
-        const existingCell = notebook.notebook.cells[0];
+    if (notebook.cells.length === 1) {
+        const existingCell = notebook.cells[0];
         if (
             existingCell.cell_type === "code" 
             && existingCell.source === ""
             && existingCell.execution_count === null 
             && (existingCell.outputs as object[]).length === 0
         ) {
-            notebook.notebook.removeCell(0);
+            notebook.removeCell(0);
         }
     }
     const cell = session.addQueryCell(query.value);
     query.value = "";
     nextTick(() => {
-        notebook.selectCell(cell.id);
         beakerSession.findNotebookCellById(cell.id).execute();
     });
 }

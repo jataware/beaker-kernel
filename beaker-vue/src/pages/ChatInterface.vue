@@ -33,7 +33,14 @@
                             >
                                 <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
                             </Button>
-                            <ResetButton :on-reset-callback="() => setContext({})"/>
+                            <Button
+                                @click="resetNotebook"
+                                v-tooltip.right="{value: 'Reset notebook', showDelay: 300}"
+                                icon="pi pi-refresh"
+                                size="small"
+                                severity="info"
+                                text
+                            />
                             <Button
                                 @click="toggleFileMenu"
                                 v-tooltip.right="{value: 'Show file menu', showDelay: 300}"
@@ -52,7 +59,7 @@
                         </template>
                         <template #end>
                             <a  
-                                href="/index" 
+                                href="/" 
                                 v-tooltip.right="{value: 'To Notebook View', showDelay: 300}"
                             >
                                 <Button
@@ -67,26 +74,27 @@
                 </header>
                 <main style="display: flex; overflow-y: auto; overflow-x: hidden;">
                     <div class="central-panel">
-                        <BeakerNotebook
-                            ref="beakerNotebookRef"
-                            :cell-map="cellComponentMapping"
-                            v-keybindings="notebookKeyBindings"
-                            :noEmptyStartingCell="true"
+                        <ChatPanel
+                            ref="chatPanelRef"
+                            v-autoscroll
                         >
-                            <ChatPanel
-                                ref="chatPanelRef"
-                                :selected-cell="beakerNotebookRef?.selectedCellId"
-                                v-autoscroll
-                            >
-                                <template #notebook-background>
-                                    <div class="welcome-placeholder">
-                                    </div>
-                                </template>
-                            </ChatPanel>
-                            <AgentQuery
-                                class="agent-query-container"
-                            />
-                        </BeakerNotebook>
+                            <template #help-text>
+                                <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
+                                <p>Feel free to ask me about whatever the context specializes in..</p>
+                                <p>
+                                    On top of answering questions, I can actually run code in a python environment, and evaluate the results. 
+                                    This lets me do some pretty awesome things like: web scraping, or plotting and exploring data.
+                                    Just shoot me a message when you're ready to get started.
+                                </p>
+                            </template>
+                            <template #notebook-background>
+                                <div class="welcome-placeholder">
+                                </div>
+                            </template>
+                        </ChatPanel>
+                        <AgentQuery
+                            class="agent-query-container"
+                        />
                     </div>
                     <HelpSidebar></HelpSidebar>
                 </main>
@@ -106,7 +114,6 @@
 <script setup lang="ts">
 import AgentQuery from '../components/chat-interface/AgentQuery.vue';
 import ChatPanel from '../components/chat-interface/ChatPanel.vue';
-import ResetButton from '../components/chat-interface/ResetButton.vue';
 import DarkModeButton from '../components/chat-interface/DarkModeButton.vue';
 import HelpSidebar from '../components/chat-interface/HelpSidebar.vue';
 import VerticalToolbar from '../components/chat-interface/VerticalToolbar.vue';
@@ -117,9 +124,6 @@ import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
 import BeakerFilePane from '../components/dev-interface/BeakerFilePane.vue';
-
-import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
-import { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
 
 import BeakerSession from '../components/session/BeakerSession.vue';
 
@@ -132,29 +136,19 @@ import OverlayPanel from 'primevue/overlaypanel';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 
-import { defineProps, inject, nextTick, onBeforeMount, onUnmounted, provide, ref, defineEmits, computed } from 'vue';
+import { defineProps, inject, nextTick, onBeforeMount, onUnmounted, provide, ref, defineEmits, computed, shallowRef } from 'vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
 import { IBeakerTheme } from '../plugins/theme';
 
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const toast = useToast();
-const chatPanelRef = ref();
-const notebook = inject<BeakerNotebookComponentType>("notebook");
+const chatPanelRef = shallowRef();
 const contextSelectionOpen = ref(false);
 const contextProcessing = ref(false);
 import BeakerContextSelection from '../components/session/BeakerContextSelection.vue';
 
-
-
-// NOTE: Right now, we don't want the context changing
-const activeContext = ref();
 const beakerNotebookRef = ref();
-const setContext = (contextInfo) => {
-    if (contextInfo?.slug !== 'default') {
-        beakerSessionRef.value.setContext(activeContext);
-    }
-}
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
 // Let's only use severity=success|warning|danger(=error) for now
@@ -197,11 +191,18 @@ const cellComponentMapping = {
     'raw': BeakerRawCell,
 }
 
+provide('cell-component-mapping', cellComponentMapping);
+
 const isFileMenuOpen = ref();
 
 const toggleFileMenu = (event) => {
     isFileMenuOpen.value.toggle(event);
 }
+
+const resetNotebook = async () => {
+    const session = beakerSessionRef.value.session;
+    session.reset();
+};
 
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
@@ -283,11 +284,9 @@ onBeforeMount(() => {
     }
     if (notebookData[sessionId]?.data) {
         nextTick(() => {
-            if (beakerNotebookRef.value?.notebook) {
-                beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
-                nextTick(() => {
-                    beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
-                });
+            const notebook = beakerSessionRef?.value?.session?.notebook;
+            if (notebook) {
+                notebook.loadFromIPynb(notebookData[sessionId].data);
             }
         });
     }
@@ -301,61 +300,38 @@ onUnmounted(() => {
     window.removeEventListener("beforeunload", snapshot);
 });
 
-const notebookKeyBindings = {
-    "keydown.enter.ctrl.prevent.capture.in-cell": () => {
-        beakerNotebookRef.value.selectedCell().execute();
-        beakerNotebookRef.value.selectedCell().exit();
-    },
-    "keydown.enter.shift.prevent.capture.in-cell": () => {
-        const targetCell = beakerNotebookRef.value.selectedCell();
-        targetCell.execute();
-        if (!beakerNotebookRef.value.selectNextCell()) {
-            // beakerNotebookRef.value.insertCellAfter(
-            //     targetCell,
-            //     targetCell.cell.cell_type,
-            //     true
-            // );
-            // don't make cell in chat
+// no state to track selection - find code editor divs and compare to evt
+const executeActiveCell = (editorSourceElement) => {
+    const panel = chatPanelRef?.value;
+    const queryCellComponents = panel?.cellsContainerRef;
+    queryCellComponents.forEach(cell => {
+        const events = cell?.queryEventsRef;
+        if (!events) {
+            return;
         }
-    },
-    "keydown.enter.exact.prevent.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectedCell().enter();
-    },
-    "keydown.esc.exact.prevent.in-cell": () => {
-        beakerNotebookRef.value.selectedCell().exit();
-    },
-    "keydown.up.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectPrevCell();
-    },
-    "keydown.j.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectPrevCell();
-    },
-    "keydown.down.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectNextCell();
-    },
-    "keydown.k.in-cell.!in-editor": () => {
-        beakerNotebookRef.value.selectNextCell();
-    },
-    "keydown.a.prevent.in-cell.!in-editor": (evt) => {
-        const notebook = beakerNotebookRef.value;
-        notebook.selectedCell().exit();
-        notebook.insertCellBefore();
-    },
-    "keydown.b.prevent.in-cell.!in-editor": () => {
-        const notebook = beakerNotebookRef.value;
-        notebook.selectedCell().exit();
-        notebook.insertCellAfter();
-    },
-    "keydown.d.selected.!in-editor": () => {
-        console.log("delete");
-        //
-        // TODO implement double press for action
-        // const notebook = beakerNotebookRef.value;
-        // notebook.removeCell();
-    },
+        events.forEach(eventRef => {
+            const codeCellRef = eventRef?.codeCellRef;
+            const codeEditor = codeCellRef?.codeEditorRef;
+            if (!codeEditor) {
+                return;
+            }
+            if (codeEditor.view._root.activeElement == editorSourceElement) {
+                codeCellRef.execute();
+            }
+        });
+    });
 }
 
-const sessionKeybindings = {}
+const sessionKeybindings = {
+    "keydown.enter.ctrl.prevent.capture.in-editor": (evt) => {
+        executeActiveCell(evt.srcElement);
+        // execute
+    },
+    "keydown.enter.shift.prevent.capture.in-editor": (evt) => {
+        // execute
+        executeActiveCell(evt.srcElement);
+    }
+}
 
 const snapshot = () => {
     var notebookData: {[key: string]: any};
@@ -367,10 +343,10 @@ const snapshot = () => {
         notebookData = {};
     }
     // Only save state if there is state to save
-    if (beakerNotebookRef.value?.notebook) {
+    const notebook = beakerSessionRef.value.session?.notebook;
+    if (notebook) {
         notebookData[sessionId] = {
-            data: beakerNotebookRef.value?.notebook.toIPynb(),
-            selectedCell: beakerNotebookRef.value?.selectedCellId,
+            data: notebook.toIPynb(),
         };
         localStorage.setItem("notebookData", JSON.stringify(notebookData));
     }
@@ -486,6 +462,10 @@ button.connection-button {
 
 div.code-cell {
     margin-bottom: 2rem;
+}
+
+div.code-cell.query-event-code-cell {
+    margin-bottom: 0.25rem;
 }
 
 </style>

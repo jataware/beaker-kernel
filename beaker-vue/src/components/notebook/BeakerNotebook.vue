@@ -38,6 +38,10 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
 
     methods: {
         selectCell(cell: string | {id: string}): string {
+            if (cell === undefined) {
+                return "";
+            }
+
             let newCellId;
             if (typeof cell === 'string') {
                 newCellId = cell;
