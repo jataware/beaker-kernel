@@ -377,6 +377,14 @@ div.cell-container {
     overflow: auto;
 }
 
+div.llm-query-cell.beaker-chat-cell {
+    padding: 0;
+}
+
+div.llm-prompt-container {
+    margin-right: 0;
+}
+
 div.llm-prompt-container h2.llm-prompt-text {
     font-size: 1.25rem;
     max-width: 70%;
