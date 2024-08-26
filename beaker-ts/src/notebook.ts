@@ -624,6 +624,9 @@ export class BeakerNotebook {
             else if (cell.cell_type === "markdown") {
                 return new BeakerMarkdownCell(cell);
             }
+            else {
+                return new BeakerRawCell(cell);
+            }
         });
 
         let cellMap: {[uuid: string]: BeakerBaseCell} = {};

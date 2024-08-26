@@ -13,10 +13,10 @@ import scrollIntoView from 'scroll-into-view-if-needed';
 export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineComponent({
     props: [
         "cellMap",
+        "noEmptyStartingCell"
     ],
 
     setup(props) {
-
         const session: BeakerSession = inject('session');
         const beakerSession = inject<BeakerSessionComponentType>('beakerSession');
         const notebook = ref<BeakerNotebook>(session.notebook);
@@ -32,12 +32,16 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
             beakerSession,
             notebook,
             selectedCellId,
-            cellCount,
+            cellCount,        
         }
     },
 
     methods: {
         selectCell(cell: string | {id: string}): string {
+            if (cell === undefined) {
+                return "";
+            }
+
             let newCellId;
             if (typeof cell === 'string') {
                 newCellId = cell;
@@ -192,13 +196,23 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
     beforeMount() {
         provide('notebook', this);
         if (this.cellCount === 0) {
+            if (this.noEmptyStartingCell) {
+                return;
+            }
             const newCell = this.session.addCodeCell("");
         }
     },
 
     mounted() {
+        if (this.noEmptyStartingCell) {
+            return;
+        }
         if (!this.selectedCell()) {
-            this.selectCell(this.notebook.cells[0].id);
+            nextTick(() => {
+                if (this.notebook.cells.length > 0) {
+                    this.selectCell(this.notebook.cells[0].id);
+                }
+            });
         }
     }
 });

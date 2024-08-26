@@ -27,6 +27,16 @@
 
         <template #end>
             <nav>
+                <a  
+                    :href="`/chat${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`" 
+                    v-tooltip.right="{value: 'To Chat View', showDelay: 300}"
+                >
+                    <Button
+                        icon="pi pi-comment"
+                        text
+                        style="margin: 0; color: var(--gray-500);"
+                    />
+                </a>
                 <Button
                     text
                     @click="toggleDarkMode"
@@ -63,12 +73,14 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject, getCurrentInstance } from "vue";
+import { defineProps, defineEmits, computed, inject } from "vue";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
-import { capitalize } from '../../util';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { IBeakerTheme } from '../../plugins/theme';
+
+const urlParams = new URLSearchParams(window.location.search);
+const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
 
 // TODO too many granular props- use a slot instead?
 const props = defineProps([

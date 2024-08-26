@@ -101,7 +101,9 @@ const badgeSeverity = computed(() => {
 });
 
 const clicked = (evt) => {
-    notebook.selectCell(cell.value);
+    if (notebook) {
+        notebook.selectCell(cell.value);
+    }
     evt.stopPropagation();
 };
 

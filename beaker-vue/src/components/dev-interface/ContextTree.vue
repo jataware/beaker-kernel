@@ -59,8 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, computed, inject } from "vue";
-import Button from 'primevue/button';
+import { ref, defineEmits, computed, inject } from "vue";
 import Tree from 'primevue/tree';
 import { TreeNode } from 'primevue/treenode';
 import { emitError } from "vue-json-pretty/types/utils";

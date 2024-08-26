@@ -4,11 +4,13 @@ const path = require('path');
 module.exports = defineConfig({
   pages: {
     index: 'src/pages/dev-interface.ts',
+    chat: 'src/pages/chat-interface.ts',
     admin: 'src/pages/admin.ts',
     notebook: 'src/pages/notebook.ts',
     cell: 'src/pages/cell.ts',
     playground: 'src/pages/playground.ts',
   },
+  css: { extract: false },
   assetsDir: "static/",
   transpileDependencies: true,
   outputDir: path.resolve(__dirname, 'dist/html'),

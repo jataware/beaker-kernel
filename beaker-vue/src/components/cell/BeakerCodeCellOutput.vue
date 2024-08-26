@@ -20,9 +20,6 @@ import { defineProps, inject } from "vue";
 import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 // import { IMimeBundle } from 'beaker-kernel';
 
-const session = inject('session');
-
-
 const props = defineProps([
     "outputs",
     "busy"
