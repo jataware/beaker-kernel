@@ -13,6 +13,7 @@ import hatch.cli.application
 import hatch.project
 import hatch.project.utils
 from hatchling.metadata.utils import normalize_project_name
+from pathlib import Path
 
 
 # HATCH_CONFIG_FILE_CONTENTS = """\
@@ -71,6 +72,9 @@ def new_project(ctx: click.Context, name, no_interact, dependencies, no_context)
     with dashes (-) instead of underscores or using CamelCase.
     If NAME is not provided you will be prompted, unless --no-interaction.
     """
+    # Perform import in action to prevent possible circular import
+    from . import context
+
     dependencies = list(dependencies)
 
     normalized_name = None
@@ -122,13 +126,14 @@ def new_project(ctx: click.Context, name, no_interact, dependencies, no_context)
             }
         else:
             if click.confirm("Would you like to include an example context?", default=True):
-                from . import context
                 context_config = context.prompt_for_missing_new_context_options(
                     {},
                     defaults={
                         "context_name": name,
+                        "context_subdirectory": f"{name}_context",
                     }
                 )
+                context_config['context_target_dir'] = "{package_name}/{context_subdir}"
             else:
                 context_config = {}
     else:
@@ -157,10 +162,10 @@ def new_project(ctx: click.Context, name, no_interact, dependencies, no_context)
             raise click.ClickException("There was an error setting up your new Beaker project. Please check the output above.")
 
 
-# @project.command()
-# @click.argument("project_name", required=False, default=None)
-# def info(project_name):
-#     """
-#     Information about a project. Looks for a project in current location if no project name is provided.
-#     """
-#     pass
+@project.command()
+@click.argument("project_name", required=False, default=None)
+def info(project_name):
+    """
+    Information about a project. Looks for a project in current location if no project name is provided.
+    """
+    pass

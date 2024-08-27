@@ -65,7 +65,7 @@ from .subkernel import subkernel
 
 cli.add_command(project)
 cli.add_command(config_group)
-# cli.add_command(context)
+cli.add_command(context)
 cli.add_command(dev)
 cli.add_command(notebook)
-# cli.add_command(subkernel)
+cli.add_command(subkernel)

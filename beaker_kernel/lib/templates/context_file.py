@@ -10,8 +10,6 @@ from .paths import package_name, context_subdir
 
 class ContextFile(TemplateFile):
     PATH_PARTS = [
-        package_name,
-        context_subdir,
         'context.py',
     ]
 

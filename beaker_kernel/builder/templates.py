@@ -1,11 +1,8 @@
-from pathlib import Path
-from hatchling.plugin import hookimpl
 from hatch.template.plugin.interface import TemplateInterface
-from hatch.template import File
 from hatch.template.files_default import PyProject
 
 from beaker_kernel.lib.templates import InitFile
-from beaker_kernel.lib.templates.paths import context_subdir, package_name
+from beaker_kernel.lib.templates.paths import package_name
 from beaker_kernel.lib.templates.agent_file import AgentFile
 from beaker_kernel.lib.templates.context_file import ContextFile
 
@@ -52,16 +49,14 @@ class BeakerNewContextTemplateHook(TemplateInterface):
         config["context_name"] = self.plugin_config["context-name"]
         config["context_class"] = f"{class_base}Context"
         config["agent_class"] = f"{class_base}Agent"
+        config["context_target_dir"] = self.plugin_config.get("context-target-dir", package_name)
 
 
-    def get_files(self, config):
+    def get_files(self, config: dict):
         """Add to the list of files for new projects that are written to the file system."""
         files = [
-            ContextFile(),
-            AgentFile(),
+            ContextFile(path_prefix=config.get("context_target_dir")),
+            AgentFile(path_prefix=config.get("context_target_dir")),
+            InitFile(path_prefix=config.get("context_target_dir")),
         ]
-        if config["context_subdir"]:
-            files.append(
-                InitFile([package_name, context_subdir, '__init__.py'])
-            )
         return files
