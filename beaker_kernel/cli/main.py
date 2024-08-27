@@ -1,45 +1,23 @@
-import importlib
-import json
-import os
-
 import click
-import dotenv
+import importlib
 
-from beaker_kernel.lib.autodiscovery import LIB_LOCATIONS
+from beaker_kernel.lib.autodiscovery import find_mappings
 
-
-# try:
-#     dotenv.load_dotenv()
-# except Exception as e:
-#     pass
 
 class BeakerCli(click.Group):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        subpackages = {}
-        for location in LIB_LOCATIONS:
-            commands_dir = os.path.join(location, "commands")
-            if os.path.exists(commands_dir):
-                for command_json_file in os.listdir(commands_dir):
-                    if not command_json_file.endswith(".json"):
-                        continue
-                    command_json_file_fullpath = os.path.join(commands_dir, command_json_file)
-                    with open(os.path.join(commands_dir, command_json_file)) as fh:
-                        try:
-                            command_info = json.load(fh)
-                        except json.JSONDecodeError as err:
-                            click.echo(f"Package {command_json_file_fullpath} does not match expected format. Skipping...", err=True)
-                            continue
-                    if "group_name" in command_info and "module" in command_info:
-                        subpackages[command_info["group_name"]] = command_info
-                    else:
-                        click.echo(f"Package {command_json_file_fullpath} does not match expected format. Skipping...", err=True)
-                        continue
 
-        for group_name, command_info in subpackages.items():
+
+        for _, command_info in find_mappings("commands"):
+            group_name = command_info["group_name"]
             module = command_info["module"]
             entry_point = command_info.get("entry_point", "cli_commands")
-            module = importlib.import_module(module)
+            try:
+                module = importlib.import_module(module)
+            except ImportError:
+                click.echo(f"Unable to load item {entry_point} from module {module}. Skipping...", err=True)
+                continue
             entry = getattr(module, entry_point, None)
             if not entry:
                 click.echo(f"Unable to load item {entry_point} from module {module}. Skipping...", err=True)

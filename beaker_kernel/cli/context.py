@@ -1,17 +1,20 @@
 import click
 import copy
-import tempfile
+import inspect
 import os
 import subprocess
 import sys
+import tempfile
 import toml
 from hatch.project.core import Project
 from hatchling.builders.plugin.interface import BuilderInterface
 from hatchling.metadata.utils import normalize_project_name
+
 # Manual "import" of a static method as it acts like a normal function
 normalize_file_name_component = BuilderInterface.normalize_file_name_component
 
 from .helpers import find_pyproject_file
+
 
 HATCH_NEW_CONTEXT_CONFIG_FILE_DEFAULTS = {
     'template': {
@@ -113,7 +116,48 @@ def list_contexts():
     """
     List installed contexts.
     """
-    pass
+    from beaker_kernel.lib.context import autodiscover_contexts
+    from beaker_kernel.lib import BeakerContext, BeakerAgent
+    contexts = autodiscover_contexts()
+    if contexts:
+        click.echo("Currently installed contexts:\n")
+        for context_name, context_cls in contexts.items():
+            agent_cls = getattr(context_cls, 'agent_cls', None)
+            context_doc = getattr(context_cls, '__doc__', None)
+            indent = 4
+            output = [
+                f"  {context_name}:",
+            ]
+            if context_doc:
+                output.append(
+                    # f"    Context docstring:" +
+                    f"{' ' * indent}'''\n" +
+                    '\n'.join(
+                        [
+                            (
+                                (' ' * indent) +
+                                line
+                            ) for line in context_doc.splitlines()]
+                    ) +
+                    f"\n{' ' * indent}'''"
+                )
+            else:
+                output.append(f"{' ' * indent}''' ( docstring not defined ) '''")
+            output.extend([
+                f"    Context Class:   {context_cls.__module__}.{context_cls.__name__}",
+                f"                       ({inspect.getfile(context_cls)})",
+            ])
+            if agent_cls:
+                output.extend([
+                f"    Agent Class:     {agent_cls.__module__}.{agent_cls.__name__}",
+                f"                       ({inspect.getfile(agent_cls)})",
+                # f"      File:            {inspect.getfile(agent_cls)}",
+
+                ])
+            output.append("")
+            click.echo("\n".join(output))
+    else:
+        click.echo("No contexts were found. Please check that you are running in the correct environment.")
 
 
 def prompt_for_missing_new_context_options(options: dict[str, any], defaults: dict[str, any] | None = None) -> dict[str, any]:

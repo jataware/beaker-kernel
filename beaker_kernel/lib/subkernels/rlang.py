@@ -10,6 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class RSubkernel(BeakerSubkernel):
+    """
+    Beaker subkernel for the R language using the `ir` (IRkernel) kernel.
+
+    See https://github.com/IRkernel/IRkernel for details on the ir kernel.
+    """
     DISPLAY_NAME = "R"
     SLUG = "rlang"
     KERNEL_NAME = "ir"
