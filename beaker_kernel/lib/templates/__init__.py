@@ -4,6 +4,9 @@ from pathlib import Path
 import typing
 from typing import Any, ClassVar
 
+import jinja2
+from jinja2 import Template
+
 
 class PathTemplate:
     def __init__(self, template: str, condition=None) -> None:
@@ -60,18 +63,24 @@ class TemplateFile(File):
             path = path.relative_to(self.relative_to)
         return path
 
+    def render(self, **template_mapping: dict[str, Any]) -> str:
+        return self.template.format(**template_mapping)
+
     def write(self, root):
-        if Path(self.path_prefix).is_absolute():
-            return super().write(Path('/'))
-        else:
-            return super().write(root)
+        return super().write(root)
 
     def __call__(self, template_config: dict, plugin_config: dict) -> Any:
-        template = self.template or self.TEMPLATE
         path = self.render_path(template_config, plugin_config)
-        contents = template.format(**template_config)
+        contents = self.render(**template_config)
         super().__init__(path, contents)
         return self
+
+
+class JinjaTemplateFile(TemplateFile):
+    def render(self, **template_mapping: dict[str, Any]) -> str:
+        t = jinja2.Template(self.template)
+        contents = t.render(**template_mapping)
+        return contents
 
 
 class InitFile(TemplateFile):

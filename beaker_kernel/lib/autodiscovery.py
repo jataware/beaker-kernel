@@ -66,7 +66,12 @@ def autodiscover(mapping_type: MappingType) -> typing.Dict[str, type]:
         slug = data["slug"]
         package = data["package"]
         class_name = data["class_name"]
-        module = importlib.import_module(package)
+        try:
+            module = importlib.import_module(package)
+        except (ImportError, ModuleNotFoundError) as err:
+            logger.warning(f"Warning: Beaker module '{package}' in file {mapping_file} is unable to be imported. See below.")
+            logger.warning(f"  {err.__class__}: {err.msg}")
+            continue
         discovered_class = getattr(module, class_name)
         setattr(discovered_class, '_autodiscovery', {
             "mapping_file": mapping_file,

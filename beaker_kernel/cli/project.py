@@ -1,20 +1,16 @@
 import click
 import copy
 import tempfile
-import hatch
 import os
 import re
-import string
 import subprocess
 import sys
 import toml
-import hatch.cli
-import hatch.cli.application
-import hatch.project
-import hatch.project.utils
+from hatch.project.core import Project
 from hatchling.metadata.utils import normalize_project_name
 from pathlib import Path
 
+from .helpers import find_pyproject_file
 
 # HATCH_CONFIG_FILE_CONTENTS = """\
 # [template.plugins.default]
@@ -109,6 +105,12 @@ def new_project(ctx: click.Context, name, no_interact, dependencies, no_context)
                     name = click.prompt("Project name")
             else:
                 raise click.ClickException("A name is a required argument when the --no-interaction flag is set.")
+        project_path: Path = Path.cwd() / name
+        if (project_path.exists() and not project_path.is_dir()) or (project_path.is_dir() and os.listdir(project_path)):
+            click.echo(f"Notice: {project_path.absolute()} exists and is not an empty directory.\n        Please "
+                       "select a different project name or change working directories.")
+            name = None
+            normalized_name = None
 
     # Additional dependencies
     if not no_interact:
@@ -139,6 +141,7 @@ def new_project(ctx: click.Context, name, no_interact, dependencies, no_context)
     else:
         context_config = {}
 
+    click.echo("\nGenerating project files...")
     # Define hatch config
     hatch_config = copy.deepcopy(HATCH_NEW_PROJECT_CONFIG_FILE_DEFAULTS)
     project_config = hatch_config['template']['plugins']['beaker-new-project']
@@ -160,6 +163,62 @@ def new_project(ctx: click.Context, name, no_interact, dependencies, no_context)
         result = subprocess.call(args, env=environ)
         if result > 0:
             raise click.ClickException("There was an error setting up your new Beaker project. Please check the output above.")
+    click.echo("Done.\n")
+
+    if not no_interact:
+        if click.confirm("Would you like to install the new project in dev mode in your current environment?", default=False):
+            click.echo("")
+            ctx.invoke(update, path=(Path.cwd() / name))
+        click.echo("")
+
+    click.echo( "Note:")
+    click.echo( "  Some changes, such as adding or moving a context require updating/reinstalling the project.")
+    click.echo(f"  You may need to run 'beaker project update' if you encounter issues after making updates to the project.")
+
+
+# @project.command()
+# @click.option(
+#     "-e", "--editable", "editable",
+#     is_flag=True,
+#     default=False,
+#     help='Install the project in editable mode (i.e. setuptools "develop mode").',
+# )
+# @click.argument("path", required=False, default=None, type=click.Path(path_type=Path))
+# def install(path):
+#     """
+#     Installs a project
+#     """
+#     pyproject_path = find_pyproject_file(path)
+#     if not pyproject_path:
+#         search_path = path.absolute() if path else Path.cwd()
+#         raise click.ClickException(f"{search_path} does not appear to be part of a valid project.")
+#     project = Project(pyproject_path)
+#     click.echo(f"Reinstalling {project.metadata.core.name} from directory {project.root}")
+#     subprocess.call(
+#         args=[sys.executable, '-m', 'pip', 'install', '-e', '.'],
+#         env=os.environ,
+#         cwd=project.root,
+#     )
+
+
+@project.command()
+@click.argument("path", required=False, default=None, type=click.Path(path_type=Path))
+def update(path):
+    """
+    (Re)installs the project in editable mode (i.e. setuptools "develop mode") in the current python environment.
+
+    """
+    pyproject_path = find_pyproject_file(path)
+    if not pyproject_path:
+        search_path = path.absolute() if path else Path.cwd()
+        raise click.ClickException(f"{search_path} does not appear to be part of a valid project.")
+    project = Project(pyproject_path)
+    click.echo(f"Reinstalling {project.metadata.core.name} from directory {Path(project.root).absolute()}")
+    subprocess.call(
+        args=[sys.executable, '-m', 'pip', 'install', '-e', '.'],
+        env=os.environ,
+        cwd=project.root,
+    )
 
 
 @project.command()
