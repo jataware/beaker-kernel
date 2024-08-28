@@ -122,7 +122,7 @@ class BeakerKernel(KernelProxyManager):
         for prefix, fn in self.magic_commands.items():
             if head == prefix:
                 self.debug(event_type="magic_word", content={"magic_word": head, "fn": fn.__name__})
-                async with handle_message(self, server, target_stream, data) as ctx:
+                async with handle_message(server, target_stream, data) as ctx:
                     result = await fn(tail, magic_word=head, parent_header=message.header)
                     ctx.return_val = result
                 return None
@@ -143,6 +143,8 @@ class BeakerKernel(KernelProxyManager):
             parent_header=parent_header,
         )
         self.stdout(f"Context switch complete.", parent_header=parent_header)
+
+        # TODO: Return the new context info
         return None
 
     @magic("run_action")

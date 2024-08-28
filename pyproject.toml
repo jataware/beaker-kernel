@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "beaker-kernel"
-version = "1.6.4"
+version = "1.6.5"
 description = ""
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,6 +32,8 @@ dependencies = [
   "watchdog~=3.0",
   "click~=8.1",
   "python-dotenv~=1.0",
+  "hatch",
+  "toml",
   "dill",
   "pandas",
   "matplotlib",
@@ -42,10 +44,10 @@ dependencies = [
 ]
 
 [project.entry-points.hatch]
-beaker = "beaker_kernel.builder.beaker"
+beaker = "beaker_kernel.builder.hooks"
 
 [project.scripts]
-beaker = "beaker_kernel.scripts.beaker:cli"
+beaker = "beaker_kernel.cli.main:cli"
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -71,7 +73,7 @@ path = "beaker_kernel/builder/beaker.py"
 
 
 [tool.bumpversion]
-current_version="1.6.4"
+current_version="1.6.5"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"

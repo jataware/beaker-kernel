@@ -13,12 +13,11 @@ from archytas.tool_utils import tool
 
 from .jupyter_kernel_proxy import ( KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                    JupyterMessage, JupyterMessageTuple)
-from .config import ConfigClass
+from .config import config
 
 
 logger = logging.getLogger(__name__)
 
-config = ConfigClass()
 
 def env_enabled(env_var: str):
     return os.environ.get(env_var, "false").lower() == "true"
@@ -103,7 +102,10 @@ def message_handler(fn):
         async with handle_message(server, target_stream, data) as ctx:
             result = await fn(self, ctx.message)
             ctx.return_val = result
-            return result
+            # If message data is returned, then the message should be proxied, but if None or any other type is
+            # returned, the message should be dropped and not continue on to the proxied server.
+            if isinstance(result, JupyterMessageTuple) or result is None:
+                return result
     return wrapper
 
 
@@ -154,7 +156,7 @@ def action(action_name: str|None=None, docs: str|None=None, default_payload=None
 
         setattr(fn, "_action", action_nm)
 
-        if default_payload and getattr(fn, '_default_payload') and default_payload != getattr(fn, '_default_payload'):
+        if default_payload and hasattr(fn, '_default_payload') and default_payload != getattr(fn, '_default_payload'):
             raise ValueError(f"The default payload for action `{action_nm}` is defined twice. Please ensure only one definition.")
 
         intercept_fn = intercept(msg_type=msg_request_type, stream="shell", docs=docs, default_payload=default_payload)(fn)
