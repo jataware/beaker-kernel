@@ -1,22 +1,23 @@
 import click
 import copy
-import tempfile
+import importlib
+import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import toml
-from hatch.project.core import Project
-from hatchling.metadata.utils import normalize_project_name
+from importlib.metadata import distribution, PackageNotFoundError
 from pathlib import Path
 
-from .helpers import find_pyproject_file
+from hatch.project.core import Project
+from hatchling.builders.config import BuilderConfig
+from hatchling.metadata.utils import normalize_project_name
 
-# HATCH_CONFIG_FILE_CONTENTS = """\
-# [template.plugins.default]
-# [template.plugins.beaker-new-project]
-# """
-# # [template.plugins.beaker-new-context]
+from .helpers import find_pyproject_file, find_pyproject_dir
+
+
 HATCH_NEW_PROJECT_CONFIG_FILE_DEFAULTS = {
     'template': {
         'plugins': {
@@ -222,9 +223,118 @@ def update(path):
 
 
 @project.command()
-@click.argument("project_name", required=False, default=None)
-def info(project_name):
+@click.argument("project_name_or_path", required=False, default=None)
+def info(project_name_or_path):
     """
     Information about a project. Looks for a project in current location if no project name is provided.
     """
-    pass
+    from beaker_kernel.lib import BeakerContext, BeakerSubkernel
+    from beaker_kernel.builder.beaker import BeakerBuildHook
+    from hatchling.builders.wheel import WheelBuilderConfig, WheelBuilder
+    project_info = None
+    # Case if project is not yet installed or is running against unpublished modifications
+    if project_name_or_path is None or os.path.isdir(project_name_or_path) or os.path.isfile(project_name_or_path):
+        pyproject_file = find_pyproject_file(project_name_or_path)
+        project_dir = pyproject_file.parent.absolute()
+        if pyproject_file:
+            project = Project(pyproject_file)
+            project_name = project.metadata.core.name
+            build_config = WheelBuilderConfig(
+                WheelBuilder(
+                    root=project_dir,
+                    config=project.config,
+                    metadata=project.metadata,
+
+                ),
+                project_dir,
+                project_name,
+                project.config.config["build"],
+                target_config={}
+            )
+            builder = BeakerBuildHook(
+                directory=project_dir,
+                root=project_dir,
+                config=project.config,
+                build_config=build_config,
+                metadata=project.metadata,
+                target_name="wheel"
+            )
+            builder.add_packages_to_path()
+            contexts = builder.find_slugged_subclasses_of(BeakerContext)
+            subkernels = builder.find_slugged_subclasses_of(BeakerSubkernel)
+            description = project.metadata.core.description
+            urls = [f"{key}: {value}" for key, value in project.metadata.core.urls.items()]
+            project_info = {
+                "name": project_name,
+                "urls": urls,
+                "description": description,
+                "contexts": contexts,
+                "subkernels": subkernels,
+            }
+
+    # Case if has been installed and is being analyzed from the site-lib packages dir
+    if project_info is None:
+        pyproject_file = None
+        project_dir = None
+        project_name = ""
+        try:
+            dist = distribution(project_name_or_path)
+            project_name = dist.name
+            project_description = dist.metadata.get("summary")
+            contexts = {}
+            subkernels = {}
+            for file in dist.files:
+                if "/share/beaker/contexts/" in str(file):
+                    content = json.loads(file.read_text())
+                    contexts[content['slug']] = (content['package'], content['class_name'])
+                elif "/share/beaker/subkernels/" in str(file):
+                    content = json.loads(file.read_text())
+                    subkernels[content['slug']] = (content['package'], content['class_name'])
+            project_info = {
+                "name": dist.name,
+                "urls": dist.metadata.get_all("project-url"),
+                "description": project_description,
+                "contexts": contexts,
+                "subkernels": subkernels,
+            }
+        except PackageNotFoundError:
+            project_info = None
+
+    if project_info is None:
+        raise click.ClickException(
+            f"The provided value '{project_name_or_path}' does not appear to exist or to be installed.\n"
+            f"       If this is a path to a local project, please ensure the path is correct.\n"
+            f"       If this is the name of a project, please ensure that it is installed in the current Python environment."
+        )
+
+    click.echo(f"Project {project_info['name']}:")
+    click.echo(f"  Description:\n    {project_info['description']}")
+
+    if project_info.get("urls", None):
+        click.echo(f"  Urls:")
+        for url in project_info['urls']:
+            url = url.replace(',', ':', 1)
+            click.echo(f"    {url}")
+
+    if contexts:
+        click.echo(f"\n  Contexts:")
+        for context_slug, (mod_name, cls_name) in contexts.items():
+            mod = importlib.import_module(mod_name)
+            cls: type = getattr(mod, cls_name)
+            click.echo( f"    {context_slug}:")
+            if cls.__doc__:
+                click.echo('      """')
+
+                click.echo("\n".join(f"       {line}" for line in cls.__doc__.strip().splitlines(False)))
+                click.echo('      """')
+    if subkernels:
+        click.echo(f"\n\n  Subkernels:")
+        for subkernel_slug, (mod_name, cls_name) in subkernels.items():
+            mod = importlib.import_module(mod_name)
+            cls: type = getattr(mod, cls_name)
+            click.echo(f"    {subkernel_slug}:")
+            if cls.__doc__:
+                click.echo('      """')
+
+                click.echo("\n".join(f"       {line}" for line in cls.__doc__.strip().splitlines(False)))
+                click.echo('      """')

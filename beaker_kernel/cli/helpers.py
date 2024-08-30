@@ -19,6 +19,10 @@ def find_pyproject_file(path: Path | str | None = None) -> Path | None:
     return None
 
 
+def find_pyproject_dir(path: Path | str | None = None) -> Path | None:
+    return find_pyproject_file(path=path).parent.absolute()
+
+
 def calculate_content_hash(
     content: str,
     hash_algo: str = "sha256"

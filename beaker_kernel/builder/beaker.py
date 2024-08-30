@@ -5,7 +5,10 @@ import json
 import os.path
 import shutil
 import sys
+from typing import Any
+from hatchling.bridge.app import Application
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+from hatchling.metadata.core import ProjectMetadata
 from hatchling.plugin import hookimpl
 from pathlib import Path
 
@@ -18,9 +21,15 @@ class BuildError(Exception):
 class BeakerBuildHook(BuildHookInterface):
     PLUGIN_NAME = "beaker"
 
+    def __init__(self, root: str, config: dict[str, Any], build_config: Any, metadata: ProjectMetadata, directory: str, target_name: str, app: Application | None = None) -> None:
+        super().__init__(root, config, build_config, metadata, directory, target_name, app)
+        self.inserted_paths = set()
+
     def find_package_classes(self, packages):
         class_map = {}
         for package in packages:
+            if package.startswith('src/'):
+                package = str(Path(package).relative_to(Path('src/')))
             package: str = package.replace('/', '.')
             base_mod = importlib.import_module(package)
             base_paths = map(Path, base_mod.__path__)
@@ -97,7 +106,6 @@ class BeakerBuildHook(BuildHookInterface):
 
     def initialize(self, version, build_data):
         """Initialize the hook."""
-        self.inserted_paths = set()
 
         # Run for wheel building only
         if self.target_name != "wheel":
@@ -164,4 +172,3 @@ class BeakerBuildHook(BuildHookInterface):
                     json.dump({"slug": slug, "package": package_name, "class_name": class_name}, f, indent=2)
                 # Add shared-data mappings for each file so it is installed to the correct location
                 self.build_config.shared_data[dest_file] = f"share/beaker/{typename}/{slug}.json"
-
