@@ -11,8 +11,6 @@ from .paths import package_name, context_subdir
 class AgentFile(TemplateFile):
 
     PATH_PARTS = [
-        package_name,
-        context_subdir,
         'agent.py'
     ]
 

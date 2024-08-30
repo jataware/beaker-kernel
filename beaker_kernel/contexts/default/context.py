@@ -13,6 +13,11 @@ if TYPE_CHECKING:
     from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 
 class DefaultContext(BeakerContext):
+    """
+    Default Beaker context
+
+    Useful for most things out of the box, but has not been specialized.
+    """
 
     agent_cls: "BeakerAgent" = DefaultAgent
 

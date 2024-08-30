@@ -4,7 +4,8 @@ import json
 import logging
 import os
 import sys
-from typing import Dict
+import typing
+# from typing import Dict
 
 
 logger = logging.getLogger(__name__)
@@ -36,26 +37,46 @@ else:
         LIB_LOCATIONS.append(os.path.join(os.environ["XDG_DATA_HOME"], "beaker"))
 
 
-def autodiscover(type) -> Dict[str, type]:
+MappingType = typing.Literal["context", "subkernel"]
+
+def find_mappings(mapping_type: MappingType) -> typing.Dict[str, any]:
     """
-    Auto discovers installed
+    Finds, reads, and parses all mappings of the provided type.
     """
-    items = {}
     for location in LIB_LOCATIONS:
-        mapping_dir = os.path.join(location, type)
+        mapping_dir = os.path.join(location, mapping_type)
         if os.path.exists(mapping_dir):
             for mapping in os.listdir(mapping_dir):
                 fullpath = os.path.join(mapping_dir, mapping)
                 try:
                     with open(fullpath) as mapping_file:
                         data = json.load(mapping_file)
-                    slug = data["slug"]
-                    package = data["package"]
-                    class_name = data["class_name"]
+                        yield fullpath, data
                 except (json.JSONDecodeError, KeyError) as err:
-                    logger.error(f"Unable to parse the {type} file '{fullpath}", exc_info=err)
+                    logger.error(f"Unable to parse the {mapping_type} file '{fullpath}", exc_info=err)
                     continue
-                module = importlib.import_module(package)
-                discovered_class = getattr(module, class_name)
-                items[slug] = discovered_class
+
+
+def autodiscover(mapping_type: MappingType) -> typing.Dict[str, type]:
+    """
+    Auto discovers installed
+    """
+    items = {}
+    for mapping_file, data in find_mappings(mapping_type):
+        slug = data["slug"]
+        package = data["package"]
+        class_name = data["class_name"]
+        try:
+            module = importlib.import_module(package)
+        except (ImportError, ModuleNotFoundError) as err:
+            logger.warning(f"Warning: Beaker module '{package}' in file {mapping_file} is unable to be imported. See below.")
+            logger.warning(f"  {err.__class__}: {err.msg}")
+            continue
+        discovered_class = getattr(module, class_name)
+        setattr(discovered_class, '_autodiscovery', {
+            "mapping_file": mapping_file,
+            **data
+        })
+
+        items[slug] = discovered_class
     return items

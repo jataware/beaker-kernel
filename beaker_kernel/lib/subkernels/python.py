@@ -8,6 +8,13 @@ logger = logging.getLogger(__name__)
 
 
 class PythonSubkernel(CheckpointableBeakerSubkernel):
+    """
+    Beaker subkernel for the python3 (IPython) ipykernel.
+
+    See the following links for more information:
+    https://ipykernel.readthedocs.io/en/stable/
+    https://github.com/ipython/ipykernel
+    """
     DISPLAY_NAME = "Python 3"
     SLUG = "python3"
     KERNEL_NAME = "python3"
@@ -15,10 +22,6 @@ class PythonSubkernel(CheckpointableBeakerSubkernel):
     WEIGHT = 20
 
     SERIALIZATION_EXTENSION = "pickle"
-
-
-    import json
-    json.JSONEncoder
 
     FETCH_STATE_CODE: str = """
 import inspect as _inspect

@@ -1,13 +1,12 @@
-from pathlib import Path
-from hatchling.plugin import hookimpl
 from hatch.template.plugin.interface import TemplateInterface
-from hatch.template import File
-from hatch.template.files_default import PyProject
+from hatch.template.files_default import PyProject, Readme as HatchReadme
 
 from beaker_kernel.lib.templates import InitFile
-from beaker_kernel.lib.templates.paths import context_subdir, package_name
+from beaker_kernel.lib.templates.paths import package_name
 from beaker_kernel.lib.templates.agent_file import AgentFile
 from beaker_kernel.lib.templates.context_file import ContextFile
+from beaker_kernel.lib.templates.readme_file import ReadmeFile
+from beaker_kernel.lib.templates.subkernel_file import SubkernelFile
 
 class BeakerNewProjectTemplateHook(TemplateInterface):
     PLUGIN_NAME = 'beaker-new-project'
@@ -25,16 +24,27 @@ class BeakerNewProjectTemplateHook(TemplateInterface):
         if extra_dependencies:
             config["dependencies"].update(extra_dependencies)
 
-    def finalize_files(self, config, files):
+    def get_files(self, config):
+        return [
+            ReadmeFile(),
+        ]
+
+    def finalize_files(self, config: dict, files: list):
         """Allow modification of files for new projects before they are written to the file system."""
         # Locate the PyProject file created by the 'default' plugin and add to the bottom of it before writing.
         file_map = {type(f): f for f in files}
         pyproject_file = file_map.get(PyProject, None)
+
+        # Append beaker specific configuration to pyproject.
         if pyproject_file:
-            pyproject_file.contents += """
+            pyproject_file.contents += """\n
 [tool.hatch.build.hooks.beaker]
 require-runtime-dependencies = true
+
 """
+        # If we have both the default Hatch readme file and the Beaker readme file, remove the Hatch version of the file
+        if HatchReadme in file_map and ReadmeFile in file_map:
+            files.remove(file_map.get(HatchReadme))
 
 
 class BeakerNewContextTemplateHook(TemplateInterface):
@@ -52,16 +62,34 @@ class BeakerNewContextTemplateHook(TemplateInterface):
         config["context_name"] = self.plugin_config["context-name"]
         config["context_class"] = f"{class_base}Context"
         config["agent_class"] = f"{class_base}Agent"
+        config["context_target_dir"] = self.plugin_config.get("context-target-dir", package_name)
 
 
-    def get_files(self, config):
+    def get_files(self, config: dict):
         """Add to the list of files for new projects that are written to the file system."""
         files = [
-            ContextFile(),
-            AgentFile(),
+            ContextFile(path_prefix=config.get("context_target_dir")),
+            AgentFile(path_prefix=config.get("context_target_dir")),
+            InitFile(path_prefix=config.get("context_target_dir")),
         ]
-        if config["context_subdir"]:
-            files.append(
-                InitFile([package_name, context_subdir, '__init__.py'])
-            )
+        return files
+
+
+class BeakerNewSubkernelTemplateHook(TemplateInterface):
+    PLUGIN_NAME = 'beaker-new-subkernel'
+    PRIORITY = 250  # Run after 'default' which has priority 100
+
+    def initialize_config(self, config):
+        """
+        Allow modification of the configuration passed to every file for new projects
+        before the list of files are determined.
+        """
+        config.update({key: value for key, value in self.plugin_config.items() if key not in config})
+
+
+    def get_files(self, config: dict):
+        """Add to the list of files for new projects that are written to the file system."""
+        files = [
+            SubkernelFile(),
+        ]
         return files

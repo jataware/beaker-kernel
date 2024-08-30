@@ -19,6 +19,13 @@ def get_kernel_name():
 
 
 class JuliaSubkernel(BeakerSubkernel):
+    """
+    Beaker subkernel for the Julia language, using the IJulia kernel from the IJulia.jl package.
+
+    More information at:
+    https://julialang.github.io/IJulia.jl/stable/
+    https://github.com/JuliaLang/IJulia.jl
+    """
     DISPLAY_NAME = "Julia"
     SLUG = "julia"
     KERNEL_NAME = get_kernel_name()

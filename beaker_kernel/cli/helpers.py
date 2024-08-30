@@ -7,13 +7,20 @@ from functools import wraps
 
 from beaker_kernel.lib.config import locate_envfile, reset_config
 
-def find_pyproject_file() -> Path | None:
-    cwd = Path.cwd()
-    for path in [cwd, *cwd.parents]:
-        potential_file = path / "pyproject.toml"
+def find_pyproject_file(path: Path | str | None = None) -> Path | None:
+    if path is None:
+        path = Path.cwd()
+    else:
+        path = Path(path)
+    for search_path in [path, *path.parents]:
+        potential_file = search_path / "pyproject.toml"
         if potential_file.is_file():
             return potential_file
     return None
+
+
+def find_pyproject_dir(path: Path | str | None = None) -> Path | None:
+    return find_pyproject_file(path=path).parent.absolute()
 
 
 def calculate_content_hash(
