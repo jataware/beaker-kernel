@@ -13,7 +13,7 @@
             @session-status-changed="statusChanged"
         >
             <div class="beaker-dev-interface">
-                <header style="justify-content: center;">
+                <header>
                     <VerticalToolbar style="align-self: flex-start;">
                         <template #start>
                             <Button
@@ -95,8 +95,21 @@
                             class="agent-query-container"
                         />
                     </div>
-                    <HelpSidebar></HelpSidebar>
                 </main>
+                <!-- <HelpSidebar></HelpSidebar> -->
+                 <SideMenu
+                    position="right"
+                    :expanded="false"
+                    :style="{gridArea: 'r-sidebar'}"
+                    :show-label="false"
+                    :static-size="true"
+                 >
+                    <SideMenuPanel
+                        icon="pi pi-question"
+                    >
+                        <HelpSidebar/>
+                    </SideMenuPanel>
+                 </SideMenu>
             </div>
             <BeakerContextSelection
                 :isOpen="contextSelectionOpen"
@@ -116,6 +129,8 @@ import ChatPanel from '../components/chat-interface/ChatPanel.vue';
 import DarkModeButton from '../components/chat-interface/DarkModeButton.vue';
 import HelpSidebar from '../components/chat-interface/HelpSidebar.vue';
 import VerticalToolbar from '../components/chat-interface/VerticalToolbar.vue';
+import SideMenu from '../components/sidemenu/SideMenu.vue';
+import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerLLMQueryCell from '../components/cell/BeakerLLMQueryCell.vue';
@@ -267,7 +282,6 @@ const statusChanged = (newStatus) => {
 };
 
 onBeforeMount(() => {
-    document.title = "Analyst UI"
     var notebookData: {[key: string]: any};
     try {
         notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
@@ -318,21 +332,24 @@ const snapshot = () => {
 <style lang="scss">
 #app {
     margin: 0;
-    padding: 0;
+    padding: 0.5em;
     overflow: hidden;
     background-color: var(--surface-b);
+    height: 100vh;
+    width: 100vw;
 }
 header {
-    grid-area: l-sidebar;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: start;
+    flex: 25;
 }
 main {
-    grid-area: main;
+    flex: 50;
 }
 footer {
-    grid-area: r-sidebar;
+    // grid-area: r-sidebar;
+    flex: 25;
 }
 .main-panel {
     display: flex;
@@ -346,7 +363,7 @@ div.beaker-notebook {
 }
 
 .central-panel {
-    flex: 1000;
+    flex: 50;
     display: flex;
     flex-direction: column;
     max-width: 820px;
@@ -355,16 +372,21 @@ div.beaker-notebook {
 
 .beaker-dev-interface {
     padding-bottom: 1rem;
-    height: 100vh;
-    width: 100vw;
-    display: grid;
+    display: flex;
     grid-gap: 1px;
-    grid-template-areas:
-        "l-sidebar main r-sidebar"
-        "l-sidebar main r-sidebar"
-        "l-sidebar main r-sidebar";
-    grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto 1fr auto;
+    flex-direction: row;
+    flex: 1;
+    height: 100%;
+    // grid-template-areas:
+    //     "l-sidebar main r-sidebar"
+    //     "l-sidebar main r-sidebar"
+    //     "l-sidebar main r-sidebar";
+    // grid-template-columns: auto 1fr auto;
+    // grid-template-rows: auto 1fr auto;
+}
+
+.beaker-session-container {
+    height: 100%;
 }
 
 div.cell-container {

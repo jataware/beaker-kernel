@@ -20,15 +20,15 @@
         <template #center>
             <div class="logo">
                 <h4>
-                    Beaker <span class="longer-title">Development Interface</span>
+                    {{ title || "Beaker Development Interface" }}
                 </h4>
             </div>
         </template>
 
         <template #end>
             <nav>
-                <a  
-                    :href="`/chat${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`" 
+                <a
+                    :href="`/chat${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`"
                     v-tooltip.right="{value: 'To Chat View', showDelay: 300}"
                 >
                     <Button
@@ -84,7 +84,8 @@ const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_ses
 
 // TODO too many granular props- use a slot instead?
 const props = defineProps([
-    "kernel"
+    "kernel",
+    "title",
 ]);
 
 const emit = defineEmits(["selectKernel"]);
