@@ -1,10 +1,11 @@
 <template>
-    <BaseInterface
-        title="Beaker Notebook"
-        ref="beakerInterfaceRef"
+    <BeakerSession
+        style="height: 100vh; width: 100vw; display: flex; flex-direction: column;"
+        ref="beakerSession"
         :connectionSettings="props.config"
         sessionName="dev_interface"
         :sessionId="sessionId"
+        defaultKernel="beaker_kernel"
         :renderers="renderers"
         @iopub-msg="iopubMessage"
         @unhandled-msg="unhandledMessage"
@@ -12,52 +13,62 @@
         @session-status-changed="statusChanged"
         v-keybindings="sessionKeybindings"
     >
-        <div class="notebook-container">
-            <div class="spacer left"></div>
-            <BeakerNotebook
-                ref="beakerNotebookRef"
-                :cell-map="cellComponentMapping"
-                v-keybindings.top="notebookKeyBindings"
-            >
-                <BeakerNotebookToolbar/>
-                <BeakerNotebookPanel
-                    :selected-cell="beakerNotebookRef?.selectedCellId"
-                    v-autoscroll
-                >
-                    <template #notebook-background>
-                        <div class="welcome-placeholder">
-                            <SvgPlaceholder />
-                        </div>
-                    </template>
-                </BeakerNotebookPanel>
-                <BeakerAgentQuery
-                    class="agent-query-container"
-                />
-            </BeakerNotebook>
-            <div class="spacer right"></div>
-        </div>
+        <app>
+            <header>
+                <slot name="header">
+                    <BeakerHeader
+                        :connectionStatus="connectionStatus"
+                        :loading="!activeContext?.slug"
+                        @select-kernel="toggleContextSelection"
+                        :title="props.title"
+                    />
+                </slot>
+            </header>
 
-        <template #left-panel>
-            <SideMenu
-                position="left"
-                :show-label="true"
-                highlight="line"
-                :expanded="false"
-                initialWidth="25vi"
-            >
-                <SideMenuPanel label="Info" icon="pi pi-home">
-                    <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
-                </SideMenuPanel>
-                <SideMenuPanel label="Files" icon="pi pi-file-export">
-                    <FilePanel />
-                </SideMenuPanel>
-            </SideMenu>
-        </template>
-    </BaseInterface>
+            <main>
+                <slot name="main">
+                    <div id="left-panel">
+                        <slot name="left-panel">
+                        </slot>
+                    </div>
+
+                    <div id="center-panel">
+                        <slot>
+                        </slot>
+                    </div>
+
+                    <div id="right-panel">
+                        <slot name="right-panel">
+                        </slot>
+                    </div>
+                </slot>
+            </main>
+
+            <footer>
+            <slot name="footer">
+                <FooterDrawer />
+            </slot>
+            </footer>
+
+            <!-- Modals, popups and globals -->
+            <slot name="context-selection-popup">
+                <BeakerContextSelection
+                    :isOpen="contextSelectionOpen"
+                    :toggleOpen="toggleContextSelection"
+                    :contextProcessing="contextProcessing"
+                    @context-changed="(contextData) => {beakerSession.setContext(contextData)}"
+                    @close-context-selection="contextSelectionOpen = false"
+                />
+            </slot>
+            <slot name="toast">
+                <Toast position="bottom-right" />
+            </slot>
+        </app>
+    </BeakerSession>
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, provide, computed, nextTick, onUnmounted } from 'vue';
+import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted } from 'vue';
 import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer } from 'beaker-kernel';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
@@ -72,12 +83,12 @@ import scrollIntoView from 'scroll-into-view-if-needed';
 
 import Card from 'primevue/card';
 import LoggingPane from '../components/dev-interface/LoggingPane.vue';
-import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
 import ContextTree from '../components/dev-interface/ContextTree.vue';
-import FilePanel from '../components/panels/FilePanel.vue';
+import BeakerFilePane from '../components/dev-interface/BeakerFilePane.vue';
+import PreviewPane from '../components/dev-interface/PreviewPane.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
@@ -93,19 +104,43 @@ const toast = useToast();
 
 const activeContext = ref();
 const beakerNotebookRef = ref();
-const beakerInterfaceRef = ref();
+
+
+// TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
+// Let's only use severity=success|warning|danger(=error) for now
+const showToast = ({title, detail, life=3000, severity=('success' as undefined), position='bottom-right'}) => {
+    toast.add({
+        summary: title,
+        detail,
+        life,
+        // for options, seee https://primevue.org/toast/
+        severity,
+        // position
+    });
+};
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
 
 const props = defineProps([
+    "title",
     "config",
     "connectionSettings",
     "sessionName",
     "sessionId",
     "defaultKernel",
     "renderers",
+    "connectionSettings",
+    "sessionName",
+    "sessionId",
+    "defaultKernel",
+    "renderers",
 ]);
+    // @iopub-msg="iopubMessage"
+    // @unhandled-msg="unhandledMessage"
+    // @any-msg="anyMessage"
+    // @session-status-changed="statusChanged"
+    // v-keybindings="sessionKeybindings"
 
 const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
@@ -127,17 +162,14 @@ const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
 const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
+const notebookRef = ref<typeof BeakerNotebook>();
+const beakerSession = ref<typeof BeakerSession>();
 
 const contextSelectionOpen = ref(false);
 const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const executeActionRef = ref<typeof BeakerExecuteAction>();
-
-const beakerSession = computed(() => {
-    return beakerInterfaceRef?.value?.beakerSession;
-});
-
 
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
@@ -206,6 +238,8 @@ onUnmounted(() => {
     window.removeEventListener("beforeunload", snapshot);
 });
 
+// TODO: See above. Move somewhere better.
+provide('show_toast', showToast);
 
 const prevCellKey = () => {
     beakerNotebookRef.value?.selectPrevCell();
@@ -348,107 +382,58 @@ const snapshot = () => {
 </script>
 
 <style lang="scss">
-// #app {
-//     margin: 0;
-//     padding: 0;
-//     overflow: hidden;
-//     background-color: var(--surface-b);
-// }
 
-// header {
-//     grid-area: header;
-//     display: flex;
-//     justify-content: space-between;
-//     align-items: center;
-// }
-
-// main {
-//     grid-area: main;
-//     padding-top: 2px;
-//     padding-bottom: 2px;
-// }
-
-// footer {
-//     grid-area: footer;
-// }
-
-// .main-panel {
-//     display: flex;
-//     flex-direction: column;
-//     &:focus {
-//         outline: none;
-//     }
-// }
-
-
-// .central-panel {
-//     flex: 1000;
-//     display: flex;
-//     flex-direction: column;
-// }
-
-// .beaker-dev-interface {
-//     padding-bottom: 2px;
-//     height: 100vh;
-//     width: 100vw;
-//     display: grid;
-//     grid-gap: 1px;
-
-//     grid-template-areas:
-//         "header header header header"
-//         "main main main main"
-//         "footer footer footer footer";
-
-//     grid-template-columns: 1fr 1fr 1fr 1fr;
-//     grid-template-rows: auto 1fr auto;
-// }
-
-// .beaker-dev-interface .p-toolbar {
-//     border: none;
-// }
-
-.notebook-container {
-    display: flex;
-    height: 100%;
-}
-
-.beaker-notebook {
-    flex: 2 0 calc(50vw - 2px);
-}
-
-.spacer {
-    &.left {
-        flex: 1 1000 25vw;
-    }
-    &.right {
-        flex: 1 1 25vw;
-    }
-}
-
-.beaker-cell {
+app {
+    margin: 0;
     padding: 0;
-    border: unset;
-    padding-bottom: 4px;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: grid;
+    grid-template:
+        "header" max-content
+        "main" auto
+        "footer" max-content /
+        100%;
 }
 
-.beaker-cell:after {
-    content: "";
-    display: block;
-    height: 4px;
-    background-color: var(--primary-900);
+header {
+    grid-area: header;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.cell-container {
-
-    gap: 10px;
+main {
+    grid-area: main;
+    position: relative;
+    display: grid;
+    grid-template:
+        "left-panel center-panel right-panel" 100% /
+        min-content auto min-content;
+    background-color: var(--surface-0);
+    overflow: auto;
 }
 
-.beaker-toolbar {
-    border-style: inset;
-    border-radius: 0;
-    border-top: unset;
-    border-left: unset;
-    border-right: unset;
+footer {
+    grid-area: footer;
+}
+
+#left-panel {
+    grid-area: left-panel;
+    width: 100%;
+}
+
+#center-panel {
+    grid-area: center-panel;
+    border: 1px solid;
+    border-color: var(--surface-border);
+
+}
+
+#right-panel {
+    grid-area: right-panel;
+    width: 100%;
 }
 
 </style>
