@@ -27,19 +27,20 @@ const emit = defineEmits([
 <style lang="scss">
 .sidemenu-panel {
     display: flex;
-    position: absolute;
-    top:0;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    overflow-y: auto;
+    flex: 1;
+    height: 100%;
+    border-radius: 0;
+}
 
+.sidemenu-panel > .p-card {
+    border-radius: 0;
 }
 
 .sidemenu-panel .p-card-body {
     display: flex;
     flex: 1;
     flex-direction: column;
+    padding: 0.5em;
 }
 
 .sidemenu-panel .p-card-content {

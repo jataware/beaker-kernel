@@ -3,12 +3,28 @@ const path = require('path');
 
 module.exports = defineConfig({
   pages: {
-    index: 'src/pages/dev-interface.ts',
-    chat: 'src/pages/chat-interface.ts',
-    admin: 'src/pages/admin.ts',
-    notebook: 'src/pages/notebook.ts',
-    cell: 'src/pages/cell.ts',
-    playground: 'src/pages/playground.ts',
+    index: {
+      entry: 'src/pages/notebook-interface.ts',
+      title: "Beaker Notebook",
+    },
+    chat: {
+      entry: 'src/pages/chat-interface.ts',
+      title: "Beaker Chat Interface",
+    },
+    admin: {
+      entry: 'src/pages/admin.ts',
+      title: "Beaker Admin",
+    },
+    dev: {
+      entry: 'src/pages/dev-interface.ts',
+      title: "Beaker Development Interface",
+    },
+    // cell: {
+    //   entry: 'src/pages/cell.ts',
+    // },
+    // playground: {
+    //   entry: 'src/pages/playground.ts',
+    // },
   },
   css: { extract: false },
   assetsDir: "static/",
