@@ -22,7 +22,7 @@
                 <BeakerNotebookToolbar default-severity="">
                     <template #end-extra>
                         <Button
-                            @click="isMaximized = !isMaximized; $el.blur();"
+                            @click="isMaximized = !isMaximized;"
                             :icon="`pi ${isMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`"
                             size="small"
                             text
@@ -449,23 +449,25 @@ const snapshot = () => {
     }
 }
 
-.beaker-cell {
-    padding: 0;
-    border: unset;
-    padding-bottom: 4px;
-}
+// .beaker-cell {
+//     // margin: 4px 0;
+//     // padding: 4px 0;
+//     border: unset;
+//     padding-bottom: 4px;
 
-.beaker-cell:after {
-    content: "";
-    display: block;
-    height: 4px;
-    background-color: var(--primary-900);
-}
+//     .cell-type-selector {
+//         margin-top: 0.25em;
 
-.cell-container {
+//     }
 
-    gap: 10px;
-}
+//     .drag-handle {
+//         align-content: center;
+//     }
+// }
+
+// .cell-container {
+
+// }
 
 .notebook-toolbar {
     border-style: inset;

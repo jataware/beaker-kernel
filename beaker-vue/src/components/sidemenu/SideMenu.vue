@@ -54,7 +54,6 @@ const props = withDefaults(defineProps<Props>(), {
     showLabel: false,
     showTooltip: true,
     staticSize: false,
-    // initialWidth: `${(document.body.clientWidth / 4)}px`,
     initialWidth: '100%',
     resizable: true,
 });
@@ -82,7 +81,6 @@ const panelRef = ref(null);
 const menuRef = ref(null);
 const gutterRef = ref(null);
 const minimizeIndicator = ref<boolean>(false);
-
 
 // const minWidth = () => {
 //     return gutterRef.value.clientWidth + menuRef.value.clientWidth + AUTO_CLOSE_MARGIN;
@@ -218,6 +216,7 @@ defineExpose({
     display: grid;
     box-sizing: border-box;
     border: 1px solid var(--surface-border);
+    width: 100%;
 
     &.right {
         grid:
@@ -244,7 +243,6 @@ defineExpose({
     box-sizing: border-box;
     height: 100%;
     width: 100%;
-    // overflow: auto;
 }
 
 .sidemenu-menu-selection {

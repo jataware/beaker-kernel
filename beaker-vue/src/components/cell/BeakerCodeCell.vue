@@ -162,7 +162,7 @@ export default {
 
 <style lang="scss">
 .code-cell {
-    padding-left: 16px;
+    // padding-left: 16px;
 }
 
 .code-cell-grid {
