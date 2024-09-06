@@ -1,5 +1,5 @@
 <template>
-    <div class="sidemenu" :class="[position]" :style="containerStyle" ref="panelRef">
+    <div class="sidemenu" :class="[position, (minimizeIndicator ? 'minimize' : undefined)]" :style="containerStyle" ref="panelRef">
         <div class="sidemenu-menu-selection" :class="[position]" ref="menuRef">
             <Button
                 v-for="(panel, index) in panels" :key="`button-${index}`"
@@ -64,7 +64,8 @@ const emit = defineEmits([
     "panel-show",
 ]);
 
-const AUTO_CLOSE_MARGIN = 10;
+const AUTO_CLOSE_MARGIN = 50;
+const MINIMIZE_INDICATION_WIDTH = 4;
 
 const slots = useSlots();
 
@@ -80,6 +81,7 @@ const dragDistance = ref<number|null>(null);
 const panelRef = ref(null);
 const menuRef = ref(null);
 const gutterRef = ref(null);
+const minimizeIndicator = ref<boolean>(false);
 
 
 // const minWidth = () => {
@@ -88,6 +90,8 @@ const gutterRef = ref(null);
 // }
 
 var minWidth: number;
+var menuWidth: number;
+var closedWidth: number;
 
 const expanded = computed(() => {
     const res = selectedTabIndex.value > -1;
@@ -140,7 +144,9 @@ const startDrag = (evt: MouseEvent) => {
 
     dragStartPos.value = evt.x;
     dragStartWidth.value = panelWidth.value || panelRef.value.clientWidth;
-    minWidth = gutterRef.value.clientWidth + menuRef.value.clientWidth + AUTO_CLOSE_MARGIN;
+    menuWidth = gutterRef.value.clientWidth + menuRef.value.clientWidth;
+    closedWidth = menuWidth + MINIMIZE_INDICATION_WIDTH;
+    minWidth = menuWidth + AUTO_CLOSE_MARGIN;
 };
 
 const moveDrag = (evt: MouseEvent) => {
@@ -152,11 +158,17 @@ const moveDrag = (evt: MouseEvent) => {
     else {
         width = dragStartWidth.value - dragDistance.value;
     }
-    if (width <= minWidth && panelWidth.value <= minWidth) {
-        console.log("minimizing")
+    if (width <= minWidth) {
+        // Will be minimizing
+        if (panelWidth.value != closedWidth) {
+            console.log('minimzing');
+            panelWidth.value = closedWidth;
+            minimizeIndicator.value = true;
+        }
     }
     else {
         panelWidth.value = width;
+        minimizeIndicator.value = false;
     }
 
 }
@@ -171,6 +183,7 @@ const endDrag = (evt: MouseEvent) => {
     }
     dragStartPos.value = null;
     dragDistance.value = null;
+    minimizeIndicator.value = false;
 
 };
 
@@ -187,6 +200,9 @@ const handleButtonClick = (index: number) => {
 
 const selectPanel = (id: string) => {
     selectedTabIndex.value = panels.value.findIndex((panel) => (panel.props?.tabId === id));
+    if (minimizeIndicator.value) {
+        minimizeIndicator.value = false;
+    }
 }
 
 defineExpose({
@@ -201,15 +217,25 @@ defineExpose({
     height: 100%;
     display: grid;
     box-sizing: border-box;
+    border: 1px solid var(--surface-border);
+
     &.right {
         grid:
             "handle content menu" 100% /
-            max-content auto max-content;
+            max-content minmax(0px, 1fr) max-content;
     }
+
     &.left {
         grid:
             "menu content handle" 100% /
-            max-content auto max-content;
+            max-content minmax(0px, 1fr) max-content;
+    }
+
+    &.minimize {
+        .sidemenu-gutter {
+            width: 8px;
+            background-color: var(--primary-color);
+        }
     }
 }
 
@@ -218,7 +244,7 @@ defineExpose({
     box-sizing: border-box;
     height: 100%;
     width: 100%;
-    overflow: auto;
+    // overflow: auto;
 }
 
 .sidemenu-menu-selection {
@@ -226,6 +252,7 @@ defineExpose({
     background-color: var(--surface-b);
     display: flex;
     flex-direction: column;
+    width: 100%;
     &.right {
         margin-left: 2px;
     }

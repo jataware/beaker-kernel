@@ -1,26 +1,26 @@
 <template>
-    <Toolbar class="toolbar beaker-toolbar">
+    <Toolbar class="notebook-toolbar">
         <template #start>
             <slot name="start">
                 <Button
                     @click="notebook.insertCellAfter()"
                     icon="pi pi-plus"
                     size="small"
-                    severity="info"
+                    :severity="props.defaultSeverity"
                     text
                 />
                 <Button
                     @click="notebook.removeCell()"
                     icon="pi pi-minus"
                     size="small"
-                    severity="info"
+                    :severity="props.defaultSeverity"
                     text
                 />
                 <Button
                     @click="notebook.selectedCell().execute()"
                     icon="pi pi-play"
                     size="small"
-                    severity="info"
+                    :severity="props.defaultSeverity"
                     text
                 />
                 <slot name="start-extra"></slot>
@@ -33,7 +33,7 @@
                     v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
                     icon="pi pi-refresh"
                     size="small"
-                    severity="info"
+                    :severity="props.defaultSeverity"
                     text
                 />
                 <Button
@@ -41,10 +41,10 @@
                     v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
                     icon="pi pi-download"
                     size="small"
-                    severity="info"
+                    :severity="props.defaultSeverity"
                     text
                 />
-                <OpenNotebookButton @open-file="loadNotebook"/>
+                <OpenNotebookButton :severity="$props.defaultSeverity" @open-file="loadNotebook"/>
                 <slot name="end-extra"></slot>
             </slot>
         </template>
@@ -52,11 +52,12 @@
 </template>
 
 <script setup lang="tsx">
-import { inject } from "vue";
+import { defineProps, inject, withDefaults } from "vue";
 import { BeakerSession } from 'beaker-kernel';
 import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
 
 import Button from "primevue/button";
+import { ButtonProps } from "primevue/button";
 import Toolbar from "primevue/toolbar";
 
 import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
@@ -75,6 +76,13 @@ const addMarkdownCell = () => {
     // notebook.selectCell(newCell);
 }
 
+export interface Props {
+    defaultSeverity?: ButtonProps["badgeSeverity"];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    defaultSeverity: "info",
+});
 
 const resetNotebook = async () => {
     session.reset();
@@ -99,8 +107,11 @@ function downloadNotebook() {
 
 
 <style lang="scss">
-.beaker-toolbar {
-    padding: 0.25rem 0.5rem;
-    align-self: flex-start;
+.notebook-toolbar {
+    margin: 0;
+    padding: 0;
+    *:focus {
+        box-shadow: none !important;
+    }
 }
 </style>
