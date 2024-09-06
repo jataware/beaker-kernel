@@ -156,6 +156,7 @@ defineExpose({
     background-color: var(--surface-a);
     z-index: 3;
     overflow: auto;
+    row-gap: 4px;
 }
 
 .drop-overflow-catcher {

@@ -4,47 +4,72 @@
         tabindex="0"
         @click="clicked"
         ref="beakerCellRef"
+        :class="{collapsed}"
     >
-        <div class="cell-grid">
-            <div
-                class="drag-handle"
-            >
-                <DraggableMarker
-                    :draggable="props.dragEnabled"
-                />
-            </div>
-            <Dropdown
-                class="cell-type-selector"
-                :model-value="cell.cell_type"
-                @update:model-value="(value) => notebook.convertCellType(cell, value)"
-                :options="Object.keys(cellMap || {})"
-                :dropdown-icon="cellIcon"
-            >
-                <template #value="slotProps">
-                    <span :class="cellIconMap[slotProps.value]"></span>
-                </template>
-
-                <template #option="slotProps">
-                    <div class="cell-type-dropdown-item">
-                        <span :class="cellIconMap[slotProps.option]"></span>
-                        <span>{{ slotProps.option }}</span>
-                    </div>
-                </template>
-            </Dropdown>
-            <div class="cell-contents">
-                <slot name="default">
-                </slot>
-
-                <slot name="child-cells">
-                </slot>
-            </div>
+        <div class="collapse-box" @click.capture.stop.prevent="collapseCell"></div>
+        <div
+            class="drag-handle"
+        >
+            <DraggableMarker
+                :draggable="props.dragEnabled"
+            />
         </div>
+        <div class="cell-contents">
+            <slot name="default">
+            </slot>
+
+            <slot name="child-cells">
+            </slot>
+        </div>
+
+        <div class="menu-area" ref="menuAreaRef">
+        <slot name="hover-menu">
+            <div class="hover-menu">
+                <Button
+                    text
+                    small
+                    icon="pi pi-ellipsis-v"
+                    @click="hoverMenuRef.toggle($event)"
+                />
+                <OverlayPanel
+                    class="menu-overlay"
+                    ref="hoverMenuRef"
+                    :popup="true"
+                >
+                    <Dropdown
+                        class="cell-type-selector"
+                        :model-value="cell.cell_type"
+                        @update:model-value="(value) => notebook.convertCellType(cell, value)"
+                        :options="Object.keys(cellMap || {})"
+                        :dropdown-icon="cellIcon"
+                    >
+                        <template #value="slotProps">
+                            <span :class="cellIconMap[slotProps.value]"></span>
+                        </template>
+
+                        <template #option="slotProps">
+                            <div class="cell-type-dropdown-item">
+                                <span :class="cellIconMap[slotProps.option]"></span>
+                                <span>{{ slotProps.option }}</span>
+                            </div>
+                        </template>
+                    </Dropdown>
+                </OverlayPanel>
+            </div>
+        </slot>
+        </div>
+        <div class="extra-area">
+            <slot name="extra">
+            </slot>
+        </div>
+
     </div>
 </template>
 
 
 <script setup lang="ts">
 import { defineProps, ref, inject, computed } from "vue";
+import Button from 'primevue/button';
 import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodeCell.vue';
 import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
@@ -54,6 +79,7 @@ import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue
 import BeakerRawCell from './BeakerRawCell.vue';
 import { BeakerBaseCell, type IBeakerCell } from "beaker-kernel";
 import Dropdown from 'primevue/dropdown';
+import OverlayPanel from 'primevue/overlaypanel';
 
 export type CellTypes =
     | typeof BeakerRawCell
@@ -76,6 +102,8 @@ const clicked = (evt) => {
 };
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
+const hoverMenuRef = ref(null);
+const collapsed = ref<boolean>(false);
 
 const cellIconMap = {
     "code": "pi pi-code",
@@ -94,45 +122,94 @@ enum CellState {
 }
 
 const cellState = ref<CellState>(CellState.Pending);
+
+const collapseCell = (evt) => {
+    console.log("Shrinking!")
+    collapsed.value = !collapsed.value;
+};
+
 </script>
 
 <style lang="scss">
 
 .beaker-cell {
+    display: grid;
+    border-radius: 0;
     position: relative;
-    padding: 1rem 0 1rem 0.2rem;
-    border-right: 5px solid transparent;
+    // padding: 0.25em 0.25em 0.25em 0;
     background-color: var(--surface-a);
-    border-bottom: 4px solid var(--surface-c);
 
-    &.selected {
-      border-right: 5px solid var(--purple-400);
-      border-top: unset;
-      background-color: var(--surface-ground);
+    // border-left: 4px solid transparent;
+    grid:
+        "collapse-box drag-handle cell-contents hover-menu" 2em
+        "collapse-box drag-handle cell-contents extra" 1fr /
+        10px 1.6rem 1fr 2em;
+
+    &.selected .collapse-box {
+        background-color: var(--primary-400);
     }
 
     &:focus {
         outline: none;
     }
+
+    // Separators between cells
+    &:not(.collapsed):after {
+        content: "";
+        position: absolute;
+        height: 4px;
+        left: 0;
+        bottom: -4px;
+        right: 0px;
+        z-index: 0;
+        background-color: var(--surface-border);
+    }
+
+    &.collapsed {
+        max-height: 3em;
+        // border-bottom: 5px dotted black;
+    }
+
+    &.collapsed .collapse-box {
+        --wave-color: var(--surface-border);
+        background-color: var(--wave-color);
+
+        &:after {
+            content: "";
+            position: absolute;
+            z-index: 200;
+            height: 10px;
+            bottom: -6px;
+            left: 0;
+            right: 0;
+            background-color: var(--wave-color);
+            --mask:
+                radial-gradient(8.059999999999999px at 50% calc(100% + 4.25px),#0000 calc(99% - 3px),#000 calc(101% - 3px) 99%,#0000 101%) calc(50% - 10px) calc(50% - 4px + .5px)/20px 8px repeat-x,
+                radial-gradient(8.059999999999999px at 50% -4.25px,#0000 calc(99% - 3px),#000 calc(101% - 3px) 99%,#0000 101%) 50% calc(50% + 4px)/20px 8px repeat-x;
+            -webkit-mask: var(--mask);
+            mask: var(--mask);
+        }
+    }
+
 }
 
-.cell-grid {
-    display: grid;
-    justify-content: start;
-    grid-template-areas:
-        "cell-type-dropdown drag-handle cell-contents";
-
-    grid-template-columns: 2rem 1.4rem 1fr;
+.collapse-box {
+    grid-area: collapse-box;
+    border: 1px inset var(--surface-border);
+    border-top: unset;
+    border-bottom: unset;
+    cursor: pointer;
 }
 
 .cell-contents {
   grid-area: cell-contents;
+  margin: 0.25em 0;
 }
 
 .drag-handle {
     grid-area: drag-handle;
-    margin-left: auto;
-    margin-right: auto;
+    align-content: center;
+    justify-self: center;
     z-index: 10;
 
     .draggable-wrapper {
@@ -184,6 +261,23 @@ const cellState = ref<CellState>(CellState.Pending);
     padding-bottom: calc(1rem - 5px);
 }
 
+.menu-area {
+    grid-area: hover-menu;
+    margin: 0.25em 0.25em 0.25em 0;
+    height: 100%;
+    width: 100%;
+    button {
+        height: 1.5rem;
+        width: unset;
+        padding: unset;
+        aspect-ratio: 1 / 1;
+        font-size: smaller;
+    }
+}
+
+.menu-overlay .p-overlaypanel-content{
+    padding: 0.2rem 3rem;
+}
 
 .cell-type-selector {
     grid-area: cell-type-dropdown;
@@ -192,7 +286,7 @@ const cellState = ref<CellState>(CellState.Pending);
     width: 1.5rem;
     aspect-ratio: 1 / 1;
     padding: 0;
-    border-color: #c5c6cc;
+    border-color: var(--surface-border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -219,5 +313,9 @@ const cellState = ref<CellState>(CellState.Pending);
         width: calc(2.5rem - 2px);
         aspect-ratio: 1 / 1;
     }
+}
+
+.extra-area {
+    margin: 0.25em 0.25em 0.25em 0;
 }
 </style>
