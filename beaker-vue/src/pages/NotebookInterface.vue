@@ -13,13 +13,22 @@
         v-keybindings="sessionKeybindings"
     >
         <div class="notebook-container">
-            <div class="spacer left"></div>
+            <div v-if="!isMaximized" class="spacer left"></div>
             <BeakerNotebook
                 ref="beakerNotebookRef"
                 :cell-map="cellComponentMapping"
                 v-keybindings.top="notebookKeyBindings"
             >
-                <BeakerNotebookToolbar/>
+                <BeakerNotebookToolbar default-severity="">
+                    <template #end-extra>
+                        <Button
+                            @click="isMaximized = !isMaximized; $el.blur();"
+                            :icon="`pi ${isMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`"
+                            size="small"
+                            text
+                        />
+                    </template>
+                </BeakerNotebookToolbar>
                 <BeakerNotebookPanel
                     :selected-cell="beakerNotebookRef?.selectedCellId"
                     v-autoscroll
@@ -34,7 +43,7 @@
                     class="agent-query-container"
                 />
             </BeakerNotebook>
-            <div class="spacer right"></div>
+            <div v-if="!isMaximized" class="spacer right"></div>
         </div>
 
         <template #left-panel>
@@ -48,8 +57,8 @@
                 <SideMenuPanel label="Info" icon="pi pi-home">
                     <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
                 </SideMenuPanel>
-                <SideMenuPanel label="Files" icon="pi pi-file-export">
-                    <FilePanel />
+                <SideMenuPanel label="Files" icon="pi pi-file-export" no-overflow>
+                    <FilePanel @open-file="loadNotebook" />
                 </SideMenuPanel>
             </SideMenu>
         </template>
@@ -57,12 +66,12 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, provide, computed, nextTick, onUnmounted } from 'vue';
-import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer } from 'beaker-kernel';
+import { defineProps, ref, onBeforeMount, provide, computed, nextTick, onUnmounted, inject } from 'vue';
+import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import BeakerSession from '../components/session/BeakerSession.vue';
+// import BeakerSession from '../components/session/BeakerSession.vue';
 import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
@@ -72,6 +81,7 @@ import scrollIntoView from 'scroll-into-view-if-needed';
 
 import Card from 'primevue/card';
 import LoggingPane from '../components/dev-interface/LoggingPane.vue';
+import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
@@ -121,6 +131,8 @@ const cellComponentMapping = {
     'raw': BeakerRawCell,
 }
 
+// const session = inject<BeakerSession>('session');
+
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
@@ -131,6 +143,7 @@ const copiedCell = ref<IBeakerCell | null>(null);
 const contextSelectionOpen = ref(false);
 const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
+const isMaximized = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const executeActionRef = ref<typeof BeakerExecuteAction>();
 
@@ -175,6 +188,10 @@ const selectAction = (actionName: string) => {
     rightMenu.value?.selectPanel("action");
     executeActionRef.value?.selectAction(actionName);
 };
+
+const loadNotebook = (notebookJSON: any) => {
+    beakerSession.value?.session.loadNotebook(notebookJSON);
+}
 
 onBeforeMount(() => {
     var notebookData: {[key: string]: any};
@@ -414,6 +431,13 @@ const snapshot = () => {
 
 .beaker-notebook {
     flex: 2 0 calc(50vw - 2px);
+    border: 2px solid var(--surface-border);
+    border-radius: 0;
+    border-top: 0;
+    // border-bottom: 10px;
+    // border-left: 2px;
+    // border-right: 2px;
+    // border-top: 2px;
 }
 
 .spacer {
@@ -443,7 +467,7 @@ const snapshot = () => {
     gap: 10px;
 }
 
-.beaker-toolbar {
+.notebook-toolbar {
     border-style: inset;
     border-radius: 0;
     border-top: unset;

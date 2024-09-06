@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted } from 'vue';
+import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted, defineExpose } from 'vue';
 import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer } from 'beaker-kernel';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
@@ -378,6 +378,10 @@ const snapshot = () => {
         localStorage.setItem("notebookData", JSON.stringify(notebookData));
     }
 };
+
+defineExpose({
+    beakerSession,
+});
 
 </script>
 

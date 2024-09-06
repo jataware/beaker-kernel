@@ -1,5 +1,5 @@
 <template>
-    <Toolbar class="toolbar">
+    <Toolbar class="beaker-toolbar">
         <template #start>
             <div class="status-bar">
                 <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
@@ -37,11 +37,12 @@
                         style="margin: 0; color: var(--gray-500);"
                     />
                 </a>
+
                 <Button
+                    :icon="themeIcon"
                     text
                     @click="toggleDarkMode"
                     style="margin: 0; color: var(--gray-500);"
-                    :icon="themeIcon"
                 />
                 <a
                     href="https://jataware.github.io/beaker-kernel"
@@ -136,9 +137,10 @@ const connectionColor = computed(() => {
 
 <style lang="scss">
 
-.toolbar {
+.beaker-toolbar {
     width: 100%;
-    padding: 0.5rem 1rem;
+    padding: 0 0.5rem;
+    border-radius: 0;
 
     &.p-toolbar {
         flex-wrap: nowrap;
@@ -147,8 +149,12 @@ const connectionColor = computed(() => {
         margin-left: -0.5rem;
     }
 
+    button {
+        padding: 0.5em;
+    }
+
     .logo {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         padding: 0 0.5rem;
         h4 {
             font-size: 1.8rem;
@@ -176,10 +182,12 @@ const connectionColor = computed(() => {
     & > i {
         margin-right: 0.5rem;
     }
+
 }
 
 .connection-button {
     color: var(--surface-500);
+    padding: 0.5em;
 }
 
 </style>
