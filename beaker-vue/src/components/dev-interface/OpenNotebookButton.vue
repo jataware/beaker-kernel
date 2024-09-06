@@ -4,7 +4,7 @@
       v-tooltip.bottom="{value: 'Open ipynb file', showDelay: 300}"
       icon="pi pi-folder-open"
       size="small"
-      severity="info"
+      :severity="props.severity"
       text
   />
   <form id="open-file-form" ref="fileForm">
@@ -19,9 +19,18 @@
 
 </template>
 
-<script setup>
-import { ref, defineEmits, inject } from "vue";
+<script setup lang="tsx">
+import { ref, defineEmits, inject, defineProps, withDefaults } from "vue";
 import Button from 'primevue/button';
+import { ButtonProps } from "primevue/button";
+
+export interface Props {
+    severity?: ButtonProps["badgeSeverity"];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    severity: "info",
+});
 
 const emit = defineEmits([
   'open-file'
