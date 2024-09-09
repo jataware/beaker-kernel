@@ -27,7 +27,7 @@ declare module "@jupyterlab/services/lib/kernel/messages" {
 declare module '@jupyterlab/nbformat' {
     export interface IBaseOutput extends PartialJSONObject {
         output_type: string;
-        metadata: nbformat.OutputMetadata;
+        metadata?: nbformat.OutputMetadata;
     }
 }
 
