@@ -101,11 +101,11 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
 
 // Simple payload events
 
-type BeakerQueryTextEventType = 
-    | "thought" 
-    | "response" 
-    | "user_question" 
-    | "user_answer" 
+type BeakerQueryTextEventType =
+    | "thought"
+    | "response"
+    | "user_question"
+    | "user_answer"
     | "abort";
 
 export interface IBeakerQueryTextEvent extends PartialJSONObject {
@@ -139,12 +139,12 @@ export interface IBeakerQueryErrorEvent extends PartialJSONObject {
 
 // umbrella-type for events
 
-export type BeakerQueryEventType =  
+export type BeakerQueryEventType =
     | BeakerQueryTextEventType
     | BeakerQueryCellEventType
     | BeakerQueryErrorEventType;
 
-export type BeakerQueryEvent = 
+export type BeakerQueryEvent =
     | IBeakerQueryTextEvent
     | IBeakerQueryCellEvent
     | IBeakerQueryErrorEvent;

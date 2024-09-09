@@ -275,16 +275,16 @@ defineExpose({
     width: 8px;
     z-index: 100;
     height: 3rem;
-    background-color: #777;
+    background-color: var(--surface-400);
     display: flex;
     justify-content: space-around;
     align-items: center;
     overflow: clip;
-    border: 1px outset #000;
+    border: 1px outset var(--surface-500);
 
     &:before {
         filter: blur(0.75px);
-        color: #333;
+        color: var(--surface-50);
         writing-mode: vertical-rl;
         text-orientation: sideways-right;
         letter-spacing: -1px;
