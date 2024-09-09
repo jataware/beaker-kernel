@@ -6,7 +6,7 @@
         ref="beakerCellRef"
         :class="{collapsed}"
     >
-        <div class="collapse-box" @click.capture.stop.prevent="collapseCell"></div>
+        <div class="collapse-box" @click.prevent="collapseCell"></div>
         <div
             class="drag-handle"
         >
@@ -29,7 +29,7 @@
                     text
                     small
                     icon="pi pi-ellipsis-v"
-                    @click="hoverMenuRef.toggle($event)"
+                    @click.prevent="hoverMenuRef.toggle($event);"
                 />
                 <OverlayPanel
                     class="menu-overlay"
@@ -98,12 +98,17 @@ const notebook = inject<BeakerNotebookComponentType>("notebook");
 const cellMap = inject("cell-component-mapping");
 
 const clicked = (evt) => {
-    notebook.selectCell(props.cell as {id: string}, );
+    if (!evt.defaultPrevented) {
+        notebook.selectCell(props.cell as {id: string}, );
+    }
 };
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
 const hoverMenuRef = ref(null);
-const collapsed = ref<boolean>(false);
+const metadata = ref(props.cell.metadata);
+const collapsed = computed(() => {
+    return metadata.value?.collapsed || false;
+});
 
 const cellIconMap = {
     "code": "pi pi-code",
@@ -124,8 +129,9 @@ enum CellState {
 const cellState = ref<CellState>(CellState.Pending);
 
 const collapseCell = (evt) => {
-    console.log("Shrinking!")
-    collapsed.value = !collapsed.value;
+    if (metadata.value) {
+        metadata.value.collapsed = !collapsed.value;
+    }
 };
 
 </script>
@@ -136,10 +142,9 @@ const collapseCell = (evt) => {
     display: grid;
     border-radius: 0;
     position: relative;
-    // padding: 0.25em 0.25em 0.25em 0;
     background-color: var(--surface-a);
+    --collapsed-height: 3.5em;
 
-    // border-left: 4px solid transparent;
     grid:
         "collapse-box drag-handle cell-contents hover-menu" 2em
         "collapse-box drag-handle cell-contents extra" 1fr /
@@ -166,20 +171,38 @@ const collapseCell = (evt) => {
     }
 
     &.collapsed {
-        max-height: 3em;
-        // border-bottom: 5px dotted black;
+
+        .cm-editor {
+            max-height: var(--collapsed-height);
+        }
+        max-height: var(--collapsed-height);
+
+        &:after {
+            content: "";
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            right: 0;
+            height: 16px;
+            box-shadow: inset 0 -10px 8px -4px var(--surface-border);
+        }
+    }
+
+    &.selected.collapsed .collapse-box {
+        background-color: var(--primary-400);
     }
 
     &.collapsed .collapse-box {
         --wave-color: var(--surface-border);
         background-color: var(--wave-color);
+        box-shadow: 0.3em 0 0.5em var(--surface-border);
 
         &:after {
             content: "";
             position: absolute;
             z-index: 200;
             height: 10px;
-            bottom: -6px;
+            bottom: -8px;
             left: 0;
             right: 0;
             background-color: var(--wave-color);
@@ -199,6 +222,10 @@ const collapseCell = (evt) => {
     border-top: unset;
     border-bottom: unset;
     cursor: pointer;
+
+    &:hover {
+        background-color: color(from var(--surface-border) srgb r g b / 0.5);
+    }
 }
 
 .cell-contents {
