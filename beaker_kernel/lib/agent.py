@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class BeakerAgent(ReActAgent):
 
     context: "BeakerContext"
-    MODEL: str = "gpt-4-turbo-preview"
+    MODEL: str = config.LLM_SERVICE_MODEL
 
     def __init__(
         self,
@@ -32,8 +32,8 @@ class BeakerAgent(ReActAgent):
             "verbose": self.context.beaker_kernel.verbose,
         })
         super().__init__(
-            model=self.MODEL,  # Use default
-            api_key=config.LLM_SERVICE_TOKEN,  # TODO: get this from configuration
+            model=self.MODEL,
+            api_key=config.LLM_SERVICE_TOKEN,
             tools=tools,
             verbose=self.context.beaker_kernel.verbose,
             spinner=None,

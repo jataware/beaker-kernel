@@ -141,11 +141,6 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
             "wsUrl": os.environ.get("JUPYTER_WS_URL", ws_url),
             "token": config.JUPYTER_TOKEN,
         }
-        logger.warning(f"{getattr(self, 'token', 'token ??????')}")
-        logger.warning(f"{getattr(self, 'base_url', 'base_url ??????')}")
-        logger.warning(f"{getattr(self, 'ws_url', 'ws_url ??????')}")
-        # logger.warning(f"{getattr(self, 'token', '??????')}")
-        logger.warning(f"{config_data}")
         return self.write(config_data)
 
 
@@ -330,18 +325,10 @@ class BeakerServerApp(ServerApp):
 
     @property
     def public_url(self):
-        logger.warning(self)
         return f"http://{self.ip}:{self.port}/"
 
     @property
     def local_url(self):
-        # logger.warning(self)
-        import pprint
-        # logger.warning(pprint.pformat(self.__dict__))
-        logger.warning("===" * 30)
-        logger.warning(f"{self.tornado_settings}")
-        logger.warning(self.identity_provider_class)
-        logger.warning(pprint.pformat(self.identity_provider_class.__dict__))
         return self.public_url
 
     @property
@@ -350,9 +337,7 @@ class BeakerServerApp(ServerApp):
 
     def _get_urlparts(self, path: str | None = None, include_token: bool = False) -> urllib.parse.ParseResult:
         # Always return urls without tokens
-        # return super()._get_urlparts(path, False)
-        logger.warning(f" super()._get_urlparts(path, True) { super()._get_urlparts(path, True)}")
-        return super()._get_urlparts(path, True)
+        return super()._get_urlparts(path, False)
 
 
 class BeakerJupyterApp(LabServerApp):

@@ -7,6 +7,7 @@ import traceback
 import warnings
 from contextlib import AbstractAsyncContextManager
 from functools import wraps, update_wrapper
+from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 from archytas.tool_utils import tool
@@ -25,6 +26,18 @@ def env_enabled(env_var: str):
 def get_socket(stream_name: str):
     socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_name)]
     return socket
+
+
+def find_file_along_path(filename: str, start_path: Path | str | None = None) -> Path | None:
+    if start_path is None:
+        path = Path.cwd()
+    else:
+        path = Path(start_path)
+    for search_path in [path, *path.parents]:
+        potential_file = search_path / filename
+        if potential_file.is_file():
+            return potential_file
+    return None
 
 
 class ExecutionTask(asyncio.Task):
