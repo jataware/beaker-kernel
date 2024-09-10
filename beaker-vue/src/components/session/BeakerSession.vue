@@ -70,8 +70,12 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
         }
       }
     );
+    console.log(rawSession)
+    console.log(props.connectionSettings)
+    console.log(props);
 
     rawSession.sessionReady.then(() => {
+        console.log(rawSession)
 
       rawSession.session.iopubMessage.connect((session, msg) => {
         emit("iopub-msg", msg);

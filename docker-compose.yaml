@@ -12,8 +12,9 @@ services:
     environment:
       - DEBUG=1
       - JUPYTER_SERVER=http://jupyter:8888
-      - JUPYTER_TOKEN=89f73481102c46c0bc13b2998f9a4fce
-      - OPENAI_API_KEY
+      - JUPYTER_BASE_URL=${JUPYTER_BASE_URL:-http://localhost:8080}
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN:-89f73481102c46c0bc13b2998f9a4fce}
+      - OPENAI_API_KEY=${OPEN_AI_KEY:-no_key_provided}
       - PYTHONPATH=/jupyter
       - ENABLE_CHECKPOINTS=true
       - TOOL_ENABLED_ASK_USER=true
