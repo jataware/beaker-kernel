@@ -313,7 +313,7 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
             },
             "sessions": sessions,
             "kernels": kernels,
-            "token": os.environ.get("JUPYTER_TOKEN", "89f73481102c46c0bc13b2998f9a4fce"),
+            "token": config.JUPYTER_TOKEN,
         }
         return self.write(json.dumps(output))
 
@@ -358,6 +358,8 @@ class BeakerJupyterApp(LabServerApp):
 
     @classmethod
     def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
+        # Set Jupyter token from config
+        os.environ.setdefault("JUPYTER_TOKEN", config.JUPYTER_TOKEN)
         # TODO: catch and handle any custom command line arguments here
         app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
         return app
