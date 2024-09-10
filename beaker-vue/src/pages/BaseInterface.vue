@@ -2,7 +2,7 @@
     <BeakerSession
         style="height: 100vh; width: 100vw; display: flex; flex-direction: column;"
         ref="beakerSession"
-        :connectionSettings="props.config"
+        :connectionSettings="props.connectionSettings"
         sessionName="dev_interface"
         :sessionId="sessionId"
         defaultKernel="beaker_kernel"
@@ -124,7 +124,6 @@ const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_ses
 
 const props = defineProps([
     "title",
-    "config",
     "connectionSettings",
     "sessionName",
     "sessionId",
