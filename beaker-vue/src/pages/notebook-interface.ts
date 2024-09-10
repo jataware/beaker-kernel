@@ -6,12 +6,8 @@ import FocusTrap from 'primevue/focustrap';
 import { vKeybindings } from '../directives/keybindings';
 import { vAutoScroll } from '../directives/autoscroll';
 import BeakerThemePlugin from '../plugins/theme';
-
 import NotebookInterface from './NotebookInterface.vue';
-import { vKeybindings } from '../directives/keybindings';
-import { vAutoScroll } from '../directives/autoscroll';
-import BeakerThemePlugin from '../plugins/theme';
-// import { vTheme } from '../directives/theme';
+
 
 import 'primeicons/primeicons.css';
 import '../index.scss';
