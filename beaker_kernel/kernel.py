@@ -329,7 +329,7 @@ class BeakerKernel(KernelProxyManager):
             "stdin",
             "input_request",
             {"prompt": query},
-            parent_header=parent_message.header,
+            parent_header=getattr(parent_message, "header", None),
             parent_identities=getattr(parent_message, "identities", None),
             msg_id=msg_id,
         )
@@ -456,6 +456,9 @@ class BeakerKernel(KernelProxyManager):
         full_context_class = f"{context_class.__module__}.{context_class.__name__}"
         context_config = getattr(self.context, "config", {}).get("context_info", None)
         context_info = self.context.get_info()
+        language_slug = self.context.subkernel.SLUG
+        subkernel_name = self.context.subkernel.KERNEL_NAME
+
         self.send_response(
             stream="iopub",
             msg_or_type="context_info_response",
@@ -464,8 +467,8 @@ class BeakerKernel(KernelProxyManager):
                 "class": full_context_class,
                 "config": context_config,
                 "language": {
-                    "slug": self.context.subkernel.SLUG,
-                    "subkernel": self.context.subkernel.KERNEL_NAME,
+                    "slug": language_slug,
+                    "subkernel": subkernel_name,
                 },
                 "info": context_info,
             },

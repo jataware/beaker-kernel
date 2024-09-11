@@ -3,6 +3,7 @@ import logging
 import re
 import typing
 
+from archytas.agent import Message
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
@@ -13,6 +14,11 @@ if typing.TYPE_CHECKING:
     from .context import BeakerContext
 
 logger = logging.getLogger(__name__)
+
+
+class AgentAuthenticationError(Exception):
+    pass
+
 
 class BeakerAgent(ReActAgent):
 
@@ -43,6 +49,29 @@ class BeakerAgent(ReActAgent):
             **kwargs
         )
 
+    async def execute(self, additional_messages: list[Message] = None) -> str:
+        import openai
+        try:
+            return await super().execute(additional_messages or [])
+        except (openai.AuthenticationError) as e:
+            raise AgentAuthenticationError(e)
+        except (openai.OpenAIError) as e:
+            if "The api_key client option must be set" in str(e):
+                raise AgentAuthenticationError(e)
+            else:
+                raise
+
+    async def oneshot(self, prompt: str, query: str) -> str:
+        import openai
+        try:
+            return await super().oneshot(prompt, query)
+        except (openai.AuthenticationError,) as e:
+            raise AgentAuthenticationError(e)
+        except (openai.OpenAIError) as e:
+            if "The api_key client option must be set" in str(e):
+                raise AgentAuthenticationError(e)
+            else:
+                raise
 
     def get_info(self):
         """

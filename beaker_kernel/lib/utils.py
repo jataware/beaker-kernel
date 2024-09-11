@@ -8,7 +8,7 @@ import warnings
 from contextlib import AbstractAsyncContextManager
 from functools import wraps, update_wrapper
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Callable
 
 from archytas.tool_utils import tool
 
@@ -150,11 +150,11 @@ def intercept(msg_type=None, stream="shell", docs: str|None=None, default_payloa
     return register_intercept
 
 
-def action(action_name: str|None=None, docs: str|None=None, default_payload=None, enabled: bool=True):
+def action(action_name: str|None=None, docs: str|None=None, default_payload=None, enabled: None|Callable[[], bool]=None):
     """
     Method decorator to identify and register context actions.
     """
-    if not enabled:
+    if enabled is not None and enabled():
         def disable(_fn):
             def disabled_message(*args, **kwargs):
                 raise RuntimeError("This action is disabled.")

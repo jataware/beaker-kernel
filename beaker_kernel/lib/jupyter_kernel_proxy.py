@@ -238,7 +238,6 @@ class ProxyKernelServer(AbstractProxyKernel):
             resign_using = resign_using or self.proxy_target.config.get("key")
 
         async def handler(data):
-            i = "execute_reply" in str(data)
             if socktype.signed:
                 msg = JupyterMessage.parse(data, validate_using)
                 if is_reply and msg.header.get("msg_type", "").endswith("_reply"):

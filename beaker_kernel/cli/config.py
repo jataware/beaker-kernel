@@ -79,6 +79,13 @@ def show(sensitive):
             click.echo("  # (default) - Not defined in config file", nl=False)
         click.echo("\n")
 
+    tools_enabled = config_data.pop('tools_enabled', {})
+    if tools_enabled:
+        click.echo("The following tools' have are enabled if true or disabled if false:")
+        for tool, enabled in tools_enabled.items():
+            click.echo(f"  {tool} - {enabled}" )
+        click.echo("")
+
     if config_data:
         click.echo("\nThe following config variables are defined in the configuration file but are not defined "
                    "in the Beaker configuration class:")

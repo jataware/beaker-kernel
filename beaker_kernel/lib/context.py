@@ -88,10 +88,11 @@ class BeakerContext:
 
     def disable_tools(self):
         # TODO: Identical toolnames don't work
-        toggles = {
+        toggles = beaker_config.tools_enabled
+        toggles.update({
             attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): value == "true"
             for attr, value in os.environ.items() if attr.startswith(TOOL_TOGGLE_PREFIX)
-        }
+        })
         toggles.update({
             attr.removeprefix(TOOL_TOGGLE_PREFIX).lower(): getattr(self, attr)
             for attr in dir(self) if attr.startswith(TOOL_TOGGLE_PREFIX)
@@ -147,7 +148,6 @@ class BeakerContext:
             raise ValueError("Refusing loopback connection")
         subkernel = kernel_opts[language](subkernel_id, kernels[matching], self)
         self.beaker_kernel.server.set_proxy_target(subkernel.connected_kernel)
-        self.beaker_kernel.server.session_id = str(uuid.uuid4())
         return subkernel
 
 

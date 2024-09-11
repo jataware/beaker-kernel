@@ -5,6 +5,7 @@ import re
 import toml
 from dataclasses import dataclass, field, MISSING
 from pathlib import Path
+from typing import Callable, Any
 from typing_extensions import Self
 
 
@@ -19,6 +20,16 @@ def new_token():
     return binascii.hexlify(os.urandom(24)).decode("ascii")
 
 
+def normalize_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    elif isinstance(value, str):
+        # Hard-coded "True" values. Anything else is False.
+        return value.lower() in ('true', 'y', 't', '1')
+    else:
+        return False
+
+
 def envfield(
     config_var: str,
     description: str,
@@ -28,6 +39,7 @@ def envfield(
     sensitive: bool = False,
     aliases: list[str] = None,
     save_default_value: bool = False,
+    normalize_function: Callable[[Any], Any] = MISSING
 ):
     def dynamic_factory():
         # Get value if defined
@@ -43,11 +55,15 @@ def envfield(
 
         # Fill in default definitions based on above findings and arguments
         if env_value is not MISSING:
-            return env_value
+            value = env_value
         elif default is not MISSING:
-            return default
+            value = default
         elif default_factory is not MISSING:
-            return default_factory()
+            value = default_factory()
+
+        if normalize_function is not MISSING:
+            value = normalize_function(value)
+        return value
 
     return field(
         metadata={
@@ -91,6 +107,14 @@ class ConfigClass:
         sensitive=True,
         aliases=["OPENAI_API_KEY"],
     )
+    ENABLE_CHECKPOINTS: bool = envfield(
+        "ENABLE_CHECKPOINTS",
+        "Flag as to whether checkpoints are enabled or not.",
+        default=True,
+        sensitive=False,
+        save_default_value=True,
+        normalize_function=normalize_bool,
+    )
 
     @classmethod
     def from_config_file(cls, config_file_path: Path|str|None = None, load_dotenv=True):
@@ -106,11 +130,14 @@ class ConfigClass:
             dotenv.load_dotenv(dotenv_path=env_file)
 
         # Create instance, passing in only options that are defined as fields
-        return cls(**{
+        instance = cls(**{
             option: value
             for option, value in config_data.items()
-            if option in cls.__dataclass_fields__
+            if option in cls.__dataclass_fields__ and not option.startswith('_')
         })
+
+        instance._tools_enabled = config_data.get('tools_enabled', {})
+        return instance
 
     def update(self, updates: dict, config_file_path: Path|str|None = None):
         if config_file_path is None:
@@ -123,6 +150,7 @@ class ConfigClass:
             config_data = {}
         print(f"Writing to {config_file}")
         for var_name, value in updates.items():
+            self.__dict__[var_name] = value
             config_data[var_name] = value
         config_file.write_text(toml.dumps(config_data))
 
@@ -140,6 +168,10 @@ class Config(ConfigClass):
                 self.config_obj = ConfigClass.from_config_file()
             return getattr(self.config_obj, name)
         raise AttributeError
+
+    @property
+    def tools_enabled(self) -> dict[str, bool]:
+        return getattr(self.config_obj, '_tools_enabled', {})
 
 config = Config()
 
