@@ -1,12 +1,14 @@
 import binascii
 import dotenv
+import logging
 import os
-import re
 import toml
 from dataclasses import dataclass, field, MISSING
 from pathlib import Path
 from typing import Callable, Any
 from typing_extensions import Self
+
+logger = logging.getLogger(__name__)
 
 
 CONFIG_FILE_SEARCH_LOCATIONS = [  # (path, filename, check_parent_paths, default)
@@ -14,6 +16,43 @@ CONFIG_FILE_SEARCH_LOCATIONS = [  # (path, filename, check_parent_paths, default
     (Path("~/.config").expanduser(), 'beaker.conf', False, True),
     (Path("~").expanduser(), '.beaker.conf', False, False),
 ]
+
+
+def locate_config(start_path: str|Path|None = None) -> Path | None:
+    """
+    Returns the location of the used Beaker config file or default location is no config file is found
+    """
+    # Avoid circular imports
+    from .utils import find_file_along_path
+
+    default_location = None
+    if start_path is not None:
+        locations = [(Path(start_path), '.beaker.conf', True, True)] + CONFIG_FILE_SEARCH_LOCATIONS
+    else:
+        locations = CONFIG_FILE_SEARCH_LOCATIONS
+    for path, filename, recurse, is_default in locations:
+        if recurse:
+            location = find_file_along_path(filename, path)
+        else:
+            location = Path(path) / filename
+        if isinstance(location, Path):
+            if location.exists():
+                return location
+            if is_default and default_location is None:
+                default_location = location
+    return default_location
+
+
+def locate_envfile() -> str:
+    """
+    Returns the location of the used envfile or default location is no envfile found
+    """
+    envfile = dotenv.find_dotenv()
+    if envfile:
+        envfile = os.path.abspath(envfile)
+    else:
+        envfile = os.path.abspath(os.path.join(os.path.curdir, ".env"))
+    return envfile
 
 
 def new_token():
@@ -112,7 +151,6 @@ class ConfigClass:
         "Flag as to whether checkpoints are enabled or not.",
         default=True,
         sensitive=False,
-        save_default_value=True,
         normalize_function=normalize_bool,
     )
 
@@ -178,40 +216,3 @@ config = Config()
 
 def reset_config():
     config.config_obj = None
-
-
-def locate_config(start_path: str|Path|None = None) -> Path | None:
-    """
-    Returns the location of the used Beaker config file or default location is no config file is found
-    """
-    # Avoid circular imports
-    from .utils import find_file_along_path
-
-    default_location = None
-    if start_path is not None:
-        locations = [(Path(start_path), '.beaker.conf', True, True)] + CONFIG_FILE_SEARCH_LOCATIONS
-    else:
-        locations = CONFIG_FILE_SEARCH_LOCATIONS
-    for path, filename, recurse, is_default in locations:
-        if recurse:
-            location = find_file_along_path(filename, path)
-        else:
-            location = Path(path) / filename
-        if isinstance(location, Path):
-            if location.exists():
-                return location
-            if is_default and default_location is None:
-                default_location = location
-    return default_location
-
-
-def locate_envfile() -> str:
-    """
-    Returns the location of the used envfile or default location is no envfile found
-    """
-    envfile = dotenv.find_dotenv()
-    if envfile:
-        envfile = os.path.abspath(envfile)
-    else:
-        envfile = os.path.abspath(os.path.join(os.path.curdir, ".env"))
-    return envfile
