@@ -32,7 +32,7 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
             beakerSession,
             notebook,
             selectedCellId,
-            cellCount,        
+            cellCount,
         }
     },
 
@@ -168,10 +168,14 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
                 cell = this.selectedCell();
             }
             const index = this.notebook.cells.findIndex((cellModel) => cellModel === cell.cell);
-            if (!this.selectNextCell()) {
-                this.selectPrevCell();
+            if (index > -1) {
+                if (cell === this.selectedCell()) {
+                    if (!this.selectNextCell()) {
+                        this.selectPrevCell();
+                    }
+                }
+                return this.notebook.cutCell(index);
             }
-            return this.notebook.cutCell(index);
         },
 
         convertCellType(cell: IBeakerCell, cellType: string) {

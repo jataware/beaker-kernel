@@ -395,7 +395,7 @@ app {
     display: grid;
     grid-template:
         "header" max-content
-        "main" auto
+        "main" 1fr
         "footer" max-content /
         100%;
 }
@@ -413,9 +413,11 @@ main {
     display: grid;
     grid-template:
         "left-panel center-panel right-panel" 100% /
-        min-content auto min-content;
+        min-content minmax(30%, 100%) min-content;
     background-color: var(--surface-0);
-    overflow: auto;
+    overflow: hidden auto;
+    max-width: 100%;
+    max-height: 100%;
 }
 
 footer {

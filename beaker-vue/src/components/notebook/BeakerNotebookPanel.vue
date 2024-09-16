@@ -7,6 +7,7 @@
             v-for="(cell, index) in session.notebook.cells"
             :cell="cell"
             :selected="cell.id === notebook.selectedCellId"
+            :index="index"
             :key="`outercell-${cell.id}`"
             class="beaker-cell"
             :class="{
@@ -67,7 +68,6 @@ function arrayMove(arr, old_index, new_index) {
 
 function handleMoveCell(fromIndex, toIndex) {
     arrayMove(session.notebook.cells, fromIndex, toIndex)
-    notebook.selectCell(toIndex);
 }
 
 /**
@@ -150,13 +150,53 @@ defineExpose({
 <style lang="scss">
 .cell-container {
     position: relative;
-    display: flex;
     flex: 1;
-    flex-direction: column;
     background-color: var(--surface-a);
     z-index: 3;
     overflow: auto;
-    row-gap: 4px;
+    width: 100%;
+    height: 100%;
+
+
+    // > .beaker-cell:nth-child(1n+2) {
+    //     border-top: 6px solid var(--primary-900);
+    // }
+
+    // Separators between cells
+
+    > .beaker-cell {
+        padding-top: 2px;
+        border-collapse: separate;
+
+        // &:not(.collapsed):after {
+        //     content: "";
+        //     position: absolute;
+        //     height: 4px;
+        //     left: 0;
+        //     bottom: -2px;
+        //     right: 0px;
+        //     z-index: 2;
+        //     background-color: var(--surface-border);
+        // }
+
+        // &.collapsed {
+
+        //     .cm-editor {
+        //         max-height: var(--collapsed-height);
+        //     }
+        //     max-height: var(--collapsed-height);
+
+        //     &:after {
+        //         content: "";
+        //         position: absolute;
+        //         bottom: -2px;
+        //         left: 0;
+        //         right: 0;
+        //         height: 16px;
+        //         box-shadow: inset 0 -10px 8px -4px var(--surface-border);
+        //     }
+        // }
+    }
 }
 
 .drop-overflow-catcher {
