@@ -88,6 +88,7 @@ const minimizeIndicator = ref<boolean>(false);
 // }
 
 var minWidth: number;
+var maxWidth: number;
 var menuWidth: number;
 var closedWidth: number;
 
@@ -145,10 +146,12 @@ const startDrag = (evt: MouseEvent) => {
     menuWidth = gutterRef.value.clientWidth + menuRef.value.clientWidth;
     closedWidth = menuWidth + MINIMIZE_INDICATION_WIDTH;
     minWidth = menuWidth + AUTO_CLOSE_MARGIN;
+    maxWidth = window.innerWidth * 0.70;
 };
 
 const moveDrag = (evt: MouseEvent) => {
     let width: number;
+    let resize = true;
     dragDistance.value = evt.x - dragStartPos.value;
     if (props.position === "left") {
         width = dragStartWidth.value + dragDistance.value;
@@ -157,17 +160,30 @@ const moveDrag = (evt: MouseEvent) => {
         width = dragStartWidth.value - dragDistance.value;
     }
     if (width <= minWidth) {
+        resize = false;
         // Will be minimizing
         if (panelWidth.value != closedWidth) {
             console.log('minimzing');
-            panelWidth.value = closedWidth;
+            resize = true;
+            width = closedWidth;
             minimizeIndicator.value = true;
         }
     }
     else {
-        panelWidth.value = width;
         minimizeIndicator.value = false;
     }
+    if (width >= maxWidth) {
+        resize = false;
+        if (panelWidth.value != maxWidth) {
+            width = maxWidth
+            resize = true;
+        }
+    }
+
+    if (resize) {
+        panelWidth.value = width;
+    }
+
 
 }
 

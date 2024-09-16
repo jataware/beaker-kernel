@@ -425,8 +425,10 @@ const snapshot = () => {
 // }
 
 .notebook-container {
-    display: flex;
+    display:flex;
     height: 100%;
+    // width: 100%;
+    max-width: 100%;
 }
 
 .beaker-notebook {
@@ -434,6 +436,7 @@ const snapshot = () => {
     border: 2px solid var(--surface-border);
     border-radius: 0;
     border-top: 0;
+    max-width: 100%;
     // border-bottom: 10px;
     // border-left: 2px;
     // border-right: 2px;

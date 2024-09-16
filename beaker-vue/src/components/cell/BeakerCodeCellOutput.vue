@@ -42,9 +42,9 @@ const rebundleError = (errorOutput) => {
 
 
 <style lang="scss">
-@import url('@jupyterlab/outputarea/style/base.css');
-@import url('@jupyterlab/rendermime/style/base.css');
-@import url('@jupyterlab/notebook/style/base.css');
+// @import url('@jupyterlab/outputarea/style/base.css');
+// @import url('@jupyterlab/rendermime/style/base.css');
+// @import url('@jupyterlab/notebook/style/base.css');
 
 .code-cell-output {
     --collapse-height: 3em;
@@ -52,7 +52,6 @@ const rebundleError = (errorOutput) => {
     padding: 0 0.5em 0.5em 0;
     background-color: var(--surface-c);
     position: relative;
-    overflow-x: auto;
     .execute_result {
         pre {
             white-space: break-spaces;

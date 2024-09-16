@@ -262,9 +262,6 @@ export default {
 
 
 <style lang="scss">
-.llm-query-cell {
-    padding: 0rem 0.35rem 1rem 1.2rem;
-}
 
 .query-row {
     display: flex;
