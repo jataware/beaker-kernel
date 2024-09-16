@@ -25,6 +25,7 @@ services:
     command: ["beaker", "dev", "watch", "--ip", "0.0.0.0"]
   ui:
     image: node:20
+    user: node
     volumes:
       - ./beaker-vue:/ui
       - ./beaker-ts:/beaker-ts

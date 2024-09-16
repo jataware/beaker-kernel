@@ -30,30 +30,69 @@
                     small
                     icon="pi pi-ellipsis-v"
                     @click.prevent="hoverMenuRef.toggle($event);"
+                    v-tooltip="'Cell Menu'"
                 />
                 <OverlayPanel
                     class="menu-overlay"
                     ref="hoverMenuRef"
                     :popup="true"
                 >
-                    <Dropdown
-                        class="cell-type-selector"
-                        :model-value="cell.cell_type"
-                        @update:model-value="(value) => notebook.convertCellType(cell, value)"
-                        :options="Object.keys(cellMap || {})"
-                        :dropdown-icon="cellIcon"
-                    >
-                        <template #value="slotProps">
-                            <span :class="cellIconMap[slotProps.value]"></span>
-                        </template>
+                    <div v-tooltip="'Change Cell Type'">
+                        <Dropdown
+                            :name="`${cell.id}-celltype`"
+                            class="cell-type-selector overlay-menu-button"
+                            :model-value="cell.cell_type"
+                            @update:model-value="(value) => {notebook.convertCellType(cell, value); hoverMenuRef.hide();}"
+                            :options="Object.keys(cellMap || {})"
+                            :dropdown-icon="cellIcon"
+                        >
+                            <template #value="slotProps">
+                                <span :class="cellIconMap[slotProps.value]"></span>
+                            </template>
 
-                        <template #option="slotProps">
-                            <div class="cell-type-dropdown-item">
-                                <span :class="cellIconMap[slotProps.option]"></span>
-                                <span>{{ slotProps.option }}</span>
-                            </div>
-                        </template>
-                    </Dropdown>
+                            <template #option="slotProps">
+                                <div class="cell-type-dropdown-item">
+                                    <span :class="cellIconMap[slotProps.option]"></span>
+                                    <span>{{ slotProps.option }}</span>
+                                </div>
+                            </template>
+                        </Dropdown>
+                    </div>
+                    <Button
+                        v-tooltip="'Execute cell'"
+                        @click="beakerSession.findNotebookCellById(cell.id).execute(); hoverMenuRef.hide();"
+                        icon="pi pi-play"
+                        size="small"
+                        text
+                    />
+                    <Button
+                        v-tooltip="'Remove cell'"
+                        @click="notebook.removeCell(beakerSession.findNotebookCellById(cell.id)); hoverMenuRef.hide();"
+                        icon="pi pi-minus"
+                        size="small"
+                        text
+                    />
+                    <Button
+                        v-tooltip="'Move cell up'"
+                        @click="moveUp(); hoverMenuRef.hide();"
+                        icon="pi pi-chevron-up"
+                        size="small"
+                        text
+                    />
+                    <Button
+                        v-tooltip="'Move cell down'"
+                        @click="moveDown(); hoverMenuRef.hide();"
+                        icon="pi pi-chevron-down"
+                        size="small"
+                        text
+                    />
+                    <Button
+                        v-tooltip="'Cut cell'"
+                        @click="notebook.removeCell(beakerSession.findNotebookCellById(cell.id)); hoverMenuRef.hide();"
+                        size="small"
+                        text
+                        label="✂"
+                    />
                 </OverlayPanel>
             </div>
         </slot>
@@ -68,7 +107,7 @@
 
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed } from "vue";
+import { defineProps, defineEmits, ref, inject, computed } from "vue";
 import Button from 'primevue/button';
 import DraggableMarker from './DraggableMarker.vue';
 import BeakerCodeCell from './BeakerCodeCell.vue';
@@ -80,6 +119,7 @@ import BeakerRawCell from './BeakerRawCell.vue';
 import { BeakerBaseCell, type IBeakerCell } from "beaker-kernel";
 import Dropdown from 'primevue/dropdown';
 import OverlayPanel from 'primevue/overlaypanel';
+import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 export type CellTypes =
     | typeof BeakerRawCell
@@ -89,11 +129,16 @@ export type CellTypes =
 
 export interface Props {
     cell: IBeakerCell;
+    index?: number;
     dragEnabled?: boolean;
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits([
+    'move-cell',
+]);
 
+const beakerSession = inject<BeakerSessionComponentType>('beakerSession');
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const cellMap = inject("cell-component-mapping");
 
@@ -134,6 +179,18 @@ const collapseCell = (evt) => {
     }
 };
 
+const moveUp = () => {
+    if (props.index > 0) {
+        emit("move-cell", props.index, props.index - 1);
+    }
+}
+
+const moveDown = () => {
+    if (props.index < notebook.cellCount - 1) {
+        emit("move-cell", props.index, props.index + 1);
+    }
+}
+
 </script>
 
 <style lang="scss">
@@ -144,6 +201,8 @@ const collapseCell = (evt) => {
     position: relative;
     background-color: var(--surface-a);
     --collapsed-height: 3.5em;
+    min-height: 3.5em;
+    // width: 100%;
 
     grid:
         "collapse-box drag-handle cell-contents hover-menu" 2em
@@ -164,7 +223,7 @@ const collapseCell = (evt) => {
         position: absolute;
         height: 4px;
         left: 0;
-        bottom: -4px;
+        bottom: -2px;
         right: 0px;
         z-index: 0;
         background-color: var(--surface-border);
@@ -172,20 +231,22 @@ const collapseCell = (evt) => {
 
     &.collapsed {
 
+        // filter: drop-shadow(0 0.5rem 0.3rem crimson);
+
         .cm-editor {
             max-height: var(--collapsed-height);
         }
         max-height: var(--collapsed-height);
 
-        &:after {
-            content: "";
-            position: absolute;
-            bottom: -4px;
-            left: 0;
-            right: 0;
-            height: 16px;
-            box-shadow: inset 0 -10px 8px -4px var(--surface-border);
-        }
+        // &:after {
+        //     content: "";
+        //     position: absolute;
+        //     bottom: -4px;
+        //     left: 0;
+        //     right: 0;
+        //     height: 16px;
+        //     box-shadow: inset 0 -10px 8px -4px var(--surface-border);
+        // }
     }
 
     &.selected.collapsed .collapse-box {
@@ -202,7 +263,7 @@ const collapseCell = (evt) => {
             position: absolute;
             z-index: 200;
             height: 10px;
-            bottom: -8px;
+            bottom: -2px;
             left: 0;
             right: 0;
             background-color: var(--wave-color);
@@ -230,7 +291,7 @@ const collapseCell = (evt) => {
 
 .cell-contents {
   grid-area: cell-contents;
-  margin: 0.25em 0;
+  margin: 0.5em 0;
 }
 
 .drag-handle {
@@ -302,19 +363,37 @@ const collapseCell = (evt) => {
     }
 }
 
-.menu-overlay .p-overlaypanel-content{
-    padding: 0.2rem 3rem;
+.menu-overlay {
+    .p-overlaypanel-content{
+        display: flex;
+        flex-direction: column;
+        padding: 0.8rem;
+        row-gap: 0.5rem;
+    }
+
+    .p-button, .overlay-menu-button {
+        background-color: var(--surface-a);
+        color: var(--primary-color);
+        --shadow: #777;
+        aspect-ratio: 1 / 1;
+        width: 1.75rem;
+        padding: 0;
+        border-color: var(--surface-border);
+        box-shadow: 0px 3px 1px -2px color(from var(--shadow) srgb r g b / 0.5),
+                    0px 2px 2px 0px color(from var(--shadow) srgb r g b / 0.25),
+                    0px 1px 5px 0px color(from var(--shadow) srgb r g b / 0.22);
+        .pi {
+            color: var(--primary-color);
+        }
+    }
+
 }
 
 .cell-type-selector {
     grid-area: cell-type-dropdown;
     margin-left: auto;
     margin-right: auto;
-    width: 1.5rem;
-    aspect-ratio: 1 / 1;
-    padding: 0;
-    border-color: var(--surface-border);
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
 
