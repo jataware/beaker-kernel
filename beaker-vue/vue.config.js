@@ -19,12 +19,6 @@ module.exports = defineConfig({
       entry: 'src/pages/dev-interface.ts',
       title: "Beaker Development Interface",
     },
-    // cell: {
-    //   entry: 'src/pages/cell.ts',
-    // },
-    // playground: {
-    //   entry: 'src/pages/playground.ts',
-    // },
   },
   css: { extract: false },
   assetsDir: "static/",
@@ -68,7 +62,11 @@ module.exports = defineConfig({
       '^/summary': {
         target: 'http://jupyter:8888',
         changeOrigin: true,
-      }
+      },
+      '^/files': {
+        target: 'http://jupyter:8888',
+        changeOrigin: true,
+      },
     },
   }
 })
