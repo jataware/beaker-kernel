@@ -11,7 +11,7 @@
       />
       <form ref="uploadForm">
         <input
-          @change="onSelectFile"
+          @change="onSelectFilesForUpload"
           ref="fileInput"
           type="file"
           multiple
@@ -33,7 +33,9 @@
     </div>
 
     <DataTable :value="files" size="small" stripedRows class="file-table" removableSort
-               @row-dblclick="doubleClick" resizableColumns columnResizeMode="fit" rowHover :loading="tableLoading">
+               @row-dblclick="doubleClick" resizableColumns columnResizeMode="fit" rowHover :loading="tableLoading"
+               @dragover="fileDragOver" @drop="fileDrop"
+               >
         <Column header="" class="download-column">
           <template #body="slotProps">
             <Button
@@ -74,7 +76,7 @@
 
 <script lang="ts" setup>
 
-import { ref, inject, defineProps, onMounted, computed, defineEmits } from "vue";
+import { ref, inject, capitalize, defineProps, onMounted, computed, defineEmits } from "vue";
 import Button from 'primevue/button';
 import 'vue-json-pretty/lib/styles.css';
 import Column from 'primevue/column';
@@ -83,7 +85,7 @@ import cookie from 'cookie';
 import {filesize} from 'filesize';
 import {Time} from '@jupyterlab/coreutils/src/time';
 
-import { ContentsManager } from '@jupyterlab/services';
+import { ContentsManager, Contents } from '@jupyterlab/services';
 
 const curDir = ref<string>('.');
 
@@ -177,29 +179,94 @@ const getFileContents = async (fileData) => {
   }
 }
 
-const onSelectFile = () => {
-  const url = "/upload";
-  const formData = new FormData(uploadForm.value);
-  const uploadFuture = fetch(url, {
-    method: "post",
-    body: formData,
-  }).then(async (response) => {
-    const text = await response.text();
-    if (response.status === 200) {
-      showToast({title: 'Upload complete', detail: text, severity: 'success', life: 4000});
+const fileDragOver = (event: DragEvent) => {
+  // Prevent default to allow dropping if a file is being dragged. Otherwise don't allow dropping here.
+  const hasFile = [...event.dataTransfer.items].filter((i) => (i.kind === 'file')).length > 0;
+  if (hasFile) {
+    event.preventDefault();
+  }
+};
+
+const fileDrop = async (event: DragEvent) => {
+  // Prevent default behavior (Prevent file from being opened)
+  event.preventDefault();
+  await uploadFiles(event.dataTransfer.files);
+}
+
+const onSelectFilesForUpload = async () => {
+  // Fetch files from form element
+  const fileList = uploadForm.value['uploadfiles']?.files;
+  await uploadFiles(fileList);
+}
+
+const uploadFiles = async (files: FileList) => {
+  const results = [];
+  const promises = Array.from(files).map(async (file) => {
+    const fullPath = `${curDir.value}/${file.name}`;
+    const bytes = [];
+    const reader = file.stream().getReader();
+    var chunk = (await reader.read()).value;
+    while (chunk?.length > 0) {
+      bytes.push(Array.from(chunk, (byte) => String.fromCharCode(byte)).join(""));
+      chunk = (await reader.read()).value;
+    }
+    const type = (file.type !== "" ? file.type : "application/octet-stream");
+    const content = btoa(bytes.join(""));
+    const format = 'base64';
+
+    const fileObj: Partial<Contents.IModel> = {
+      type,
+      format,
+      content,
+    };
+
+    let result;
+    try {
+      result = await contentManager.save(fullPath, fileObj);
+    }
+    catch(e) {
+      showToast({
+        title: 'Upload failed',
+        detail: `Unable to upload file "${fullPath}": ${e}`,
+        severity: 'error',
+        life: 8000
+      });
+      return;
+    }
+    if (result && result.created && result.size) {
+      showToast({
+        title: 'Upload complete',
+        detail: `File "${result.path}" (${result.size} bytes) successfully uploaded.`,
+        severity: 'success',
+        life: 4000
+      });
     }
     else {
-      showToast({title: 'Upload failed', detail: text, severity: 'error', life: 8000});
+      showToast({
+        title: 'Upload failed',
+        detail: `Unable to upload file "${fullPath}".`,
+        severity: 'error',
+        life: 8000
+      });
     }
-    await refreshFiles();
-  }).catch(async (error) => {
-    showToast({title: 'Upload failed', detail: `There was an error trying to upload: ${error}`, severity: 'error', life: 8000});
-    await refreshFiles();
   });
+  // Wait for all uploads to complete, then refresh the file list.
+  await Promise.all(promises);
+  await refreshFiles();
+  return results;
 }
 
 const downloadFile = async (file) => {
-  const url = `/download/${file.name}`;
+  let url = await contentManager.getDownloadUrl(file.path);
+  // Ensure we are downloading. Add the download query param
+  if (!/download=/.test(url)) {
+    if (/\?/.test(url)) {
+      url = url + "&download=1"
+    }
+    else {
+      url = url + "?download=1"
+    }
+  }
   window.location.href = url;
 };
 

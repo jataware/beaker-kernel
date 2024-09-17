@@ -86,13 +86,13 @@
                         size="small"
                         text
                     />
-                    <Button
+                    <!-- <Button
                         v-tooltip="'Cut cell'"
                         @click="notebook.removeCell(beakerSession.findNotebookCellById(cell.id)); hoverMenuRef.hide();"
                         size="small"
                         text
                         label="✂"
-                    />
+                    /> -->
                 </OverlayPanel>
             </div>
         </slot>
