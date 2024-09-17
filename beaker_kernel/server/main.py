@@ -13,6 +13,7 @@ from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
 from jupyter_server.serverapp import ServerApp
 from jupyter_server.services.kernels.handlers import MainKernelHandler, json_default
+from jupyter_server.services.contents.handlers import ContentsHandler
 from jupyter_server.utils import url_escape, url_path_join
 from jupyterlab_server import LabServerApp
 from tornado import web, httputil
@@ -116,12 +117,11 @@ class MainHandler(StaticFileHandler):
                 )
                 return self.redirect(to_url, permanent=False)
             path = os.path.relpath(validated_path, self.root)
-
         # Otherwise, serve files as normal
 
         # Ensure a proper xsrf cookie value is set.
         cookie_name = self.settings.get("xsrf_cookie_name", "_xsrf")
-        xsrf_token=self.xsrf_token.decode("utf8")
+        xsrf_token = self.xsrf_token.decode("utf8")
         xsrf_cookie = self.request.cookies.get(cookie_name, None)
         if not xsrf_cookie or xsrf_cookie.value != xsrf_token:
             kwargs = self.settings.get("xsrf_cookie_kwargs", {})
@@ -155,6 +155,15 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
             "wsUrl": os.environ.get("JUPYTER_WS_URL", ws_url),
             "token": config.JUPYTER_TOKEN,
         }
+
+        # Ensure a proper xsrf cookie value is set.
+        cookie_name = self.settings.get("xsrf_cookie_name", "_xsrf")
+        xsrf_token = self.xsrf_token.decode("utf8")
+        xsrf_cookie = self.request.cookies.get(cookie_name, None)
+        if not xsrf_cookie or xsrf_cookie.value != xsrf_token:
+            kwargs = self.settings.get("xsrf_cookie_kwargs", {})
+            self.set_cookie(cookie_name, xsrf_token, **kwargs)
+
         return self.write(config_data)
 
 
@@ -193,19 +202,19 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         return self.write(context_data)
 
 
-class UploadHandler(RequestHandler):
-    def post(self):
-        filenames = []
-        for file in self.request.files["uploadfiles"]:
-            # Files are actually an array within an array?
-            filename = file["filename"]
-            if os.path.exists(filename):
-                self.write(f"'{filename}' already exists.")
-                raise HTTPError(401)
-            with open(filename, 'wb') as output_file:
-                output_file.write(file["body"])
-            filenames.append(filename)
-        self.finish(f"Saved files {', '.join(filenames)} uploaded.")
+# class UploadHandler(RequestHandler):
+#     def post(self):
+#         filenames = []
+#         for file in self.request.files["uploadfiles"]:
+#             # Files are actually an array within an array?
+#             filename = file["filename"]
+#             if os.path.exists(filename):
+#                 self.write(f"'{filename}' already exists.")
+#                 raise HTTPError(401)
+#             with open(filename, 'wb') as output_file:
+#                 output_file.write(file["body"])
+#             filenames.append(filename)
+#         self.finish(f"Saved files {', '.join(filenames)} uploaded.")
 
 
 class DownloadHandler(RequestHandler):
@@ -382,16 +391,31 @@ class BeakerJupyterApp(LabServerApp):
 
     def initialize_handlers(self):
         """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""
+        # Build up static and page definitions for handler pages and static files
+        pages = []
+        statics = []
+        for file in os.listdir(self.ui_path):
+            if file.startswith(('_', '.')):
+                continue
+            if file.endswith(".html"):
+                pages.append(os.path.splitext(file)[0])
+            else:
+                if os.path.isdir(os.path.join(self.ui_path, file)):
+                    statics.append(f"{file}/")
+                else:
+                    statics.append(f"{file}$")
+        page_handler = ("/((" + "|".join(pages) + "))", MainHandler, {"path": self.ui_path, "default_filename": "index.html"})
+        static_handler = ("/((" + "|".join(statics) + ").*)", StaticFileHandler, {"path": self.ui_path})
+
         self.handlers.append((r"/api/kernels", SafeKernelHandler))
         self.handlers.append(("/contexts", ContextHandler))
         self.handlers.append(("/config", ConfigHandler))
         self.handlers.append(("/stats", StatsHandler))
         self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": self.ui_path, "default_filename": "admin.html"}))
-        self.handlers.append(("/notebook", NotebookHandler))
-        self.handlers.append((r"/upload", UploadHandler))
-        self.handlers.append((r"/download/(.*)", DownloadHandler))
         self.handlers.append((r"/summary", SummaryHandler))
-        self.handlers.append((r"(?!api)(?P<path>.*)", MainHandler, {"path": self.ui_path, "default_filename": "index.html"}))
+        self.handlers.append((f"/()", MainHandler, {"path": self.ui_path, "default_filename": "index.html"}))
+        self.handlers.append(static_handler)
+        self.handlers.append(page_handler)
         super().initialize_handlers()
 
     def initialize_settings(self):
