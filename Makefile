@@ -6,7 +6,8 @@ init:
 	make .env beaker-vue/node_modules
 
 .PHONY:build
-build:beaker_kernel/server/ui/index.html
+build:
+	rm -r beaker-ts/dist/* beaker-vue/dist/* beaker_kernel/server/ui/* || true
 	make beaker_kernel/server/ui/index.html
 	hatch build
 
@@ -44,7 +45,7 @@ beaker-vue/node_modules:beaker-vue/package*.json
 beaker_kernel/server/ui/index.html:beaker-vue/node_modules beaker-vue/**
 	rm -r beaker_kernel/server/ui/* || true; \
 	(cd beaker-ts/ && npm install && npm run build) && \
-	(cd beaker-vue/ && npm run build) && \
+	(cd beaker-vue/ && npm install && npm run build) && \
 	cp -r beaker-vue/dist/html/* beaker_kernel/server/ui/
 
 .PHONY:changed-files

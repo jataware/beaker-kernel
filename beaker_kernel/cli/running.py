@@ -5,13 +5,11 @@ import sys
 import click
 import webbrowser
 
-from .helpers import ensure_config
 
 
 @click.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
-@ensure_config
 def notebook(ctx, extra_args):
     """
     Start Beaker in local mode and opens a notebook.
@@ -31,7 +29,6 @@ def notebook(ctx, extra_args):
 @click.group(name="dev", invoke_without_command=True)
 @click.option("--no-open-notebook", "-n", is_flag=True, default=False, type=bool, help="Prevent opening the notebook in a webbrowser.")
 @click.pass_context
-@ensure_config
 def dev(ctx: click.Context, no_open_notebook):
     """
     Start Beaker server in development mode. (Subcommands available)

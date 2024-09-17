@@ -3,6 +3,7 @@ import logging
 import re
 import typing
 
+from archytas.agent import Message
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
@@ -14,10 +15,15 @@ if typing.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+class AgentAuthenticationError(Exception):
+    pass
+
+
 class BeakerAgent(ReActAgent):
 
     context: "BeakerContext"
-    MODEL: str = "gpt-4-turbo-preview"
+    MODEL: str = config.LLM_SERVICE_MODEL
 
     def __init__(
         self,
@@ -32,8 +38,8 @@ class BeakerAgent(ReActAgent):
             "verbose": self.context.beaker_kernel.verbose,
         })
         super().__init__(
-            model=self.MODEL,  # Use default
-            api_key=config.LLM_SERVICE_TOKEN,  # TODO: get this from configuration
+            model=self.MODEL,
+            api_key=config.LLM_SERVICE_TOKEN,
             tools=tools,
             verbose=self.context.beaker_kernel.verbose,
             spinner=None,
@@ -43,6 +49,29 @@ class BeakerAgent(ReActAgent):
             **kwargs
         )
 
+    async def execute(self, additional_messages: list[Message] = None) -> str:
+        import openai
+        try:
+            return await super().execute(additional_messages or [])
+        except (openai.AuthenticationError) as e:
+            raise AgentAuthenticationError(e)
+        except (openai.OpenAIError) as e:
+            if "The api_key client option must be set" in str(e):
+                raise AgentAuthenticationError(e)
+            else:
+                raise
+
+    async def oneshot(self, prompt: str, query: str) -> str:
+        import openai
+        try:
+            return await super().oneshot(prompt, query)
+        except (openai.AuthenticationError,) as e:
+            raise AgentAuthenticationError(e)
+        except (openai.OpenAIError) as e:
+            if "The api_key client option must be set" in str(e):
+                raise AgentAuthenticationError(e)
+            else:
+                raise
 
     def get_info(self):
         """

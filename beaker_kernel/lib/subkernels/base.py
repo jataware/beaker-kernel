@@ -32,7 +32,7 @@ class BeakerSubkernel(abc.ABC):
 
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
-    TOOLS: list[tuple[Callable, bool]]  = []
+    TOOLS: list[tuple[Callable, Callable]]  = []
 
     FETCH_STATE_CODE: str = ""
 
@@ -43,7 +43,7 @@ class BeakerSubkernel(abc.ABC):
 
     @property
     def tools(self):
-        return [tool for tool, condition in self.TOOLS if condition]
+        return [tool for tool, condition in self.TOOLS if condition()]
 
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context: BeakerContext):
         self.jupyter_id = jupyter_id
@@ -196,16 +196,19 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
 # Provided for backwards compatibility
 BaseSubkernel = BeakerSubkernel
 
+def is_checkpointing_enabled():
+    return getattr(config, "ENABLE_CHECKPOINTS", True)
+
 class CheckpointableBeakerSubkernel(BeakerSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"
 
     TOOLS = [
-        (run_code, env_enabled("ENABLE_CHECKPOINTS"))
+        (run_code, is_checkpointing_enabled),
     ]
 
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         super().__init__(jupyter_id, subkernel_configuration, context)
-        self.checkpoints_enabled = env_enabled("ENABLE_CHECKPOINTS")
+        self.checkpoints_enabled = is_checkpointing_enabled()
         if self.checkpoints_enabled:
             self.checkpoints : list[Checkpoint] = []
             self.storage_prefix = mkdtemp()
@@ -252,13 +255,13 @@ class CheckpointableBeakerSubkernel(BeakerSubkernel):
         await self.load_checkpoint(checkpoint)
         self.checkpoints = self.checkpoints[:checkpoint_index + 1]
 
-    @action(action_name="rollback", enabled=env_enabled("ENABLE_CHECKPOINTS"))
+    @action(action_name="rollback", enabled=is_checkpointing_enabled)
     async def rollback_action(self, message):
         checkpoint_index = message.content.get("checkpoint_index", None)
         await self.rollback(checkpoint_index)
     rollback_action._default_payload = "{\n\t\"checkpoint_index\": 0\n}"
 
-    @action(action_name="add_checkpoint", enabled=env_enabled("ENABLE_CHECKPOINTS"))
+    @action(action_name="add_checkpoint", enabled=is_checkpointing_enabled)
     async def add_checkpoint_action(self, message):
         return await self.add_checkpoint()
     add_checkpoint_action._default_payload = "{}"

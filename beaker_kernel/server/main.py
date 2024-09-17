@@ -92,16 +92,30 @@ class MainHandler(StaticFileHandler):
     Handle the main interface to properly set a session
     """
     async def get(self, path: str, include_body: bool = True) -> None:
+
+        url_path = self.parse_url_path(path)
+        absolute_path = self.get_absolute_path(self.root, url_path)
+        try:
+            validated_path = self.validate_absolute_path(self.root, absolute_path)
+        except HTTPError as e:
+            # If path cannot be found, check again with a .html extension
+            if e.status_code == 404:
+                html_path = f"{absolute_path}.html"
+                validated_path = self.validate_absolute_path(self.root, html_path)
+            else:
+                raise
+
         # If no session is provided on a root request, generate a session uuid and redirect to it
-        if path == "":
+        if validated_path.endswith('.html'):
             session_id = self.get_query_argument("session", None)
             if not session_id:
                 session_id = str(uuid.uuid4())
                 to_url = httputil.url_concat(
-                    path,
+                    f"{'/' if path.startswith('/') else '' }{path}",
                     {"session": session_id},
                 )
                 return self.redirect(to_url, permanent=False)
+            path = os.path.relpath(validated_path, self.root)
 
         # Otherwise, serve files as normal
 
@@ -313,7 +327,7 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
             },
             "sessions": sessions,
             "kernels": kernels,
-            "token": os.environ.get("JUPYTER_TOKEN", "89f73481102c46c0bc13b2998f9a4fce"),
+            "token": config.JUPYTER_TOKEN,
         }
         return self.write(json.dumps(output))
 
@@ -352,12 +366,16 @@ class BeakerJupyterApp(LabServerApp):
 
     subcommands = {}
 
+    ui_path = os.path.join(HERE, "ui")
+
     @classmethod
     def get_extension_package(cls):
         return cls.__module__
 
     @classmethod
     def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
+        # Set Jupyter token from config
+        os.environ.setdefault("JUPYTER_TOKEN", config.JUPYTER_TOKEN)
         # TODO: catch and handle any custom command line arguments here
         app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
         return app
@@ -368,17 +386,12 @@ class BeakerJupyterApp(LabServerApp):
         self.handlers.append(("/contexts", ContextHandler))
         self.handlers.append(("/config", ConfigHandler))
         self.handlers.append(("/stats", StatsHandler))
-        self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "admin.html"}))
+        self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": self.ui_path, "default_filename": "admin.html"}))
         self.handlers.append(("/notebook", NotebookHandler))
         self.handlers.append((r"/upload", UploadHandler))
         self.handlers.append((r"/download/(.*)", DownloadHandler))
         self.handlers.append((r"/summary", SummaryHandler))
-        self.handlers.append((r"(/?)", MainHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
-        self.handlers.append((r"/index.html", StaticFileHandler, {"path": os.path.join(HERE, "ui"), "default_filename": "index.html"}))
-        self.handlers.append((r"/(favicon.ico)", StaticFileHandler, {"path": os.path.join(HERE, "ui")}))
-        self.handlers.append((r"/static/(.*)", StaticFileHandler, {"path": os.path.join(HERE, "ui", "static")}))
-        self.handlers.append((r"/themes/(.*)", StaticFileHandler, {"path": os.path.join(HERE, "ui", "themes")}))
-        self.handlers.append((r"/dev_ui/?(.*)", RedirectHandler, {"url": r"/{0}"}))
+        self.handlers.append((r"(?!api)(?P<path>.*)", MainHandler, {"path": self.ui_path, "default_filename": "index.html"}))
         super().initialize_handlers()
 
     def initialize_settings(self):
