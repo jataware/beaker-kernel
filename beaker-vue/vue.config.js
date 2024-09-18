@@ -33,40 +33,22 @@ module.exports = defineConfig({
     },
   },
   devServer: {
-    proxy: {
-      '^/stats': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/api': {
-        target: 'http://jupyter:8888',
-        ws: true,
-        changeOrigin: true,
-      },
-      '^/upload': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/download': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/contexts': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/config': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/summary': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/files': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
+    proxy: "http://jupyter:8888",
+    onBeforeSetupMiddleware (server) {
+      // Proxy everything to the server except for `/ws`, webpacks websocket for hotloading, static files and pages.
+      const origContext = server.options.proxy[0].context;
+      server.options.proxy[0].context = (pathname, req) => {
+        if (pathname === '/ws') {
+          return false;
+        }
+        const result = origContext(pathname, req);
+        // Will be undefined on websocket requests, or any other request that does not provide an `accepts` header.
+        // Allow all such requests other than `/ws` which is handled above.
+        if (result === undefined) {
+          return true;
+        }
+        return result;
+      }
     },
-  }
+  },
 })
