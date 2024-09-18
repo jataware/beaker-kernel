@@ -6,7 +6,8 @@ export declare interface IThemeConfig {
     name: string,
     lightTheme?: string, // Name of theme directory as exists in your public themes folder.
     darkTheme?: string, // Name of theme directory as exists in your public themes folder.
-    mode?: ThemeMode,
+    defaultMode?: ThemeMode, // Default light/dark mode to use if not set.
+    mode?: ThemeMode,  // Currently set light/dark mode value.
     overrides?: any, // css to override any defaults
     saveTheme?: boolean,
 }
@@ -18,11 +19,11 @@ export declare interface IBeakerTheme {
 }
 
 export const ThemeDefaults: IThemeConfig = {
-    name: 'soho',
-    lightTheme: "soho-light",
-    darkTheme: "soho-dark",
-    mode: 'light',
-    saveTheme: true,
+    name: 'beaker-default',
+    lightTheme: "beaker-light",
+    darkTheme: "beaker-dark",
+    defaultMode: 'light',
+    saveTheme: false,
 }
 
 export const BeakerThemePlugin: Plugin = {
@@ -46,8 +47,8 @@ export const BeakerThemePlugin: Plugin = {
                 localStorage.setItem('theme', JSON.stringify(theme));
             }
         }
+        theme.mode = <ThemeMode>localStorage.getItem('theme-lightmode') || theme.defaultMode || 'light';
         theme = reactive(theme);
-
 
         const applyTheme = () => {
             const themeLink: HTMLLinkElement = document.querySelector('#primevue-theme');
@@ -59,6 +60,7 @@ export const BeakerThemePlugin: Plugin = {
             if (theme.saveTheme) {
                 localStorage.setItem('theme', JSON.stringify(theme));
             }
+            localStorage.setItem('theme-lightmode', theme.mode);
             applyTheme();
         };
 
@@ -68,6 +70,7 @@ export const BeakerThemePlugin: Plugin = {
             if (theme.saveTheme) {
                 localStorage.setItem('theme', JSON.stringify(theme));
             }
+            localStorage.setItem('theme-lightmode', theme.mode);
             applyTheme();
         };
 
