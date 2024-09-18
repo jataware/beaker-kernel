@@ -148,9 +148,11 @@ const doubleClick = ({data}) => {
     refreshFiles();
   }
   else if (data.type === 'notebook') {
-    getFileContents(data).then((json) => {
-      emit('open-file', json);
-    })
+    if (window.confirm(`Open notebook ${data.name}?\n\nOpening this file will replace your current notebook and reset the session. Proceed?`)) {
+      getFileContents(data).then((json) => {
+        emit('open-file', json);
+      })
+    }
   }
   else {
     showToast({
