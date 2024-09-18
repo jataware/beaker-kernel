@@ -382,11 +382,18 @@ class BeakerJupyterApp(LabServerApp):
         return cls.__module__
 
     @classmethod
+    def request_log_handler(cls, request):
+        """Allow for debugging/extra logging of requests"""
+        logging.debug(f"URI: {request.request.uri}")
+
+    @classmethod
     def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
         # Set Jupyter token from config
         os.environ.setdefault("JUPYTER_TOKEN", config.JUPYTER_TOKEN)
         # TODO: catch and handle any custom command line arguments here
         app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
+        if cls.request_log_handler:
+            app.web_app.log_request = cls.request_log_handler
         return app
 
     def initialize_handlers(self):
@@ -404,8 +411,6 @@ class BeakerJupyterApp(LabServerApp):
                     statics.append(f"{file}/")
                 else:
                     statics.append(f"{file}$")
-        page_handler = ("/((" + "|".join(pages) + "))", MainHandler, {"path": self.ui_path, "default_filename": "index.html"})
-        static_handler = ("/((" + "|".join(statics) + ").*)", StaticFileHandler, {"path": self.ui_path})
 
         self.handlers.append((r"/api/kernels", SafeKernelHandler))
         self.handlers.append(("/contexts", ContextHandler))
@@ -414,8 +419,12 @@ class BeakerJupyterApp(LabServerApp):
         self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": self.ui_path, "default_filename": "admin.html"}))
         self.handlers.append((r"/summary", SummaryHandler))
         self.handlers.append((f"/()", MainHandler, {"path": self.ui_path, "default_filename": "index.html"}))
-        self.handlers.append(static_handler)
-        self.handlers.append(page_handler)
+        if statics:
+            static_handler = ("/((" + "|".join(statics) + ").*)", StaticFileHandler, {"path": self.ui_path})
+            self.handlers.append(static_handler)
+        if pages:
+            page_handler = ("/((" + "|".join(pages) + "))", MainHandler, {"path": self.ui_path, "default_filename": "index.html"})
+            self.handlers.append(page_handler)
         super().initialize_handlers()
 
     def initialize_settings(self):
