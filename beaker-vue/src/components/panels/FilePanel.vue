@@ -49,7 +49,7 @@
         <Column field="name" header="Name" class="filename-column" sortable>
           <template #body="slotProps">
             <span :class="getFileClass(slotProps.data)"></span>
-            <span class="filename">
+            <span :id="`file-list::${slotProps.data.path}`" class="filename">
               {{ slotProps.data.name }}
             </span>
           </template>
@@ -76,7 +76,7 @@
 
 <script lang="ts" setup>
 
-import { ref, inject, capitalize, defineProps, onMounted, computed, defineEmits } from "vue";
+import { ref, inject, capitalize, defineProps, defineExpose, onMounted, computed, defineEmits } from "vue";
 import Button from 'primevue/button';
 import 'vue-json-pretty/lib/styles.css';
 import Column from 'primevue/column';
@@ -310,10 +310,30 @@ const refreshFiles = async () => {
   tableLoading.value = false;
 };
 
+const flashFile = async (path: string) => {
+  const nameSpan = document.getElementById(`file-list::${path}`)
+  if (!nameSpan) {
+    return;
+  }
+  const row = nameSpan.closest('tr');
+  if (!row) {
+    return;
+  }
+  row.classList.add("flash");
+  row.addEventListener("animationend", () => row.classList.remove("flash"), {once: true});
+  row.style.backgroundColor = 'rgba(255, 0, 0, 0)';
+
+}
 
 onMounted(async () => {
   await refreshFiles();
 });
+
+defineExpose({
+  refresh: refreshFiles,
+  flashFile,
+});
+
 </script>
 
 <style lang="scss">
@@ -349,7 +369,31 @@ onMounted(async () => {
         font-size: 16px;
       }
     }
+
+    tr.flash {
+      animation-name: fade-out-background;
+      animation-duration: 4000ms;
+      background-color: rgba(255, 33, 78, 0.8);
+    }
   }
+
+@keyframes fade-out-background {
+  0% {
+    background-color: rgba(255, 33, 78, 0.8);
+  }
+
+  40% {
+    background-color: rgba(255, 33, 78, 0.4);
+  }
+
+  50% {
+    background-color: rgba(255, 33, 78, 0.6);
+  }
+
+  100% {
+    background-color: rgba(255, 33, 78, 0);
+  }
+}
 
   .download-column {
     width: unset;

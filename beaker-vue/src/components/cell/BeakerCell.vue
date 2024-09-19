@@ -116,7 +116,7 @@ import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 import BeakerRawCell from './BeakerRawCell.vue';
-import { BeakerBaseCell, type IBeakerCell } from "beaker-kernel";
+import { BeakerBaseCell, type IBeakerCell } from "beaker-kernel/src";
 import Dropdown from 'primevue/dropdown';
 import OverlayPanel from 'primevue/overlaypanel';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";

@@ -25,7 +25,7 @@ import { defineEmits, ref, nextTick, inject } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");

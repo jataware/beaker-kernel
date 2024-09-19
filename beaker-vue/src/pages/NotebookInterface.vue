@@ -10,7 +10,6 @@
         @unhandled-msg="unhandledMessage"
         @any-msg="anyMessage"
         @session-status-changed="statusChanged"
-        v-keybindings="sessionKeybindings"
     >
         <div class="notebook-container">
             <div v-if="!isMaximized" class="spacer left"></div>
@@ -19,7 +18,12 @@
                 :cell-map="cellComponentMapping"
                 v-keybindings.top="notebookKeyBindings"
             >
-                <BeakerNotebookToolbar default-severity="">
+                <BeakerNotebookToolbar
+                    default-severity=""
+                    :saveAvailable="true"
+                    @notebook-saved="handleNotebookSaved"
+                >
+
                     <template #end-extra>
                         <Button
                             @click="isMaximized = !isMaximized;"
@@ -32,6 +36,7 @@
                 <BeakerNotebookPanel
                     :selected-cell="beakerNotebookRef?.selectedCellId"
                     v-autoscroll
+
                 >
                     <template #notebook-background>
                         <div class="welcome-placeholder">
@@ -48,6 +53,7 @@
 
         <template #left-panel>
             <SideMenu
+                ref="sideMenuRef"
                 position="left"
                 :show-label="true"
                 highlight="line"
@@ -57,8 +63,11 @@
                 <SideMenuPanel label="Info" icon="pi pi-home">
                     <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
                 </SideMenuPanel>
-                <SideMenuPanel label="Files" icon="pi pi-file-export" no-overflow>
-                    <FilePanel @open-file="loadNotebook" />
+                <SideMenuPanel id="files" label="Files" icon="pi pi-file-export" no-overflow>
+                    <FilePanel
+                        ref="filePanelRef"
+                        @open-file="loadNotebook"
+                    />
                 </SideMenuPanel>
             </SideMenu>
         </template>
@@ -66,32 +75,24 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, provide, computed, nextTick, onUnmounted, inject } from 'vue';
-import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel';
+import { defineProps, ref, onBeforeMount, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
+import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel/src';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-// import BeakerSession from '../components/session/BeakerSession.vue';
-import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
-import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
-import scrollIntoView from 'scroll-into-view-if-needed';
 
-import Card from 'primevue/card';
-import LoggingPane from '../components/dev-interface/LoggingPane.vue';
 import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
-import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
 import ContextTree from '../components/dev-interface/ContextTree.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
-import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
@@ -104,6 +105,8 @@ const toast = useToast();
 const activeContext = ref();
 const beakerNotebookRef = ref();
 const beakerInterfaceRef = ref();
+const filePanelRef = ref();
+const sideMenuRef = ref();
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
@@ -141,8 +144,6 @@ const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
 
 const contextSelectionOpen = ref(false);
-const activeContextPayload = ref<any>(null);
-const contextProcessing = ref(false);
 const isMaximized = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const executeActionRef = ref<typeof BeakerExecuteAction>();
@@ -151,6 +152,16 @@ const beakerSession = computed(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
 
+// Ensure we always have at least one cell
+watch(
+    () => beakerNotebookRef?.value?.notebook.cells,
+    (cells) => {
+        if (cells.length === 0) {
+            beakerNotebookRef.value.insertCellBefore();
+        }
+    },
+    {deep: true},
+)
 
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
@@ -178,10 +189,6 @@ const unhandledMessage = (msg) => {
 
 const statusChanged = (newStatus) => {
     connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
-};
-
-const toggleContextSelection = () => {
-    contextSelectionOpen.value = !contextSelectionOpen.value;
 };
 
 const selectAction = (actionName: string) => {
@@ -222,6 +229,12 @@ onUnmounted(() => {
     saveInterval.value = null;
     window.removeEventListener("beforeunload", snapshot);
 });
+
+const handleNotebookSaved = async (path: string) => {
+    sideMenuRef.value?.selectPanel("Files");
+    await filePanelRef.value.refresh();
+    await filePanelRef.value.flashFile(path);
+}
 
 
 const prevCellKey = () => {
@@ -327,20 +340,40 @@ const notebookKeyBindings = {
             }
         }
     },
-    "keydown.p.!in-editor": () => {
+    "keydown.p.!in-editor": (evt: KeyboardEvent) => {
         const notebook = beakerNotebookRef.value;
-        const oldCell = copiedCell.value;
-        if (oldCell !== null) {
-            const newCell: IBeakerCell = notebook?.insertCellAfter(notebook.selectedCell(), oldCell);
-            for (const key of Object.keys(oldCell).filter((k) => k !== "id")) {
-                newCell[key] = oldCell[key];
+        let copiedCellValue = toRaw(copiedCell.value);
+        if (copiedCellValue !== null) {
+            var newCell: IBeakerCell;
+
+
+            // If a cell with the to-be-pasted cell's id already exists in the notebook, set the copied cell's id to
+            // undefined so that it is regenerated when added.
+            const notebookIds = notebook.notebook.cells.map((cell) => cell.id);
+            if (notebookIds.includes(copiedCellValue.id)) {
+                const cls = copiedCellValue.constructor as (data: IBeakerCell) => void;
+                const data = {
+                    ...copiedCellValue,
+                    // Set non-transferable attributes to undefined.
+                    id: undefined,
+                    executionCount: undefined,
+                    busy: undefined,
+                    last_execution: undefined,
+                } as IBeakerCell;
+                copiedCellValue = new cls(data);
             }
-            copiedCell.value = null;
+
+            // Lowercase `p` pastes after, uppercase `P` pastes before. Checking the actual is key better than checking
+            // for shift, etc as it includes caps lock, etc.
+            if (evt.key === 'p') {
+                 newCell = notebook?.insertCellAfter(notebook.selectedCell(), copiedCellValue);
+            }
+            else if (evt.key === 'P') {
+                 newCell = notebook?.insertCellBefore(notebook.selectedCell(), copiedCellValue);
+            }
+            copiedCellValue.value = null;
         }
     },
-}
-
-const sessionKeybindings = {
 }
 
 const snapshot = () => {
@@ -365,69 +398,10 @@ const snapshot = () => {
 </script>
 
 <style lang="scss">
-// #app {
-//     margin: 0;
-//     padding: 0;
-//     overflow: hidden;
-//     background-color: var(--surface-b);
-// }
-
-// header {
-//     grid-area: header;
-//     display: flex;
-//     justify-content: space-between;
-//     align-items: center;
-// }
-
-// main {
-//     grid-area: main;
-//     padding-top: 2px;
-//     padding-bottom: 2px;
-// }
-
-// footer {
-//     grid-area: footer;
-// }
-
-// .main-panel {
-//     display: flex;
-//     flex-direction: column;
-//     &:focus {
-//         outline: none;
-//     }
-// }
-
-
-// .central-panel {
-//     flex: 1000;
-//     display: flex;
-//     flex-direction: column;
-// }
-
-// .beaker-dev-interface {
-//     padding-bottom: 2px;
-//     height: 100vh;
-//     width: 100vw;
-//     display: grid;
-//     grid-gap: 1px;
-
-//     grid-template-areas:
-//         "header header header header"
-//         "main main main main"
-//         "footer footer footer footer";
-
-//     grid-template-columns: 1fr 1fr 1fr 1fr;
-//     grid-template-rows: auto 1fr auto;
-// }
-
-// .beaker-dev-interface .p-toolbar {
-//     border: none;
-// }
 
 .notebook-container {
     display:flex;
     height: 100%;
-    // width: 100%;
     max-width: 100%;
 }
 
@@ -437,10 +411,6 @@ const snapshot = () => {
     border-radius: 0;
     border-top: 0;
     max-width: 100%;
-    // border-bottom: 10px;
-    // border-left: 2px;
-    // border-right: 2px;
-    // border-top: 2px;
 }
 
 .spacer {
@@ -451,26 +421,6 @@ const snapshot = () => {
         flex: 1 1 25vw;
     }
 }
-
-// .beaker-cell {
-//     // margin: 4px 0;
-//     // padding: 4px 0;
-//     border: unset;
-//     padding-bottom: 4px;
-
-//     .cell-type-selector {
-//         margin-top: 0.25em;
-
-//     }
-
-//     .drag-handle {
-//         align-content: center;
-//     }
-// }
-
-// .cell-container {
-
-// }
 
 .notebook-toolbar {
     border-style: inset;

@@ -21,7 +21,7 @@
 <script lang="ts" setup>
 import { ref, defineProps, inject, computed } from "vue";
 import SelectButton from "primevue/selectbutton";
-import { BeakerSession } from "beaker-kernel";
+import { BeakerSession } from "beaker-kernel/src";
 import { BeakerRenderOutput } from "../../renderers";
 
 const props = defineProps([

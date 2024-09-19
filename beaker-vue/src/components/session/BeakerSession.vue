@@ -6,7 +6,7 @@
 
 <script lang="ts">
 import { reactive, ref, inject, provide, VNode, defineComponent, PropType, ComponentInternalInstance, DefineComponent } from 'vue';
-import { BeakerSession, IBeakerRendererOptions, IMimeRenderer, IBeakerCell } from 'beaker-kernel';
+import { BeakerSession, IBeakerRendererOptions, IMimeRenderer, IBeakerCell } from 'beaker-kernel/src';
 import { BeakerRenderOutput } from '../../renderers';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 
