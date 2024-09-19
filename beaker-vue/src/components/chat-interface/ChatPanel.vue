@@ -20,7 +20,7 @@
 
 <script setup lang="tsx">
 import { ref, inject, defineProps, defineExpose } from 'vue';
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerSession } from 'beaker-kernel/src';
 
 const session = inject<BeakerSession>('session');
 

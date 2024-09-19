@@ -155,7 +155,7 @@ import BeakerSession from '../components/session/BeakerSession.vue';
 
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
-import { JupyterMimeRenderer } from 'beaker-kernel';
+import { JupyterMimeRenderer } from 'beaker-kernel/src';
 
 import Button from "primevue/button";
 import OverlayPanel from 'primevue/overlaypanel';

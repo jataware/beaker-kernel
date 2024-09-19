@@ -212,15 +212,15 @@ const handleButtonClick = (index: number) => {
     }
 }
 
-const selectPanel = (id: string) => {
-    selectedTabIndex.value = panels.value.findIndex((panel) => (panel.props?.tabId === id));
+const selectPanel = (label: string) => {
+    selectedTabIndex.value = panels.value.findIndex((panel) => (panel.props?.label === label));
     if (minimizeIndicator.value) {
         minimizeIndicator.value = false;
     }
 }
 
 defineExpose({
-    selectPanel
+    selectPanel,
 });
 
 </script>
