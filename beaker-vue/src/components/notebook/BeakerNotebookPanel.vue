@@ -42,7 +42,7 @@
 
 <script setup lang="tsx">
 import { ref, inject, computed, defineExpose, defineEmits } from 'vue';
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerSession } from 'beaker-kernel/src';
 import BeakerCell from '../cell/BeakerCell.vue';
 import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
 

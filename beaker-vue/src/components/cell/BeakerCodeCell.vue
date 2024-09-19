@@ -48,7 +48,7 @@ import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 import { findSelectableParent } from "../../util";
-import { BeakerSession } from "beaker-kernel";
+import { BeakerSession } from "beaker-kernel/src";
 import CodeEditor from "../misc/CodeEditor.vue";
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
@@ -154,9 +154,10 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerCodeCell } from "beaker-kernel";
+import { BeakerCodeCell } from "beaker-kernel/src";
 export default {
-    modelClass: BeakerCodeCell
+    modelClass: BeakerCodeCell,
+    icon: "pi pi-code",
 };
 </script>
 

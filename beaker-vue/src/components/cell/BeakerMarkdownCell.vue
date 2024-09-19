@@ -107,9 +107,10 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerMarkdownCell } from "beaker-kernel";
+import { BeakerMarkdownCell } from "beaker-kernel/src";
 export default {
-    modelClass: BeakerMarkdownCell
+    modelClass: BeakerMarkdownCell,
+    icon: "pi pi-pencil",
 };
 </script>
 

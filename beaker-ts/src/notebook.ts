@@ -52,20 +52,34 @@ export type BeakerCellType = nbformat.CellType | string | 'query';
 
 export class BeakerBaseCell implements nbformat.IBaseCell {
     // Override index type to allow methods to be defined on the class
-    private IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments",
-                  "outputs", "execution_count"];
+    static IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments", "outputs", "execution_count"];
 
     [key: string]: any;
+    id: string;
     cell_type: BeakerCellType;
     metadata: Partial<nbformat.ICellMetadata>;
     source: nbformat.MultilineString;
     status: BeakerCellStatus;
     children: BeakerBaseCell[];
 
-    constructor() {
+    constructor(content: Partial<nbformat.IBaseCell>) {
+        Object.keys(content).forEach((key) => {this[key] = content[key] });
+        if (this.metadata === undefined) {
+            this.metadata = {};
+        }
         this.status = "idle";
         this.last_execution = {status: "none"};
         this.children = [];
+        if (this.id === undefined) {
+            this.id = uuidv4();
+        }
+        if (this.source === undefined) {
+            this.source = "";
+        }
+    }
+
+    static generateId(): string {
+        return uuidv4();
     }
 
     public reset_execution_state(): void {
@@ -91,7 +105,7 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     public toIPynb() {
         const output = {};
         for (const key of Object.keys(this)) {
-            if (this.IPYNB_KEYS.includes(key)) {
+            if (BeakerBaseCell.IPYNB_KEYS.includes(key)) {
                 output[key] = this[key];
             }
         }
@@ -153,22 +167,16 @@ export type BeakerQueryEvent =
 
 export interface IQueryCell extends nbformat.IBaseCell {
     cell_type: 'query';
-    id?: string;
     events: BeakerQueryEvent[];
 }
 
 export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
     declare cell_type: 'raw';
-    id?: string;
     attachments?: nbformat.IAttachments;
     declare metadata: Partial<nbformat.IRawCellMetadata>;
 
     constructor(content: nbformat.ICell) {
-        super();
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
-        if (this.id === undefined) {
-            this.id = uuidv4();
-        }
+        super({cell_type: "raw", ...content});
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
@@ -178,20 +186,15 @@ export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
 
 export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell {
     declare cell_type: 'code';
-    id?: string;
     outputs: nbformat.IOutput[];
     execution_count: nbformat.ExecutionCount;
     declare metadata: Partial<nbformat.ICodeCellMetadata>;
     last_execution?: BeakerCellExecutionStatus;
     busy?: boolean;
 
-    constructor(content: nbformat.ICell) {
-        super();
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
+    constructor(content: Partial<nbformat.ICell>) {
+        super({cell_type: 'code', ...content});
         this.outputs = this.outputs ?? [];
-        if (this.id === undefined) {
-            this.id = uuidv4();
-        }
         if (this.execution_count === undefined) {
             this.execution_count = null;
         }
@@ -260,15 +263,10 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
 
 export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMarkdownCell {
     declare cell_type: 'markdown';
-    id?: string;
     attachments?: nbformat.IAttachments;
 
-    constructor(content: nbformat.ICell) {
-        super();
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
-        if (this.id === undefined) {
-            this.id = uuidv4();
-        }
+    constructor(content: Partial<nbformat.ICell>) {
+        super({cell_type: 'markdown', ...content});
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
@@ -279,18 +277,13 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     declare cell_type: 'query';
-    id?: string;
     events: BeakerQueryEvent[];
 
     _current_input_request_message: messages.IInputRequestMsg;
 
-    constructor(content: nbformat.ICell) {
-        super();
+    constructor(content: Partial<nbformat.ICell>) {
+        super({cell_type: 'query', ...content});
         this.events = [];
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
-        if (this.id === undefined) {
-            this.id = uuidv4();
-        }
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {

@@ -88,9 +88,10 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerRawCell } from "beaker-kernel";
+import { BeakerRawCell } from "beaker-kernel/src";
 export default {
-    modelClass: BeakerRawCell
+    modelClass: BeakerRawCell,
+    icon: "pi pi-question-circle",
 };
 </script>
 

@@ -1,4 +1,5 @@
-import { withModifiers, withKeys, ObjectDirective, DirectiveBinding } from "vue";
+import { withModifiers, withKeys } from "@vue/runtime-dom";
+import { ObjectDirective, DirectiveBinding } from "@vue/runtime-core";
 
 const keybindingKey = Symbol("_v_keybinding");
 
@@ -125,7 +126,7 @@ export const vKeybindings: KeybindingDefinition = {
             if (eventType === undefined || key === undefined || eventType === "" || key === "") {
                 console.warn(`Keybinding definition '${bindingDef}' cannot be parsed. Please ensure it is in the format of '{eventtype}.{key}(.{modifier})*'`)
             }
-            let callback = action;
+            let callback: EventCallback = action;
             if (keyModifiers.length) {
                 callback = withModifiers(callback, keyModifiers as any);
             }

@@ -116,7 +116,7 @@ import AccordionTab from "primevue/accordiontab";
 import BeakerLLMQueryEvent from "./BeakerLLMQueryEvent.vue";
 import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 const props = defineProps([
@@ -254,9 +254,10 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerQueryCell } from "beaker-kernel";
+import { BeakerQueryCell } from "beaker-kernel/src";
 export default {
-    modelClass: BeakerQueryCell
+    modelClass: BeakerQueryCell,
+    icon: "pi pi-sparkles",
 };
 </script>
 
