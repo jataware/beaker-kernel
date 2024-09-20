@@ -4,11 +4,11 @@
             <slot name="start">
                 <SplitButton
                     @click="notebook.insertCellAfter()"
-                    class="add-cell-button"
+                    class="toolbar-splitbutton add-cell-button"
                     icon="pi pi-plus"
                     size="small"
                     :severity="props.defaultSeverity"
-                    :model="menuItems"
+                    :model="addCellMenuItems"
                     text
                 />
                 <Button
@@ -38,15 +38,47 @@
                     :severity="props.defaultSeverity"
                     text
                 />
-                <Button
-                    v-if="saveAvailable"
-                    @click="saveNotebook"
-                    v-tooltip.bottom="{value: 'Save locally as .ipynb', showDelay: 300}"
-                    icon="pi pi-save"
-                    size="small"
-                    :severity="props.defaultSeverity"
-                    text
-                />
+                <div v-if="props.saveAvailable" class="p-splitbutton toolbar-splitbutton">
+                    <Button
+                        class="p-splitbutton-defaultbutton"
+                        @click="saveNotebook"
+                        v-tooltip.bottom="{
+                            value: 'Save locally as ' + (saveAsFilename ? saveAsFilename : 'a .ipynb file') ,
+                            showDelay: 300
+                        }"
+                        icon="pi pi-save"
+                        size="small"
+                        :severity="props.defaultSeverity"
+                        text
+                    />
+                    <Button
+                        class="p-splitbutton-menubutton"
+                        size="small"
+                        :severity="props.defaultSeverity"
+                        text
+                        @click="saveAsHoverMenuRef.toggle($event);"
+                    >
+                         <ChevronDownIcon/>
+                    </Button>
+                    <OverlayPanel
+                        class="saveas-overlay"
+                        ref="saveAsHoverMenuRef"
+                        :popup="true"
+                        @show="if (!saveAsFilename) {resetSaveAsFilename()};"
+                    >
+                        <div>Save as:</div>
+                        <InputGroup>
+                            <InputText
+                                class="saveas-input"
+                                ref="saveAsInputRef"
+                                v-model="saveAsFilename"
+                                @keydown.enter="saveAs()"
+                                autofocus
+                            />
+                            <Button label="Save" @click="saveAs()"/>
+                        </InputGroup>
+                    </OverlayPanel>
+                </div>
                 <Button
                     @click="downloadNotebook"
                     v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
@@ -63,13 +95,17 @@
 </template>
 
 <script setup lang="tsx">
-import { defineEmits, defineProps, computed, inject, withDefaults, capitalize } from "vue";
+import { defineEmits, defineProps, computed, inject, ref, withDefaults, capitalize, nextTick, watch } from "vue";
 import { BeakerSession, BeakerBaseCell } from 'beaker-kernel/src';
 import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
 
 import Button from "primevue/button";
+import ChevronDownIcon from 'primevue/icons/chevrondown'
 import { ButtonProps } from "primevue/button";
 import SplitButton from 'primevue/splitbutton';
+import InputGroup from "primevue/inputgroup";
+import InputText from "primevue/inputtext";
+import OverlayPanel from 'primevue/overlaypanel';
 import Toolbar from "primevue/toolbar";
 
 import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
@@ -79,7 +115,7 @@ const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
 const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
 
-const menuItems = computed(() => {
+const addCellMenuItems = computed(() => {
     return Object.entries(cellMapping).map(([name, obj]) => {
         return {
             label: `${capitalize(name)} Cell`,
@@ -92,22 +128,37 @@ const menuItems = computed(() => {
             },
         }
     })
-
 });
 
 const emit = defineEmits([
     "notebook-saved",
+    "open-file",
 ])
 
 export interface Props {
     defaultSeverity?: ButtonProps["badgeSeverity"];
     saveAvailable?: boolean;
+    saveAsFilename?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     defaultSeverity: "info",
     saveAvailable: false,
 });
+
+const saveAsFilename = ref<string>(props.saveAsFilename);
+const saveAsHoverMenuRef = ref();
+const saveAsInputRef = ref();
+
+watch(props, (oldValue, newValue) => {
+    if (saveAsFilename.value !== newValue.saveAsFilename) {
+        saveAsFilename.value = newValue.saveAsFilename;
+    }
+});
+
+const resetSaveAsFilename = () => {
+    saveAsFilename.value = `Beaker-Notebook_${getDateTime()}.ipynb`;
+}
 
 const resetNotebook = async () => {
     session.reset();
@@ -116,21 +167,29 @@ const resetNotebook = async () => {
     }
 };
 
-function loadNotebook(notebookJSON) {
-    session.loadNotebook(notebookJSON);
+function loadNotebook(notebookJSON: any, filename: string) {
+    emit("open-file", notebookJSON, filename);
 }
 
 async function saveNotebook() {
     const notebookContent = session.notebook.toIPynb();
     const contentsService = session.services.contents;
-    const filename = `Beaker-Notebook_${getDateTime()}.ipynb`;
-    const path = `${filename}`;
+    if (!saveAsFilename.value) {
+        resetSaveAsFilename();
+    }
+    const path = `./${saveAsFilename.value}`;
     const result = await contentsService.save(path, {
         type: "notebook",
         content: notebookContent,
         format: 'text',
     });
     emit("notebook-saved", result.path);
+    saveAsFilename.value = result.path;
+}
+
+async function saveAs() {
+    await saveNotebook();
+    saveAsHoverMenuRef.value.hide();
 
 }
 
@@ -152,7 +211,7 @@ function downloadNotebook() {
         box-shadow: none !important;
     }
 
-    .add-cell-button {
+    .toolbar-splitbutton {
         .p-splitbutton-defaultbutton {
             padding-right: 0;
         }
@@ -163,10 +222,24 @@ function downloadNotebook() {
             padding-bottom: 0.5rem;
             width: min-content;
 
-            .p-icon {
+            .p-icon, .p-button-icon {
                 height: 0.7rem;
+                font-size: 0.875rem;;
             }
         }
+    }
+
+}
+
+.saveas-overlay {
+    .p-overlaypanel-content {
+        padding: 0.5rem;
+    }
+    .saveas-input {
+        min-width: 25rem;
+        padding: 0.25rem;
+        font-size: small;
+        font-family: 'Courier New', Courier, monospace;
     }
 }
 </style>

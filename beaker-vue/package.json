@@ -48,6 +48,7 @@
     "core-js": "^3.8.3",
     "cytoscape": "^3.28.1",
     "filesize": "^10.1.6",
+    "hash-sum": "^2.0.0",
     "katex": "^0.16.9",
     "node-fetch": "^2.6.6",
     "primeicons": "^7.0.0",

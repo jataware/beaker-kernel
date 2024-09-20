@@ -1,15 +1,20 @@
 <template>
     <BaseInterface
         title="Beaker Notebook"
+        :title-extra="saveAsFilename"
+        :header-nav="headerNav"
         ref="beakerInterfaceRef"
         :connectionSettings="props.config"
-        sessionName="dev_interface"
+        sessionName="notebook_interface"
+        defaultKernel="beaker_kernel"
         :sessionId="sessionId"
         :renderers="renderers"
+        :savefile="saveAsFilename"
         @iopub-msg="iopubMessage"
         @unhandled-msg="unhandledMessage"
         @any-msg="anyMessage"
         @session-status-changed="statusChanged"
+        @open-file="loadNotebook"
     >
         <div class="notebook-container">
             <div v-if="!isMaximized" class="spacer left"></div>
@@ -21,7 +26,9 @@
                 <BeakerNotebookToolbar
                     default-severity=""
                     :saveAvailable="true"
+                    :save-as-filename="saveAsFilename"
                     @notebook-saved="handleNotebookSaved"
+                    @open-file="loadNotebook"
                 >
 
                     <template #end-extra>
@@ -98,9 +105,8 @@ import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerLLMQueryCell from '../components/cell/BeakerLLMQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
+import { IBeakerTheme } from '../plugins/theme';
 
-
-const toast = useToast();
 
 const activeContext = ref();
 const beakerNotebookRef = ref();
@@ -109,7 +115,7 @@ const filePanelRef = ref();
 const sideMenuRef = ref();
 
 const urlParams = new URLSearchParams(window.location.search);
-const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
+const sessionId = urlParams.has("session") ? urlParams.get("session") : "notebook_dev_session";
 
 const props = defineProps([
     "config",
@@ -142,11 +148,53 @@ const rawMessages = ref<object[]>([])
 const previewData = ref<any>();
 const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
+const saveAsFilename = ref<string>(null);
 
 const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const executeActionRef = ref<typeof BeakerExecuteAction>();
+const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
+
+const notebookTitle = computed(() => {
+    if (saveAsFilename.value) {
+        return `Beaker Notebook`;
+    }
+    else {
+        return 'Beaker Notebook';
+    }
+});
+
+const headerNav = computed(() => [
+    {
+        type: 'link',
+        href: `/chat${window.location.search}`,
+        icon: 'comment',
+        label: 'Navigate to chat view',
+    },
+    {
+        type: 'button',
+        icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
+        command: toggleDarkMode,
+        label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
+    },
+    {
+        type: 'link',
+        href: `https://jataware.github.io/beaker-kernel`,
+        label: 'Beaker Documentation',
+        icon: "book",
+        rel: "noopener",
+        target: "_blank",
+    },
+    {
+        type: 'link',
+        href: `https://github.com/jataware/beaker-kernel`,
+        label: 'Check us out on Github',
+        icon: "github",
+        rel: "noopener",
+        target: "_blank",
+    },
+]);
 
 const beakerSession = computed(() => {
     return beakerInterfaceRef?.value?.beakerSession;
@@ -156,7 +204,7 @@ const beakerSession = computed(() => {
 watch(
     () => beakerNotebookRef?.value?.notebook.cells,
     (cells) => {
-        if (cells.length === 0) {
+        if (cells?.length === 0) {
             beakerNotebookRef.value.insertCellBefore();
         }
     },
@@ -196,41 +244,21 @@ const selectAction = (actionName: string) => {
     executeActionRef.value?.selectAction(actionName);
 };
 
-const loadNotebook = (notebookJSON: any) => {
+const loadNotebook = (notebookJSON: any, filename: string) => {
+    const notebook = beakerNotebookRef.value;
     beakerSession.value?.session.loadNotebook(notebookJSON);
-}
-
-onBeforeMount(() => {
-    var notebookData: {[key: string]: any};
-    try {
-        notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-    }
-    catch (e) {
-        console.error(e);
-        notebookData = {};
-    }
-
-    if (notebookData[sessionId]?.data) {
+    saveAsFilename.value = filename;
+    const cellIds = notebook.notebook.cells.map((cell) => cell.id);
+    if (!cellIds.includes(notebook.selectedCellId)) {
         nextTick(() => {
-            if (beakerNotebookRef.value?.notebook) {
-                beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
-                nextTick(() => {
-                    beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
-                });
-            }
+            // Force the notebook to select one of cells in the current notebook.
+            notebook.selectCell(cellIds[0]);
         });
     }
-    saveInterval.value = setInterval(snapshot, 30000);
-    window.addEventListener("beforeunload", snapshot);
-});
-
-onUnmounted(() => {
-    clearInterval(saveInterval.value);
-    saveInterval.value = null;
-    window.removeEventListener("beforeunload", snapshot);
-});
+}
 
 const handleNotebookSaved = async (path: string) => {
+    saveAsFilename.value = path;
     sideMenuRef.value?.selectPanel("Files");
     await filePanelRef.value.refresh();
     await filePanelRef.value.flashFile(path);
@@ -375,25 +403,6 @@ const notebookKeyBindings = {
         }
     },
 }
-
-const snapshot = () => {
-    var notebookData: {[key: string]: any};
-    try {
-        notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-    }
-    catch (e) {
-        console.error(e);
-        notebookData = {};
-    }
-    // Only save state if there is state to save
-    if (beakerNotebookRef.value?.notebook) {
-        notebookData[sessionId] = {
-            data: beakerNotebookRef.value?.notebook.toIPynb(),
-            selectedCell: beakerNotebookRef.value?.selectedCellId,
-        };
-        localStorage.setItem("notebookData", JSON.stringify(notebookData));
-    }
-};
 
 </script>
 
