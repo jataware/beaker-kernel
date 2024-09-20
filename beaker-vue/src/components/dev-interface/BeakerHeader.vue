@@ -2,8 +2,10 @@
     <Toolbar class="beaker-toolbar">
         <template #start>
             <div class="status-bar">
-                <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
-                {{ statusLabel }}
+                <span v-tooltip.right="'Kernel connection status'">
+                    <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
+                    {{ statusLabel }}
+                </span>
             </div>
             <Button
                 outlined
@@ -14,85 +16,101 @@
                 @click="selectKernel"
                 :label="beakerSession.activeContext?.slug"
                 :loading="!(beakerSession.activeContext?.slug)"
+                v-tooltip.bottom="'Change or update the context'"
             />
         </template>
 
         <template #center>
-            <div class="logo">
+            <div class="title">
                 <h4>
                     {{ title || "Beaker Development Interface" }}
                 </h4>
+                <span v-if="titleExtra" class="title-extra">
+                    - {{ titleExtra }}
+                </span>
             </div>
         </template>
 
         <template #end>
             <nav>
-                <a
-                    :href="`/chat${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`"
-                    v-tooltip.right="{value: 'To Chat View', showDelay: 300}"
-                >
-                    <Button
-                        icon="pi pi-comment"
+                <template v-for="navItem in navItems" :key="navItem">
+                    <a
+                        v-if="navItem.type === 'link'"
+                        :href="navItem.href"
+                        :aria-label="navItem.label"
+                        :rel="navItem.rel"
+                        :target="navItem.target"
+                        v-tooltip.bottom="navItem.label"
+                    >
+                        <Button
+                            :icon="`pi pi-${navItem.icon}`"
+                            text
+                        />
+                    </a>
+                    <Button v-else-if="navItem.type === 'button'"
+                        :icon="`pi pi-${navItem.icon}`"
                         text
-                        style="margin: 0; color: var(--gray-500);"
+                        @click="navItem.command"
+                        :aria-label="navItem.label"
+                        v-tooltip.bottom="navItem.label"
                     />
-                </a>
-
-                <Button
-                    :icon="themeIcon"
-                    text
-                    @click="toggleDarkMode"
-                    style="margin: 0; color: var(--gray-500);"
-                />
-                <a
-                    href="https://jataware.github.io/beaker-kernel"
-                    rel="noopener"
-                    target="_blank"
-                >
-                    <Button
-                        text
-                        style="margin: 0; color: var(--gray-500);"
-                        aria-label="Beaker Documentation"
-                        icon="pi pi-book"
-                    />
-                </a>
-                <a
-                    href="https://github.com/jataware/beaker-kernel"
-                    rel="noopener"
-                    target="_blank"
-                >
-                    <Button
-                        text
-                        style="margin: 0; color: var(--gray-500);"
-                        aria-label="Github Repository Link Icon"
-                        icon="pi pi-github"
-                    />
-                </a>
+                </template>
             </nav>
         </template>
     </Toolbar>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject } from "vue";
+import { defineProps, defineEmits, computed, inject, withDefaults } from "vue";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { IBeakerTheme } from '../../plugins/theme';
 
-const urlParams = new URLSearchParams(window.location.search);
-const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
+export interface Props {
+    title: string;
+    titleExtra?: string;
+    nav?: any[];
+}
 
-// TODO too many granular props- use a slot instead?
-const props = defineProps([
-    "kernel",
-    "title",
-]);
+const props = withDefaults(defineProps<Props>(), {
+    title: "Beaker",
+});
 
 const emit = defineEmits(["selectKernel"]);
 
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+
+const navItems = computed(() => {
+    if (props.nav) {
+        return props.nav;
+    }
+    return [
+        {
+            type: 'button',
+            icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
+            command: toggleDarkMode,
+            label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
+        },
+        {
+            type: 'link',
+            href: `https://jataware.github.io/beaker-kernel`,
+            label: 'Beaker Documentation',
+            icon: "book",
+            rel: "noopener",
+            target: "_blank",
+        },
+        {
+            type: 'link',
+            href: `https://github.com/jataware/beaker-kernel`,
+            label: 'Check us out on Github',
+            icon: "github",
+            rel: "noopener",
+            target: "_blank",
+        },
+    ];
+})
 
 function selectKernel() {
     emit('selectKernel');
@@ -153,15 +171,20 @@ const connectionColor = computed(() => {
         padding: 0.5em;
     }
 
-    .logo {
+    .title {
         font-size: 1.2rem;
         padding: 0 0.5rem;
+        display: flex;
+        align-items: center;
+
+        font-weight: 500;
+        color: var(--gray-500);
+
         h4 {
+            display: inline-block;
             font-size: 1.8rem;
             margin: 0;
             padding: 0;
-            font-weight: 500;
-            color: var(--gray-500);
 
             @media(max-width: 885px) {
                 .longer-title {

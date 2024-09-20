@@ -60,7 +60,7 @@ const onSelectFile = async (event) => {
 
   try {
     const json = JSON.parse(text);
-    emit('open-file', json);
+    emit('open-file', json, file.name);
   } catch(e) {
     console.error(e);
     showToast({

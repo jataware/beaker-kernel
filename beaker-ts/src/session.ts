@@ -36,6 +36,7 @@ export class BeakerSession {
         this._services = new ServiceManager({
             serverSettings: this._serverSettings,
         });
+        this._services.connectionFailure.connect((sender, args) => {console.log("CONNECTION ERROR:", sender, args)});
         this._renderer = new BeakerRenderer(options.rendererOptions);
         this._history = new BeakerHistory(this._sessionId);
 
@@ -331,6 +332,10 @@ export class BeakerSession {
 
     get renderer(): BeakerRenderer {
         return this._renderer;
+    }
+
+    get sessionId(): string {
+        return this._sessionContext.path;
     }
 
     private _sessionId: string;

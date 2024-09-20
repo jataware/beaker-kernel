@@ -3,100 +3,40 @@
         title="Beaker Chat Interface"
         ref="beakerInterfaceRef"
         :connectionSettings="props.config"
-        sessionName="dev_interface"
+        sessionName="chat_interface"
         :sessionId="sessionId"
+        defaultKernel="beaker_kernel"
         :renderers="renderers"
-    >
-        <!-- @iopub-msg="iopubMessage"
+        @iopub-msg="iopubMessage"
         @unhandled-msg="unhandledMessage"
         @any-msg="anyMessage"
-        @session-status-changed="statusChanged" -->
-        <!-- v-keybindings="sessionKeybindings" -->
-
-            <!-- <div class="beaker-dev-interface">
-                <header>
-                    <VerticalToolbar style="align-self: flex-start;">
-                        <template #start>
-                            <Button
-                                outlined
-                                size="small"
-                                icon="pi pi-angle-down"
-                                iconPos="right"
-                                class="connection-button"
-                                @click="() => {contextSelectionOpen = !contextSelectionOpen}"
-                                v-tooltip.right="{
-                                    value: `${statusLabel}: ${beakerSessionRef?.activeContext?.slug || ''}`,
-                                    showDelay: 300
-                                }"
-                                :label="beakerSessionRef?.activeContext?.slug"
-                                :loading="!(beakerSessionRef?.activeContext?.slug)"
-                            >
-                                <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
-                            </Button>
-                            <Button
-                                @click="resetNotebook"
-                                v-tooltip.right="{value: 'Reset notebook', showDelay: 300}"
-                                icon="pi pi-refresh"
-                                size="small"
-                                severity="info"
-                                text
-                            />
-                            <Button
-                                @click="toggleFileMenu"
-                                v-tooltip.right="{value: 'Show file menu', showDelay: 300}"
-                                icon="pi pi-file-export"
-                                size="small"
-                                severity="info"
-                                text
-                            />
-                            <OverlayPanel ref="isFileMenuOpen" style="overflow-y: auto; height:40em;">
-                                <BeakerFilePane/>
-                            </OverlayPanel>
-                            <DarkModeButton :toggle-dark-mode="toggleDarkMode"/>
-                        </template>
-                        <template #center>
-                            <div class="vertical-toolbar-divider" />
-                        </template>
-                        <template #end>
-                            <a
-                                :href="`/${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`"
-                                v-tooltip.right="{value: 'To Notebook View', showDelay: 300}"
-                            >
-                                <Button
-                                    icon="pi pi-book"
-                                    size="small"
-                                    severity="info"
-                                    text
-                                />
-                            </a>
-                        </template>
-                    </VerticalToolbar>
-                </header> -->
-                <main style="display: flex; overflow-y: auto; overflow-x: hidden;">
-                    <div class="central-panel">
-                        <ChatPanel
-                            :cell-map="cellComponentMapping"
-                            v-autoscroll
-                        >
-                            <template #help-text>
-                                <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
-                                <p>Feel free to ask me about whatever the context specializes in..</p>
-                                <p>
-                                    On top of answering questions, I can actually run code in a python environment, and evaluate the results.
-                                    This lets me do some pretty awesome things like: web scraping, or plotting and exploring data.
-                                    Just shoot me a message when you're ready to get started.
-                                </p>
-                            </template>
-                            <template #notebook-background>
-                                <div class="welcome-placeholder">
-                                </div>
-                            </template>
-                        </ChatPanel>
-                        <AgentQuery
-                            class="agent-query-container"
-                        />
-                    </div>
-                </main>
+        @session-status-changed="statusChanged"
+    >
+        <main style="display: flex; overflow-y: auto; overflow-x: hidden;">
+            <div class="central-panel">
+                <ChatPanel
+                    :cell-map="cellComponentMapping"
+                    v-autoscroll
+                >
+                    <template #help-text>
+                        <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
+                        <p>Feel free to ask me about whatever the context specializes in..</p>
+                        <p>
+                            On top of answering questions, I can actually run code in a python environment, and evaluate the results.
+                            This lets me do some pretty awesome things like: web scraping, or plotting and exploring data.
+                            Just shoot me a message when you're ready to get started.
+                        </p>
+                    </template>
+                    <template #notebook-background>
+                        <div class="welcome-placeholder">
+                        </div>
+                    </template>
+                </ChatPanel>
+                <AgentQuery
+                    class="agent-query-container"
+                />
+            </div>
+        </main>
 
         <template #left-panel>
             <SideMenu
@@ -197,9 +137,9 @@ const loadNotebook = (notebookJSON: any) => {
 
 // // provide('show_toast', showToast);
 
-// const urlParams = new URLSearchParams(window.location.search);
+const urlParams = new URLSearchParams(window.location.search);
 
-// const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
+const sessionId = urlParams.has("session") ? urlParams.get("session") : "chat_dev_session";
 
 const props = defineProps([
     "config",

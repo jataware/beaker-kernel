@@ -84,6 +84,7 @@ import DataTable from 'primevue/datatable';
 import cookie from 'cookie';
 import {filesize} from 'filesize';
 import {Time} from '@jupyterlab/coreutils/src/time';
+import scroll from 'scroll-into-view-if-needed'
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
 
@@ -150,7 +151,7 @@ const doubleClick = ({data}) => {
   else if (data.type === 'notebook') {
     if (window.confirm(`Open notebook ${data.name}?\n\nOpening this file will replace your current notebook and reset the session. Proceed?`)) {
       getFileContents(data).then((json) => {
-        emit('open-file', json);
+        emit('open-file', json, data.path);
       })
     }
   }
@@ -313,12 +314,16 @@ const refreshFiles = async () => {
 const flashFile = async (path: string) => {
   const nameSpan = document.getElementById(`file-list::${path}`)
   if (!nameSpan) {
+    // File panel isn't populated, or is in some other directory.
     return;
   }
   const row = nameSpan.closest('tr');
   if (!row) {
+    // If namespan exists, this should exist, but just in case err on the side of gracefully not flashing if it can't be
+    // found.
     return;
   }
+  scroll(row, {behavior: "smooth"});
   row.classList.add("flash");
   row.addEventListener("animationend", () => row.classList.remove("flash"), {once: true});
   row.style.backgroundColor = 'rgba(255, 0, 0, 0)';
