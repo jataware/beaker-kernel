@@ -8,6 +8,8 @@
                         :loading="!activeContext?.slug"
                         @select-kernel="toggleContextSelection"
                         :title="props.title"
+                        :title-extra="props.titleExtra"
+                        :nav="props.headerNav"
                     />
                 </slot>
             </header>
@@ -55,11 +57,13 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted, defineExpose } from 'vue';
+import { defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounted, defineExpose } from 'vue';
 import BeakerSession from '../components/session/BeakerSession.vue';
 import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
+import {BeakerSession as Session} from 'beaker-kernel/src'
+import sum from 'hash-sum';
 
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
@@ -68,7 +72,7 @@ import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
 const toast = useToast();
 
 const activeContext = ref();
-const beakerNotebookRef = ref();
+const lastSaveChecksum = ref<string>();
 
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
@@ -84,11 +88,16 @@ const showToast = ({title, detail, life=3000, severity=('success' as undefined),
     });
 };
 
-const urlParams = new URLSearchParams(window.location.search);
-const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
-
 const props = defineProps([
     "title",
+    "titleExtra",
+    "savefile",
+    "headerNav",
+]);
+
+const emit = defineEmits([
+    "notebook-autosaved",
+    "open-file",
 ]);
 
 const connectionStatus = ref('connecting');
@@ -102,8 +111,12 @@ const toggleContextSelection = () => {
     contextSelectionOpen.value = !contextSelectionOpen.value;
 };
 
+provide('show_toast', showToast);
 
-onBeforeMount(() => {
+onMounted(async () => {
+    const session: Session = beakerSession.value.session;
+    await session.sessionReady;  // Ensure content service is up
+
     var notebookData: {[key: string]: any};
     try {
         notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
@@ -113,13 +126,20 @@ onBeforeMount(() => {
         notebookData = {};
     }
 
-    if (notebookData[sessionId]?.data) {
-        nextTick(() => {
-            if (beakerNotebookRef.value?.notebook) {
-                beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
-                nextTick(() => {
-                    beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
-                });
+    const sessionId = session.sessionId;
+
+    const sessionData = notebookData[sessionId];
+    if (sessionData) {
+        nextTick(async () => {
+            if (sessionData.filename !== undefined) {
+
+                const contentsService = session.services.contents;
+                const result = await contentsService.get(sessionData.filename)
+                lastSaveChecksum.value = sessionData.checksum;
+                emit('open-file', result.content, result.path, {selectedCell: sessionData.selectedCell});
+            }
+            if (sessionData.data !== undefined) {
+                emit('open-file', sessionData.data, undefined, {selectedCell: sessionData.selectedCell});
             }
         });
     }
@@ -133,10 +153,7 @@ onUnmounted(() => {
     window.removeEventListener("beforeunload", snapshot);
 });
 
-// TODO: See above. Move somewhere better.
-provide('show_toast', showToast);
-
-const snapshot = () => {
+const snapshot = async () => {
     var notebookData: {[key: string]: any};
     try {
         notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
@@ -145,13 +162,45 @@ const snapshot = () => {
         console.error(e);
         notebookData = {};
     }
-    // Only save state if there is state to save
-    if (beakerNotebookRef.value?.notebook) {
-        notebookData[sessionId] = {
-            data: beakerNotebookRef.value?.notebook.toIPynb(),
-            selectedCell: beakerNotebookRef.value?.selectedCellId,
-        };
-        localStorage.setItem("notebookData", JSON.stringify(notebookData));
+
+    const session: Session = beakerSession.value.session;
+    const sessionId = session.sessionId;
+    if (props.savefile && typeof props.savefile === "string") {
+
+        const notebookContent = session.notebook.toIPynb();
+        const notebookChecksum: string = sum(notebookContent);
+
+        if (!lastSaveChecksum.value || lastSaveChecksum.value != notebookChecksum) {
+            lastSaveChecksum.value = notebookChecksum;
+
+            const contentsService = session.services.contents;
+            const path = props.savefile;
+            const result = await contentsService.save(path, {
+                type: "notebook",
+                content: notebookContent,
+                format: 'text',
+            });
+            emit("notebook-autosaved", result.path);
+            showToast({
+                title: "Autosave",
+                detail: `Auto-saved notebook to file ${props.savefile}.`,
+            });
+            notebookData[sessionId] = {
+                filename: result.path,
+                checksum: notebookChecksum,
+            };
+            localStorage.setItem("notebookData", JSON.stringify(notebookData));
+        }
+    }
+    else {
+        // Only save state if there is state to save
+        if (session.notebook) {
+            notebookData[sessionId] = {
+                data: session.notebook.toIPynb(),
+                // selectedCell: beakerNotebookRef.value?.selectedCellId,
+            };
+            localStorage.setItem("notebookData", JSON.stringify(notebookData));
+        }
     }
 };
 
