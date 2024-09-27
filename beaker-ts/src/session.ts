@@ -285,6 +285,7 @@ export class BeakerSession {
      * @param notebookJSONObject - The json representation of a notebook, as found inside an .ipynb file
      */
     public loadNotebook(notebookJSONObject: object) {
+        console.log('1', notebookJSONObject);
         this.notebook.loadFromIPynb(notebookJSONObject);
     }
 

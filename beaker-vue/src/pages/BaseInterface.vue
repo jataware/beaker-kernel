@@ -5,7 +5,6 @@
                 <slot name="header">
                     <BeakerHeader
                         :connectionStatus="connectionStatus"
-                        :loading="!activeContext?.slug"
                         @select-kernel="toggleContextSelection"
                         :title="props.title"
                         :title-extra="props.titleExtra"
@@ -71,7 +70,6 @@ import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
 
 const toast = useToast();
 
-const activeContext = ref();
 const lastSaveChecksum = ref<string>();
 
 

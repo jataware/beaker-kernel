@@ -68,7 +68,7 @@
                 initialWidth="25vi"
             >
                 <SideMenuPanel label="Info" icon="pi pi-home">
-                    <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
+                    <ContextPanel @action-selected="selectAction"/>
                 </SideMenuPanel>
                 <SideMenuPanel id="files" label="Files" icon="pi pi-file-export" no-overflow>
                     <FilePanel
@@ -95,7 +95,7 @@ import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
-import ContextTree from '../components/dev-interface/ContextTree.vue';
+import ContextPanel from '../components/panels/ContextPanel.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
@@ -103,12 +103,11 @@ import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
-import BeakerLLMQueryCell from '../components/cell/BeakerLLMQueryCell.vue';
+import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
 
 
-const activeContext = ref();
 const beakerNotebookRef = ref();
 const beakerInterfaceRef = ref();
 const filePanelRef = ref();
@@ -136,7 +135,7 @@ const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
 const cellComponentMapping = {
     'code': BeakerCodeCell,
     'markdown': BeakerMarkdownCell,
-    'query': BeakerLLMQueryCell,
+    'query': BeakerQueryCell,
     'raw': BeakerRawCell,
 }
 
@@ -259,9 +258,11 @@ const loadNotebook = (notebookJSON: any, filename: string) => {
 
 const handleNotebookSaved = async (path: string) => {
     saveAsFilename.value = path;
-    sideMenuRef.value?.selectPanel("Files");
-    await filePanelRef.value.refresh();
-    await filePanelRef.value.flashFile(path);
+    if (path) {
+        sideMenuRef.value?.selectPanel("Files");
+        await filePanelRef.value.refresh();
+        await filePanelRef.value.flashFile(path);
+    }
 }
 
 
@@ -286,8 +287,8 @@ const notebookKeyBindings = {
             // Create a new cell after the current cell if one doesn't exist.
             beakerNotebookRef.value?.insertCellAfter(
                 targetCell,
-                targetCell.cell.cell_type,
-                true
+                undefined,
+                true,
             );
             // Focus the editor only if we are creating a new cell.
             nextTick(() => {
