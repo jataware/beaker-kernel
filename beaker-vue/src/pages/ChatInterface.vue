@@ -2,41 +2,42 @@
     <BaseInterface
         title="Beaker Chat Interface"
         ref="beakerInterfaceRef"
+        :header-nav="headerNav"
         :connectionSettings="props.config"
         sessionName="chat_interface"
         :sessionId="sessionId"
         defaultKernel="beaker_kernel"
         :renderers="renderers"
-        @iopub-msg="iopubMessage"
-        @unhandled-msg="unhandledMessage"
-        @any-msg="anyMessage"
         @session-status-changed="statusChanged"
+        @iopub-msg="iopubMessage"
     >
-        <main style="display: flex; overflow-y: auto; overflow-x: hidden;">
-            <div class="central-panel">
-                <ChatPanel
-                    :cell-map="cellComponentMapping"
-                    v-autoscroll
-                >
-                    <template #help-text>
-                        <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
-                        <p>Feel free to ask me about whatever the context specializes in..</p>
-                        <p>
-                            On top of answering questions, I can actually run code in a python environment, and evaluate the results.
-                            This lets me do some pretty awesome things like: web scraping, or plotting and exploring data.
-                            Just shoot me a message when you're ready to get started.
-                        </p>
-                    </template>
-                    <template #notebook-background>
-                        <div class="welcome-placeholder">
-                        </div>
-                    </template>
-                </ChatPanel>
-                <AgentQuery
-                    class="agent-query-container"
-                />
+        <div class="chat-layout">
+            <div v-if="!isMaximized" class="spacer left"></div>
+            <div class="chat-container">
+                    <ChatPanel
+                        :cell-map="cellComponentMapping"
+                        v-autoscroll
+                    >
+                        <template #help-text>
+                            <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
+                            <p>Feel free to ask me about whatever the context specializes in..</p>
+                            <p>
+                                On top of answering questions, I can actually run code in a python environment, and evaluate the results.
+                                This lets me do some pretty awesome things like: web scraping, or plotting and exploring data.
+                                Just shoot me a message when you're ready to get started.
+                            </p>
+                        </template>
+                        <template #notebook-background>
+                            <div class="welcome-placeholder">
+                            </div>
+                        </template>
+                    </ChatPanel>
+                    <AgentQuery
+                        class="agent-query-container"
+                    />
             </div>
-        </main>
+            <div v-if="!isMaximized" class="spacer right"></div>
+        </div>
 
         <template #left-panel>
             <SideMenu
@@ -47,7 +48,7 @@
                 initialWidth="25vi"
             >
                 <SideMenuPanel label="Info" icon="pi pi-home">
-                    <ContextTree :context="activeContext?.info"/>
+                    <ContextPanel />
                 </SideMenuPanel>
                 <SideMenuPanel label="Files" icon="pi pi-file-export" no-overflow>
                     <FilePanel @open-file="loadNotebook" />
@@ -82,9 +83,10 @@ import HelpSidebar from '../components/chat-interface/HelpSidebar.vue';
 import VerticalToolbar from '../components/chat-interface/VerticalToolbar.vue';
 import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
+import ContextPanel from '../components/panels/ContextPanel.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
-import BeakerLLMQueryCell from '../components/cell/BeakerLLMQueryCell.vue';
+import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
@@ -106,15 +108,48 @@ import { defineProps, inject, nextTick, onBeforeMount, onUnmounted, provide, ref
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
 import { IBeakerTheme } from '../plugins/theme';
+import { vKeybindings } from '@/directives/keybindings';
 
-const activeContext = ref();
 const beakerInterfaceRef = ref();
-// const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
+const isMaximized = ref(false);
+const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 // const toast = useToast();
+
 // const contextSelectionOpen = ref(false);
 // const contextProcessing = ref(false);
 // import BeakerContextSelection from '../components/session/BeakerContextSelection.vue';
 
+
+const headerNav = computed(() => [
+    {
+        type: 'link',
+        href: `/${window.location.search}`,
+        icon: 'comment',
+        label: 'Navigate to notebook view',
+    },
+    {
+        type: 'button',
+        icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
+        command: toggleDarkMode,
+        label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
+    },
+    {
+        type: 'link',
+        href: `https://jataware.github.io/beaker-kernel`,
+        label: 'Beaker Documentation',
+        icon: "book",
+        rel: "noopener",
+        target: "_blank",
+    },
+    {
+        type: 'link',
+        href: `https://github.com/jataware/beaker-kernel`,
+        label: 'Check us out on Github',
+        icon: "github",
+        rel: "noopener",
+        target: "_blank",
+    },
+]);
 
 const beakerSession = computed(() => {
     return beakerInterfaceRef?.value?.beakerSession;
@@ -123,20 +158,6 @@ const beakerSession = computed(() => {
 const loadNotebook = (notebookJSON: any) => {
     beakerSession.value?.session.loadNotebook(notebookJSON);
 }
-// // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
-// // Let's only use severity=success|warning|danger(=error) for now
-// const showToast = ({title, detail, life=3000, severity='success' as any}) => {
-//     toast.add({
-//         summary: title,
-//         detail,
-//         life,
-//         // for options, seee https://primevue.org/toast/
-//         severity,
-//     });
-// };
-
-// // provide('show_toast', showToast);
-
 const urlParams = new URLSearchParams(window.location.search);
 
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "chat_dev_session";
@@ -160,88 +181,23 @@ const renderers = [
 const cellComponentMapping = {
     'code': BeakerCodeCell,
     'markdown': BeakerMarkdownCell,
-    'query': BeakerLLMQueryCell,
+    'query': BeakerQueryCell,
     'raw': BeakerRawCell,
 }
 
-// const isFileMenuOpen = ref();
+const connectionStatus = ref('connecting');
+const beakerSessionRef = ref<typeof BeakerSession>();
 
-// const toggleFileMenu = (event) => {
-//     isFileMenuOpen.value.toggle(event);
-// }
 
-// const resetNotebook = async () => {
-//     const session = beakerSessionRef.value.session;
-//     session.reset();
-// };
+const iopubMessage = (msg) => {
+    if (msg.header.msg_type === "job_response") {
+        beakerSessionRef.value.session.addMarkdownCell(msg.content.response);
+    }
+};
 
-// const connectionStatus = ref('connecting');
-// const debugLogs = ref<object[]>([]);
-// const rawMessages = ref<object[]>([])
-// const previewData = ref<any>();
-// const saveInterval = ref();
-// const beakerSessionRef = ref<typeof BeakerSession>();
-
-// const statusLabels = {
-//     unknown: 'Unknown',
-//     starting: 'Starting',
-//     idle: 'Ready',
-//     busy: 'Busy',
-//     terminating: 'Terminating',
-//     restarting: 'Restarting',
-//     autorestarting: 'Autorestarting',
-//     dead: 'Dead',
-//     // This extends kernel status for now.
-//     connected: 'Connected',
-//     connecting: 'Connecting'
-// }
-
-// const statusColors = {
-//     connected: 'green-300',
-//     idle: 'green-400',
-//     connecting: 'green-200',
-//     busy: 'orange-400',
-// };
-
-// const statusLabel = computed(() => {
-//     return statusLabels[beakerSessionRef?.value?.status] || "unknown";
-
-// });
-
-// const connectionColor = computed(() => {
-//     // return connectionStatusColorMap[beakerSession.status];
-//     return statusColors[beakerSessionRef?.value?.status] || "grey-200"
-// });
-
-// const iopubMessage = (msg) => {
-//     if (msg.header.msg_type === "preview") {
-//         previewData.value = msg.content;
-//     } else if (msg.header.msg_type === "debug_event") {
-//         debugLogs.value.push({
-//             type: msg.content.event,
-//             body: msg.content.body,
-//             timestamp: msg.header.date,
-//         });
-//     } else if (msg.header.msg_type === "job_response") {
-//         beakerSessionRef.value.session.addMarkdownCell(msg.content.response);
-//     }
-// };
-
-// const anyMessage = (msg, direction) => {
-//     rawMessages.value.push({
-//         type: direction,
-//         body: msg,
-//         timestamp: msg.header.date,
-//     });
-// };
-
-// const unhandledMessage = (msg) => {
-//     console.log("Unhandled message recieved", msg);
-// }
-
-// const statusChanged = (newStatus) => {
-//     connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
-// };
+const statusChanged = (newStatus) => {
+    connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
+};
 
 // onBeforeMount(() => {
 //     var notebookData: {[key: string]: any};
@@ -420,5 +376,31 @@ const cellComponentMapping = {
 // div.code-cell.query-event-code-cell {
 //     margin-bottom: 0.25rem;
 // }
+
+.spacer {
+    &.left {
+        flex: 1 1000 25vw;
+    }
+    &.right {
+        flex: 1 1 25vw;
+    }
+}
+
+.chat-container {
+    flex: 2 0 calc(50vw - 2px);
+    border: 1px solid var(--surface-border);
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-layout {
+    display:flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.cell-container {
+    // flex: 1;
+}
 
 </style>

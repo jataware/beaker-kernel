@@ -161,9 +161,13 @@ const resetSaveAsFilename = () => {
 }
 
 const resetNotebook = async () => {
-    session.reset();
-    if (notebook.cellCount <= 0) {
-        notebook.selectCell(session.addCodeCell("") as {id: string});
+    if (window.confirm(`This will reset your entire session, clearing the notebook and removing any updates to the environment. Proceed?`)) {
+        session.reset();
+        saveAsFilename.value = undefined;
+        emit("notebook-saved", undefined);
+        if (notebook.cellCount <= 0) {
+            notebook.selectCell(session.addCodeCell("") as {id: string});
+        }
     }
 };
 

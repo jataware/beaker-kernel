@@ -90,14 +90,15 @@ const isBusy = computed(() => {
 });
 
 const badgeSeverity = computed(() => {
+    const defaultValue = "secondary";
     const mappings = {
         [ExecuteStatus.Success]: 'success',
         [ExecuteStatus.Modified]: 'warning',
         [ExecuteStatus.Error]: 'danger',
-        [ExecuteStatus.Pending]: 'secondary',
-        [ExecuteStatus.None]: "secondary",
+        [ExecuteStatus.Pending]: defaultValue,
+        [ExecuteStatus.None]: defaultValue,
     };
-    return mappings[cell.value?.last_execution?.status];
+    return mappings[cell.value?.last_execution?.status] || defaultValue;
 });
 
 const clicked = (evt) => {
@@ -203,7 +204,7 @@ export default {
 
 .execution-count-badge {
     font-family: monospace;
-    min-width: 3rem;
+    min-width: 2.5rem;
     display: flex;
     justify-content: center;
 

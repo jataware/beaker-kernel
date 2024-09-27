@@ -54,6 +54,13 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     // Override index type to allow methods to be defined on the class
     static IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments", "outputs", "execution_count"];
 
+    static defaults = {
+        metadata: {},
+        source: "",
+        status: "idle",
+        children: [],
+    };
+
     [key: string]: any;
     id: string;
     cell_type: BeakerCellType;
@@ -63,27 +70,14 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     children: BeakerBaseCell[];
 
     constructor(content: Partial<nbformat.IBaseCell>) {
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
-        if (this.metadata === undefined) {
-            this.metadata = {};
-        }
-        this.status = "idle";
-        this.last_execution = {status: "none"};
-        this.children = [];
+        Object.assign(this, BeakerBaseCell.defaults, content)
         if (this.id === undefined) {
-            this.id = uuidv4();
-        }
-        if (this.source === undefined) {
-            this.source = "";
+            this.id = BeakerBaseCell.generateId();
         }
     }
 
     static generateId(): string {
         return uuidv4();
-    }
-
-    public reset_execution_state(): void {
-        this.last_execution = {status: "modified"};
     }
 
     public fromJSON(obj: any) {
@@ -164,7 +158,6 @@ export type BeakerQueryEvent =
     | IBeakerQueryErrorEvent;
 
 
-
 export interface IQueryCell extends nbformat.IBaseCell {
     cell_type: 'query';
     events: BeakerQueryEvent[];
@@ -177,6 +170,7 @@ export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
 
     constructor(content: nbformat.ICell) {
         super({cell_type: "raw", ...content});
+        Object.assign(this, content)
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
@@ -192,13 +186,17 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
     last_execution?: BeakerCellExecutionStatus;
     busy?: boolean;
 
+    static defaults = {
+        ...super.defaults,
+        last_execution: {status: "none"},
+        outputs: [],
+        execution_count: null,
+        busy: false,
+    }
+
     constructor(content: Partial<nbformat.ICell>) {
         super({cell_type: 'code', ...content});
-        this.outputs = this.outputs ?? [];
-        if (this.execution_count === undefined) {
-            this.execution_count = null;
-        }
-        this.busy = false;
+        Object.assign(this, BeakerCodeCell.defaults, content)
         if (Array.isArray(this.source)) {
             this.source = this.source.join("\n");
         }
@@ -259,6 +257,10 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         }
         return null;
     };
+
+    public reset_execution_state(): void {
+        this.last_execution = {status: "modified"};
+    }
 }
 
 export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMarkdownCell {
@@ -267,6 +269,7 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 
     constructor(content: Partial<nbformat.ICell>) {
         super({cell_type: 'markdown', ...content});
+        Object.assign(this, content)
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
@@ -279,11 +282,16 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     declare cell_type: 'query';
     events: BeakerQueryEvent[];
 
+    static defaults = {
+        ...super.defaults,
+        events: [],
+    }
+
     _current_input_request_message: messages.IInputRequestMsg;
 
     constructor(content: Partial<nbformat.ICell>) {
         super({cell_type: 'query', ...content});
-        this.events = [];
+        Object.assign(this, BeakerQueryCell.defaults, content)
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {

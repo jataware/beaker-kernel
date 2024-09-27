@@ -28,7 +28,7 @@
                     highlight="line"
                 >
                     <SideMenuPanel label="Context" icon="pi pi-home">
-                        <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
+                        <ContextPanel :context="activeContext?.info" @action-selected="selectAction"/>
                     </SideMenuPanel>
                 </SideMenu>
 
@@ -130,7 +130,7 @@ import LoggingPane from '../components/dev-interface/LoggingPane.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
-import ContextTree from '../components/dev-interface/ContextTree.vue';
+import ContextPanel from '../components/panels/ContextPanel.vue';
 import BeakerFilePane from '../components/dev-interface/BeakerFilePane.vue';
 import PreviewPane from '../components/dev-interface/PreviewPane.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
@@ -140,7 +140,7 @@ import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
-import BeakerLLMQueryCell from '../components/cell/BeakerLLMQueryCell.vue';
+import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
 
@@ -185,7 +185,7 @@ const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
 const cellComponentMapping = {
     'code': BeakerCodeCell,
     'markdown': BeakerMarkdownCell,
-    'query': BeakerLLMQueryCell,
+    'query': BeakerQueryCell,
     'raw': BeakerRawCell,
 }
 

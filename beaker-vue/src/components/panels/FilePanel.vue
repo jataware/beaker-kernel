@@ -37,19 +37,26 @@
                @dragover="fileDragOver" @drop="fileDrop"
                >
         <Column header="" class="download-column">
+          <template #header>
+            <span
+              class="pi pi-cloud-download"
+              style="font-weight: lighter;"
+            ></span>
+          </template>
           <template #body="slotProps">
             <Button
               v-if="slotProps.data.type === 'file' || slotProps.data.type === 'notebook'"
               icon="pi pi-cloud-download"
               class="download-button"
               @click="downloadFile(slotProps.data)"
+              v-tooltip.left="{value: 'Download', showDelay: 0, hideDelay: 0}"
             ></Button>
           </template>
         </Column>
         <Column field="name" header="Name" class="filename-column" sortable>
           <template #body="slotProps">
-            <span :class="getFileClass(slotProps.data)"></span>
-            <span :id="`file-list::${slotProps.data.path}`" class="filename">
+            <span :class="[...getFileIconClass(slotProps.data), 'file-icon', slotProps.data.type]"></span>
+            <span :id="`file-list::${slotProps.data.path}`" class="file-name" :class="slotProps.data.type">
               {{ slotProps.data.name }}
             </span>
           </template>
@@ -128,7 +135,7 @@ const displayPath = computed(() => {
   return `/${path}`;
 });
 
-const getFileClass = (obj) => {
+const getFileIconClass = (obj) => {
   const classes = [];
   if (obj.type === 'file') {
     classes.push('pi', 'pi-file');
@@ -375,6 +382,14 @@ defineExpose({
       }
     }
 
+    tr:hover {
+      .download-button {
+        opacity: 1;
+        animation-name: download-fade-in;
+        animation-duration: 200ms;
+      }
+    }
+
     tr.flash {
       animation-name: fade-out-background;
       animation-duration: 4000ms;
@@ -397,6 +412,16 @@ defineExpose({
 
   100% {
     background-color: rgba(255, 33, 78, 0);
+  }
+}
+
+@keyframes download-fade-in {
+  0% {
+    opacity: 0.0;
+  }
+
+  100% {
+    opacity: 1.0;
   }
 }
 
@@ -429,9 +454,21 @@ defineExpose({
     }
   }
 
-  .filename {
+  .file-icon {
+    &.directory {
+      color: var(--primary-600);
+      font-weight: bold;
+    }
+  }
+
+  .file-name {
     word-break: keep-all;
     margin-left: 0.25rem;
+    &.directory {
+      text-decoration: underline ;
+      text-underline-offset: 0.25rem;
+      // color: var(--primary-500);
+    }
   }
 
   .download-button {
@@ -439,6 +476,7 @@ defineExpose({
     margin: 0 2px;
     width: unset;
     aspect-ratio: 1/1;
+    opacity: 0;
   }
 
   .file-container-header {

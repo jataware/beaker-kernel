@@ -5,6 +5,7 @@
         @click="clicked"
         ref="beakerCellRef"
         :class="{collapsed}"
+        :cell-id="cell.id"
     >
         <div class="collapse-box" @click.prevent="collapseCell"></div>
         <div
@@ -24,18 +25,24 @@
 
         <div class="menu-area" ref="menuAreaRef">
         <slot name="hover-menu">
-            <div class="hover-menu">
+            <div class="hover-menu"
+                @pointerenter="overlayMenuHoverHandler"
+                @pointerleave="overlayMenuHoverHandler"
+            >
                 <Button
+                    ref="cellMenuButton"
+                    class="cell-menu-button"
                     text
                     small
                     icon="pi pi-ellipsis-v"
-                    @click.prevent="hoverMenuRef.toggle($event);"
-                    v-tooltip="'Cell Menu'"
+                    @click.prevent="hoverMenuRef.show($event);"
                 />
                 <OverlayPanel
                     class="menu-overlay"
                     ref="hoverMenuRef"
-                    :popup="true"
+                    :cell-id="cell.id"
+                    @pointerenter="overlayMenuHoverHandler"
+                    @pointerleave="overlayMenuHoverHandler"
                 >
                     <div v-tooltip="'Change Cell Type'">
                         <Dropdown
@@ -110,22 +117,12 @@
 import { defineProps, defineEmits, ref, inject, computed } from "vue";
 import Button from 'primevue/button';
 import DraggableMarker from './DraggableMarker.vue';
-import BeakerCodeCell from './BeakerCodeCell.vue';
-import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
-import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
-import BeakerRawCell from './BeakerRawCell.vue';
-import { BeakerBaseCell, type IBeakerCell } from "beaker-kernel/src";
+import { type IBeakerCell } from "beaker-kernel/src";
 import Dropdown from 'primevue/dropdown';
 import OverlayPanel from 'primevue/overlaypanel';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
-
-export type CellTypes =
-    | typeof BeakerRawCell
-    | typeof BeakerCodeCell
-    | typeof BeakerMarkdownCell
-    | typeof BeakerLLMQueryCell;
 
 export interface Props {
     cell: IBeakerCell;
@@ -150,6 +147,7 @@ const clicked = (evt) => {
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
 const hoverMenuRef = ref(null);
+const cellMenuButton = ref(null);
 const metadata = ref(props.cell.metadata);
 const collapsed = computed(() => {
     return metadata.value?.collapsed || false;
@@ -191,6 +189,29 @@ const moveDown = () => {
     }
 }
 
+const overlayMenuHoverHandler = (event: PointerEvent) => {
+    // Trigger if we are entering, but not moving between elements with the specified classes
+    if (!((event?.target instanceof HTMLElement) && (event?.relatedTarget instanceof HTMLElement))) {
+        return;
+    }
+    const selectors = [
+        `[cell-id="${props.cell.id}"] .menu-area`,
+        `[cell-id="${props.cell.id}"] .hover-menu`,
+        `.menu-overlay[cell-id="${props.cell.id}"]`,
+    ];
+    const selectorString = selectors.join(', ');
+    const closest = event.relatedTarget.closest(selectorString);
+    const ignore = closest !== null;
+    if (!ignore) {
+        if (event.type.toLowerCase().includes('enter')) {
+            hoverMenuRef.value.show(event, cellMenuButton.value.$el);
+        }
+        else if (event.type.toLowerCase().includes('leave')) {
+            hoverMenuRef.value.hide();
+        }
+    }
+}
+
 </script>
 
 <style lang="scss">
@@ -202,12 +223,11 @@ const moveDown = () => {
     background-color: var(--surface-a);
     --collapsed-height: 3.5em;
     min-height: 3.5em;
-    // width: 100%;
 
     grid:
-        "collapse-box drag-handle cell-contents hover-menu" 2em
+        "collapse-box drag-handle cell-contents hover-menu" min-content
         "collapse-box drag-handle cell-contents extra" 1fr /
-        10px 1.6rem 1fr 2em;
+        10px 1.6rem 1fr 2.5em;
 
     &.selected .collapse-box {
         background-color: var(--primary-400);
@@ -232,6 +252,7 @@ const moveDown = () => {
     &.collapsed {
 
         // filter: drop-shadow(0 0.5rem 0.3rem crimson);
+        overflow: hidden;
 
         .cm-editor {
             max-height: var(--collapsed-height);
@@ -351,16 +372,29 @@ const moveDown = () => {
 
 .menu-area {
     grid-area: hover-menu;
-    margin: 0.25em 0.25em 0.25em 0;
+    margin: 0.5em 0.25em 0 0;
+    height: 2em;
+    width: 100%;
+
+    .cell-menu-button {
+        height: 1.5em;
+        width: 1.5em;
+        aspect-ratio: 1 / 1;
+        border-width: 0;
+        padding: auto;
+        border-radius: var(--border-radius);
+
+        .p-button-icon {
+            font-size: smaller;
+        }
+    }
+}
+
+.hover-menu {
     height: 100%;
     width: 100%;
-    button {
-        height: 1.5rem;
-        width: unset;
-        padding: unset;
-        aspect-ratio: 1 / 1;
-        font-size: smaller;
-    }
+    padding: auto;
+    text-align: center;
 }
 
 .menu-overlay {
