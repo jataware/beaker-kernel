@@ -1,44 +1,31 @@
 <template>
     <div class="llm-query-cell">
-        <div class="query-row">
-            <div class="query">
-                <div class="query-steps">User Query:</div>
-                <div class="llm-prompt-container">
-                    <div v-show="isEditing" class="prompt-input-container">
-                        <ContainedTextArea
-                            ref="textarea"
-                            class="prompt-input"
-                            v-model="promptText"
-                            :style="{minHeight: `${promptEditorMinHeight}px`}"
-                        />
-                        <div class="prompt-controls" style="">
-                            <Button label="Submit" @click="execute"/>
-                            <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
-                        </div>
-                    </div>
-                    <div v-show="!isEditing" @dblclick="promptEditorMinHeight = ($event.target as HTMLElement).clientHeight; isEditing = true">
-                        <div class="llm-prompt-text">{{ cell.source }}</div>
+        <div class="query" @dblclick="promptDoubleClick">
+            <div class="query-steps">User Query:</div>
+            <div class="llm-prompt-container">
+                <div v-show="isEditing" class="prompt-input-container">
+                    <ContainedTextArea
+                        ref="textarea"
+                        class="prompt-input"
+                        v-model="promptText"
+                        :style="{minHeight: `${promptEditorMinHeight}px`}"
+                    />
+                    <div class="prompt-controls" style="">
+                        <Button label="Submit" @click="execute"/>
+                        <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
                     </div>
                 </div>
-            </div>
-            <div class="actions">
-                <Button
-                    v-if="cell.status === 'busy'"
-                    style="pointer-events: none;"
-                    text
-                    size="small"
-                    severity="info"
-                    icon="pi pi-spin pi-spinner"
-                />
+                <div v-show="!isEditing">
+                    <div class="llm-prompt-text">{{ cell.source }}</div>
+                </div>
             </div>
         </div>
-        <div class="event-container" v-if="taggedCellEvents.length > 0 || isLastEventTerminal()">
+        <div class="event-container" v-if="events.length > 0">
             <div class="events">
-                <h3 class="query-steps">Agent actions:</h3>
-                <div class="query-horizontal-br" />
+                <div class="query-steps">Agent actions:</div>
                 <Accordion :multiple="true" :class="'query-accordion'" v-model:active-index="selectedEvents">
                     <AccordionTab
-                        v-for="[eventIndex, event] of taggedCellEvents.entries()"
+                        v-for="(event, eventIndex) in events"
                         :key="eventIndex"
                         :pt="{
                             header: {
@@ -57,11 +44,13 @@
                     >
                         <template #header>
                             <span class="flex align-items-center gap-2 w-full">
-                                <span :class="eventIconMap[event.type]"/>
+                                <span :class="eventIconMap[event.type]">
+                                    <ThinkingIcon v-if="event.type === 'thought'" class="thought-icon"/>
+                                </span>
                                 <span class="font-bold white-space-nowrap">{{ queryEventNameMap[event.type] }}</span>
                             </span>
                         </template>
-                        <BeakerLLMQueryEvent
+                        <BeakerQueryCellEvent
                             :key="eventIndex"
                             :event="event"
                             :parentQueryCell="cell"
@@ -70,7 +59,7 @@
                 </Accordion>
                 <div class="query-answer" v-if="isLastEventTerminal()" >
                     <h3 class="query-steps">Result</h3>
-                    <BeakerLLMQueryEvent
+                    <BeakerQueryCellEvent
                         v-if="isLastEventTerminal()"
                         :event="cell?.events[cell?.events.length - 1]"
                         :parent-query-cell="cell"
@@ -79,7 +68,7 @@
             </div>
         </div>
         <div class="thinking-indicator" v-if="cell.status === 'busy'">
-            <span class="pi pi-comment"></span> Thinking <span class="thinking-animation"></span>
+            <span class="thought-icon"><ThinkingIcon/></span> Thinking <span class="thinking-animation"></span>
         </div>
         <div
             class="input-request"
@@ -113,11 +102,12 @@ import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick,
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
-import BeakerLLMQueryEvent from "./BeakerLLMQueryEvent.vue";
+import BeakerQueryCellEvent from "./BeakerQueryCellEvent.vue";
 import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import ThinkingIcon from "../../assets/icon-components/BrainIcon.vue";
 
 const props = defineProps([
     'index',
@@ -125,8 +115,8 @@ const props = defineProps([
 ]);
 
 const eventIconMap = {
-    "code_cell": "pi pi-align-left",
-    "thought": "pi pi-comment",
+    "code_cell": "pi pi-code",
+    "thought": "thought-icon",
     "user_answer": "pi pi-reply",
     "user_question": "pi pi-question-circle"
 }
@@ -135,6 +125,12 @@ const terminalEvents = [
     "error",
     "response"
 ]
+
+const enum QueryStatuses {
+    NotExecuted,
+    Running,
+    Done,
+}
 
 const cell = shallowRef(props.cell);
 const isEditing = ref<boolean>(cell.value.source === "");
@@ -145,6 +141,12 @@ const textarea = ref();
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
+
+// const rollingExpandedActionCount = 2;
+
+const events = computed(() => {
+    return [...props.cell.events];
+})
 
 const taggedCellEvents = computed(() => {
     let index = 0;
@@ -158,6 +160,24 @@ const taggedCellEvents = computed(() => {
     return events.filter((e) => !terminalEvents.includes(e.type));
 });
 
+const queryStatus = computed<QueryStatuses>(() => {
+    const eventCount = events.value.length;
+    if (props.cell.status === 'busy') {
+        return QueryStatuses.Running;
+    }
+    if (eventCount === 0) {
+        return QueryStatuses.NotExecuted;
+    }
+    else if (terminalEvents.includes(events.value[eventCount - 1].type)) {
+        return QueryStatuses.Done;
+    }
+    else {
+        return QueryStatuses.Running;
+    }
+
+
+})
+
 const isLastEventTerminal = () => {
     const events: BeakerQueryEvent[] = props.cell.events;
     if (events?.length > 0) {
@@ -170,17 +190,28 @@ const isLastEventTerminal = () => {
 // only show code cells
 const selectedEvents = computed({
     get() {
-        if (taggedCellEvents.value.length == 0) {
+        const eventCount = events.value.length;
+        if (eventCount === 0) {
+            return [];
+        }
+        else if (eventCount === 1) {
             return [0];
         }
-        const events: BeakerQueryEvent[] = [...props.cell.events];
-        const codeCellIndices = events
-            .map((e, index) => e.type === "code_cell" ? index : null)
-            .filter(e => e);
-        if (isLastEventTerminal()) {
-            return codeCellIndices;
+        else {
+            return [eventCount-2, eventCount-1];
         }
-        return [...codeCellIndices, taggedCellEvents.value.length - 1];
+        // return [0];
+        // if (taggedCellEvents.value.length == 0) {
+        //     return [0];
+        // }
+        // const events: BeakerQueryEvent[] = [...props.cell.events];
+        // const codeCellIndices = events
+        //     .map((e, index) => e.type === "code_cell" ? index : null)
+        //     .filter(e => e);
+        // if (isLastEventTerminal()) {
+        //     return codeCellIndices;
+        // }
+        // return [...codeCellIndices, taggedCellEvents.value.length - 1];
     },
     set(newValue) {
         // no operation,
@@ -189,13 +220,20 @@ const selectedEvents = computed({
 })
 
 const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
-    "thought": "Agent Thought",
-    "response": "Agent Response",
+    "thought": "Thought",
+    "response": "Final Response",
     "code_cell": "Code",
     "user_answer": "Answer",
     "user_question": "Question",
     "error": "Error",
     "abort": "Abort"
+}
+
+const promptDoubleClick = (event) => {
+    if (!isEditing.value) {
+        promptEditorMinHeight.value = (event.target as HTMLElement).clientHeight;
+        isEditing.value = true;
+    }
 }
 
 const respond = () => {
@@ -277,7 +315,10 @@ export default {
 }
 
 .query {
-    flex: 1;
+    display: flex;
+    // align-items: start;
+    justify-content: space-between;
+    flex-direction: column;
     margin-bottom: 0.25rem;
 }
 
@@ -324,7 +365,6 @@ export default {
     flex-direction: column;
     background-color: var(--surface-c);
     border-radius: var(--border-radius);
-    margin-right: 2em;
 }
 
 div.query-steps {
@@ -336,12 +376,10 @@ h3.query-steps {
 }
 
 .llm-prompt-text {
-    // margin-top: 0;
-    // margin-bottom: 0;
-    padding: 1em;
-    font-weight: 400;
-    font-size: larger;
+    margin-left: 1rem;
+    padding: 0.5rem;
     white-space: pre-wrap;
+    width: fit-content;
 }
 
 .event-container {
@@ -366,7 +404,7 @@ h3.query-steps {
 }
 
 .query-steps {
-    font-weight: 400;
+    // font-weight: 400;
     font-size: large;
 }
 
@@ -383,8 +421,8 @@ div.query-tab-user_question a.p-accordion-header-link.p-accordion-header-action,
 div.query-tab-user_answer a.p-accordion-header-link.p-accordion-header-action {
     background: none;
     border: none;
-    font-size: 0.75rem;
-    font-weight: 400;
+    // font-size: 0.75rem;
+    // font-weight: 400;
 }
 
 div.p-accordion-content.query-tab-content-thought,
@@ -406,30 +444,22 @@ div.code-cell.query-event-code-cell {
     padding-left: 0;
 }
 
-svg.query-tab-icon-thought,
-svg.query-tab-icon-user_answer,
-svg.query-tab-icon-user_question {
-    width: 1rem;
-    height: 0.7rem;
-}
+// svg.query-tab-icon-thought,
+// svg.query-tab-icon-user_answer,
+// svg.query-tab-icon-user_question {
+//     width: 1rem;
+//     height: 0.7rem;
+// }
 
 a.query-tab-headeraction > span > span.pi {
     align-items: center;
     margin: auto;
-    padding-right: 0.25rem;
-}
-
-a.query-tab-headeraction > span > span.pi-align-left {
-    font-size: 1.2rem;
-    font-weight: 500;
-    margin: auto;
-    padding-right: 0.6rem;
+    padding-right: 0.5rem;
 }
 
 .query-answer {
     background-color: var(--surface-c);
     padding-left: 1rem;
-    margin-right: 2rem;
     padding-bottom: 1rem;
     border-radius: var(--border-radius);
     margin-top: 1rem;
@@ -450,6 +480,19 @@ a.query-tab-headeraction > span > span.pi-align-left {
     flex-direction: column;
     gap: 0.5em;
     margin: 0.5em;
+}
+
+.thought-icon {
+    display: inline-block;
+    height: 1rem;
+    margin: auto;
+    margin-right: 0.5rem;
+    svg {
+        fill: currentColor;
+        stroke: currentColor;
+        width: 1rem;
+        margin: 0;
+    }
 }
 
 .thinking-indicator {

@@ -41,6 +41,16 @@ module.exports = defineConfig({
         if (pathname === '/ws') {
           return false;
         }
+        // Always proxy requests to /files/* for downloading
+        if (/^\/files\//.test(pathname)) {
+          return true;
+        }
+        // Never proxy pages defined in the vue config.
+        const pageRegex = '^/?(' + Object.keys(module.exports.pages).join('|') + ')\\b'
+        if (RegExp(pageRegex).test(pathname)) {
+          return false;
+        }
+
         const result = origContext(pathname, req);
         // Will be undefined on websocket requests, or any other request that does not provide an `accepts` header.
         // Allow all such requests other than `/ws` which is handled above.

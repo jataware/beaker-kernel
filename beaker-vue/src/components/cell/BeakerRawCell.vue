@@ -83,8 +83,6 @@ onBeforeMount(() => {
 onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
-
-
 </script>
 
 <script lang="ts">
@@ -98,7 +96,7 @@ export default {
 
 <style lang="scss">
 .raw-cell {
-    padding-left: 0.2rem;
+    padding-right: 2em;
 
     .cm-editor {
         border: 1px solid var(--surface-d);
