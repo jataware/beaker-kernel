@@ -58,6 +58,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
     const cellRegistry = ref<({[key: string]: VNode})>({});
 
     const activeContext = ref();
+    const kernelInfo = ref();
 
     const rawSession = new BeakerSession(
       {
@@ -71,7 +72,8 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
       }
     );
 
-    rawSession.sessionReady.then(() => {
+    rawSession.sessionReady.then(async () => {
+      kernelInfo.value = await rawSession.kernel.info;
 
       rawSession.session.iopubMessage.connect((session, msg) => {
         emit("iopub-msg", msg);
@@ -94,6 +96,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
 
     return {
       activeContext,
+      kernelInfo,
       session: beakerSession,
       status,
       cellRegistry,
@@ -123,17 +126,15 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
     },
 
     setContext(contextPayload: any) {
+      console.log('setContext');
         const showToast: (...args) => void = inject('show_toast');
         // TODO: Figure out a better way set context to "loading" state
         this.activeContext = {};
 
-        const future = this.session.sendBeakerMessage(
-            "context_setup_request",
-            contextPayload
-        );
-        future.done.then((result: any) => {
+        const future = this.session.setContext(contextPayload);
+        future.then((result: any) => {
 
-            if (result?.content?.status === 'error') {
+            if (result?.status === 'error') {
                 let formatted = result?.content?.evalue;
                 if (formatted) {
                     const endsWithPeriod = /\.$/.test(formatted);
@@ -150,7 +151,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
                 return;
             }
 
-            if (result?.content?.status === 'abort') {
+            if (result?.status === 'abort') {
                 showToast({
                     title: 'Context Setup Aborted',
                     severity: 'warning',
@@ -164,7 +165,9 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
             // contextSelectionOpen.value = false;
             // Update the context info in the sidebar
             // TODO: Is this even needed? Could maybe be fed/triggered by existing events?
-            this.fetchContextInfo();
+            this.activeContext = result
+            this.$emit("context-changed", this.activeContext);
+            // this.fetchContextInfo();
         });
         return future;
     },
