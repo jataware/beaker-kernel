@@ -270,7 +270,7 @@ class BeakerContext:
 
         If it is not defined on the context class as cls.SLUG, default to look at the name of the package that contains
         the context.
-        E.g. For "beaker_kernel.contexts.pypackage" the slug would be "pypackage"
+        E.g. For "beaker_kernel.contexts.pandas" the slug would be "pandas"
         """
         if self.SLUG:
             return self.SLUG
