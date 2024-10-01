@@ -12,7 +12,6 @@
         @iopub-msg="iopubMessage"
     >
         <div class="chat-layout">
-            <div v-if="!isMaximized" class="spacer left"></div>
             <div class="chat-container">
                     <ChatPanel
                         :cell-map="cellComponentMapping"
@@ -46,6 +45,7 @@
                 highlight="line"
                 :expanded="false"
                 initialWidth="25vi"
+                :maximized="isMaximized"
             >
                 <SideMenuPanel label="Info" icon="pi pi-home">
                     <ContextPanel />

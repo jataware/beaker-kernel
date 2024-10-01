@@ -151,13 +151,33 @@ export class BeakerSession {
                 "context_info_request",
                 {}
             );
-            future.onIOPub = (msg: any) => {
+            future.onIOPub = async (msg: any) => {
                 if (msg.header.msg_type === "context_info_response") {
-                    resolve(msg.content);
+                    resolve({
+                        ...msg.content,
+                        kernelInfo: await this.kernel.info,
+                    });
                 }
             }
             await future.done;
             reject({});
+        });
+    }
+
+    public async setContext(contextPayload: any): Promise<IActiveContextInfo> {
+        return new Promise(async (resolve, reject) => {
+            const setupResult = this.sendBeakerMessage(
+                "context_setup_request",
+                contextPayload
+            );
+            await setupResult.done;
+            const contextInfo = setupResult.msg.content as IActiveContextInfo;
+            const kernelInfo = await this.kernel.requestKernelInfo();
+
+            resolve({
+                ...contextInfo,
+                kernelInfo: kernelInfo.content,
+            })
         });
     }
 
@@ -285,7 +305,6 @@ export class BeakerSession {
      * @param notebookJSONObject - The json representation of a notebook, as found inside an .ipynb file
      */
     public loadNotebook(notebookJSONObject: object) {
-        console.log('1', notebookJSONObject);
         this.notebook.loadFromIPynb(notebookJSONObject);
     }
 
@@ -348,6 +367,7 @@ export class BeakerSession {
     private _history: BeakerHistory;
     private _sessionInfo: any;
     private _renderer: BeakerRenderer;
+    private _kernelInfo: any;
 
     public notebook: BeakerNotebook;
 
