@@ -1,10 +1,19 @@
 import os
 import subprocess
 import sys
+from typing import TYPE_CHECKING
 
 import click
 import webbrowser
 
+if TYPE_CHECKING:
+    from beaker_kernel.server.main import BeakerJupyterApp
+    from jupyter_server.serverapp import ServerApp
+
+
+def set_config_from_app(app: 'ServerApp'):
+    os.environ.setdefault("JUPYTER_SERVER", app.connection_url)
+    os.environ.setdefault("JUPYTER_TOKEN", app.identity_provider.token)
 
 
 @click.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
@@ -18,6 +27,7 @@ def notebook(ctx, extra_args):
     app = None
     try:
         app = BeakerJupyterApp.initialize_server(argv=extra_args)
+        set_config_from_app(app)
         app.start()
     except (InterruptedError, KeyboardInterrupt, EOFError) as err:
         print(err)
@@ -50,6 +60,7 @@ def serve(open_notebook, extra_args):
 
     try:
         app = DevBeakerJupyterApp.initialize_server(argv=extra_args)
+        set_config_from_app(app)
         if open_notebook:
             webbrowser.open(app.public_url)
         app.start()

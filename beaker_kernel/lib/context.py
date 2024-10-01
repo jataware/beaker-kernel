@@ -4,6 +4,7 @@ import json
 import logging
 import os.path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar
+import urllib.parse
 import requests
 import uuid
 
@@ -130,8 +131,9 @@ class BeakerContext:
             subkernel.KERNEL_NAME: subkernel
             for subkernel in autodiscover("subkernels").values()
         }
+        url = urllib.parse.urljoin(config.JUPYTER_SERVER, "/api/kernels")
         res = requests.post(
-            f"{config.JUPYTER_SERVER}/api/kernels",
+            url,
             json={"name": language, "path": ""},
             headers={"Authorization": f"token {config.JUPYTER_TOKEN}"},
         )
