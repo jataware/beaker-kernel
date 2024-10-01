@@ -44,7 +44,7 @@
                     @pointerenter="overlayMenuHoverHandler"
                     @pointerleave="overlayMenuHoverHandler"
                 >
-                    <div v-tooltip="'Change Cell Type'">
+                    <div v-tooltip.left="'Change Cell Type'">
                         <Dropdown
                             :name="`${cell.id}-celltype`"
                             class="cell-type-selector overlay-menu-button"
@@ -52,6 +52,7 @@
                             @update:model-value="(value) => {notebook.convertCellType(cell, value); hoverMenuRef.hide();}"
                             :options="Object.keys(cellMap || {})"
                             :dropdown-icon="cellIcon"
+                            append-to="self"
                         >
                             <template #value="slotProps">
                                 <span :class="cellIconMap[slotProps.value]"></span>
@@ -66,28 +67,28 @@
                         </Dropdown>
                     </div>
                     <Button
-                        v-tooltip="'Execute cell'"
+                        v-tooltip.left="'Execute cell'"
                         @click="beakerSession.findNotebookCellById(cell.id).execute(); hoverMenuRef.hide();"
                         icon="pi pi-play"
                         size="small"
                         text
                     />
                     <Button
-                        v-tooltip="'Remove cell'"
+                        v-tooltip.left="'Remove cell'"
                         @click="notebook.removeCell(beakerSession.findNotebookCellById(cell.id)); hoverMenuRef.hide();"
                         icon="pi pi-minus"
                         size="small"
                         text
                     />
                     <Button
-                        v-tooltip="'Move cell up'"
+                        v-tooltip.left="'Move cell up'"
                         @click="moveUp(); hoverMenuRef.hide();"
                         icon="pi pi-chevron-up"
                         size="small"
                         text
                     />
                     <Button
-                        v-tooltip="'Move cell down'"
+                        v-tooltip.left="'Move cell down'"
                         @click="moveDown(); hoverMenuRef.hide();"
                         icon="pi pi-chevron-down"
                         size="small"

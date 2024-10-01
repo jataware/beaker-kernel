@@ -1,6 +1,7 @@
 :root {
   font-family: Lato, Helvetica, sans-serif;
   --font-family:Lato, Helvetica, sans-serif;
+  font-size: 12pt;
   --surface-a:#ffffff;
   --surface-b:#eff3f8;
   --surface-c:#f6f9fc;

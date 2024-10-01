@@ -47,6 +47,7 @@ export interface IActiveContextInfo {
         slug: string;
         subkernel: string;
     }
+    kernelInfo?: any
 }
 
 

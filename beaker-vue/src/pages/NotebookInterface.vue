@@ -17,7 +17,6 @@
         @open-file="loadNotebook"
     >
         <div class="notebook-container">
-            <div v-if="!isMaximized" class="spacer left"></div>
             <BeakerNotebook
                 ref="beakerNotebookRef"
                 :cell-map="cellComponentMapping"
@@ -66,9 +65,10 @@
                 highlight="line"
                 :expanded="false"
                 initialWidth="25vi"
+                :maximized="isMaximized"
             >
                 <SideMenuPanel label="Info" icon="pi pi-home">
-                    <ContextPanel @action-selected="selectAction"/>
+                    <InfoPanel/>
                 </SideMenuPanel>
                 <SideMenuPanel id="files" label="Files" icon="pi pi-file-export" no-overflow>
                     <FilePanel
@@ -95,7 +95,7 @@ import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
-import ContextPanel from '../components/panels/ContextPanel.vue';
+import InfoPanel from '../components/panels/InfoPanel.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
@@ -152,7 +152,6 @@ const saveAsFilename = ref<string>(null);
 const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
-const executeActionRef = ref<typeof BeakerExecuteAction>();
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 
 const notebookTitle = computed(() => {
@@ -238,10 +237,6 @@ const statusChanged = (newStatus) => {
     connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
 };
 
-const selectAction = (actionName: string) => {
-    rightMenu.value?.selectPanel("action");
-    executeActionRef.value?.selectAction(actionName);
-};
 
 const loadNotebook = (notebookJSON: any, filename: string) => {
     const notebook = beakerNotebookRef.value;

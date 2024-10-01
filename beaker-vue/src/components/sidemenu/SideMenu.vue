@@ -1,27 +1,30 @@
 <template>
-    <div class="sidemenu" :class="[position, (minimizeIndicator ? 'minimize' : undefined)]" :style="containerStyle" ref="panelRef">
-        <div class="sidemenu-menu-selection" :class="[position]" ref="menuRef">
-            <Button
-                v-for="(panel, index) in panels" :key="`button-${index}`"
-                :class="['menu-button', props.highlight, props.position, (selectedTabIndex === index ? 'selected' : undefined), (props.showLabel ? 'show-label' : undefined)]"
-                :icon="panel.props.icon"
-                :label="props.showLabel ? panel.props.label : undefined"
-                icon-pos="top"
-                @click="handleButtonClick(index)"
-                v-tooltip:[toolTipArgs]="props.showTooltip ? panel.props.label : undefined"
-                text
-            ></Button>
+    <div class="sidemenu-container" :class="[position]" :style="{minWidth: (initialWidth && !maximized ? initialWidth : undefined)}" >
+        <div class="sidemenu" :class="[position, (minimizeIndicator ? 'minimize' : undefined)]" :style="containerStyle" ref="panelRef">
+            <div class="sidemenu-menu-selection" :class="[position]" ref="menuRef">
+                <Button
+                    v-for="(panel, index) in panels" :key="`button-${index}`"
+                    :class="['menu-button', props.highlight, props.position, (selectedTabIndex === index ? 'selected' : undefined), (props.showLabel ? 'show-label' : undefined)]"
+                    :icon="panel.props.icon"
+                    :label="props.showLabel ? panel.props.label : undefined"
+                    icon-pos="top"
+                    @click="handleButtonClick(index)"
+                    v-tooltip:[toolTipArgs]="props.showTooltip ? panel.props.label : undefined"
+                    text
+                ></Button>
+            </div>
+            <div v-show="expanded" role="menu" class="sidemenu-panel-container">
+                <component v-for="(panel, index) in panels" :key="`panel-${index}`" :is="panel" v-show="selectedTabIndex === index" ></component>
+            </div>
+            <div v-if="expanded && !staticSize"
+                class="sidemenu-gutter"
+                @mousedown.prevent="startDrag"
+                ref="gutterRef"
+            >
+                <div v-if="!staticSize" class="sidemenu-gutter-handle"></div>
+            </div>
         </div>
-        <div v-show="expanded" role="menu" class="sidemenu-panel-container">
-            <component v-for="(panel, index) in panels" :key="`panel-${index}`" :is="panel" v-show="selectedTabIndex === index" ></component>
-        </div>
-        <div v-if="expanded && !staticSize"
-            class="sidemenu-gutter"
-            @mousedown.prevent="startDrag"
-            ref="gutterRef"
-        >
-            <div class="sidemenu-gutter-handle"></div>
-        </div>
+        <div class="spacer"/>
     </div>
 </template>
 
@@ -41,9 +44,10 @@ export interface Props {
     highlight?: HighlightType;
     showLabel?: boolean;
     showTooltip?: boolean;
-    staticSize?: boolean,
-    initialWidth?: string,
-    resizable?: boolean,
+    staticSize?: boolean;
+    initialWidth?: string;
+    resizable?: boolean;
+    maximized?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -56,6 +60,7 @@ const props = withDefaults(defineProps<Props>(), {
     staticSize: false,
     initialWidth: '100%',
     resizable: true,
+    maximized: false,
 });
 
 const emit = defineEmits([
@@ -227,11 +232,32 @@ defineExpose({
 
 
 <style lang="scss">
+.sidemenu-container {
+    height: 100%;
+    width: 100%;
+    display: grid;
+    &.right {
+        grid:
+            "spacer sidemenu" 100% /
+            1fr max-content;
+
+    }
+    &.left {
+        grid:
+            "sidemenu spacer" 100% /
+            max-content 1fr;
+    }
+}
+
+.spacer {
+    grid-area: spacer;
+}
+
 .sidemenu {
+    grid-area: sidemenu;
     height: 100%;
     display: grid;
     box-sizing: border-box;
-    border: 1px solid var(--surface-border);
     width: 100%;
 
     &.right {
@@ -262,17 +288,12 @@ defineExpose({
 }
 
 .sidemenu-menu-selection {
+    border: 1px solid var(--surface-border);
     grid-area: menu;
     background-color: var(--surface-b);
     display: flex;
     flex-direction: column;
     width: 100%;
-    &.right {
-        margin-left: 2px;
-    }
-    &.left {
-        margin-right: 2px;
-    }
 }
 
 .sidemenu-gutter {
@@ -281,6 +302,7 @@ defineExpose({
     display: flex;
     flex-direction: row;
     align-items: center;
+    background-color: var(--surface-border);
 
     &:hover {
         cursor: col-resize;
@@ -288,6 +310,7 @@ defineExpose({
 }
 
 .sidemenu-gutter-handle {
+    position: relative;
     width: 8px;
     z-index: 100;
     height: 3rem;
@@ -297,6 +320,7 @@ defineExpose({
     align-items: center;
     overflow: clip;
     border: 1px outset var(--surface-500);
+    right: 2px;
 
     &:before {
         filter: blur(0.75px);
@@ -318,10 +342,6 @@ button.menu-button {
 
     &.show-label {
         padding: .75rem .5rem;
-    }
-
-    .p-button-label {
-        font-size: smaller;
     }
 
     &:focus {
