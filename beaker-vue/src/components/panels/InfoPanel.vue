@@ -102,7 +102,7 @@ const contextExpandedKeys = ref({0: true, 1: true, 2: true, 3: true});
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const activeContext = computed(() => {
     const contextInfo = beakerSession?.activeContext;
-    const kernelInfo = beakerSession?.kernelInfo;
+    const kernelInfo = beakerSession?.session.kernelInfo;
     return {
         ...contextInfo,
         kernelInfo,
@@ -112,8 +112,6 @@ const activeContext = computed(() => {
 const contextNodes = computed<TreeNode[]>(() => {
 
     const context = activeContext.value;
-    console.log(activeContext.value)
-
 
     if (!context) {
         return [];

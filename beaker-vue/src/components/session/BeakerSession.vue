@@ -58,7 +58,6 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
     const cellRegistry = ref<({[key: string]: VNode})>({});
 
     const activeContext = ref();
-    const kernelInfo = ref();
 
     const rawSession = new BeakerSession(
       {
@@ -73,7 +72,6 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
     );
 
     rawSession.sessionReady.then(async () => {
-      kernelInfo.value = await rawSession.kernel.info;
 
       rawSession.session.iopubMessage.connect((session, msg) => {
         emit("iopub-msg", msg);
@@ -96,7 +94,6 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
 
     return {
       activeContext,
-      kernelInfo,
       session: beakerSession,
       status,
       cellRegistry,
@@ -119,14 +116,13 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
       }
     },
 
-    async fetchContextInfo() {
+    async updateContextInfo() {
       const activeContextInfo = await this.session.activeContext();
       this.activeContext = activeContextInfo;
       this.$emit("context-changed", this.activeContext);
     },
 
     setContext(contextPayload: any) {
-      console.log('setContext');
         const showToast: (...args) => void = inject('show_toast');
         // TODO: Figure out a better way set context to "loading" state
         this.activeContext = {};
@@ -165,9 +161,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
             // contextSelectionOpen.value = false;
             // Update the context info in the sidebar
             // TODO: Is this even needed? Could maybe be fed/triggered by existing events?
-            this.activeContext = result
-            this.$emit("context-changed", this.activeContext);
-            // this.fetchContextInfo();
+            this.updateContextInfo();
         });
         return future;
     },
@@ -180,7 +174,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
   },
 
   mounted() {
-    this.fetchContextInfo();
+    this.updateContextInfo();
   },
 });
 
