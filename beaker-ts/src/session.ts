@@ -63,6 +63,14 @@ export class BeakerSession {
             }
         });
 
+        // Track all messages from kernels. The disconnect on newValue is in case the kernel connection is reused, to
+        // not set up duplicate handlers.
+        this._sessionContext.kernelChanged.connect((sender, {oldValue, newValue, name}) => {
+            oldValue?.anyMessage.disconnect(this._sessionMessageHandler, this);
+            newValue?.anyMessage.disconnect(this._sessionMessageHandler, this);
+            newValue?.anyMessage.connect(this._sessionMessageHandler, this);
+        });
+
         // Initialize the session
         this._sessionContext.initialize().then(() => {
             this._sessionContext.ready.then(() => {
@@ -73,7 +81,6 @@ export class BeakerSession {
                 else {
                     this._messageHandler = undefined;
                 }
-                this._sessionContext.iopubMessage.connect(this._sessionMessageHandler, this);
             });
         });
     }
@@ -117,7 +124,7 @@ export class BeakerSession {
      * @param _sessionContext - The session Context related to the incoming message
      * @param msg - The incoming IOPub message
      */
-    private _sessionMessageHandler(_sessionContext: SessionContext, msg: IBeakerIOPubMessage) {
+    private _sessionMessageHandler(_kernel: IKernelConnection, {msg, direction}) {
         if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
             if (msg.header.msg_type === "context_setup_response") {
                 this._sessionInfo = msg.content;
@@ -126,6 +133,9 @@ export class BeakerSession {
                 this._sessionInfo = msg.content.info;
             }
             this.notebook.setSubkernelInfo(this._sessionInfo);
+        }
+        else if (msg.header.msg_type === "kernel_info_reply") {
+            this._kernelInfo = msg.content;
         }
     }
 
@@ -341,6 +351,10 @@ export class BeakerSession {
      */
     get kernel(): IKernelConnection {
         return this._sessionContext?.session?.kernel;
+    }
+
+    get kernelInfo() {
+        return this._kernelInfo;
     }
 
     /**

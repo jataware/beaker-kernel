@@ -15,7 +15,7 @@
                 class="connection-button"
                 @click="selectKernel"
                 :label="beakerSession.activeContext?.slug"
-                :loading="!(beakerSession.activeContext?.slug)"
+                :loading="loading"
                 v-tooltip.bottom="'Change or update the context'"
             />
         </template>
@@ -119,6 +119,10 @@ function selectKernel() {
 const themeIcon = computed(() => {
     return `pi pi-${theme.mode === 'dark' ? 'sun' : 'moon'}`;
 });
+
+const loading = computed(() => {
+    return !(beakerSession.activeContext?.slug);
+})
 
 const statusLabels = {
     unknown: 'Unknown',
