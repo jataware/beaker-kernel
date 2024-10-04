@@ -54,11 +54,13 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     // Override index type to allow methods to be defined on the class
     static IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments", "outputs", "execution_count"];
 
-    static defaults = {
-        metadata: {},
-        source: "",
-        status: "idle",
-        children: [],
+    static defaults() {
+        return {
+            metadata: {},
+            source: "",
+            status: "idle",
+            children: [],
+        }
     };
 
     [key: string]: any;
@@ -70,7 +72,7 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     children: BeakerBaseCell[];
 
     constructor(content: Partial<nbformat.IBaseCell>) {
-        Object.assign(this, BeakerBaseCell.defaults, content)
+        Object.assign(this, BeakerBaseCell.defaults(), content)
         if (this.id === undefined) {
             this.id = BeakerBaseCell.generateId();
         }
@@ -186,17 +188,19 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
     last_execution?: BeakerCellExecutionStatus;
     busy?: boolean;
 
-    static defaults = {
-        ...super.defaults,
-        last_execution: {status: "none"},
-        outputs: [],
-        execution_count: null,
-        busy: false,
+    static defaults() {
+        return {
+            ...super.defaults(),
+            last_execution: {status: "none"},
+            outputs: [],
+            execution_count: null,
+            busy: false,
+        }
     }
 
     constructor(content: Partial<nbformat.ICell>) {
         super({cell_type: 'code', ...content});
-        Object.assign(this, BeakerCodeCell.defaults, content)
+        Object.assign(this, BeakerCodeCell.defaults(), content)
         if (Array.isArray(this.source)) {
             this.source = this.source.join("\n");
         }
@@ -282,16 +286,18 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     declare cell_type: 'query';
     events: BeakerQueryEvent[];
 
-    static defaults = {
-        ...super.defaults,
-        events: [],
+    static defaults() {
+        return {
+            ...super.defaults(),
+            events: [],
+        }
     }
 
     _current_input_request_message: messages.IInputRequestMsg;
 
     constructor(content: Partial<nbformat.ICell>) {
         super({cell_type: 'query', ...content});
-        Object.assign(this, BeakerQueryCell.defaults, content)
+        Object.assign(this, BeakerQueryCell.defaults(), content)
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {

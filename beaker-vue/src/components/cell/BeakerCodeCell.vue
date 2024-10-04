@@ -18,8 +18,9 @@
                     <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" v-show="!hideOutput" />
                 </div>
                 <div class="state-info">
-                    <div class="execution-count-badge">
+                    <div>
                         <Badge
+                            class="execution-count-badge"
                             :class="{secondary: badgeSeverity === 'secondary'}"
                             :severity="badgeSeverity"
                             :value="cell.execution_count || '&nbsp;'">
@@ -203,16 +204,17 @@ export default {
 }
 
 .execution-count-badge {
-    font-family: monospace;
-    min-width: 2.5rem;
+    margin-left: 0.5rem;
+    font-family: "'Ubuntu Mono', 'Courier New', Courier, monospace";
+    font-size: 1.1rem;
     display: flex;
     justify-content: center;
-
-    .p-badge {
-        border-radius: 15%;
-        &.secondary {
-            background-color: var(--surface-d);
-        }
+    align-items: center;
+    height: 2em;
+    aspect-ratio: 1/1;
+    border-radius: 15%;
+    &.secondary {
+        background-color: var(--surface-300);
     }
 }
 

@@ -1,7 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 :root {
-  font-family: Lato, Helvetica, sans-serif;
+  font-family:Lato, Helvetica, sans-serif;
   --font-family:Lato, Helvetica, sans-serif;
   font-size: 12pt;
+  font-weight: 400;
   --surface-a:#282936;
   --surface-b:#1d1e27;
   --surface-c:rgba(255, 255, 255, 0.03);
