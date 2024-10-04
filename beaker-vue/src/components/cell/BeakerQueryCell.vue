@@ -145,7 +145,7 @@ const instance = getCurrentInstance();
 // const rollingExpandedActionCount = 2;
 
 const events = computed(() => {
-    return [...props.cell.events];
+    return [...props.cell.events].filter((event) => event.type !== 'response');
 })
 
 const taggedCellEvents = computed(() => {

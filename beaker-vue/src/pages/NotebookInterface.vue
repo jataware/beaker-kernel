@@ -435,4 +435,11 @@ const notebookKeyBindings = {
     border-right: unset;
 }
 
+.title-extra {
+    vertical-align: baseline;
+    display: inline-block;
+    height: 100%;
+    font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
+}
+
 </style>

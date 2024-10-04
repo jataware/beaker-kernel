@@ -1,7 +1,7 @@
 <template>
   <div class="file-container">
     <div class="file-container-header">
-      <span>Contents of: <span style="font-weight: bold;">{{ displayPath }}</span></span>
+      <span>Contents of: <span class="header-path">{{ displayPath }}</span></span>
       <span style="flex: 1"></span>
       <Button
           @click="openFileSelection"
@@ -355,8 +355,8 @@ defineExpose({
     height: 100%;
     display: flex;
     flex-direction: column;
-    --font-family: 'Courier New', Courier, monospace;
-    font-size: 12pt;
+    --font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
+    font-size: 14pt;
   }
 
   .file-table {
@@ -493,6 +493,10 @@ defineExpose({
       margin-left: 3px;
       width: 2em;
       aspect-ratio: 1/1;
+    }
+
+    .header-path {
+      font-family: var(--font-family);
     }
   }
 
