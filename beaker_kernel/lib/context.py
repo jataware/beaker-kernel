@@ -3,10 +3,11 @@ import inspect
 import json
 import logging
 import os.path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar
 import urllib.parse
 import requests
 import uuid
+from functools import wraps
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
@@ -310,7 +311,9 @@ class BeakerContext:
         store_history=False,
         surpress_messages=True,
         identities=None,
+        relabel_messages=True,
     ) -> ExecutionTask:
+
         self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
         stream = self.subkernel.connected_kernel.streams.shell
 
@@ -357,8 +360,26 @@ class BeakerContext:
 
             shell_socket = get_socket("shell")
             iopub_socket = get_socket("iopub")
+            def relabel(fn):
+                @wraps(fn)
+                def inner_relabel(server, target_stream, data):
+                    if relabel_messages:
+                        message = JupyterMessage.parse(data)
+                        if relabel_messages:
+                            destination_server = server.manager.server
+                            destination_stream = destination_server.streams.iopub
+                            relabeled_message = JupyterMessage(*message)
+                            relabeled_message.header["msg_type"] = f"beaker__{message.header['msg_type']}"
+                            relabeled_data = relabeled_message.sign_using(destination_server.config.get("key")).parts
+                            destination_stream.send_multipart(relabeled_data)
+                            destination_stream.flush()
+
+                    return fn(server, target_stream, data)
+                return inner_relabel
+
 
             # Generate a handler to catch and silence the output
+            @relabel
             async def silence_message(server, target_stream, data):
                 message = JupyterMessage.parse(data)
 
@@ -397,6 +418,7 @@ class BeakerContext:
                 if not surpress_messages:
                     return data
 
+            @relabel
             async def handle_error(server, target_stream, data):
                 message = JupyterMessage.parse(data)
                 content = message.content
@@ -410,6 +432,7 @@ class BeakerContext:
                 if not surpress_messages:
                     return data
 
+            @relabel
             async def cleanup(server, target_stream, data):
                 message = JupyterMessage.parse(data)
                 # Ensure we are only working on handlers for this message response
