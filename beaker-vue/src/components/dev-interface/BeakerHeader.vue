@@ -25,9 +25,7 @@
                 <h4>
                     {{ title || "Beaker Development Interface" }}
                 </h4>
-                <span v-if="titleExtra" class="title-extra">
-                    - {{ titleExtra }}
-                </span>
+                <span v-if="titleExtra" class="title-extra">{{ titleExtra }}</span>
             </div>
         </template>
 
@@ -195,6 +193,10 @@ const connectionColor = computed(() => {
                     display: none;
                 }
             }
+        }
+
+        .title-extra {
+            margin-left: 1rem;
         }
     }
 

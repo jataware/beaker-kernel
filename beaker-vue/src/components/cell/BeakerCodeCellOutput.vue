@@ -1,11 +1,12 @@
 <template>
-    <div class="code-cell-output jp-RenderedText">
+    <div class="code-cell-output">
         <div class="code-cell-output-box" :class="{'collapsed-output': output.metadata?.collapsed}" v-for="output of props.outputs" :key="output">
             <div class="output-collapse-box" @click.capture.stop.prevent="collapseOutput(output)"></div>
             <div v-if="output.output_type == 'stream'" :class="output.output_type">{{ output.text }}</div>
             <BeakerMimeBundle
                 v-else-if="['display_data', 'execute_result'].includes(output.output_type)"
                 :mime-bundle="output.data"
+                class="mime-bundle"
                 collapse="true"
             />
             <div v-else-if="output.output_type == 'error'" :class="output.output_type">
@@ -42,9 +43,6 @@ const rebundleError = (errorOutput) => {
 
 
 <style lang="scss">
-// @import url('@jupyterlab/outputarea/style/base.css');
-// @import url('@jupyterlab/rendermime/style/base.css');
-// @import url('@jupyterlab/notebook/style/base.css');
 
 .code-cell-output {
     --collapse-height: 3em;
@@ -58,6 +56,57 @@ const rebundleError = (errorOutput) => {
             overflow-wrap: break-word;
         }
     }
+
+    table {
+        min-width: 75%;
+        text-align: end;
+        border-collapse: collapse;
+        border-width: 1px;
+        border-color: rgba(255,0,0,0.0);
+
+        th, td {
+            text-align: end;
+            padding: 0.25rem 0.5rem;
+            border-width: 1px;
+        }
+
+        th {
+            font-weight: bold;
+            background-color: var(--surface-b);
+
+            &:hover {
+                background-color: var(--surface-50);
+                border: 1px solid var(--text-color);
+            }
+        }
+
+        thead {
+            text-align: start;
+            background-color: var(--surface-b);
+        }
+
+        tbody {
+            th {
+                text-align: center;
+            }
+
+            tr {
+                background-color: var(--surface-c);
+            }
+            tr:nth-child(even) {
+                background-color: var(--surface-a);
+            }
+
+            td:hover {
+                background-color: var(--surface-200) !important;
+                border: 1px solid var(--text-color) !important;
+            }
+        }
+    }
+}
+
+.mime-bundle {
+    width: 100%;
 }
 
 .collapsed-output {
