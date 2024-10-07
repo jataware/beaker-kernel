@@ -10,6 +10,7 @@
         :renderers="renderers"
         @session-status-changed="statusChanged"
         @iopub-msg="iopubMessage"
+        @open-file="loadNotebook"
     >
         <div class="chat-layout">
             <div class="chat-container">
@@ -85,6 +86,7 @@ import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 import ContextPanel from '../components/panels/ContextPanel.vue';
 
+import NotebookSvg from '@/assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
@@ -124,7 +126,13 @@ const headerNav = computed(() => [
     {
         type: 'link',
         href: `/${window.location.search}`,
-        icon: 'comment',
+        component: NotebookSvg,
+        componentStyle: {
+            fill: 'currentColor',
+            stroke: 'currentColor',
+            height: '1rem',
+            width: '1rem',
+        },
         label: 'Navigate to notebook view',
     },
     {
