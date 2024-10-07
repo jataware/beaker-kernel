@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, defineProps, defineExpose, computed, defineEmits, useSlots, isVNode, nextTick, withDefaults, onMounted } from "vue";
+import { ref, defineProps, defineExpose, computed, defineEmits, useSlots, isVNode, nextTick, withDefaults, onBeforeMount, onUnmounted, onMounted } from "vue";
 
 import Button from 'primevue/button';
 import SideMenuPanel from "./SideMenuPanel.vue";
@@ -86,6 +86,8 @@ const panelRef = ref(null);
 const menuRef = ref(null);
 const gutterRef = ref(null);
 const minimizeIndicator = ref<boolean>(false);
+const resizeObserver = ref<ResizeObserver>();
+const resizeHistory = ref<DOMRectReadOnly>();
 
 // const minWidth = () => {
 //     return gutterRef.value.clientWidth + menuRef.value.clientWidth + AUTO_CLOSE_MARGIN;
@@ -223,6 +225,33 @@ const selectPanel = (label: string) => {
         minimizeIndicator.value = false;
     }
 }
+
+onMounted(() => {
+    const target: HTMLElement = document.body;
+    // Observer to smoothly resize the side menu when the document size changes (maximizing/resizing a browser window)
+    resizeObserver.value = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+            if (!resizeHistory.value) {
+                resizeHistory.value = entry.contentRect;
+
+            }
+            else if (entry.contentRect !== resizeHistory.value) {
+                if (panelWidth.value) {
+                    const resizeRatio = entry.contentRect.width / resizeHistory.value.width;
+                    panelWidth.value = panelWidth.value * resizeRatio;
+                }
+                resizeHistory.value = entry.contentRect;
+            }
+        }
+
+    });
+    resizeObserver.value.observe(target);
+})
+
+onUnmounted(() => {
+    resizeObserver.value.disconnect();
+    resizeObserver.value = null;
+})
 
 defineExpose({
     selectPanel,
