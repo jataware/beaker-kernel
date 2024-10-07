@@ -136,8 +136,11 @@ onMounted(async () => {
                 lastSaveChecksum.value = sessionData.checksum;
                 emit('open-file', result.content, result.path, {selectedCell: sessionData.selectedCell});
             }
-            if (sessionData.data !== undefined) {
+            else if (sessionData.data !== undefined) {
                 emit('open-file', sessionData.data, undefined, {selectedCell: sessionData.selectedCell});
+            }
+            if (sessionData.selectedCell !== undefined && beakerSession.value.notebookComponent) {
+                nextTick(() => beakerSession.value.notebookComponent.selectCell(sessionData.selectedCell));
             }
         });
     }
@@ -162,43 +165,46 @@ const snapshot = async () => {
     }
 
     const session: Session = beakerSession.value.session;
-    const sessionId = session.sessionId;
-    if (props.savefile && typeof props.savefile === "string") {
+    const sessionId = session.sessionId ;
 
-        const notebookContent = session.notebook.toIPynb();
-        const notebookChecksum: string = sum(notebookContent);
-
-        if (!lastSaveChecksum.value || lastSaveChecksum.value != notebookChecksum) {
-            lastSaveChecksum.value = notebookChecksum;
-
-            const contentsService = session.services.contents;
-            const path = props.savefile;
-            const result = await contentsService.save(path, {
-                type: "notebook",
-                content: notebookContent,
-                format: 'text',
-            });
-            emit("notebook-autosaved", result.path);
-            showToast({
-                title: "Autosave",
-                detail: `Auto-saved notebook to file ${props.savefile}.`,
-            });
-            notebookData[sessionId] = {
-                filename: result.path,
-                checksum: notebookChecksum,
-            };
-            localStorage.setItem("notebookData", JSON.stringify(notebookData));
-        }
+    if (!Object.keys(notebookData).includes(sessionId)) {
+        notebookData[sessionId] = {};
     }
-    else {
-        // Only save state if there is state to save
-        if (session.notebook) {
-            notebookData[sessionId] = {
-                data: session.notebook.toIPynb(),
-                // selectedCell: beakerNotebookRef.value?.selectedCellId,
-            };
-            localStorage.setItem("notebookData", JSON.stringify(notebookData));
+    const sessionData = notebookData[sessionId];
+
+    // Only save state if there is state to save
+    if (session.notebook) {
+        sessionData['data'] = session.notebook.toIPynb();
+        const notebookComponent = beakerSession.value.notebookComponent;
+        if (notebookComponent) {
+            sessionData['selectedCell'] = notebookComponent.selectedCellId
         }
+
+        if (props.savefile && typeof props.savefile === "string") {
+
+            const notebookContent = session.notebook.toIPynb();
+            const notebookChecksum: string = sum(notebookContent);
+
+            if (!lastSaveChecksum.value || lastSaveChecksum.value != notebookChecksum) {
+                lastSaveChecksum.value = notebookChecksum;
+
+                const contentsService = session.services.contents;
+                const path = props.savefile;
+                const result = await contentsService.save(path, {
+                    type: "notebook",
+                    content: notebookContent,
+                    format: 'text',
+                });
+                emit("notebook-autosaved", result.path);
+                showToast({
+                    title: "Autosave",
+                    detail: `Auto-saved notebook to file ${props.savefile}.`,
+                });
+                sessionData['filename'] = result.path;
+                sessionData['checksum'] = notebookChecksum;
+            }
+        }
+        localStorage.setItem("notebookData", JSON.stringify(notebookData));
     }
 };
 

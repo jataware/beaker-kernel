@@ -41,9 +41,16 @@
                         v-tooltip.bottom="navItem.label"
                     >
                         <Button
-                            :icon="`pi pi-${navItem.icon}`"
+                            :icon="navItem.icon ? `pi pi-${navItem.icon}`: 'pi'"
                             text
-                        />
+                        >
+                            <component
+                                :item="navItem"
+                                v-if="navItem.component"
+                                :is="navItem.component"
+                                :style="navItem.componentStyle"
+                            />
+                        </Button>
                     </a>
                     <Button v-else-if="navItem.type === 'button'"
                         :icon="`pi pi-${navItem.icon}`"
