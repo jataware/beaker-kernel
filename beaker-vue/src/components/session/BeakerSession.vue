@@ -58,6 +58,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
     const cellRegistry = ref<({[key: string]: VNode})>({});
 
     const activeContext = ref();
+    const notebookComponent = ref();
 
     const rawSession = new BeakerSession(
       {
@@ -97,6 +98,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
       session: beakerSession,
       status,
       cellRegistry,
+      notebookComponent,
     }
   },
 

@@ -130,8 +130,6 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
             }
             else {
                 for (const notebookCell of this.notebook.cells) {
-                    // console.log(ch)
-                    // if (notebookCell.children)
                     console.log(notebookCell)
                 }
 
@@ -210,6 +208,7 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
 
     beforeMount() {
         provide('notebook', this);
+        this.beakerSession.notebookComponent = this;
         if (this.cellCount === 0) {
             if (this.noEmptyStartingCell) {
                 return;
