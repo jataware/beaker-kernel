@@ -86,7 +86,7 @@ import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 import ContextPanel from '../components/panels/ContextPanel.vue';
 
-import NotebookSvg from '@/assets/icon-components/NotebookSvg.vue';
+import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
@@ -110,7 +110,7 @@ import { defineProps, inject, nextTick, onBeforeMount, onUnmounted, provide, ref
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
 import { IBeakerTheme } from '../plugins/theme';
-import { vKeybindings } from '@/directives/keybindings';
+import { vKeybindings } from '../directives/keybindings';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
