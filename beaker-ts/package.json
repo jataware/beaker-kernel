@@ -8,10 +8,11 @@
   "scripts": {
     "build": "tsc"
   },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/",
+  "types": "dist/",
   "files": [
-    "/dist"
+    "dist/",
+    "src/"
   ],
   "dependencies": {
     "@jupyter/ydoc": "^1.1.1",
