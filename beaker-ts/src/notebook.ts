@@ -98,14 +98,17 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
         })
     }
 
-    public toIPynb() {
+    public toIPynb(object: {}=null): nbformat.IBaseCell|nbformat.IBaseCell[] {
         const output = {};
-        for (const key of Object.keys(this)) {
+        if (object === null) {
+            object = this;
+        }
+        for (const key of Object.keys(object)) {
             if (BeakerBaseCell.IPYNB_KEYS.includes(key)) {
-                output[key] = this[key];
+                output[key] = object[key];
             }
         }
-        return(output);
+        return output as nbformat.IBaseCell;
     }
 }
 
@@ -264,6 +267,23 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
 
     public reset_execution_state(): void {
         this.last_execution = {status: "modified"};
+    }
+
+    public toIPynb(): nbformat.IBaseCell|nbformat.IBaseCell[] {
+        return super.toIPynb(
+            {
+                ...this,
+                outputs: this.outputs.map(
+                    (output) => {
+                       return {
+                        ...output,
+                        transient: undefined,
+                       }
+
+                    }
+                ),
+            }
+        )
     }
 }
 
@@ -556,13 +576,13 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
 
     }
 
-    public toIPynb() {
+    public toIPynb(): [nbformat.IMarkdownCell, ...nbformat.IBaseCell[]] {
         // TODO: Is this modifying the cells in memory, if so, is this causing problems?
-        const taggedChildren = this.children?.map((cell) => {
+        const taggedChildren: nbformat.IBaseCell[] = this.children?.flatMap((cell) => {
             cell.metadata.beaker_child_of = this?.id;
             return cell.toIPynb();
         });
-        return [this.toMarkdownCell().toIPynb(), ...taggedChildren];
+        return [...this.toMarkdownCell().toIPynb() as [nbformat.IMarkdownCell], ...taggedChildren];
     }
 }
 
