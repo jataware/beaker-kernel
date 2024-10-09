@@ -225,6 +225,7 @@ const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
     "code_cell": "Code",
     "user_answer": "Answer",
     "user_question": "Question",
+    // "background_code": "Background Code",
     "error": "Error",
     "abort": "Abort"
 }
@@ -407,6 +408,17 @@ h3.query-steps {
     // font-weight: 400;
     font-size: large;
 }
+
+.query-tab-background_code {
+    font-size: 6pt;
+    color: #777;
+
+    + a {
+        margin: 0;
+        padding: 0;
+    }
+}
+
 
 div.query-tab a.p-accordion-header-link.p-accordion-header-action{
     padding-left: 0px;

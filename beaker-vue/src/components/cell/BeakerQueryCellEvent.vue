@@ -32,6 +32,13 @@
                 </AccordionTab>
             </Accordion>
         </span>
+        <div v-else-if="props.event?.type === 'thought'">
+            <div v-html="marked.parse(props.event.content.thought)" />
+            <div v-if="props.event.content.background_code_executions.length">
+                {{ props.event.content.background_code_executions }}
+
+            </div>
+        </div>
         <span v-else-if="props.event?.type === 'code_cell'">
             <BeakerCodeCell
                 @click="codeCellOnClick"
@@ -164,7 +171,7 @@ const getCellModelById = (id): IBeakerCell | undefined => {
 }
 
 const isMarkdown = (event: BeakerQueryEvent) => {
-    const markdownTypes: BeakerQueryEventType[] = ["thought", "response", "user_answer", "user_question"];
+    const markdownTypes: BeakerQueryEventType[] = ["response", "user_answer", "user_question"];
     return markdownTypes.includes(event.type);
 }
 

@@ -96,7 +96,7 @@ export class BeakerSession {
         messageType: string,
         content: JSONObject,
         messageId: string = null
-    ) {
+    ): IBeakerFuture {
         if (messageId === null) {
             messageId = createMessageId(messageType);
         }
