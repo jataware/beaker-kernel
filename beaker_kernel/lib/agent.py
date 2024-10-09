@@ -2,13 +2,14 @@ import json
 import logging
 import re
 import typing
+from functools import wraps
 
 from archytas.agent import Message
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
 from beaker_kernel.lib.config import config
-from beaker_kernel.lib.utils import env_enabled
+from beaker_kernel.lib.utils import env_enabled, set_tool_execution_context
 
 if typing.TYPE_CHECKING:
     from .context import BeakerContext
@@ -48,6 +49,10 @@ class BeakerAgent(ReActAgent):
             thought_handler=context.beaker_kernel.handle_thoughts,
             **kwargs
         )
+        # Update tools so that the execution contexts are properly tracked
+        for tool in self.tools.values():
+            set_tool_execution_context(tool)
+
 
     async def execute(self, additional_messages: list[Message] = None) -> str:
         import openai
@@ -77,9 +82,10 @@ class BeakerAgent(ReActAgent):
         """
         Returns info about the agent for communication with the kernel.
         """
+
         info = {
             "name": self.__class__.__name__,
-            "tools": {tool_name: tool_func.__doc__.strip() for tool_name, tool_func in self.tools.items()},
+            "tools": {tool_name.split('.')[-1]: tool_func.__doc__.strip() for tool_name, tool_func in self.tools.items()},
             "agent_prompt": self.__class__.__doc__.strip(),
         }
         return info

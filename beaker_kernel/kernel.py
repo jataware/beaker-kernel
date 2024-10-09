@@ -19,7 +19,7 @@ from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
 from .lib.utils import (message_handler, LogMessageEncoder, magic,
-                        handle_message, get_socket)
+                        handle_message, get_socket, execution_context, get_execution_context)
 
 if TYPE_CHECKING:
     from .lib.agent import BeakerAgent
@@ -81,9 +81,6 @@ class BeakerKernel(KernelProxyManager):
         """
         Adds intercepts used by the Beaker kernel
         """
-        self.server.intercept_message(
-            "shell", "kernel_info_reply", self.kernel_info_reply
-        )
         self.server.intercept_message(
             "shell", "context_info_request", self.context_info_request
         )
@@ -216,11 +213,11 @@ class BeakerKernel(KernelProxyManager):
         self.server.filters.remove(InterceptionFilter(socket, msg_type, func))
 
     async def send_preview(self, parent_header=None):
-        generate_preview = getattr(self.context, "generate_preview", None)
-        if generate_preview and (callable(generate_preview) or inspect.iscoroutinefunction(generate_preview)):
-            preview_payload = await generate_preview()
-            if preview_payload:
-                self.send_response("iopub", "preview", preview_payload, parent_header=parent_header)
+        if self.context.preview:
+            with execution_context("preview"):
+                preview_payload = await self.context.preview()
+                if preview_payload:
+                    self.send_response("iopub", "preview", preview_payload, parent_header=parent_header)
 
     async def update_connection_file(self, **kwargs):
         try:
@@ -251,10 +248,11 @@ class BeakerKernel(KernelProxyManager):
         await self.context.setup(context_info=context_info, parent_header=parent_header)
         subkernel = self.context.subkernel
         kernel_setup_func = getattr(subkernel, "setup", None)
-        if inspect.iscoroutinefunction(kernel_setup_func):
-            await kernel_setup_func()
-        elif inspect.isfunction(kernel_setup_func) or inspect.ismethod(kernel_setup_func):
-            kernel_setup_func()
+        with execution_context(type="setup", name=context_name):
+            if inspect.iscoroutinefunction(kernel_setup_func):
+                await kernel_setup_func()
+            elif inspect.isfunction(kernel_setup_func) or inspect.ismethod(kernel_setup_func):
+                kernel_setup_func()
         await self.update_connection_file(context={"name": context_name, "config": context_info})
         await self.send_preview(parent_header=parent_header)
 
@@ -444,9 +442,6 @@ class BeakerKernel(KernelProxyManager):
             self.context.agent.thought_handler = self.handle_thoughts
             setattr(self.context, "current_llm_query", None)
 
-    async def kernel_info_reply(self, server, target_stream, data):
-        await self.send_preview(parent_header={})
-        return data
 
     @message_handler
     async def context_info_request(self, message):

@@ -230,6 +230,9 @@ const anyMessage = (msg, direction) => {
         body: msg,
         timestamp: msg.header.date,
     });
+    if (/^beaker__/.test(msg.header.msg_type)) {
+        console.log("beaker_message", msg);
+    }
 };
 
 const unhandledMessage = (msg) => {
