@@ -51,6 +51,7 @@ class BeakerAgent(ReActAgent):
         )
         # Update tools so that the execution contexts are properly tracked
         for tool in self.tools.values():
+            logger.warning(tool)
             set_tool_execution_context(tool)
 
 

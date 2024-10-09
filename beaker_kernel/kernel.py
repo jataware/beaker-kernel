@@ -19,7 +19,7 @@ from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
 from .lib.utils import (message_handler, LogMessageEncoder, magic,
-                        handle_message, get_socket, execution_context, get_execution_context)
+                        handle_message, get_socket, execution_context, parent_message_context, get_parent_message)
 
 if TYPE_CHECKING:
     from .lib.agent import BeakerAgent
@@ -120,8 +120,9 @@ class BeakerKernel(KernelProxyManager):
             if head == prefix:
                 self.debug(event_type="magic_word", content={"magic_word": head, "fn": fn.__name__})
                 async with handle_message(server, target_stream, data) as ctx:
-                    result = await fn(tail, magic_word=head, parent_header=message.header)
-                    ctx.return_val = result
+                    with parent_message_context(ctx.message):
+                        result = await fn(tail, magic_word=head, parent_header=message.header)
+                        ctx.return_val = result
                 return None
         return data
 
@@ -248,7 +249,7 @@ class BeakerKernel(KernelProxyManager):
         await self.context.setup(context_info=context_info, parent_header=parent_header)
         subkernel = self.context.subkernel
         kernel_setup_func = getattr(subkernel, "setup", None)
-        with execution_context(type="setup", name=context_name):
+        with execution_context(type="setup", name=context_name, parent_header=parent_header):
             if inspect.iscoroutinefunction(kernel_setup_func):
                 await kernel_setup_func()
             elif inspect.isfunction(kernel_setup_func) or inspect.ismethod(kernel_setup_func):
@@ -270,12 +271,14 @@ class BeakerKernel(KernelProxyManager):
         # Fetch event loop and ensure it's valid
         loop = asyncio.get_event_loop()
         post_execute = getattr(self.context, "post_execute", None)
+        logger.warning(f"post_execute {post_execute}")
         async def task():
             """
             Task that runs post_execute and then preview in the background as a async task.
             This allows the normal execution flow to respond quickly in case these tasks are slow
             or resource intensive.
             """
+            logger.warning("IN TASK!!!!!")
             if post_execute and (callable(post_execute) or inspect.iscoroutinefunction(post_execute)):
                 # If we have a callback function, then add it as a task to the execution loop so it runs
                 await post_execute(message)
@@ -284,6 +287,7 @@ class BeakerKernel(KernelProxyManager):
             await self.send_preview(parent_header=message.parent_header)
 
         if loop:
+            logger.warning(f"task {task}")
             loop.create_task(task())
         return data
 
@@ -396,9 +400,10 @@ class BeakerKernel(KernelProxyManager):
         setattr(self.context, "current_llm_query", request)
         try:
             # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track thoughts
-            self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
-            self.debug("llm_query", request, parent_header=message.header)
-            result = await self.context.agent.react_async(request, react_context={"message": message})
+            # with parent_message_context(parent_message=message):
+                self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
+                self.debug("llm_query", request, parent_header=message.header)
+                result = await self.context.agent.react_async(request, react_context={"message": message})
         except Exception as err:
             error_text = f"""LLM Error:
 {err}
