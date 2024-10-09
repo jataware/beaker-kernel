@@ -115,52 +115,80 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
 // Simple payload events
 
 type BeakerQueryTextEventType =
-    | "thought"
+    // | "thought"
     | "response"
     | "user_question"
     | "user_answer"
     | "abort";
 
 export interface IBeakerQueryTextEvent extends PartialJSONObject {
-    type: BeakerQueryTextEventType
+    type: BeakerQueryTextEventType;
     content: string;
 };
 
 // Specific-payload types
 
-type BeakerQueryCellEventType = "code_cell"
+type BeakerQueryCellEventType = "code_cell";
 
 export interface IBeakerQueryCellEvent extends PartialJSONObject {
-    type: BeakerQueryCellEventType
+    type: BeakerQueryCellEventType;
     content: {
-        cell_id: string
-        parent_id: string
-        metadata: PartialJSONObject
+        cell_id: string;
+        parent_id: string;
+        metadata: PartialJSONObject;
     };
 };
 
 type BeakerQueryErrorEventType = "error";
 
 export interface IBeakerQueryErrorEvent extends PartialJSONObject {
-    type: BeakerQueryErrorEventType
+    type: BeakerQueryErrorEventType;
     content: {
-        ename: string
-        evalue: string
-        traceback: string[]
+        ename: string;
+        evalue: string;
+        traceback: string[];
     };
 }
+
+type BackgroundCodeContent = Partial<
+    {code: string; execution_count: nbformat.ExecutionCount;}
+    & (messages.IExecuteReply | messages.IReplyErrorContent | messages.IReplyAbortContent)
+>;
+
+type BeakerQueryThoughtType = "thought";
+export interface IBeakerQueryThoughtEvent extends PartialJSONObject {
+    type: BeakerQueryThoughtType;
+    content: {
+        thought: string;
+        tool_name: string;
+        tool_input: any;
+        background_code_executions: BackgroundCodeContent[];
+    };
+}
+
+// type BeakerQueryBackgroundCodeEventType = "background_code";
+// export interface IBeakerQueryBackgroundCodeEvent extends PartialJSONObject {
+//     type: BeakerQueryBackgroundCodeEventType;
+//     content: BackgroundCodeContent;
+// }
 
 // umbrella-type for events
 
 export type BeakerQueryEventType =
     | BeakerQueryTextEventType
     | BeakerQueryCellEventType
-    | BeakerQueryErrorEventType;
+    | BeakerQueryErrorEventType
+    // | BeakerQueryBackgroundCodeEventType;
+    | BeakerQueryThoughtType
+    ;
 
 export type BeakerQueryEvent =
     | IBeakerQueryTextEvent
     | IBeakerQueryCellEvent
-    | IBeakerQueryErrorEvent;
+    | IBeakerQueryErrorEvent
+    // | IBeakerQueryBackgroundCodeEvent;
+    | IBeakerQueryThoughtEvent
+    ;
 
 
 export interface IQueryCell extends nbformat.IBaseCell {
@@ -323,6 +351,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     public execute(session: BeakerSession): IBeakerFuture | null {
         this.events.splice(0, this.events.length);
         this.children.splice(0, this.children.length);
+        let current_codeblock = null;
 
         const handleIOPub = async (msg: IBeakerIOPubMessage) => {
             const msg_type = msg.header.msg_type;
@@ -334,10 +363,34 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 if (content.thought === "") {
                     return;
                 }
-                this.events.push({
-                    type: "thought",
-                    content: content.thought,
-                });
+                this.events.push(
+                    <IBeakerQueryThoughtEvent>{
+                        type: "thought",
+                        content: {
+                            ...content,
+                            background_code_executions: []
+                        }
+                    }
+                );
+            }
+            else if (msg_type === "beaker__execute_input") {
+                // Ugly to hardcode the one tool here. Should be based on something from the message so it's not so
+                // coupled
+                if (!(content.execution_type === 'tool' && content.execution_item_name == 'run_code')) {
+                    current_codeblock = {...content};
+                }
+            }
+            else if (msg_type === "beaker__execute_reply") {
+                // Ugly to hardcode the one tool here. Should be based on something from the message so it's not so
+                // coupled
+                if (!(content.execution_type === 'tool' && content.execution_item_name == 'run_code')) {
+                    let last_thought = this.events.findLast((event) => event.type === 'thought');
+                    last_thought.content.background_code_executions.push({
+                        ...current_codeblock,
+                        ...content,
+                    });
+                    current_codeblock = null;
+                }
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
                 this.events.push({

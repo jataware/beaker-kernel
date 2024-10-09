@@ -28,6 +28,24 @@ class DefaultAgent(BeakerAgent):
         Returns:
             str: The joke
         """
-        joke = """Have you ever seen an elephant hiding in a tree? Me neither. They must be VERY good at it!
+        code = """
+import requests
+url = 'https://v2.jokeapi.dev/joke/Programming,Miscellaneous,Pun,Spooky?blacklistFlags=nsfw,religious,political,racist,sexist,explicit'
+result = requests.get(url).json()
+if result.get('type') == 'single':
+    formatted_joke = result.get('joke')
+elif result.get('type') == 'twopart':
+    formatted_joke = f'''
+{result.get('setup')}
+
+{result.get('delivery')}
+'''.strip()
+
+formatted_joke
 """
+        try:
+            joke = await agent.context.evaluate(code)
+        except Exception as e:
+            logger.warning(f"Error fetching joke: {e}")
+            joke = """Have you ever seen an elephant hiding in a tree? Me neither. They must be VERY good at it!"""
         return joke

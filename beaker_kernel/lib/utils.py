@@ -23,6 +23,7 @@ from .config import config
 logger = logging.getLogger(__name__)
 
 execution_context_var = contextvars.ContextVar('execution_context', default=None)
+parent_message_var = contextvars.ContextVar('parent_message_var', default={})
 
 
 def env_enabled(env_var: str):
@@ -118,12 +119,13 @@ def message_handler(fn):
     @wraps(fn)
     async def wrapper(self, server, target_stream, data: JupyterMessageTuple):
         async with handle_message(server, target_stream, data) as ctx:
-            result = await fn(self, ctx.message)
-            ctx.return_val = result
-            # If message data is returned, then the message should be proxied, but if None or any other type is
-            # returned, the message should be dropped and not continue on to the proxied server.
-            if isinstance(result, JupyterMessageTuple) or result is None:
-                return result
+            with parent_message_context(ctx.message):
+                result = await fn(self, ctx.message)
+                ctx.return_val = result
+                # If message data is returned, then the message should be proxied, but if None or any other type is
+                # returned, the message should be dropped and not continue on to the proxied server.
+                if isinstance(result, JupyterMessageTuple) or result is None:
+                    return result
     return wrapper
 
 
@@ -178,12 +180,12 @@ def action(action_name: str|None=None, docs: str|None=None, default_payload=None
             raise ValueError(f"The default payload for action `{action_nm}` is defined twice. Please ensure only one definition.")
 
         @wraps(fn)
-        async def with_context(*args, **kwargs):
+        async def with_context(self, message):
             with execution_context("action", action_nm):
                 if inspect.iscoroutinefunction(fn):
-                    return await fn(*args, **kwargs)
+                    return await fn(self, message)
                 else:
-                    return fn(*args, **kwargs)
+                    return fn(self, message)
 
         intercept_fn = intercept(msg_type=msg_request_type, stream="shell", docs=docs, default_payload=default_payload)(with_context)
         update_wrapper(register_method, intercept_fn)
@@ -230,15 +232,17 @@ def togglable_tool(env_var, *, name: str | None = None):
 
 
 class execution_context(AbstractContextManager):
-    def __init__(self, type=None, name=None) -> None:
+    def __init__(self, type=None, name=None, **extra) -> None:
+        self.token = None
         self.type = type
         self.name = name
-        self.token = None
+        self.extra = extra
 
     def __enter__(self) -> Any:
         self.token = execution_context_var.set(frozendict({
             "type": self.type,
             "name": self.name,
+            **self.extra
         }))
         return super().__enter__()
 
@@ -246,9 +250,31 @@ class execution_context(AbstractContextManager):
         execution_context_var.reset(self.token)
         return super().__exit__(exc_type, exc_value, traceback)
 
-
 def get_execution_context():
-    context = execution_context_var.get(None)
+    context = execution_context_var.get()
+    print(f'context: {context}')
+    return context
+
+class parent_message_context(AbstractContextManager):
+    def __init__(self, parent_message={}, **extra) -> None:
+        self.token = None
+        self.parent_message = parent_message
+        self.extra = extra
+
+    def __enter__(self) -> Any:
+        context = {
+            "parent_message": self.parent_message,
+            **self.extra,
+        }
+        self.token = parent_message_var.set(frozendict(context))
+        return super().__enter__()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        parent_message_var.reset(self.token)
+        return super().__exit__(exc_type, exc_value, traceback)
+
+def get_parent_message():
+    context = parent_message_var.get()
     return context
 
 

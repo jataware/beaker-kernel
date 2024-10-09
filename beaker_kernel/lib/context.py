@@ -13,7 +13,7 @@ from typing_extensions import Self
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context
+from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message
 from beaker_kernel.lib.config import config as beaker_config
 
 
@@ -88,7 +88,7 @@ class BeakerContext:
                     self.templates[template_name] = template
                 except UnicodeDecodeError:
                     # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
-                    logger.warn(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
+                    logger.warning(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
 
     @property
     def preview(self) -> Callable[[], Awaitable[Any]] | None:
@@ -337,6 +337,7 @@ class BeakerContext:
         stream = self.subkernel.connected_kernel.streams.shell
 
         execution_context = get_execution_context() or {}
+        outer_parent_context = get_parent_message() or {}
 
         if identities is None:
             identities = []
@@ -396,6 +397,14 @@ class BeakerContext:
                         relabeled_message = JupyterMessage(*message)
                         context_type = execution_context.get("type", "unknown")
                         context_name = execution_context.get("name", None)
+
+                        original_parent_message: JupyterMessage = outer_parent_context.get("parent_message")
+                        if original_parent_message:
+                            # As this is a tuple, we can't update the reference pointed to by
+                            # `relabled_message.parent_header` but we can  change the values of the referenced dict
+                            parent_header: dict = relabeled_message.parent_header
+                            parent_header.clear()
+                            parent_header.update(original_parent_message.header)
 
                         relabeled_message.header["msg_type"] = f"beaker__{msg_type}"
                         relabeled_message.content["execution_type"] = context_type
