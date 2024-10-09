@@ -582,7 +582,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             cell.metadata.beaker_child_of = this?.id;
             return cell.toIPynb();
         });
-        return [...this.toMarkdownCell().toIPynb() as [nbformat.IMarkdownCell], ...taggedChildren];
+        return [this.toMarkdownCell().toIPynb() as nbformat.IMarkdownCell, ...taggedChildren];
     }
 }
 
