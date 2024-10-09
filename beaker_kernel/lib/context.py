@@ -3,15 +3,17 @@ import inspect
 import json
 import logging
 import os.path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar
 import urllib.parse
 import requests
 import uuid
+from functools import wraps
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable
+from typing_extensions import Self
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import action, get_socket, ExecutionTask
+from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context
 from beaker_kernel.lib.config import config as beaker_config
 
 
@@ -41,6 +43,7 @@ class BeakerContext:
     intercepts: List[Tuple[str, Callable, str]]
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
+    preview_function_name: str = "generate_preview"
 
     SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
@@ -86,6 +89,14 @@ class BeakerContext:
                 except UnicodeDecodeError:
                     # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
                     logger.warn(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
+
+    @property
+    def preview(self) -> Callable[[], Awaitable[Any]] | None:
+        preview_func = getattr(self, self.preview_function_name, None)
+        if callable(preview_func) and not inspect.iscoroutinefunction:
+            raise ValueError(f"Preview function '{self.preview_function_name}' must be a coroutine (awaitable) if defined.")
+        if preview_func and inspect.iscoroutinefunction(preview_func):
+            return preview_func
 
     def disable_tools(self):
         # TODO: Identical toolnames don't work
@@ -260,8 +271,17 @@ class BeakerContext:
     get_agent_history._default_payload = '{}'
 
 
+    @action(default_payload='{}')
+    async def get_preview(self, message):
+        """
+        Returns the current preview payload if enabled, otherwise None.
+        """
+        return await self.preview()
+
+
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
         return self.beaker_kernel.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)
+
 
     @property
     def slug(self) -> Optional[str]:
@@ -310,9 +330,13 @@ class BeakerContext:
         store_history=False,
         surpress_messages=True,
         identities=None,
+        cc_messages=True,
     ) -> ExecutionTask:
+
         self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
         stream = self.subkernel.connected_kernel.streams.shell
+
+        execution_context = get_execution_context() or {}
 
         if identities is None:
             identities = []
@@ -358,7 +382,35 @@ class BeakerContext:
             shell_socket = get_socket("shell")
             iopub_socket = get_socket("iopub")
 
+            # Internal decorator to send relabeled copies of certain messages to the front-end
+            def carbon_copy(fn):
+                @wraps(fn)
+                def inner_relabel(server, target_stream, data):
+                    if cc_messages:
+                        message = JupyterMessage.parse(data)
+                        msg_type = message.header.get('msg_type')
+
+                        destination_server = server.manager.server
+                        destination_stream = destination_server.streams.iopub
+
+                        relabeled_message = JupyterMessage(*message)
+                        context_type = execution_context.get("type", "unknown")
+                        context_name = execution_context.get("name", None)
+
+                        relabeled_message.header["msg_type"] = f"beaker__{msg_type}"
+                        relabeled_message.content["execution_type"] = context_type
+                        if context_name:
+                            relabeled_message.content["execution_item_name"] = context_name
+                        relabeled_data = relabeled_message.sign_using(destination_server.config.get("key")).parts
+                        destination_stream.send_multipart(relabeled_data)
+                        destination_stream.flush()
+
+                    return fn(server, target_stream, data)
+                return inner_relabel
+
+
             # Generate a handler to catch and silence the output
+            @carbon_copy
             async def silence_message(server, target_stream, data):
                 message = JupyterMessage.parse(data)
 
@@ -397,6 +449,7 @@ class BeakerContext:
                 if not surpress_messages:
                     return data
 
+            @carbon_copy
             async def handle_error(server, target_stream, data):
                 message = JupyterMessage.parse(data)
                 content = message.content
@@ -410,6 +463,7 @@ class BeakerContext:
                 if not surpress_messages:
                     return data
 
+            @carbon_copy
             async def cleanup(server, target_stream, data):
                 message = JupyterMessage.parse(data)
                 # Ensure we are only working on handlers for this message response
