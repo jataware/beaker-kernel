@@ -76,6 +76,15 @@
   src: local("Lato Bold"), local("Lato-Bold"), url("../fonts/lato-v17-latin-ext_latin-700.woff2") format("woff2"), url("../fonts/lato-v17-latin-ext_latin-700.woff") format("woff");
   /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
 }
+
+.monospace {
+  font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
+}
+
+.pre {
+    white-space: pre-line;
+}
+
 :root {
   --blue-50:#f6fbfe;
   --blue-100:#d6ecfc;

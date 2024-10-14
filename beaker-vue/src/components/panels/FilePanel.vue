@@ -1,5 +1,5 @@
 <template>
-  <div class="file-container">
+  <div class="file-container pre">
     <div class="file-container-header">
       <span>Contents of: <span class="header-path">{{ displayPath }}</span></span>
       <span style="flex: 1"></span>
