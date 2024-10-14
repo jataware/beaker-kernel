@@ -115,7 +115,6 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
 // Simple payload events
 
 type BeakerQueryTextEventType =
-    // | "thought"
     | "response"
     | "user_question"
     | "user_answer"
@@ -166,19 +165,12 @@ export interface IBeakerQueryThoughtEvent extends PartialJSONObject {
     };
 }
 
-// type BeakerQueryBackgroundCodeEventType = "background_code";
-// export interface IBeakerQueryBackgroundCodeEvent extends PartialJSONObject {
-//     type: BeakerQueryBackgroundCodeEventType;
-//     content: BackgroundCodeContent;
-// }
-
 // umbrella-type for events
 
 export type BeakerQueryEventType =
     | BeakerQueryTextEventType
     | BeakerQueryCellEventType
     | BeakerQueryErrorEventType
-    // | BeakerQueryBackgroundCodeEventType;
     | BeakerQueryThoughtType
     ;
 
@@ -186,7 +178,6 @@ export type BeakerQueryEvent =
     | IBeakerQueryTextEvent
     | IBeakerQueryCellEvent
     | IBeakerQueryErrorEvent
-    // | IBeakerQueryBackgroundCodeEvent;
     | IBeakerQueryThoughtEvent
     ;
 
@@ -384,7 +375,8 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 // Ugly to hardcode the one tool here. Should be based on something from the message so it's not so
                 // coupled
                 if (!(content.execution_type === 'tool' && content.execution_item_name == 'run_code')) {
-                    let last_thought = this.events.findLast((event) => event.type === 'thought');
+                    const isThought = (object: any): object is IBeakerQueryThoughtEvent => 'type' in object && object.type === 'thought';
+                    let last_thought: IBeakerQueryThoughtEvent = this.events.findLast(isThought)
                     last_thought.content.background_code_executions.push({
                         ...current_codeblock,
                         ...content,
