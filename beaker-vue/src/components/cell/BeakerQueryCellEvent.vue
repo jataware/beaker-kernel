@@ -22,12 +22,12 @@
                         }
                     }"
                 >
-                        <template #header>
-                            <span class="flex align-items-center gap-2 w-full">
-                                <span :class="chooseOutputIcon(child?.outputs)"/>
-                                <span class="font-bold white-space-nowrap">{{ formatOutputs(child?.outputs, ["execute_result"]) }}</span>
-                            </span>
-                        </template>
+                    <template #header>
+                        <span class="flex align-items-center gap-2 w-full">
+                            <span :class="chooseOutputIcon(child?.outputs)"/>
+                            <span class="font-bold white-space-nowrap">{{ formatOutputs(child?.outputs, ["execute_result"]) }}</span>
+                        </span>
+                    </template>
                     <BeakerCodecellOutput :outputs="child?.outputs" />
                 </AccordionTab>
             </Accordion>
@@ -35,7 +35,55 @@
         <div v-else-if="props.event?.type === 'thought'">
             <div v-html="marked.parse(props.event.content.thought)" />
             <div v-if="props.event.content.background_code_executions.length">
-                {{ props.event.content.background_code_executions }}
+                <Accordion :multiple="true" :active-index="[]">
+                    <AccordionTab
+                        v-for="(code_execution, index) in event.content.background_code_executions"
+                        :key="`code_execution_${index}`"
+                        :pt="{
+                            header: {
+                                class: [`agent-response-header`]
+                            },
+                            headerAction: {
+                                class: [`agent-response-headeraction`]
+                            },
+                            content: {
+                                class: [`agent-response-content`]
+                            },
+                            headerIcon: {
+                                class: [`agent-response-icon`]
+                            }
+                        }"
+                    >
+                        <template #header>
+                            <span class="flex align-items-center gap-2 w-full" style="font-weight: normal">
+                                <span class="pi pi-icon pi-server"></span>
+                                <span>Background Execution by Agent</span>
+                            </span>
+                        </template>
+                        <div
+                            class="monospace pre"
+                            style="border: 1px var(--surface-border) solid; background-color: var(--surface-50); padding: 0.5rem"
+                        >
+                            {{ code_execution.code.trim() }}
+                        </div>
+                        <div v-if="code_execution.status === 'ok'">
+                            <span class="pi pi-icon pi-check"></span>
+                            Ran successfully
+                        </div>
+                        <div v-else>
+                            <span class="pi pi-icon pi-exclamation-triangle"></span>
+                            {{ capitalize(code_execution.status) }}
+                            <div v-if="code_execution.status === 'error'">
+                                <div>
+                                {{ code_execution.ename }}: {{ code_execution.evalue }}
+                                </div>
+                                <div class="monospace pre">
+                                    {{ stripAnsi(code_execution.traceback.join('\n').trim())}}
+                                </div>
+                            </div>
+                        </div>
+                    </AccordionTab>
+                </Accordion>
 
             </div>
         </div>
@@ -63,10 +111,10 @@
         </span>
         <span v-else-if="props.event?.type === 'error'">
             <div>
-                <pre class="query-error-text" v-if="props?.event.content.ename">
+                <pre class="pre" v-if="props?.event.content.ename">
                     {{props?.event.content.ename}}
                 </pre>
-                <pre class="query-error-text" v-if="props?.event.content.evalue">
+                <pre class="pre" v-if="props?.event.content.evalue">
                     {{props?.event.content.evalue}}
                 </pre>
                 <Accordion>
@@ -91,8 +139,8 @@
                                 <span class="font-bold white-space-nowrap">Traceback:</span>
                             </span>
                         </template>
-                        <pre class="query-error-text" v-if="props?.event.content.traceback">
-                            {{props?.event.content.traceback?.join('')}}
+                        <pre class="pre" v-if="props?.event.content.traceback">
+                            {{props?.event.content.traceback?.join('\n')}}
                         </pre>
                     </AccordionTab>
                 </Accordion>
@@ -102,13 +150,14 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, inject, onBeforeMount, computed, ref } from "vue";
+import { defineProps, defineExpose, inject, onBeforeMount, computed, ref, capitalize } from "vue";
 import { BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel/src/notebook";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";
 import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
+import stripAnsi from "strip-ansi";
 
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
@@ -336,24 +385,11 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     font-size: 0.7rem;
 }
 
-/*
-.agent-response-content .code-cell-output > div > div > .mime-select-container {
-    justify-content: flex-start
-}
-*/
-
-.query-error-text {
-    white-space: pre-line;
-}
 
 .agent-outputs {
     font-weight: 400;
     margin-bottom: 0rem;
     font-size: 1.1rem;
-}
-
-.agent-response-icon {
-
 }
 
 </style>
