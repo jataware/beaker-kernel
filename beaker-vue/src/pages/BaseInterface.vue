@@ -204,6 +204,13 @@ const snapshot = async () => {
                 sessionData['checksum'] = notebookChecksum;
             }
         }
+        else {
+            const notebookContent = session.notebook.toIPynb();
+            const notebookChecksum: string = sum(notebookContent);
+            sessionData['filename'] = undefined;
+            sessionData['data'] = notebookContent;
+            sessionData['checksum'] = notebookChecksum;
+        }
         localStorage.setItem("notebookData", JSON.stringify(notebookData));
     }
 };

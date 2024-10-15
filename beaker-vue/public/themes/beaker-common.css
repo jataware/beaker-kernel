@@ -1,0 +1,154 @@
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+:root {
+  font-family:Lato, Helvetica, sans-serif;
+  --font-family:Lato, Helvetica, sans-serif;
+  font-size: 12pt;
+  font-weight: 400;
+}
+
+:root {
+  --blue-50:#f6fbfe;
+  --blue-100:#d6ecfc;
+  --blue-200:#b5ddfa;
+  --blue-300:#95cef8;
+  --blue-400:#74bff5;
+  --blue-500:#54b0f3;
+  --blue-600:#4796cf;
+  --blue-700:#3b7baa;
+  --blue-800:#2e6186;
+  --blue-900:#224661;
+  --green-50:#f4fcf8;
+  --green-100:#ccf2dc;
+  --green-200:#a3e7c1;
+  --green-300:#7adca6;
+  --green-400:#52d28a;
+  --green-500:#29c76f;
+  --green-600:#23a95e;
+  --green-700:#1d8b4e;
+  --green-800:#176d3d;
+  --green-900:#10502c;
+  --yellow-50:#fefdf6;
+  --yellow-100:#fcf4d6;
+  --yellow-200:#faebb5;
+  --yellow-300:#f8e295;
+  --yellow-400:#f5d974;
+  --yellow-500:#f3d054;
+  --yellow-600:#cfb147;
+  --yellow-700:#aa923b;
+  --yellow-800:#86722e;
+  --yellow-900:#615322;
+  --cyan-50:#f5fcfd;
+  --cyan-100:#d1f2f5;
+  --cyan-200:#ace8ed;
+  --cyan-300:#87dee6;
+  --cyan-400:#63d3de;
+  --cyan-500:#3ec9d6;
+  --cyan-600:#35abb6;
+  --cyan-700:#2b8d96;
+  --cyan-800:#226f76;
+  --cyan-900:#195056;
+  --pink-50:#fef6f7;
+  --pink-100:#fad6d6;
+  --pink-200:#f6b5b6;
+  --pink-300:#f29596;
+  --pink-400:#ee7475;
+  --pink-500:#ea5455;
+  --pink-600:#c74748;
+  --pink-700:#a43b3c;
+  --pink-800:#812e2f;
+  --pink-900:#5e2222;
+  --indigo-50:#f6f7fe;
+  --indigo-100:#d6dafc;
+  --indigo-200:#b5bcfa;
+  --indigo-300:#959ff8;
+  --indigo-400:#7481f5;
+  --indigo-500:#5464f3;
+  --indigo-600:#4755cf;
+  --indigo-700:#3b46aa;
+  --indigo-800:#2e3786;
+  --indigo-900:#222861;
+  --teal-50:#f3fcf9;
+  --teal-100:#c5f1e1;
+  --teal-200:#97e5c9;
+  --teal-300:#69dab1;
+  --teal-400:#3bce99;
+  --teal-500:#0dc381;
+  --teal-600:#0ba66e;
+  --teal-700:#09895a;
+  --teal-800:#076b47;
+  --teal-900:#054e34;
+  --orange-50:#fffaf6;
+  --orange-100:#ffe8d2;
+  --orange-200:#ffd6ae;
+  --orange-300:#ffc38a;
+  --orange-400:#ffb166;
+  --orange-500:#ff9f42;
+  --orange-600:#d98738;
+  --orange-700:#b36f2e;
+  --orange-800:#8c5724;
+  --orange-900:#66401a;
+  --bluegray-50:#f7f8fa;
+  --bluegray-100:#dbdfe8;
+  --bluegray-200:#bec5d6;
+  --bluegray-300:#a1abc4;
+  --bluegray-400:#8592b2;
+  --bluegray-500:#6878a0;
+  --bluegray-600:#586688;
+  --bluegray-700:#495470;
+  --bluegray-800:#394258;
+  --bluegray-900:#2a3040;
+  --purple-50:#f8f6fe;
+  --purple-100:#ddd6fc;
+  --purple-200:#c2b5fa;
+  --purple-300:#a895f8;
+  --purple-400:#8d74f5;
+  --purple-500:#7254f3;
+  --purple-600:#6147cf;
+  --purple-700:#503baa;
+  --purple-800:#3f2e86;
+  --purple-900:#2e2261;
+  --red-50:#fff5f6;
+  --red-100:#ffcfd4;
+  --red-200:#ffa9b2;
+  --red-300:#ff848f;
+  --red-400:#ff5e6d;
+  --red-500:#ff384b;
+  --red-600:#d93040;
+  --red-700:#b32735;
+  --red-800:#8c1f29;
+  --red-900:#66161e;
+}
+
+/* lato-300 - latin-ext_latin */
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 300;
+  src: local("Lato Light"), local("Lato-Light"), url("../fonts/lato-v17-latin-ext_latin-300.woff2") format("woff2"), url("../fonts/lato-v17-latin-ext_latin-300.woff") format("woff");
+  /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+/* lato-regular - latin-ext_latin */
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 400;
+  src: local("Lato Regular"), local("Lato-Regular"), url("../fonts/lato-v17-latin-ext_latin-regular.woff2") format("woff2"), url("../fonts/lato-v17-latin-ext_latin-regular.woff") format("woff");
+  /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+/* lato-700 - latin-ext_latin */
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 700;
+  src: local("Lato Bold"), local("Lato-Bold"), url("../fonts/lato-v17-latin-ext_latin-700.woff2") format("woff2"), url("../fonts/lato-v17-latin-ext_latin-700.woff") format("woff");
+  /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+
+.monospace {
+  font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
+}
+
+.pre {
+    white-space: pre-wrap;
+}

@@ -13,7 +13,7 @@ from typing_extensions import Self
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message
+from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError
 from beaker_kernel.lib.config import config as beaker_config
 
 
@@ -331,6 +331,7 @@ class BeakerContext:
         surpress_messages=True,
         identities=None,
         cc_messages=True,
+        raise_on_error=True,
     ) -> ExecutionTask:
 
         self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
@@ -469,6 +470,8 @@ class BeakerContext:
                     content["evalue"],
                     "\n".join(content["traceback"]),
                 )
+                if raise_on_error:
+                    raise ExecutionError(content["ename"], content["evalue"], content["traceback"])
                 if not surpress_messages:
                     return data
 

@@ -6,6 +6,7 @@ from archytas.tool_utils import AgentRef, LoopControllerRef, tool
 
 from beaker_kernel.lib.agent import BeakerAgent
 from beaker_kernel.lib.context import BeakerContext
+from beaker_kernel.lib.utils import ExecutionError
 
 
 logger = logging.getLogger(__name__)
@@ -42,10 +43,13 @@ elif result.get('type') == 'twopart':
 '''.strip()
 
 formatted_joke
-"""
+""".strip()
+
         try:
-            joke = await agent.context.evaluate(code)
-        except Exception as e:
+            context = await agent.context.evaluate(code)
+            joke = context["return"]
+        except ExecutionError as e:
             logger.warning(f"Error fetching joke: {e}")
             joke = """Have you ever seen an elephant hiding in a tree? Me neither. They must be VERY good at it!"""
+
         return joke

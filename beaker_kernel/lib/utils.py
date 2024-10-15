@@ -11,7 +11,7 @@ from frozendict import frozendict
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from functools import wraps, update_wrapper
 from pathlib import Path
-from typing import Any, TYPE_CHECKING, Callable
+from typing import Any, TYPE_CHECKING, Callable, List
 
 from archytas.tool_utils import tool
 
@@ -45,6 +45,9 @@ def find_file_along_path(filename: str, start_path: Path | str | None = None) ->
             return potential_file
     return None
 
+class ExecutionError(RuntimeError):
+    def __init__(self, ename: str, evalue: str, traceback: List[str]) -> None:
+        super().__init__(ename, evalue, traceback)
 
 class ExecutionTask(asyncio.Task):
     execute_request_msg: JupyterMessage | None
