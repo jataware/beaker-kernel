@@ -170,7 +170,6 @@ const moveDrag = (evt: MouseEvent) => {
         resize = false;
         // Will be minimizing
         if (panelWidth.value != closedWidth) {
-            console.log('minimzing');
             resize = true;
             width = closedWidth;
             minimizeIndicator.value = true;

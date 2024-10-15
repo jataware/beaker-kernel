@@ -271,14 +271,12 @@ class BeakerKernel(KernelProxyManager):
         # Fetch event loop and ensure it's valid
         loop = asyncio.get_event_loop()
         post_execute = getattr(self.context, "post_execute", None)
-        logger.warning(f"post_execute {post_execute}")
         async def task():
             """
             Task that runs post_execute and then preview in the background as a async task.
             This allows the normal execution flow to respond quickly in case these tasks are slow
             or resource intensive.
             """
-            logger.warning("IN TASK!!!!!")
             if post_execute and (callable(post_execute) or inspect.iscoroutinefunction(post_execute)):
                 # If we have a callback function, then add it as a task to the execution loop so it runs
                 await post_execute(message)
@@ -287,7 +285,6 @@ class BeakerKernel(KernelProxyManager):
             await self.send_preview(parent_header=message.parent_header)
 
         if loop:
-            logger.warning(f"task {task}")
             loop.create_task(task())
         return data
 
