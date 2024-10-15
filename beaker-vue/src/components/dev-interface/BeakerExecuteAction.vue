@@ -128,7 +128,6 @@ const executeAction = () => {
         messageId.value,
     );
     future.onResponse = async (msg: messages.IIOPubMessage) => {
-        console.log("I'm here!", msg);
         response.value = msg;
     };
     future.onReply = async (msg: messages.IExecuteReplyMsg) => {

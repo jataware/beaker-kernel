@@ -103,7 +103,6 @@ const contextNodes = computed<TreeNode[]>(() => {
         children: Object.keys(context.actions).map((action, idx) => {
             return ({
                 dblClick: (data) => {
-                    console.log("This is my data", data);
                     // emit("select_action", )
                 },
                 key: `1-${idx}`,

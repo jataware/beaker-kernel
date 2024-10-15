@@ -130,7 +130,7 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
             }
             else {
                 for (const notebookCell of this.notebook.cells) {
-                    console.log(notebookCell)
+                    // console.log(notebookCell)
                 }
 
             }
