@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "beaker-kernel"
-version = "1.6.8a"
+version = "1.6.8a1"
 description = ""
 readme = "README.md"
 requires-python = ">=3.10"
@@ -73,9 +73,12 @@ path = "beaker_kernel/builder/beaker.py"
 
 
 [tool.bumpversion]
-current_version="1.6.8a"
-parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
-serialize = ["{major}.{minor}.{patch}"]
+current_version="1.6.8a1"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)((?P<release>[release])(?P<revision>\\d+))?"
+serialize = [
+  "{major}.{minor}.{patch}{release}{revision}",
+  "{major}.{minor}.{patch}"
+]
 search = "{current_version}"
 replace = "{new_version}"
 regex = false
@@ -89,6 +92,12 @@ allow_dirty = true
 commit = true
 message = "Bump version: {current_version} → {new_version}"
 commit_args = ""
+
+[[tool.bumpversion.part.release]]
+values = [
+  "a",
+  "b",
+]
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
