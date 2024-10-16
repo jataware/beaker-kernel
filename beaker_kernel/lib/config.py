@@ -154,6 +154,7 @@ class ConfigClass:
         normalize_function=normalize_bool,
     )
 
+
     @classmethod
     def from_config_file(cls, config_file_path: Path|str|None = None, load_dotenv=True):
         config_file = locate_config(start_path=config_file_path)
@@ -175,6 +176,7 @@ class ConfigClass:
         })
 
         instance._tools_enabled = config_data.get('tools_enabled', {})
+        instance._model_config = config_data.get('model_config', {})
         return instance
 
     def update(self, updates: dict, config_file_path: Path|str|None = None):
@@ -210,6 +212,32 @@ class Config(ConfigClass):
     @property
     def tools_enabled(self) -> dict[str, bool]:
         return getattr(self.config_obj, '_tools_enabled', {})
+
+    @property
+    def model_config(self) -> dict[str, any]:
+        return getattr(self.config_obj, '_model_config', {})
+
+    def get_model(self):
+        import importlib
+        default_model_name = self.model_config.get("default_model", None)
+        if 'dotted_import_path' in self.model_config and 'model_name' in self.model_config:
+            model_config = self.model_config
+        elif default_model_name and default_model_name in self.model_config:
+            model_config = self.model_config.get(default_model_name)
+        else:
+            from archytas.models import OpenAIModel
+            return OpenAIModel({})
+
+        # Copying config so it doesn't get changed globally if modified in the model instance
+        model_config = model_config.copy()
+
+        module_name, cls_name = model_config.pop("dotted_import_path").rsplit('.', 1)
+        module = importlib.import_module(module_name)
+        cls = getattr(module, cls_name, None)
+        if cls and isinstance(cls, type):
+            return cls(model_config)
+        else:
+            raise ImportError(f"Unable to load model identified by '{module_name}.{cls_name}'. Please make sure it is properly installed.")
 
 config = Config()
 

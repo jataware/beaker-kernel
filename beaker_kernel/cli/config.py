@@ -86,6 +86,13 @@ def show(sensitive):
             click.echo(f"  {tool} - {enabled}" )
         click.echo("")
 
+    model_config = config_data.pop('model_config', {})
+    if model_config:
+        click.echo("Model configuration")
+        for key, value in model_config.items():
+            click.echo(f"  {key}: {value}" )
+        click.echo("")
+
     if config_data:
         click.echo("\nThe following config variables are defined in the configuration file but are not defined "
                    "in the Beaker configuration class:")

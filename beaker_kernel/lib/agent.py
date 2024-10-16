@@ -4,7 +4,7 @@ import re
 import typing
 from functools import wraps
 
-from archytas.agent import Message
+from archytas.agent import BaseMessage
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
@@ -33,13 +33,14 @@ class BeakerAgent(ReActAgent):
         **kwargs,
     ):
         self.context = context
+        model = config.get_model()
 
         self.context.beaker_kernel.debug("init-agent", {
             "debug": self.context.beaker_kernel.debug_enabled,
             "verbose": self.context.beaker_kernel.verbose,
         })
         super().__init__(
-            model=self.MODEL,
+            model=model,
             api_key=config.LLM_SERVICE_TOKEN,
             tools=tools,
             verbose=self.context.beaker_kernel.verbose,
@@ -54,7 +55,7 @@ class BeakerAgent(ReActAgent):
             set_tool_execution_context(tool)
 
 
-    async def execute(self, additional_messages: list[Message] = None) -> str:
+    async def execute(self, additional_messages: list[BaseMessage] = None) -> str:
         import openai
         try:
             return await super().execute(additional_messages or [])
