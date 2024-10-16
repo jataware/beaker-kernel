@@ -255,7 +255,6 @@ class execution_context(AbstractContextManager):
 
 def get_execution_context():
     context = execution_context_var.get()
-    print(f'context: {context}')
     return context
 
 class parent_message_context(AbstractContextManager):
