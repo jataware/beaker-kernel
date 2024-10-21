@@ -52,6 +52,22 @@ export const BeakerThemePlugin: Plugin = {
 
         const applyTheme = () => {
             const themeLink: HTMLLinkElement = document.querySelector('#primevue-theme');
+            themeLink.addEventListener('error', (err) => {
+                // Error loading the theme. Fallback to default.
+                const failureCount = Number(localStorage.getItem('theme-failure-count')) || 0;
+                Object.keys(ThemeDefaults).forEach((key) => {
+                    theme[key] = ThemeDefaults[key];
+                });
+                // Clear theme from storage if it's a consistent problem.
+                if (failureCount >= 5) {
+                    localStorage.removeItem('theme');
+                    localStorage.removeItem('theme-failure-count');
+                }
+                else {
+                    localStorage.setItem('theme-failure-count', (failureCount+1).toString());
+                }
+                applyTheme()
+            }, {once: true});
             themeLink.href = `/themes/${theme.mode === 'light'? theme.lightTheme : theme.darkTheme}/theme.css`;
         };
 
