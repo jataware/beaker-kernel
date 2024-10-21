@@ -87,7 +87,12 @@ const displayMode = computed<DisplayMode>(() => {
 
 const extensions = computed<Extension[]>(() => {
     const enabledExtensions: Extension[] = [
-        EditorView.lineWrapping
+        EditorView.lineWrapping,
+        [EditorView.theme({
+            '.cm-scroller': {
+                fontFamily: "'Ubuntu Mono', 'Courier New', Courier, monospace",
+            }
+        })],
     ];
     if (displayMode.value === "dark") {
         enabledExtensions.push(oneDark);

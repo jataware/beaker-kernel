@@ -12,6 +12,7 @@
                 v-if="renderedBundle[selectedMimeType]?.component"
                 :is="renderedBundle[selectedMimeType].component"
                 v-bind="renderedBundle[selectedMimeType].bindMapping"
+                :class="`rendered-output ${selectedMimeType.replace('/', '-')}`"
             />
         </div>
     </div>
@@ -21,7 +22,7 @@
 <script lang="ts" setup>
 import { ref, defineProps, inject, computed } from "vue";
 import SelectButton from "primevue/selectbutton";
-import { BeakerSession } from "beaker-kernel";
+import { BeakerSession } from "beaker-kernel/src";
 import { BeakerRenderOutput } from "../../renderers";
 
 const props = defineProps([
@@ -31,7 +32,11 @@ const props = defineProps([
 
 const session = inject<BeakerSession>('session');
 
-const renderedBundle = computed<{[key: string]: BeakerRenderOutput}>(() => {return session.renderer.renderMimeBundle(props.mimeBundle) as any as {[key: string]: BeakerRenderOutput}});
+const renderedBundle = computed<{[key: string]: BeakerRenderOutput}>(
+    () => {
+        return session.renderer.renderMimeBundle(props.mimeBundle) as any as {[key: string]: BeakerRenderOutput}
+    }
+);
 const sortedMimetypes = computed(() => {return session.renderer.rankedMimetypesInBundle(props.mimeBundle)});
 
 const selectedMimeType = ref<string>(sortedMimetypes.value[0]);

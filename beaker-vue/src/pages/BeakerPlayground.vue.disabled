@@ -38,7 +38,7 @@
 
 <script setup lang="tsx">
 import { ref, onBeforeMount, computed, provide, inject } from "vue";
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerSession } from 'beaker-kernel/src';
 import Button from 'primevue/button';
 
 import Notebook from './lib/UINotebook.vue';

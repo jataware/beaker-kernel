@@ -3,12 +3,22 @@ const path = require('path');
 
 module.exports = defineConfig({
   pages: {
-    index: 'src/pages/dev-interface.ts',
-    chat: 'src/pages/chat-interface.ts',
-    admin: 'src/pages/admin.ts',
-    notebook: 'src/pages/notebook.ts',
-    cell: 'src/pages/cell.ts',
-    playground: 'src/pages/playground.ts',
+    index: {
+      entry: 'src/pages/notebook-interface.ts',
+      title: "Beaker Notebook",
+    },
+    chat: {
+      entry: 'src/pages/chat-interface.ts',
+      title: "Beaker Chat Interface",
+    },
+    admin: {
+      entry: 'src/pages/admin.ts',
+      title: "Beaker Admin",
+    },
+    dev: {
+      entry: 'src/pages/dev-interface.ts',
+      title: "Beaker Development Interface",
+    },
   },
   css: { extract: false },
   assetsDir: "static/",
@@ -23,36 +33,32 @@ module.exports = defineConfig({
     },
   },
   devServer: {
-    proxy: {
-      '^/stats': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/api': {
-        target: 'http://jupyter:8888',
-        ws: true,
-        changeOrigin: true,
-      },
-      '^/upload': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/download': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/contexts': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/config': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
-      },
-      '^/summary': {
-        target: 'http://jupyter:8888',
-        changeOrigin: true,
+    proxy: "http://jupyter:8888",
+    onBeforeSetupMiddleware (server) {
+      // Proxy everything to the server except for `/ws`, webpacks websocket for hotloading, static files and pages.
+      const origContext = server.options.proxy[0].context;
+      server.options.proxy[0].context = (pathname, req) => {
+        if (pathname === '/ws') {
+          return false;
+        }
+        // Always proxy requests to /files/* for downloading
+        if (/^\/files\//.test(pathname)) {
+          return true;
+        }
+        // Never proxy pages defined in the vue config.
+        const pageRegex = '^/?(' + Object.keys(module.exports.pages).join('|') + ')\\b'
+        if (RegExp(pageRegex).test(pathname)) {
+          return false;
+        }
+
+        const result = origContext(pathname, req);
+        // Will be undefined on websocket requests, or any other request that does not provide an `accepts` header.
+        // Allow all such requests other than `/ws` which is handled above.
+        if (result === undefined) {
+          return true;
+        }
+        return result;
       }
     },
-  }
+  },
 })

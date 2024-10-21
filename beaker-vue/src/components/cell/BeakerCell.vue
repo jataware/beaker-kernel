@@ -4,78 +4,155 @@
         tabindex="0"
         @click="clicked"
         ref="beakerCellRef"
+        :class="{collapsed}"
+        :cell-id="cell.id"
     >
-        <div class="cell-grid">
-            <div
-                class="drag-handle"
-            >
-                <DraggableMarker
-                    :draggable="props.dragEnabled"
-                />
-            </div>
-            <Dropdown
-                class="cell-type-selector"
-                :model-value="cell.cell_type"
-                @update:model-value="(value) => notebook.convertCellType(cell, value)"
-                :options="Object.keys(cellMap || {})"
-                :dropdown-icon="cellIcon"
-            >
-                <template #value="slotProps">
-                    <span :class="cellIconMap[slotProps.value]"></span>
-                </template>
-
-                <template #option="slotProps">
-                    <div class="cell-type-dropdown-item">
-                        <span :class="cellIconMap[slotProps.option]"></span>
-                        <span>{{ slotProps.option }}</span>
-                    </div>
-                </template>
-            </Dropdown>
-            <div class="cell-contents">
-                <slot name="default">
-                </slot>
-
-                <slot name="child-cells">
-                </slot>
-            </div>
+        <div class="collapse-box" @click.prevent="collapseCell"></div>
+        <div
+            class="drag-handle"
+        >
+            <DraggableMarker
+                :draggable="props.dragEnabled"
+            />
         </div>
+        <div class="cell-contents">
+            <slot name="default">
+            </slot>
+
+            <slot name="child-cells">
+            </slot>
+        </div>
+
+        <div class="menu-area" ref="menuAreaRef">
+        <slot name="hover-menu">
+            <div class="hover-menu"
+                @pointerenter="overlayMenuHoverHandler"
+                @pointerleave="overlayMenuHoverHandler"
+            >
+                <Button
+                    ref="cellMenuButton"
+                    class="cell-menu-button"
+                    text
+                    small
+                    icon="pi pi-ellipsis-v"
+                    @click.prevent="hoverMenuRef.show($event);"
+                />
+                <OverlayPanel
+                    class="menu-overlay"
+                    ref="hoverMenuRef"
+                    :cell-id="cell.id"
+                    @pointerenter="overlayMenuHoverHandler"
+                    @pointerleave="overlayMenuHoverHandler"
+                >
+                    <div v-tooltip.left="'Change Cell Type'">
+                        <Dropdown
+                            :name="`${cell.id}-celltype`"
+                            class="cell-type-selector overlay-menu-button"
+                            :model-value="cell.cell_type"
+                            @update:model-value="(value) => {notebook.convertCellType(cell, value); hoverMenuRef.hide();}"
+                            :options="Object.keys(cellMap || {})"
+                            :dropdown-icon="cellIcon"
+                            append-to="self"
+                        >
+                            <template #value="slotProps">
+                                <span :class="cellIconMap[slotProps.value]"></span>
+                            </template>
+
+                            <template #option="slotProps">
+                                <div class="cell-type-dropdown-item">
+                                    <span :class="cellIconMap[slotProps.option]"></span>
+                                    <span>{{ slotProps.option }}</span>
+                                </div>
+                            </template>
+                        </Dropdown>
+                    </div>
+                    <Button
+                        v-tooltip.left="'Execute cell'"
+                        @click="beakerSession.findNotebookCellById(cell.id).execute(); hoverMenuRef.hide();"
+                        icon="pi pi-play"
+                        size="small"
+                        text
+                    />
+                    <Button
+                        v-tooltip.left="'Remove cell'"
+                        @click="notebook.removeCell(beakerSession.findNotebookCellById(cell.id)); hoverMenuRef.hide();"
+                        icon="pi pi-minus"
+                        size="small"
+                        text
+                    />
+                    <Button
+                        v-tooltip.left="'Move cell up'"
+                        @click="moveUp(); hoverMenuRef.hide();"
+                        icon="pi pi-chevron-up"
+                        size="small"
+                        text
+                    />
+                    <Button
+                        v-tooltip.left="'Move cell down'"
+                        @click="moveDown(); hoverMenuRef.hide();"
+                        icon="pi pi-chevron-down"
+                        size="small"
+                        text
+                    />
+                    <!-- <Button
+                        v-tooltip="'Cut cell'"
+                        @click="notebook.removeCell(beakerSession.findNotebookCellById(cell.id)); hoverMenuRef.hide();"
+                        size="small"
+                        text
+                        label="✂"
+                    /> -->
+                </OverlayPanel>
+            </div>
+        </slot>
+        </div>
+        <div class="extra-area">
+            <slot name="extra">
+            </slot>
+        </div>
+
     </div>
 </template>
 
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed } from "vue";
+import { defineProps, defineEmits, ref, inject, computed } from "vue";
+import Button from 'primevue/button';
 import DraggableMarker from './DraggableMarker.vue';
-import BeakerCodeCell from './BeakerCodeCell.vue';
-import BeakerMarkdownCell from './BeakerMarkdownCell.vue';
-import BeakerLLMQueryCell from './BeakerLLMQueryCell.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
-import BeakerRawCell from './BeakerRawCell.vue';
-import { BeakerBaseCell, type IBeakerCell } from "beaker-kernel";
+import { type IBeakerCell } from "beaker-kernel/src";
 import Dropdown from 'primevue/dropdown';
-
-export type CellTypes =
-    | typeof BeakerRawCell
-    | typeof BeakerCodeCell
-    | typeof BeakerMarkdownCell
-    | typeof BeakerLLMQueryCell;
+import OverlayPanel from 'primevue/overlaypanel';
+import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 export interface Props {
     cell: IBeakerCell;
+    index?: number;
     dragEnabled?: boolean;
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits([
+    'move-cell',
+]);
 
+const beakerSession = inject<BeakerSessionComponentType>('beakerSession');
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const cellMap = inject("cell-component-mapping");
 
 const clicked = (evt) => {
-    notebook.selectCell(props.cell as {id: string}, );
+    if (!evt.defaultPrevented) {
+        notebook.selectCell(props.cell as {id: string}, );
+    }
 };
 
 const beakerCellRef = ref<HTMLDivElement|null>(null);
+const hoverMenuRef = ref(null);
+const cellMenuButton = ref(null);
+const metadata = ref(props.cell.metadata);
+const collapsed = computed(() => {
+    return metadata.value?.collapsed || false;
+});
 
 const cellIconMap = {
     "code": "pi pi-code",
@@ -94,45 +171,155 @@ enum CellState {
 }
 
 const cellState = ref<CellState>(CellState.Pending);
+
+const collapseCell = (evt) => {
+    if (metadata.value) {
+        metadata.value.collapsed = !collapsed.value;
+    }
+};
+
+const moveUp = () => {
+    if (props.index > 0) {
+        emit("move-cell", props.index, props.index - 1);
+    }
+}
+
+const moveDown = () => {
+    if (props.index < notebook.cellCount - 1) {
+        emit("move-cell", props.index, props.index + 1);
+    }
+}
+
+const overlayMenuHoverHandler = (event: PointerEvent) => {
+    // Trigger if we are entering, but not moving between elements with the specified classes
+    if (!((event?.target instanceof HTMLElement) && (event?.relatedTarget instanceof HTMLElement))) {
+        return;
+    }
+    const selectors = [
+        `[cell-id="${props.cell.id}"] .menu-area`,
+        `[cell-id="${props.cell.id}"] .hover-menu`,
+        `.menu-overlay[cell-id="${props.cell.id}"]`,
+    ];
+    const selectorString = selectors.join(', ');
+    const closest = event.relatedTarget.closest(selectorString);
+    const ignore = closest !== null;
+    if (!ignore) {
+        if (event.type.toLowerCase().includes('enter')) {
+            hoverMenuRef.value.show(event, cellMenuButton.value.$el);
+        }
+        else if (event.type.toLowerCase().includes('leave')) {
+            hoverMenuRef.value.hide();
+        }
+    }
+}
+
 </script>
 
 <style lang="scss">
 
 .beaker-cell {
+    display: grid;
+    border-radius: 0;
     position: relative;
-    padding: 1rem 0 1rem 0.2rem;
-    border-right: 5px solid transparent;
     background-color: var(--surface-a);
-    border-bottom: 4px solid var(--surface-c);
+    --collapsed-height: 3.5em;
+    min-height: 3.5em;
 
-    &.selected {
-      border-right: 5px solid var(--purple-400);
-      border-top: unset;
-      background-color: var(--surface-ground);
+    grid:
+        "collapse-box drag-handle cell-contents hover-menu" min-content
+        "collapse-box drag-handle cell-contents extra" 1fr /
+        10px 1.6rem 1fr 2.5em;
+
+    &.selected .collapse-box {
+        background-color: var(--primary-400);
     }
 
     &:focus {
         outline: none;
     }
+
+    // Separators between cells
+    &:not(.collapsed):after {
+        content: "";
+        position: absolute;
+        height: 4px;
+        left: 0;
+        bottom: -2px;
+        right: 0px;
+        z-index: 0;
+        background-color: var(--surface-border);
+    }
+
+    &.collapsed {
+
+        // filter: drop-shadow(0 0.5rem 0.3rem crimson);
+        overflow: hidden;
+
+        .cm-editor {
+            max-height: var(--collapsed-height);
+        }
+        max-height: var(--collapsed-height);
+
+        // &:after {
+        //     content: "";
+        //     position: absolute;
+        //     bottom: -4px;
+        //     left: 0;
+        //     right: 0;
+        //     height: 16px;
+        //     box-shadow: inset 0 -10px 8px -4px var(--surface-border);
+        // }
+    }
+
+    &.selected.collapsed .collapse-box {
+        background-color: var(--primary-400);
+    }
+
+    &.collapsed .collapse-box {
+        --wave-color: var(--surface-border);
+        background-color: var(--wave-color);
+        box-shadow: 0.3em 0 0.5em var(--surface-border);
+
+        &:after {
+            content: "";
+            position: absolute;
+            z-index: 200;
+            height: 10px;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            background-color: var(--wave-color);
+            --mask:
+                radial-gradient(8.059999999999999px at 50% calc(100% + 4.25px),#0000 calc(99% - 3px),#000 calc(101% - 3px) 99%,#0000 101%) calc(50% - 10px) calc(50% - 4px + .5px)/20px 8px repeat-x,
+                radial-gradient(8.059999999999999px at 50% -4.25px,#0000 calc(99% - 3px),#000 calc(101% - 3px) 99%,#0000 101%) 50% calc(50% + 4px)/20px 8px repeat-x;
+            -webkit-mask: var(--mask);
+            mask: var(--mask);
+        }
+    }
+
 }
 
-.cell-grid {
-    display: grid;
-    justify-content: start;
-    grid-template-areas:
-        "cell-type-dropdown drag-handle cell-contents";
+.collapse-box {
+    grid-area: collapse-box;
+    border: 1px inset var(--surface-border);
+    border-top: unset;
+    border-bottom: unset;
+    cursor: pointer;
 
-    grid-template-columns: 2rem 1.4rem 1fr;
+    &:hover {
+        background-color: color(from var(--surface-border) srgb r g b / 0.5);
+    }
 }
 
 .cell-contents {
   grid-area: cell-contents;
+  margin: 0.5em 0;
 }
 
 .drag-handle {
     grid-area: drag-handle;
-    margin-left: auto;
-    margin-right: auto;
+    align-content: center;
+    justify-self: center;
     z-index: 10;
 
     .draggable-wrapper {
@@ -184,16 +371,64 @@ const cellState = ref<CellState>(CellState.Pending);
     padding-bottom: calc(1rem - 5px);
 }
 
+.menu-area {
+    grid-area: hover-menu;
+    margin: 0.5em 0.25em 0 0;
+    height: 2em;
+    width: 100%;
+
+    .cell-menu-button {
+        height: 1.5em;
+        width: 1.5em;
+        aspect-ratio: 1 / 1;
+        border-width: 0;
+        padding: auto;
+        border-radius: var(--border-radius);
+
+        .p-button-icon {
+            font-size: smaller;
+        }
+    }
+}
+
+.hover-menu {
+    height: 100%;
+    width: 100%;
+    padding: auto;
+    text-align: center;
+}
+
+.menu-overlay {
+    .p-overlaypanel-content{
+        display: flex;
+        flex-direction: column;
+        padding: 0.8rem;
+        row-gap: 0.5rem;
+    }
+
+    .p-button, .overlay-menu-button {
+        background-color: var(--surface-a);
+        color: var(--primary-color);
+        --shadow: #777;
+        aspect-ratio: 1 / 1;
+        width: 1.75rem;
+        padding: 0;
+        border-color: var(--surface-border);
+        box-shadow: 0px 3px 1px -2px color(from var(--shadow) srgb r g b / 0.5),
+                    0px 2px 2px 0px color(from var(--shadow) srgb r g b / 0.25),
+                    0px 1px 5px 0px color(from var(--shadow) srgb r g b / 0.22);
+        .pi {
+            color: var(--primary-color);
+        }
+    }
+
+}
 
 .cell-type-selector {
     grid-area: cell-type-dropdown;
     margin-left: auto;
     margin-right: auto;
-    width: 1.5rem;
-    aspect-ratio: 1 / 1;
-    padding: 0;
-    border-color: #c5c6cc;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
 
@@ -219,5 +454,9 @@ const cellState = ref<CellState>(CellState.Pending);
         width: calc(2.5rem - 2px);
         aspect-ratio: 1 / 1;
     }
+}
+
+.extra-area {
+    margin: 0.25em 0.25em 0.25em 0;
 }
 </style>

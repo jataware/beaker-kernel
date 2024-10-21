@@ -19,7 +19,7 @@ from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                        InterceptionFilter, JupyterMessage,
                                        KernelProxyManager)
 from .lib.utils import (message_handler, LogMessageEncoder, magic,
-                        handle_message, get_socket)
+                        handle_message, get_socket, execution_context, parent_message_context, get_parent_message)
 
 if TYPE_CHECKING:
     from .lib.agent import BeakerAgent
@@ -82,9 +82,6 @@ class BeakerKernel(KernelProxyManager):
         Adds intercepts used by the Beaker kernel
         """
         self.server.intercept_message(
-            "shell", "kernel_info_reply", self.kernel_info_reply
-        )
-        self.server.intercept_message(
             "shell", "context_info_request", self.context_info_request
         )
         self.server.intercept_message(
@@ -123,8 +120,9 @@ class BeakerKernel(KernelProxyManager):
             if head == prefix:
                 self.debug(event_type="magic_word", content={"magic_word": head, "fn": fn.__name__})
                 async with handle_message(server, target_stream, data) as ctx:
-                    result = await fn(tail, magic_word=head, parent_header=message.header)
-                    ctx.return_val = result
+                    with parent_message_context(ctx.message):
+                        result = await fn(tail, magic_word=head, parent_header=message.header)
+                        ctx.return_val = result
                 return None
         return data
 
@@ -216,11 +214,11 @@ class BeakerKernel(KernelProxyManager):
         self.server.filters.remove(InterceptionFilter(socket, msg_type, func))
 
     async def send_preview(self, parent_header=None):
-        generate_preview = getattr(self.context, "generate_preview", None)
-        if generate_preview and (callable(generate_preview) or inspect.iscoroutinefunction(generate_preview)):
-            preview_payload = await generate_preview()
-            if preview_payload:
-                self.send_response("iopub", "preview", preview_payload, parent_header=parent_header)
+        if self.context.preview:
+            with execution_context("preview"):
+                preview_payload = await self.context.preview()
+                if preview_payload:
+                    self.send_response("iopub", "preview", preview_payload, parent_header=parent_header)
 
     async def update_connection_file(self, **kwargs):
         try:
@@ -251,10 +249,11 @@ class BeakerKernel(KernelProxyManager):
         await self.context.setup(context_info=context_info, parent_header=parent_header)
         subkernel = self.context.subkernel
         kernel_setup_func = getattr(subkernel, "setup", None)
-        if inspect.iscoroutinefunction(kernel_setup_func):
-            await kernel_setup_func()
-        elif inspect.isfunction(kernel_setup_func) or inspect.ismethod(kernel_setup_func):
-            kernel_setup_func()
+        with execution_context(type="setup", name=context_name, parent_header=parent_header):
+            if inspect.iscoroutinefunction(kernel_setup_func):
+                await kernel_setup_func()
+            elif inspect.isfunction(kernel_setup_func) or inspect.ismethod(kernel_setup_func):
+                kernel_setup_func()
         await self.update_connection_file(context={"name": context_name, "config": context_info})
         await self.send_preview(parent_header=parent_header)
 
@@ -398,9 +397,10 @@ class BeakerKernel(KernelProxyManager):
         setattr(self.context, "current_llm_query", request)
         try:
             # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track thoughts
-            self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
-            self.debug("llm_query", request, parent_header=message.header)
-            result = await self.context.agent.react_async(request, react_context={"message": message})
+            # with parent_message_context(parent_message=message):
+                self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
+                self.debug("llm_query", request, parent_header=message.header)
+                result = await self.context.agent.react_async(request, react_context={"message": message})
         except Exception as err:
             error_text = f"""LLM Error:
 {err}
@@ -444,9 +444,6 @@ class BeakerKernel(KernelProxyManager):
             self.context.agent.thought_handler = self.handle_thoughts
             setattr(self.context, "current_llm_query", None)
 
-    async def kernel_info_reply(self, server, target_stream, data):
-        await self.send_preview(parent_header={})
-        return data
 
     @message_handler
     async def context_info_request(self, message):

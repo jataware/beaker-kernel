@@ -1,9 +1,11 @@
 <template>
-    <Toolbar class="toolbar">
+    <Toolbar class="beaker-toolbar">
         <template #start>
             <div class="status-bar">
-                <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
-                {{ statusLabel }}
+                <span v-tooltip.right="'Kernel connection status'">
+                    <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
+                    {{ statusLabel }}
+                </span>
             </div>
             <Button
                 outlined
@@ -13,84 +15,107 @@
                 class="connection-button"
                 @click="selectKernel"
                 :label="beakerSession.activeContext?.slug"
-                :loading="!(beakerSession.activeContext?.slug)"
+                :loading="loading"
+                v-tooltip.bottom="'Change or update the context'"
             />
         </template>
 
         <template #center>
-            <div class="logo">
+            <div class="title">
                 <h4>
-                    Beaker <span class="longer-title">Development Interface</span>
+                    {{ title || "Beaker Development Interface" }}
                 </h4>
+                <span v-if="titleExtra" class="title-extra">{{ titleExtra }}</span>
             </div>
         </template>
 
         <template #end>
             <nav>
-                <a  
-                    :href="`/chat${sessionId == 'dev_session' ? '' : '?session=' + sessionId}`" 
-                    v-tooltip.right="{value: 'To Chat View', showDelay: 300}"
-                >
-                    <Button
-                        icon="pi pi-comment"
+                <template v-for="navItem in navItems" :key="navItem">
+                    <a
+                        v-if="navItem.type === 'link'"
+                        :href="navItem.href"
+                        :aria-label="navItem.label"
+                        :rel="navItem.rel"
+                        :target="navItem.target"
+                        v-tooltip.bottom="navItem.label"
+                    >
+                        <Button
+                            :icon="navItem.icon ? `pi pi-${navItem.icon}`: 'pi'"
+                            text
+                        >
+                            <component
+                                :item="navItem"
+                                v-if="navItem.component"
+                                :is="navItem.component"
+                                :style="navItem.componentStyle"
+                            />
+                        </Button>
+                    </a>
+                    <Button v-else-if="navItem.type === 'button'"
+                        :icon="`pi pi-${navItem.icon}`"
                         text
-                        style="margin: 0; color: var(--gray-500);"
+                        @click="navItem.command"
+                        :aria-label="navItem.label"
+                        v-tooltip.bottom="navItem.label"
                     />
-                </a>
-                <Button
-                    text
-                    @click="toggleDarkMode"
-                    style="margin: 0; color: var(--gray-500);"
-                    :icon="themeIcon"
-                />
-                <a
-                    href="https://jataware.github.io/beaker-kernel"
-                    rel="noopener"
-                    target="_blank"
-                >
-                    <Button
-                        text
-                        style="margin: 0; color: var(--gray-500);"
-                        aria-label="Beaker Documentation"
-                        icon="pi pi-book"
-                    />
-                </a>
-                <a
-                    href="https://github.com/jataware/beaker-kernel"
-                    rel="noopener"
-                    target="_blank"
-                >
-                    <Button
-                        text
-                        style="margin: 0; color: var(--gray-500);"
-                        aria-label="Github Repository Link Icon"
-                        icon="pi pi-github"
-                    />
-                </a>
+                </template>
             </nav>
         </template>
     </Toolbar>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject } from "vue";
+import { defineProps, defineEmits, computed, inject, withDefaults } from "vue";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { IBeakerTheme } from '../../plugins/theme';
 
-const urlParams = new URLSearchParams(window.location.search);
-const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
+export interface Props {
+    title: string;
+    titleExtra?: string;
+    nav?: any[];
+}
 
-// TODO too many granular props- use a slot instead?
-const props = defineProps([
-    "kernel"
-]);
+const props = withDefaults(defineProps<Props>(), {
+    title: "Beaker",
+});
 
 const emit = defineEmits(["selectKernel"]);
 
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+
+const navItems = computed(() => {
+    if (props.nav) {
+        return props.nav;
+    }
+    return [
+        {
+            type: 'button',
+            icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
+            command: toggleDarkMode,
+            label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
+        },
+        {
+            type: 'link',
+            href: `https://jataware.github.io/beaker-kernel`,
+            label: 'Beaker Documentation',
+            icon: "book",
+            rel: "noopener",
+            target: "_blank",
+        },
+        {
+            type: 'link',
+            href: `https://github.com/jataware/beaker-kernel`,
+            label: 'Check us out on Github',
+            icon: "github",
+            rel: "noopener",
+            target: "_blank",
+        },
+    ];
+})
 
 function selectKernel() {
     emit('selectKernel');
@@ -99,6 +124,10 @@ function selectKernel() {
 const themeIcon = computed(() => {
     return `pi pi-${theme.mode === 'dark' ? 'sun' : 'moon'}`;
 });
+
+const loading = computed(() => {
+    return !(beakerSession.activeContext?.slug);
+})
 
 const statusLabels = {
     unknown: 'Unknown',
@@ -135,9 +164,10 @@ const connectionColor = computed(() => {
 
 <style lang="scss">
 
-.toolbar {
+.beaker-toolbar {
     width: 100%;
-    padding: 0.5rem 1rem;
+    padding: 0 0.5rem;
+    border-radius: 0;
 
     &.p-toolbar {
         flex-wrap: nowrap;
@@ -146,21 +176,34 @@ const connectionColor = computed(() => {
         margin-left: -0.5rem;
     }
 
-    .logo {
-        font-size: 1.5rem;
+    button {
+        padding: 0.5em;
+    }
+
+    .title {
+        font-size: 1.2rem;
         padding: 0 0.5rem;
+        display: flex;
+        align-items: center;
+
+        font-weight: 500;
+        color: var(--gray-500);
+
         h4 {
+            display: inline-block;
             font-size: 1.8rem;
             margin: 0;
             padding: 0;
-            font-weight: 500;
-            color: var(--gray-500);
 
             @media(max-width: 885px) {
                 .longer-title {
                     display: none;
                 }
             }
+        }
+
+        .title-extra {
+            margin-left: 1rem;
         }
     }
 
@@ -175,10 +218,12 @@ const connectionColor = computed(() => {
     & > i {
         margin-right: 0.5rem;
     }
+
 }
 
 .connection-button {
     color: var(--surface-500);
+    padding: 0.5em;
 }
 
 </style>

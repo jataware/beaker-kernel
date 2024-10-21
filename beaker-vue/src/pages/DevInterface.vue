@@ -1,120 +1,121 @@
 <template>
-    <div id="app">
-        <BeakerSession
-            ref="beakerSession"
-            :connectionSettings="props.config"
-            sessionName="dev_interface"
-            :sessionId="sessionId"
-            defaultKernel="beaker_kernel"
-            :renderers="renderers"
-            @iopub-msg="iopubMessage"
-            @unhandled-msg="unhandledMessage"
-            @any-msg="anyMessage"
-            @session-status-changed="statusChanged"
-            v-keybindings="sessionKeybindings"
-        >
-            <div class="beaker-dev-interface">
-            <header>
-                <BeakerHeader
-                    :connectionStatus="connectionStatus"
-                    :loading="!activeContext?.slug"
-                    @select-kernel="toggleContextSelection"
-                />
-            </header>
-            <main style="display: flex; overflow: auto;">
-                <SideMenu
-                    position="left"
-                    :show-label="true"
-                    highlight="line"
+    <BaseInterface
+        title="Beaker Dev Interface"
+        :title-extra="saveAsFilename"
+        :connectionSettings="props.config"
+        ref="beakerInterfaceRef"
+        sessionName="dev_interface"
+        :sessionId="sessionId"
+        defaultKernel="beaker_kernel"
+        :renderers="renderers"
+        @iopub-msg="iopubMessage"
+        @unhandled-msg="unhandledMessage"
+        @any-msg="anyMessage"
+        @session-status-changed="statusChanged"
+        @open-file="loadNotebook"
+    >
+        <div class="notebook-container">
+            <BeakerNotebook
+                ref="beakerNotebookRef"
+                :cell-map="cellComponentMapping"
+                v-keybindings.top="notebookKeyBindings"
+            >
+                <BeakerNotebookToolbar
+                    default-severity=""
+                    :saveAvailable="true"
+                    :save-as-filename="saveAsFilename"
+                    @notebook-saved="handleNotebookSaved"
+                    @open-file="loadNotebook"
                 >
-                    <SideMenuPanel label="Context" icon="pi pi-home">
-                        <ContextTree :context="activeContext?.info" @action-selected="selectAction"/>
-                    </SideMenuPanel>
-                </SideMenu>
-
-                    <div class="central-panel"
-                    >
-                        <BeakerNotebook
-                            ref="beakerNotebookRef"
-                            :cell-map="cellComponentMapping"
-                            v-keybindings.top="notebookKeyBindings"
-                        >
-                            <BeakerNotebookToolbar/>
-                            <BeakerNotebookPanel
-                                :selected-cell="beakerNotebookRef?.selectedCellId"
-                                v-autoscroll
-                            >
-                                <template #notebook-background>
-                                    <div class="welcome-placeholder">
-                                        <SvgPlaceholder />
-                                    </div>
-                                </template>
-                            </BeakerNotebookPanel>
-                            <BeakerAgentQuery
-                                class="agent-query-container"
-                            />
-                        </BeakerNotebook>
-                    </div>
-                        <SideMenu
-                            position="right"
-                            ref="rightMenu"
-                            highlight="line"
-                            :show-label="true"
-                        >
-                            <SideMenuPanel tabId="preview" label="Preview" icon="pi pi-eye">
-                                <PreviewPane :previewData="previewData"/>
-                            </SideMenuPanel>
-
-                            <SideMenuPanel tabId="action" label="Actions" icon="pi pi-send">
-                                <Card class="debug-card">
-                                    <template #title>Execute an Action</template>
-                                    <template #content>
-                                        <BeakerExecuteAction
-                                            ref="executeActionRef"
-                                            :rawMessages="rawMessages"
-                                        />
-                                    </template>
-                                </Card>
-                            </SideMenuPanel>
-
-                            <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
-                                <LoggingPane :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
-                            </SideMenuPanel>
-
-                            <SideMenuPanel label="Messages" icon="pi pi-comments">
-                                <LoggingPane :entries="rawMessages" @clear-logs="rawMessages.splice(0, rawMessages.length)" v-autoscroll />
-                            </SideMenuPanel>
-
-                            <SideMenuPanel label="Files" icon="pi pi-file-export">
-                                <BeakerFilePane />
-                            </SideMenuPanel>
-
-                        </SideMenu>
-            </main>
-            <footer>
-                <FooterDrawer />
-            </footer>
-            </div>
-            <slot name="context-selection-popup">
-                <BeakerContextSelection
-                    :isOpen="contextSelectionOpen"
-                    :toggleOpen="toggleContextSelection"
-                    :contextProcessing="contextProcessing"
-                    @context-changed="(contextData) => {beakerSession.setContext(contextData)}"
-                    @close-context-selection="contextSelectionOpen = false"
+                <template #end-extra>
+                    <Button
+                        @click="isMaximized = !isMaximized;"
+                        :icon="`pi ${isMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`"
+                        size="small"
+                        text
+                    />
+                </template>
+                </BeakerNotebookToolbar>
+                <BeakerNotebookPanel
+                    :selected-cell="beakerNotebookRef?.selectedCellId"
+                    v-autoscroll
+                >
+                    <template #notebook-background>
+                        <div class="welcome-placeholder">
+                            <SvgPlaceholder />
+                        </div>
+                    </template>
+                </BeakerNotebookPanel>
+                <BeakerAgentQuery
+                    class="agent-query-container"
                 />
-            </slot>
-        </BeakerSession>
+            </BeakerNotebook>
+        </div>
 
-        <!-- Modals, popups and globals -->
-        <Toast position="bottom-right" />
-    </div>
+        <template #left-panel>
+            <SideMenu
+                position="left"
+                :show-label="true"
+                highlight="line"
+                :expanded="false"
+                initialWidth="20vi"
+                :maximized="isMaximized"
+            >
+                <SideMenuPanel label="Info" icon="pi pi-home">
+                    <ContextPanel :context="activeContext?.info" @action-selected="selectAction"/>
+                </SideMenuPanel>
+                <SideMenuPanel id="files" label="Files" icon="pi pi-file-export" no-overflow>
+                    <FilePanel
+                        ref="filePanelRef"
+                        @open-file="loadNotebook"
+                    />
+                </SideMenuPanel>
+            </SideMenu>
+        </template>
+
+        <template #right-panel>
+            <SideMenu
+                position="right"
+                ref="rightMenu"
+                highlight="line"
+                :show-label="true"
+                :expanded="false"
+                initialWidth="20vi"
+                :maximized="isMaximized"
+            >
+                <SideMenuPanel tabId="preview" label="Preview" icon="pi pi-eye">
+                    <PreviewPane :previewData="previewData"/>
+                </SideMenuPanel>
+
+                <SideMenuPanel tabId="action" label="Actions" icon="pi pi-send">
+                    <Card class="debug-card">
+                        <template #title>Execute an Action</template>
+                        <template #content>
+                            <BeakerExecuteAction
+                                ref="executeActionRef"
+                                :rawMessages="rawMessages"
+                            />
+                        </template>
+                    </Card>
+                </SideMenuPanel>
+
+                <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
+                    <LoggingPane :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
+                </SideMenuPanel>
+
+                <SideMenuPanel label="Messages" icon="pi pi-comments">
+                    <LoggingPane :entries="rawMessages" @clear-logs="rawMessages.splice(0, rawMessages.length)" v-autoscroll />
+                </SideMenuPanel>
+            </SideMenu>
+        </template>
+    </BaseInterface>
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, provide, nextTick, onUnmounted } from 'vue';
-import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer } from 'beaker-kernel';
+import { defineProps, ref, watch, computed, inject, toRaw, provide, nextTick, onUnmounted } from 'vue';
+import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer } from 'beaker-kernel/src';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
+import BaseInterface from './BaseInterface.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
 import BeakerSession from '../components/session/BeakerSession.vue';
@@ -125,13 +126,14 @@ import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, Bea
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 import scrollIntoView from 'scroll-into-view-if-needed';
 
+import Button from "primevue/button";
 import Card from 'primevue/card';
 import LoggingPane from '../components/dev-interface/LoggingPane.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
-import ContextTree from '../components/dev-interface/ContextTree.vue';
-import BeakerFilePane from '../components/dev-interface/BeakerFilePane.vue';
+import ContextPanel from '../components/panels/ContextPanel.vue';
+import FilePanel from '../components/panels/FilePanel.vue';
 import PreviewPane from '../components/dev-interface/PreviewPane.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
@@ -140,28 +142,17 @@ import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
-import BeakerLLMQueryCell from '../components/cell/BeakerLLMQueryCell.vue';
+import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
+import { IBeakerTheme } from '../plugins/theme';
 
-
-const toast = useToast();
 
 const activeContext = ref();
 const beakerNotebookRef = ref();
+const beakerInterfaceRef = ref();
+const filePanelRef = ref();
+const sideMenuRef = ref();
 
-
-// TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
-// Let's only use severity=success|warning|danger(=error) for now
-const showToast = ({title, detail, life=3000, severity=('success' as undefined), position='bottom-right'}) => {
-    toast.add({
-        summary: title,
-        detail,
-        life,
-        // for options, seee https://primevue.org/toast/
-        severity,
-        // position
-    });
-};
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "dev_session";
@@ -185,7 +176,7 @@ const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
 const cellComponentMapping = {
     'code': BeakerCodeCell,
     'markdown': BeakerMarkdownCell,
-    'query': BeakerLLMQueryCell,
+    'query': BeakerQueryCell,
     'raw': BeakerRawCell,
 }
 
@@ -196,13 +187,19 @@ const previewData = ref<any>();
 const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
 const notebookRef = ref<typeof BeakerNotebook>();
-const beakerSession = ref<typeof BeakerSession>();
+const saveAsFilename = ref<string>(null);
 
+const isMaximized = ref(false);
 const contextSelectionOpen = ref(false);
 const activeContextPayload = ref<any>(null);
 const contextProcessing = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const executeActionRef = ref<typeof BeakerExecuteAction>();
+const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
+
+const beakerSession = computed(() => {
+    return beakerInterfaceRef?.value?.beakerSession;
+});
 
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
@@ -215,6 +212,17 @@ const iopubMessage = (msg) => {
         });
     }
 };
+
+// Ensure we always have at least one cell
+watch(
+    () => beakerNotebookRef?.value?.notebook.cells,
+    (cells) => {
+        if (cells?.length === 0) {
+            beakerNotebookRef.value.insertCellBefore();
+        }
+    },
+    {deep: true},
+)
 
 const anyMessage = (msg, direction) => {
     rawMessages.value.push({
@@ -241,39 +249,50 @@ const selectAction = (actionName: string) => {
     executeActionRef.value?.selectAction(actionName);
 };
 
-onBeforeMount(() => {
-    document.title = "Beaker Development Interface"
-    var notebookData: {[key: string]: any};
-    try {
-        notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-    }
-    catch (e) {
-        console.error(e);
-        notebookData = {};
-    }
-
-    if (notebookData[sessionId]?.data) {
+const loadNotebook = (notebookJSON: any, filename: string) => {
+    const notebook = beakerNotebookRef.value;
+    beakerSession.value?.session.loadNotebook(notebookJSON);
+    saveAsFilename.value = filename;
+    const cellIds = notebook.notebook.cells.map((cell) => cell.id);
+    if (!cellIds.includes(notebook.selectedCellId)) {
         nextTick(() => {
-            if (beakerNotebookRef.value?.notebook) {
-                beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
-                nextTick(() => {
-                    beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
-                });
-            }
+            // Force the notebook to select one of cells in the current notebook.
+            notebook.selectCell(cellIds[0]);
         });
     }
-    saveInterval.value = setInterval(snapshot, 30000);
-    window.addEventListener("beforeunload", snapshot);
-});
+}
 
-onUnmounted(() => {
-    clearInterval(saveInterval.value);
-    saveInterval.value = null;
-    window.removeEventListener("beforeunload", snapshot);
-});
+const handleNotebookSaved = async (path: string) => {
+    saveAsFilename.value = path;
+    if (path) {
+        sideMenuRef.value?.selectPanel("Files");
+        await filePanelRef.value.refresh();
+        await filePanelRef.value.flashFile(path);
+    }
+}
+;
 
-// TODO: See above. Move somewhere better.
-provide('show_toast', showToast);
+// onBeforeMount(() => {
+//     var notebookData: {[key: string]: any};
+//     try {
+//         notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
+//     }
+//     catch (e) {
+//         console.error(e);
+//         notebookData = {};
+//     }
+
+//     if (notebookData[sessionId]?.data) {
+//         nextTick(() => {
+//             if (beakerNotebookRef.value?.notebook) {
+//                 beakerNotebookRef.value?.notebook.loadFromIPynb(notebookData[sessionId].data);
+//                 nextTick(() => {
+//                     beakerNotebookRef.value?.selectCell(notebookData[sessionId].selectedCell);
+//                 });
+//             }
+//         });
+//     }
+// });
 
 const prevCellKey = () => {
     beakerNotebookRef.value?.selectPrevCell();
@@ -296,8 +315,8 @@ const notebookKeyBindings = {
             // Create a new cell after the current cell if one doesn't exist.
             beakerNotebookRef.value?.insertCellAfter(
                 targetCell,
-                targetCell.cell.cell_type,
-                true
+                undefined,
+                true,
             );
             // Focus the editor only if we are creating a new cell.
             nextTick(() => {
@@ -378,101 +397,126 @@ const notebookKeyBindings = {
             }
         }
     },
-    "keydown.p.!in-editor": () => {
+    "keydown.p.!in-editor": (evt: KeyboardEvent) => {
         const notebook = beakerNotebookRef.value;
-        const oldCell = copiedCell.value;
-        if (oldCell !== null) {
-            const newCell: IBeakerCell = notebook?.insertCellAfter(notebook.selectedCell(), oldCell);
-            for (const key of Object.keys(oldCell).filter((k) => k !== "id")) {
-                newCell[key] = oldCell[key];
+        let copiedCellValue = toRaw(copiedCell.value);
+        if (copiedCellValue !== null) {
+            var newCell: IBeakerCell;
+
+
+            // If a cell with the to-be-pasted cell's id already exists in the notebook, set the copied cell's id to
+            // undefined so that it is regenerated when added.
+            const notebookIds = notebook.notebook.cells.map((cell) => cell.id);
+            if (notebookIds.includes(copiedCellValue.id)) {
+                const cls = copiedCellValue.constructor as (data: IBeakerCell) => void;
+                const data = {
+                    ...copiedCellValue,
+                    // Set non-transferable attributes to undefined.
+                    id: undefined,
+                    executionCount: undefined,
+                    busy: undefined,
+                    last_execution: undefined,
+                } as IBeakerCell;
+                copiedCellValue = new cls(data);
             }
-            copiedCell.value = null;
+
+            // Lowercase `p` pastes after, uppercase `P` pastes before. Checking the actual is key better than checking
+            // for shift, etc as it includes caps lock, etc.
+            if (evt.key === 'p') {
+                 newCell = notebook?.insertCellAfter(notebook.selectedCell(), copiedCellValue);
+            }
+            else if (evt.key === 'P') {
+                 newCell = notebook?.insertCellBefore(notebook.selectedCell(), copiedCellValue);
+            }
+            copiedCellValue.value = null;
         }
     },
 }
 
-const sessionKeybindings = {
-}
-
-const snapshot = () => {
-    var notebookData: {[key: string]: any};
-    try {
-        notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-    }
-    catch (e) {
-        console.error(e);
-        notebookData = {};
-    }
-    // Only save state if there is state to save
-    if (beakerNotebookRef.value?.notebook) {
-        notebookData[sessionId] = {
-            data: beakerNotebookRef.value?.notebook.toIPynb(),
-            selectedCell: beakerNotebookRef.value?.selectedCellId,
-        };
-        localStorage.setItem("notebookData", JSON.stringify(notebookData));
-    }
-};
-
 </script>
 
 <style lang="scss">
-#app {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background-color: var(--surface-b);
+
+.notebook-container {
+    display:flex;
+    height: 100%;
+    max-width: 100%;
 }
 
-header {
-    grid-area: header;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-main {
-    grid-area: main;
-    padding-top: 2px;
-    padding-bottom: 2px;
-}
-
-footer {
-    grid-area: footer;
-}
-
-.main-panel {
-    display: flex;
-    flex-direction: column;
-    &:focus {
-        outline: none;
-    }
+.beaker-notebook {
+    flex: 2 0 calc(50vw - 2px);
+    border: 2px solid var(--surface-border);
+    border-radius: 0;
+    border-top: 0;
+    max-width: 100%;
 }
 
 
-.central-panel {
-    flex: 1000;
-    display: flex;
-    flex-direction: column;
+.notebook-toolbar {
+    border-style: inset;
+    border-radius: 0;
+    border-top: unset;
+    border-left: unset;
+    border-right: unset;
 }
 
-.beaker-dev-interface {
-    padding-bottom: 2px;
-    height: 100vh;
-    width: 100vw;
-    display: grid;
-    grid-gap: 1px;
+// #app {
+//     margin: 0;
+//     padding: 0;
+//     overflow: hidden;
+//     background-color: var(--surface-b);
+// }
 
-    grid-template-areas:
-        "header header header header"
-        "main main main main"
-        "footer footer footer footer";
+// header {
+//     grid-area: header;
+//     display: flex;
+//     justify-content: space-between;
+//     align-items: center;
+// }
 
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-    grid-template-rows: auto 1fr auto;
-}
+// main {
+//     grid-area: main;
+//     padding-top: 2px;
+//     padding-bottom: 2px;
+// }
 
-.beaker-dev-interface .p-toolbar {
-    border: none;
-}
+// footer {
+//     grid-area: footer;
+// }
+
+// .main-panel {
+//     display: flex;
+//     flex-direction: column;
+//     &:focus {
+//         outline: none;
+//     }
+// }
+
+
+// .central-panel {
+//     flex: 1000;
+//     display: flex;
+//     flex-direction: column;
+// }
+
+// .beaker-dev-interface {
+//     padding-bottom: 2px;
+//     height: 100vh;
+//     width: 100vw;
+//     display: grid;
+//     grid-gap: 1px;
+
+//     grid-template-areas:
+//         "header header header header"
+//         "main main main main"
+//         "footer footer footer footer";
+
+//     grid-template-columns: 1fr 1fr 1fr 1fr;
+//     grid-template-rows: auto 1fr auto;
+// }
+
+// .beaker-dev-interface .p-toolbar {
+//     border: none;
+// }
 
 </style>

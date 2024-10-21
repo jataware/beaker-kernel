@@ -1,4 +1,25 @@
 <template>
+    <div class="info-panel-container">
+    <!-- <Accordion :multiple="true">
+        <AccordionTab header="Kernel/System">
+            <h3>Kernel</h3> -->
+            <!-- <div><label>Display name</label>{{ activeContext.kernelInfo.display_name }}</div> -->
+            <!-- <div><label>Language</label>{{ kernelInfo.language }}</div>
+            <div><label>Metadata</label>{{ kernelInfo.metadata }}</div>
+            <div><label>Extra</label>{{ kernelInfo.extra }}</div> -->
+
+
+
+            <!-- <div>{{activeContext}}</div>
+
+        </AccordionTab>
+        <AccordionTab header="Context">
+
+        </AccordionTab>
+        <AccordionTab header="Agent">
+
+        </AccordionTab>
+    </Accordion> -->
     <Tree
         :value="contextNodes"
         :loading="!contextNodes"
@@ -12,7 +33,6 @@
         <template #action="slotProps">
             <div
                 @mousedown="($event.detail > 1) && $event.preventDefault();"
-                @dblclick.stop.prevent="selectAction(slotProps.node.label)"
                 style="cursor: pointer; border-bottom: 1px dotted var(--text-color-secondary);"
                 v-tooltip="{
                     value: `${slotProps.node.data}`,
@@ -56,12 +76,16 @@
             </span>
         </template>
     </Tree>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, computed, inject } from "vue";
+import { ref, defineEmits, onBeforeMount, computed, inject } from "vue";
 import Tree from 'primevue/tree';
 import { TreeNode } from 'primevue/treenode';
+import Accordion from "primevue/accordion";
+import AccordionTab from "primevue/accordiontab";
+import DataView from "primevue/dataview";
 import { emitError } from "vue-json-pretty/types/utils";
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
@@ -75,12 +99,19 @@ const toggleContextPanel = () => {
 // TODO easier way for tree to auto-open by default
 const contextExpandedKeys = ref({0: true, 1: true, 2: true, 3: true});
 
-const emits = defineEmits(['action-selected']);
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+const activeContext = computed(() => {
+    const contextInfo = beakerSession?.activeContext;
+    const kernelInfo = beakerSession?.session.kernelInfo;
+    return {
+        ...contextInfo,
+        kernelInfo,
+    };
+});
 
 const contextNodes = computed<TreeNode[]>(() => {
 
-    const context = beakerSession?.activeContext?.info;
+    const context = activeContext.value;
 
     if (!context) {
         return [];
@@ -91,78 +122,39 @@ const contextNodes = computed<TreeNode[]>(() => {
         label: 'Kernel',
         icon: 'pi pi-fw pi-cog',
         expanded: true,
-        children: [{
-            key: '0-1',
-            label: `${context.subkernel} (${context.language})`,
-        }]
-    }, {
-        key: "1",
-        label: 'Actions',
-        icon: 'pi pi-fw pi-send',
-        expanded: true,
-        children: Object.keys(context.actions).map((action, idx) => {
-            return ({
-                dblClick: (data) => {
-                    console.log("This is my data", data);
-                    // emit("select_action", )
-                },
-                key: `1-${idx}`,
-                label: action,
-                data: context.actions[action].docs + "\n\nExample payload:\n" + context.actions[action].default_payload,
-                type: 'action',
-            })
-        })
+        children: [
+            {
+                key: '0-1',
+                label: `${context?.info?.subkernel} (${context?.info?.language})`,
+            },
+            // ...Object.entries(context?.kernelInfo || {}).map(
+            //     ([key, value]) => {
+            //         return {
+            //             key: `0-${key}`,
+            //             label: `${key}: ${value}`,
+            //         }
+            //     }
+            // ),
+    ]
     }];
-
-    if (context.procedures.length) {
-        displayableNodes.push({
-            key: "2",
-            label: 'Procedures',
-            icon: 'pi pi-fw pi-tablet',
-            expanded: true,
-            children: context.procedures.map((proc, idx) => ({
-                key: `2-${idx}`,
-                label: proc,
-            }))
-        });
-    }
 
     displayableNodes.push({
         key: "3",
         label: 'Tools',
         icon: 'pi pi-fw pi-wrench',
         expanded: true,
-        children: Object.keys(context?.agent?.tools || {})
+        children: Object.keys(context?.info?.agent?.tools || {})
             .map((toolname, idx) => ({
                 key: `3-${idx}`,
                 label: toolname.replace('PyPackageAgent.', ''),
-                data: context.agent.tools[toolname],
+                data: context.info.agent.tools[toolname],
                 type: 'tool'
             }))
     });
 
-    if (Object.keys(context.custom_messages).length) {
-        displayableNodes.push({
-            key: "4",
-            label: 'Custom Messages',
-            icon: 'pi pi-fw pi-comment',
-            expanded: false,
-            children: Object.keys(context.custom_messages).map((msg, idx) => ({
-                key: `4-${idx}`,
-                label: msg,
-                data: context.custom_messages[msg].docs + "\n\nExample payload:\n" + context.custom_messages[msg].default_payload,
-                type: 'tool'
-            }))
-        });
-    }
-
     return displayableNodes;
 
 });
-
-const selectAction = (actionName: string) => {
-    emits("action-selected", actionName);
-}
 
 </script>
 

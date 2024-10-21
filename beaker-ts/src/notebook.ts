@@ -52,24 +52,34 @@ export type BeakerCellType = nbformat.CellType | string | 'query';
 
 export class BeakerBaseCell implements nbformat.IBaseCell {
     // Override index type to allow methods to be defined on the class
-    private IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments",
-                  "outputs", "execution_count"];
+    static IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments", "outputs", "execution_count"];
+
+    static defaults() {
+        return {
+            metadata: {},
+            source: "",
+            status: "idle",
+            children: [],
+        }
+    };
 
     [key: string]: any;
+    id: string;
     cell_type: BeakerCellType;
     metadata: Partial<nbformat.ICellMetadata>;
     source: nbformat.MultilineString;
     status: BeakerCellStatus;
     children: BeakerBaseCell[];
 
-    constructor() {
-        this.status = "idle";
-        this.last_execution = {status: "none"};
-        this.children = [];
+    constructor(content: Partial<nbformat.IBaseCell>) {
+        Object.assign(this, BeakerBaseCell.defaults(), content)
+        if (this.id === undefined) {
+            this.id = BeakerBaseCell.generateId();
+        }
     }
 
-    public reset_execution_state(): void {
-        this.last_execution = {status: "modified"};
+    static generateId(): string {
+        return uuidv4();
     }
 
     public fromJSON(obj: any) {
@@ -88,87 +98,103 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
         })
     }
 
-    public toIPynb() {
+    public toIPynb(object: {}=null): nbformat.IBaseCell|nbformat.IBaseCell[] {
         const output = {};
-        for (const key of Object.keys(this)) {
-            if (this.IPYNB_KEYS.includes(key)) {
-                output[key] = this[key];
+        if (object === null) {
+            object = this;
+        }
+        for (const key of Object.keys(object)) {
+            if (BeakerBaseCell.IPYNB_KEYS.includes(key)) {
+                output[key] = object[key];
             }
         }
-        return(output);
+        return output as nbformat.IBaseCell;
     }
 }
 
 // Simple payload events
 
-type BeakerQueryTextEventType = 
-    | "thought" 
-    | "response" 
-    | "user_question" 
-    | "user_answer" 
+type BeakerQueryTextEventType =
+    | "response"
+    | "user_question"
+    | "user_answer"
     | "abort";
 
 export interface IBeakerQueryTextEvent extends PartialJSONObject {
-    type: BeakerQueryTextEventType
+    type: BeakerQueryTextEventType;
     content: string;
 };
 
 // Specific-payload types
 
-type BeakerQueryCellEventType = "code_cell"
+type BeakerQueryCellEventType = "code_cell";
 
 export interface IBeakerQueryCellEvent extends PartialJSONObject {
-    type: BeakerQueryCellEventType
+    type: BeakerQueryCellEventType;
     content: {
-        cell_id: string
-        parent_id: string
-        metadata: PartialJSONObject
+        cell_id: string;
+        parent_id: string;
+        metadata: PartialJSONObject;
     };
 };
 
 type BeakerQueryErrorEventType = "error";
 
 export interface IBeakerQueryErrorEvent extends PartialJSONObject {
-    type: BeakerQueryErrorEventType
+    type: BeakerQueryErrorEventType;
     content: {
-        ename: string
-        evalue: string
-        traceback: string[]
+        ename: string;
+        evalue: string;
+        traceback: string[];
+    };
+}
+
+type BackgroundCodeContent = Partial<
+    {code: string; execution_count: nbformat.ExecutionCount;}
+    & (messages.IExecuteReply | messages.IReplyErrorContent | messages.IReplyAbortContent)
+>;
+
+type BeakerQueryThoughtType = "thought";
+export interface IBeakerQueryThoughtEvent extends PartialJSONObject {
+    type: BeakerQueryThoughtType;
+    content: {
+        thought: string;
+        tool_name: string;
+        tool_input: any;
+        background_code_executions: BackgroundCodeContent[];
     };
 }
 
 // umbrella-type for events
 
-export type BeakerQueryEventType =  
+export type BeakerQueryEventType =
     | BeakerQueryTextEventType
     | BeakerQueryCellEventType
-    | BeakerQueryErrorEventType;
+    | BeakerQueryErrorEventType
+    | BeakerQueryThoughtType
+    ;
 
-export type BeakerQueryEvent = 
+export type BeakerQueryEvent =
     | IBeakerQueryTextEvent
     | IBeakerQueryCellEvent
-    | IBeakerQueryErrorEvent;
-
+    | IBeakerQueryErrorEvent
+    | IBeakerQueryThoughtEvent
+    ;
 
 
 export interface IQueryCell extends nbformat.IBaseCell {
     cell_type: 'query';
-    id?: string;
     events: BeakerQueryEvent[];
 }
 
 export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
     declare cell_type: 'raw';
-    id?: string;
     attachments?: nbformat.IAttachments;
     declare metadata: Partial<nbformat.IRawCellMetadata>;
 
     constructor(content: nbformat.ICell) {
-        super();
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
-        if (this.id === undefined) {
-            this.id = uuidv4();
-        }
+        super({cell_type: "raw", ...content});
+        Object.assign(this, content)
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
@@ -178,24 +204,25 @@ export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
 
 export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell {
     declare cell_type: 'code';
-    id?: string;
     outputs: nbformat.IOutput[];
     execution_count: nbformat.ExecutionCount;
     declare metadata: Partial<nbformat.ICodeCellMetadata>;
     last_execution?: BeakerCellExecutionStatus;
     busy?: boolean;
 
-    constructor(content: nbformat.ICell) {
-        super();
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
-        this.outputs = this.outputs ?? [];
-        if (this.id === undefined) {
-            this.id = uuidv4();
+    static defaults() {
+        return {
+            ...super.defaults(),
+            last_execution: {status: "none"},
+            outputs: [],
+            execution_count: null,
+            busy: false,
         }
-        if (this.execution_count === undefined) {
-            this.execution_count = null;
-        }
-        this.busy = false;
+    }
+
+    constructor(content: Partial<nbformat.ICell>) {
+        super({cell_type: 'code', ...content});
+        Object.assign(this, BeakerCodeCell.defaults(), content)
         if (Array.isArray(this.source)) {
             this.source = this.source.join("\n");
         }
@@ -256,19 +283,36 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         }
         return null;
     };
+
+    public reset_execution_state(): void {
+        this.last_execution = {status: "modified"};
+    }
+
+    public toIPynb(): nbformat.IBaseCell|nbformat.IBaseCell[] {
+        return super.toIPynb(
+            {
+                ...this,
+                outputs: this.outputs.map(
+                    (output) => {
+                       return {
+                        ...output,
+                        transient: undefined,
+                       }
+
+                    }
+                ),
+            }
+        )
+    }
 }
 
 export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMarkdownCell {
     declare cell_type: 'markdown';
-    id?: string;
     attachments?: nbformat.IAttachments;
 
-    constructor(content: nbformat.ICell) {
-        super();
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
-        if (this.id === undefined) {
-            this.id = uuidv4();
-        }
+    constructor(content: Partial<nbformat.ICell>) {
+        super({cell_type: 'markdown', ...content});
+        Object.assign(this, content)
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
@@ -279,23 +323,26 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     declare cell_type: 'query';
-    id?: string;
     events: BeakerQueryEvent[];
+
+    static defaults() {
+        return {
+            ...super.defaults(),
+            events: [],
+        }
+    }
 
     _current_input_request_message: messages.IInputRequestMsg;
 
-    constructor(content: nbformat.ICell) {
-        super();
-        this.events = [];
-        Object.keys(content).forEach((key) => {this[key] = content[key] });
-        if (this.id === undefined) {
-            this.id = uuidv4();
-        }
+    constructor(content: Partial<nbformat.ICell>) {
+        super({cell_type: 'query', ...content});
+        Object.assign(this, BeakerQueryCell.defaults(), content)
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
         this.events.splice(0, this.events.length);
         this.children.splice(0, this.children.length);
+        let current_codeblock = null;
 
         const handleIOPub = async (msg: IBeakerIOPubMessage) => {
             const msg_type = msg.header.msg_type;
@@ -307,10 +354,35 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 if (content.thought === "") {
                     return;
                 }
-                this.events.push({
-                    type: "thought",
-                    content: content.thought,
-                });
+                this.events.push(
+                    <IBeakerQueryThoughtEvent>{
+                        type: "thought",
+                        content: {
+                            ...content,
+                            background_code_executions: []
+                        }
+                    }
+                );
+            }
+            else if (msg_type === "beaker__execute_input") {
+                // Ugly to hardcode the one tool here. Should be based on something from the message so it's not so
+                // coupled
+                if (!(content.execution_type === 'tool' && content.execution_item_name == 'run_code')) {
+                    current_codeblock = {...content};
+                }
+            }
+            else if (msg_type === "beaker__execute_reply") {
+                // Ugly to hardcode the one tool here. Should be based on something from the message so it's not so
+                // coupled
+                if (!(content.execution_type === 'tool' && content.execution_item_name == 'run_code')) {
+                    const isThought = (object: any): object is IBeakerQueryThoughtEvent => 'type' in object && object.type === 'thought';
+                    let last_thought: IBeakerQueryThoughtEvent = this.events.findLast(isThought)
+                    last_thought.content.background_code_executions.push({
+                        ...current_codeblock,
+                        ...content,
+                    });
+                    current_codeblock = null;
+                }
             }
             else if (msg_type === "llm_response" && content.name === "response_text") {
                 this.events.push({
@@ -549,13 +621,13 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
 
     }
 
-    public toIPynb() {
+    public toIPynb(): [nbformat.IMarkdownCell, ...nbformat.IBaseCell[]] {
         // TODO: Is this modifying the cells in memory, if so, is this causing problems?
-        const taggedChildren = this.children?.map((cell) => {
+        const taggedChildren: nbformat.IBaseCell[] = this.children?.flatMap((cell) => {
             cell.metadata.beaker_child_of = this?.id;
             return cell.toIPynb();
         });
-        return [this.toMarkdownCell().toIPynb(), ...taggedChildren];
+        return [this.toMarkdownCell().toIPynb() as nbformat.IMarkdownCell, ...taggedChildren];
     }
 }
 

@@ -5,8 +5,8 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, computed, nextTick, provide, inject, DefineComponent } from "vue";
-import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell } from 'beaker-kernel';
+import { defineComponent, ref, computed, nextTick, provide, inject, DefineComponent, watch } from "vue";
+import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell, BeakerBaseCell } from 'beaker-kernel/src';
 import { IBeakerCellComponent, type BeakerSessionComponentType} from "../session/BeakerSession.vue";
 import scrollIntoView from 'scroll-into-view-if-needed';
 
@@ -32,12 +32,12 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
             beakerSession,
             notebook,
             selectedCellId,
-            cellCount,        
+            cellCount,
         }
     },
 
     methods: {
-        selectCell(cell: string | {id: string}): string {
+        selectCell(cell: string | {id: string}, enter=false): string {
             if (cell === undefined) {
                 return "";
             }
@@ -55,6 +55,9 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
 
             nextTick(() => {
                 this.scrollCellIntoView(this.selectedCell());
+                if (enter) {
+                    this.selectedCell().enter();
+                }
             })
 
             return this.selectedCellId;
@@ -76,7 +79,14 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
         // This can't/shouldn't be a computed property because it information about the selected cell can change
         // without the dependencies in the function changing.
         selectedCell(): IBeakerCellComponent  {
-            return this.beakerSession.findNotebookCellById(this.selectedCellId);
+            const selectedCell = this.beakerSession.findNotebookCellById(this.selectedCellId);
+            if (selectedCell) {
+                return selectedCell;
+            }
+            if (this.notebook.cells.length > 0) {
+                this.selectedCellId = this.notebook.cells[0].id;
+                return this.beakerSession.findNotebookCellById(this.selectedCellId);
+            }
         },
 
         selectNextCell(referenceCell?: IBeakerCell, enter=false): IBeakerCell | null {
@@ -120,45 +130,35 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
             }
             else {
                 for (const notebookCell of this.notebook.cells) {
-                    // console.log(ch)
-                    // if (notebookCell.children)
-                    console.log(notebookCell)
+                    // console.log(notebookCell)
                 }
 
             }
             return null;
         },
 
-        insertCellBefore(referenceCell?: IBeakerCell, cellType?: string, enter=false) {
+        insertCellBefore(referenceCell?: IBeakerCell, newCell?: IBeakerCell, enter=false) {
             if (referenceCell === undefined) {
                 referenceCell = this.selectedCell();
             }
-            if (cellType === undefined) {
-                cellType = "code";
+            if (newCell === undefined) {
+                newCell = new this.defaultCellModel({source: ""})
             }
             const index = (referenceCell === undefined ? this.notebook.cells.length-1 : this.notebook.cells.findIndex((cell) => cell === referenceCell.cell));
-            // TODO: Switch this to create same type of cell as selected cell
-            const newCell = this.session.addCodeCell("");
-            this.notebook.moveCell(this.notebook.cells.length -1, index);
+            this.notebook.cells.splice(index, 0, newCell);
             nextTick(() => this.selectCell(newCell, enter));
             return newCell;
         },
 
-        insertCellAfter(referenceCell?: IBeakerCell, cellType?: string, enter=false) {
+        insertCellAfter(referenceCell?: IBeakerCell, newCell?: IBeakerCell, enter=false) {
             if (referenceCell === undefined) {
                 referenceCell = this.selectedCell();
             }
-            if (cellType === undefined) {
-                cellType = "code";
+            if (newCell === undefined) {
+                newCell = new this.defaultCellModel({source: ""})
             }
             let index = (referenceCell === undefined ? this.notebook.cells.length-1 : this.notebook.cells.findIndex((cell) => cell === referenceCell.cell));
-            // if reference cell is a child
-            const parentId = referenceCell?.cell?.metadata?.beaker_child_of;
-            if (index === -1 && parentId) {
-                index = this.notebook.cells.findIndex(cell => cell.id === parentId);
-            }
-            const newCell = this.session.addCodeCell("");
-            this.notebook.moveCell(this.notebook.cells.length -1, index + 1);
+            this.notebook.cells.splice(index + 1, 0, newCell);
             nextTick(() => this.selectCell(newCell, enter));
             return newCell;
         },
@@ -168,10 +168,14 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
                 cell = this.selectedCell();
             }
             const index = this.notebook.cells.findIndex((cellModel) => cellModel === cell.cell);
-            if (!this.selectNextCell()) {
-                this.selectPrevCell();
+            if (index > -1) {
+                if (cell.cell.id === this.selectedCellId) {
+                    if (!this.selectNextCell()) {
+                        this.selectPrevCell();
+                    }
+                }
+                return this.notebook.cutCell(index);
             }
-            return this.notebook.cutCell(index);
         },
 
         convertCellType(cell: IBeakerCell, cellType: string) {
@@ -191,10 +195,20 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
     },
 
     computed: {
+        defaultCellModel(): typeof BeakerBaseCell {
+            if (this.cellMap && this.cellMap.length > 0) {
+                const modelClass = (Object.values(this.cellMap)[0] as any).modelClass;
+                return modelClass as typeof modelClass;
+            }
+            else {
+                return BeakerCodeCell;
+            }
+        }
     },
 
     beforeMount() {
         provide('notebook', this);
+        this.beakerSession.notebookComponent = this;
         if (this.cellCount === 0) {
             if (this.noEmptyStartingCell) {
                 return;

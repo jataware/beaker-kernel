@@ -1,12 +1,13 @@
 import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
-import NotebookInterface from './NotebookInterface.vue';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
 import { vKeybindings } from '../directives/keybindings';
 import { vAutoScroll } from '../directives/autoscroll';
 import BeakerThemePlugin from '../plugins/theme';
+import NotebookInterface from './NotebookInterface.vue';
+
 
 import 'primeicons/primeicons.css';
 import '../index.scss';
@@ -21,13 +22,7 @@ const baseUrl = PageConfig.getBaseUrl();
   const configResponse = await fetch(confUrl);
   const config = await configResponse.json();
 
-  const app = createApp(NotebookInterface, {
-    connectionSettings: config,
-    sessionName: "BasicNotebook",
-    sessionId: "basicnotebook",
-    defaultKernel: "beaker_kernel",
-
-  });
+  const app = createApp(NotebookInterface, {config});
 
   app.use(PrimeVue);
   app.use(ToastService);

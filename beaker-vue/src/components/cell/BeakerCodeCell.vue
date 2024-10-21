@@ -18,8 +18,9 @@
                     <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" v-show="!hideOutput" />
                 </div>
                 <div class="state-info">
-                    <div class="execution-count-badge">
+                    <div>
                         <Badge
+                            class="execution-count-badge"
                             :class="{secondary: badgeSeverity === 'secondary'}"
                             :severity="badgeSeverity"
                             :value="cell.execution_count || '&nbsp;'">
@@ -48,7 +49,7 @@ import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 import { findSelectableParent } from "../../util";
-import { BeakerSession } from "beaker-kernel";
+import { BeakerSession } from "beaker-kernel/src";
 import CodeEditor from "../misc/CodeEditor.vue";
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
@@ -90,14 +91,15 @@ const isBusy = computed(() => {
 });
 
 const badgeSeverity = computed(() => {
+    const defaultValue = "secondary";
     const mappings = {
         [ExecuteStatus.Success]: 'success',
         [ExecuteStatus.Modified]: 'warning',
         [ExecuteStatus.Error]: 'danger',
-        [ExecuteStatus.Pending]: 'secondary',
-        [ExecuteStatus.None]: "secondary",
+        [ExecuteStatus.Pending]: defaultValue,
+        [ExecuteStatus.None]: defaultValue,
     };
-    return mappings[cell.value?.last_execution?.status];
+    return mappings[cell.value?.last_execution?.status] || defaultValue;
 });
 
 const clicked = (evt) => {
@@ -154,15 +156,16 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerCodeCell } from "beaker-kernel";
+import { BeakerCodeCell } from "beaker-kernel/src";
 export default {
-    modelClass: BeakerCodeCell
+    modelClass: BeakerCodeCell,
+    icon: "pi pi-code",
 };
 </script>
 
 <style lang="scss">
 .code-cell {
-    padding-left: 16px;
+    // padding-left: 16px;
 }
 
 .code-cell-grid {
@@ -201,16 +204,17 @@ export default {
 }
 
 .execution-count-badge {
-    font-family: monospace;
-    min-width: 3rem;
+    margin-left: 0.5rem;
+    font-family: "'Ubuntu Mono', 'Courier New', Courier, monospace";
+    font-size: 1.1rem;
     display: flex;
     justify-content: center;
-
-    .p-badge {
-        border-radius: 15%;
-        &.secondary {
-            background-color: var(--surface-d);
-        }
+    align-items: center;
+    height: 2em;
+    aspect-ratio: 1/1;
+    border-radius: 15%;
+    &.secondary {
+        background-color: var(--surface-300);
     }
 }
 

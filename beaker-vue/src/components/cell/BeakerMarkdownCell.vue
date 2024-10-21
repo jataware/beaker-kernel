@@ -107,9 +107,10 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerMarkdownCell } from "beaker-kernel";
+import { BeakerMarkdownCell } from "beaker-kernel/src";
 export default {
-    modelClass: BeakerMarkdownCell
+    modelClass: BeakerMarkdownCell,
+    icon: "pi pi-pencil",
 };
 </script>
 
@@ -117,8 +118,8 @@ export default {
 
 .markdown-cell {
     padding-right: 2rem;
-    padding-left: 1rem;
-    min-height: 80%;
+    // padding-left: 1rem;
+    // min-height: 80%;
 }
 
 .markdown-edit-cell-grid {

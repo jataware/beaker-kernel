@@ -36,6 +36,7 @@ export class BeakerSession {
         this._services = new ServiceManager({
             serverSettings: this._serverSettings,
         });
+        this._services.connectionFailure.connect((sender, args) => {console.log("CONNECTION ERROR:", sender, args)});
         this._renderer = new BeakerRenderer(options.rendererOptions);
         this._history = new BeakerHistory(this._sessionId);
 
@@ -62,6 +63,14 @@ export class BeakerSession {
             }
         });
 
+        // Track all messages from kernels. The disconnect on newValue is in case the kernel connection is reused, to
+        // not set up duplicate handlers.
+        this._sessionContext.kernelChanged.connect((sender, {oldValue, newValue, name}) => {
+            oldValue?.anyMessage.disconnect(this._sessionMessageHandler, this);
+            newValue?.anyMessage.disconnect(this._sessionMessageHandler, this);
+            newValue?.anyMessage.connect(this._sessionMessageHandler, this);
+        });
+
         // Initialize the session
         this._sessionContext.initialize().then(() => {
             this._sessionContext.ready.then(() => {
@@ -72,7 +81,6 @@ export class BeakerSession {
                 else {
                     this._messageHandler = undefined;
                 }
-                this._sessionContext.iopubMessage.connect(this._sessionMessageHandler, this);
             });
         });
     }
@@ -88,7 +96,7 @@ export class BeakerSession {
         messageType: string,
         content: JSONObject,
         messageId: string = null
-    ) {
+    ): IBeakerFuture {
         if (messageId === null) {
             messageId = createMessageId(messageType);
         }
@@ -116,7 +124,7 @@ export class BeakerSession {
      * @param _sessionContext - The session Context related to the incoming message
      * @param msg - The incoming IOPub message
      */
-    private _sessionMessageHandler(_sessionContext: SessionContext, msg: IBeakerIOPubMessage) {
+    private _sessionMessageHandler(_kernel: IKernelConnection, {msg, direction}) {
         if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
             if (msg.header.msg_type === "context_setup_response") {
                 this._sessionInfo = msg.content;
@@ -125,6 +133,9 @@ export class BeakerSession {
                 this._sessionInfo = msg.content.info;
             }
             this.notebook.setSubkernelInfo(this._sessionInfo);
+        }
+        else if (msg.header.msg_type === "kernel_info_reply") {
+            this._kernelInfo = msg.content;
         }
     }
 
@@ -150,13 +161,33 @@ export class BeakerSession {
                 "context_info_request",
                 {}
             );
-            future.onIOPub = (msg: any) => {
+            future.onIOPub = async (msg: any) => {
                 if (msg.header.msg_type === "context_info_response") {
-                    resolve(msg.content);
+                    resolve({
+                        ...msg.content,
+                        kernelInfo: await this.kernel.info,
+                    });
                 }
             }
             await future.done;
             reject({});
+        });
+    }
+
+    public async setContext(contextPayload: any): Promise<IActiveContextInfo> {
+        return new Promise(async (resolve, reject) => {
+            const setupResult = this.sendBeakerMessage(
+                "context_setup_request",
+                contextPayload
+            );
+            await setupResult.done;
+            const contextInfo = setupResult.msg.content as IActiveContextInfo;
+            const kernelInfo = await this.kernel.requestKernelInfo();
+
+            resolve({
+                ...contextInfo,
+                kernelInfo: kernelInfo.content,
+            })
         });
     }
 
@@ -322,6 +353,10 @@ export class BeakerSession {
         return this._sessionContext?.session?.kernel;
     }
 
+    get kernelInfo() {
+        return this._kernelInfo;
+    }
+
     /**
      * A reference to the Jupyter ServiceManager which contains all of the services for this session.
      */
@@ -333,6 +368,10 @@ export class BeakerSession {
         return this._renderer;
     }
 
+    get sessionId(): string {
+        return this._sessionContext.path;
+    }
+
     private _sessionId: string;
     private _sessionOptions: IBeakerSessionOptions;
     private _services: ServiceManager;
@@ -342,6 +381,7 @@ export class BeakerSession {
     private _history: BeakerHistory;
     private _sessionInfo: any;
     private _renderer: BeakerRenderer;
+    private _kernelInfo: any;
 
     public notebook: BeakerNotebook;
 

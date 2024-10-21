@@ -7,6 +7,7 @@
             v-for="(cell, index) in session.notebook.cells"
             :cell="cell"
             :selected="cell.id === notebook.selectedCellId"
+            :index="index"
             :key="`outercell-${cell.id}`"
             class="beaker-cell"
             :class="{
@@ -41,7 +42,7 @@
 
 <script setup lang="tsx">
 import { ref, inject, computed, defineExpose, defineEmits } from 'vue';
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerSession } from 'beaker-kernel/src';
 import BeakerCell from '../cell/BeakerCell.vue';
 import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
 
@@ -67,7 +68,6 @@ function arrayMove(arr, old_index, new_index) {
 
 function handleMoveCell(fromIndex, toIndex) {
     arrayMove(session.notebook.cells, fromIndex, toIndex)
-    notebook.selectCell(toIndex);
 }
 
 /**
@@ -150,12 +150,19 @@ defineExpose({
 <style lang="scss">
 .cell-container {
     position: relative;
-    display: flex;
     flex: 1;
-    flex-direction: column;
     background-color: var(--surface-a);
     z-index: 3;
     overflow: auto;
+    width: 100%;
+    height: 100%;
+
+    // Separators between cells
+    > .beaker-cell {
+        padding-top: 2px;
+        border-collapse: separate;
+
+    }
 }
 
 .drop-overflow-catcher {

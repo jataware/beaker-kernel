@@ -89,7 +89,7 @@ import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
 
-import { BeakerSession } from 'beaker-kernel';
+import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import CodeEditor from '../misc/CodeEditor.vue';
 
@@ -128,7 +128,6 @@ const executeAction = () => {
         messageId.value,
     );
     future.onResponse = async (msg: messages.IIOPubMessage) => {
-        console.log("I'm here!", msg);
         response.value = msg;
     };
     future.onReply = async (msg: messages.IExecuteReplyMsg) => {

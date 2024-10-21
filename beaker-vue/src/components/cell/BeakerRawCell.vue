@@ -83,21 +83,20 @@ onBeforeMount(() => {
 onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
-
-
 </script>
 
 <script lang="ts">
-import { BeakerRawCell } from "beaker-kernel";
+import { BeakerRawCell } from "beaker-kernel/src";
 export default {
-    modelClass: BeakerRawCell
+    modelClass: BeakerRawCell,
+    icon: "pi pi-question-circle",
 };
 </script>
 
 
 <style lang="scss">
 .raw-cell {
-    padding-left: 0.2rem;
+    padding-right: 2em;
 
     .cm-editor {
         border: 1px solid var(--surface-d);

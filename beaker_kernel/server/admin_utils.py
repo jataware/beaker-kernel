@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 from collections import defaultdict
+from jupyter_core.paths import jupyter_runtime_dir
 
 async def fetch_system_stats():
     ps_process = asyncio.create_subprocess_exec('/usr/bin/ps', '-A', '-o', 'pid,ppid,%cpu,cputime,%mem,nlwp,rss,cmd', '--cumulative', 'Sww', '--no-headers', stdout=asyncio.subprocess.PIPE)
@@ -23,15 +24,16 @@ async def fetch_system_stats():
     return ps_info, fh_response, lsof_response
 
 async def fetch_kernel_info(kernel_manager):
+    runtime_dir = jupyter_runtime_dir()
     kernels: dict[str, dict] = {kernel["id"]: kernel for kernel in kernel_manager.list_kernels()}
-    kernel_files = os.listdir("/home/jupyter/.local/share/jupyter/runtime/")
+    kernel_files = os.listdir(runtime_dir)
     for kernel_file in kernel_files:
         if not kernel_file.startswith("kernel-"):
             continue
         kernel_id = kernel_file[7:-5]  # Remove 'kernel-' and '.json' from the beginning and end of the filename.
         if kernel_id not in kernels:
             continue
-        with open(f"/home/jupyter/.local/share/jupyter/runtime/{kernel_file}") as kf:
+        with open(os.path.join(runtime_dir, kernel_file)) as kf:
             kernels[kernel_id].update(json.load(kf))
     return kernels
 
@@ -63,7 +65,9 @@ async def build_edges_map(lsof_response, kernels):
     pid_port_listens = {}
     pid_connections = defaultdict(set)
     for line in lsof_response.decode().splitlines()[1:]:
-        cmd, pid, user, fd, itype, _, _, node, conn = line.split(maxsplit=8)
+        cmd, pid, user, fd, itype, _, _, proto, conn = line.split(maxsplit=8)
+        if proto != 'TCP':
+            continue
         connection_string, connection_type = conn.split()
         if connection_type == '(LISTEN)':
             pid_port_listens[connection_string] = pid
