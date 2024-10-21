@@ -1,6 +1,6 @@
 {
   "name": "beaker-vue",
-  "version": "1.6.8a2",
+  "version": "1.6.8",
   "declaration": true,
   "scripts": {
     "serve": "vue-cli-service serve",
