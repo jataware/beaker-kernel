@@ -75,7 +75,25 @@ class BeakerKernel(KernelProxyManager):
         self.user_responses = dict()
         # Initialize context (Using the event loop to simulate `await`ing the async func in non-async setup)
         event_loop = asyncio.get_event_loop()
-        event_loop.run_until_complete(self.set_context("default", {}))
+        event_loop.run_until_complete(self.start_default_context())
+
+    async def start_default_context(self):
+        default_context = os.environ.get('BEAKER_DEFAULT_CONTEXT')
+        default_context_payload = os.environ.get('BEAKER_DEFAULT_CONTEXT_PAYLOAD', "{}")
+        if default_context_payload:
+            try:
+                default_context_payload = json.loads(default_context_payload)
+            except json.JSONDecodeError:
+                default_context_payload = {}
+        if not default_context:
+            sorted_contexts = sorted(autodiscover_contexts().items(), key=lambda item: item[1].WEIGHT)
+            first_context = sorted_contexts[0]
+            default_context, context_cls = first_context
+            default_context_payload = context_cls.default_payload()
+        if not default_context:
+            default_context = "default"
+            default_context_payload = {}
+        await self.set_context(default_context, None)
 
     def add_base_intercepts(self):
         """
@@ -240,6 +258,12 @@ class BeakerKernel(KernelProxyManager):
         # Cleanup the old context, then create and setup the new context
         if self.context:
             self.context.cleanup()
+
+        if context_info is None:
+            default_payload = context_cls.default_payload()
+            if isinstance(default_payload, str):
+                default_payload = json.loads(default_payload)
+            context_info = default_payload
 
         config = {
             "language": language,
