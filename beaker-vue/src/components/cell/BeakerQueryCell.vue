@@ -142,7 +142,6 @@ const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
 
-// const rollingExpandedActionCount = 2;
 
 const events = computed(() => {
     return [...props.cell.events].filter((event) => event.type !== 'response');
@@ -200,18 +199,6 @@ const selectedEvents = computed({
         else {
             return [eventCount-2, eventCount-1];
         }
-        // return [0];
-        // if (taggedCellEvents.value.length == 0) {
-        //     return [0];
-        // }
-        // const events: BeakerQueryEvent[] = [...props.cell.events];
-        // const codeCellIndices = events
-        //     .map((e, index) => e.type === "code_cell" ? index : null)
-        //     .filter(e => e);
-        // if (isLastEventTerminal()) {
-        //     return codeCellIndices;
-        // }
-        // return [...codeCellIndices, taggedCellEvents.value.length - 1];
     },
     set(newValue) {
         // no operation,
@@ -225,7 +212,6 @@ const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
     "code_cell": "Code",
     "user_answer": "Answer",
     "user_question": "Question",
-    // "background_code": "Background Code",
     "error": "Error",
     "abort": "Abort"
 }
@@ -317,7 +303,6 @@ export default {
 
 .query {
     display: flex;
-    // align-items: start;
     justify-content: space-between;
     flex-direction: column;
     margin-bottom: 0.25rem;
@@ -384,10 +369,8 @@ h3.query-steps {
 }
 
 .event-container {
-    //margin-top: 1.25rem;
     padding: 0rem;
     border-radius: 6px;
-    //background-color: var(--surface-c);
 }
 
 .query-events-header {
@@ -405,7 +388,6 @@ h3.query-steps {
 }
 
 .query-steps {
-    // font-weight: 400;
     font-size: large;
 }
 
@@ -433,8 +415,6 @@ div.query-tab-user_question a.p-accordion-header-link.p-accordion-header-action,
 div.query-tab-user_answer a.p-accordion-header-link.p-accordion-header-action {
     background: none;
     border: none;
-    // font-size: 0.75rem;
-    // font-weight: 400;
 }
 
 div.p-accordion-content.query-tab-content-thought,
@@ -456,12 +436,6 @@ div.code-cell.query-event-code-cell {
     padding-left: 0;
 }
 
-// svg.query-tab-icon-thought,
-// svg.query-tab-icon-user_answer,
-// svg.query-tab-icon-user_question {
-//     width: 1rem;
-//     height: 0.7rem;
-// }
 
 a.query-tab-headeraction > span > span.pi {
     align-items: center;

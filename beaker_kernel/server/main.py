@@ -202,21 +202,6 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         return self.write(context_data)
 
 
-# class UploadHandler(RequestHandler):
-#     def post(self):
-#         filenames = []
-#         for file in self.request.files["uploadfiles"]:
-#             # Files are actually an array within an array?
-#             filename = file["filename"]
-#             if os.path.exists(filename):
-#                 self.write(f"'{filename}' already exists.")
-#                 raise HTTPError(401)
-#             with open(filename, 'wb') as output_file:
-#                 output_file.write(file["body"])
-#             filenames.append(filename)
-#         self.finish(f"Saved files {', '.join(filenames)} uploaded.")
-
-
 class DownloadHandler(RequestHandler):
     def get(self, filepath: str):
         if filepath.startswith("."):
