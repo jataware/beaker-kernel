@@ -21,6 +21,10 @@ export interface IBeakerSessionOptions {
     sessionId?: string;
     rendererOptions?: IBeakerRendererOptions;
     messageHandler?: Slot<any, any>;
+    context?: {
+        slug: string,
+        payload: any,
+    }
 };
 
 
@@ -41,10 +45,18 @@ export class BeakerSession {
         this._history = new BeakerHistory(this._sessionId);
 
         this.notebook = new BeakerNotebook();
-
-        this._services.ready.then(() => {
-            this.initialize(options);
-        })
+        this._initialized = new Promise(async (resolve, reject) => {
+            this._services.ready.then(async () => {
+                await this.initialize(options);
+                if (options.context) {
+                    await this.setContext({
+                        context: options.context.slug,
+                        context_info: options.context.payload,
+                    });
+                }
+            });
+            resolve();
+        });
     }
 
     /**
@@ -72,17 +84,15 @@ export class BeakerSession {
         });
 
         // Initialize the session
-        this._sessionContext.initialize().then(() => {
-            this._sessionContext.ready.then(() => {
-                if (options.messageHandler) {
-                    this._messageHandler = options.messageHandler;
-                    this._sessionContext.iopubMessage.connect(this._messageHandler);
-                }
-                else {
-                    this._messageHandler = undefined;
-                }
-            });
-        });
+        await this._sessionContext.initialize();
+        await this._sessionContext.ready;
+        if (options.messageHandler) {
+            this._messageHandler = options.messageHandler;
+            this._sessionContext.iopubMessage.connect(this._messageHandler);
+        }
+        else {
+            this._messageHandler = undefined;
+        }
     }
 
     /**
@@ -335,6 +345,7 @@ export class BeakerSession {
         return new Promise(async (resolve) => {
             await this._services.ready;
             await this._sessionContext.ready;
+            await this._initialized;
             resolve();
         })
     }
@@ -372,6 +383,7 @@ export class BeakerSession {
         return this._sessionContext.path;
     }
 
+    private _initialized: Promise<void>;
     private _sessionId: string;
     private _sessionOptions: IBeakerSessionOptions;
     private _services: ServiceManager;
