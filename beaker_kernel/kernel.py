@@ -388,6 +388,7 @@ class BeakerKernel(KernelProxyManager):
     @message_handler
     async def llm_request(self, message):
         # Send "code" to LLM Agent. The "code" is actually the LLM query
+        from archytas.exceptions import AuthenticationError
         content = message.content
         request = content.get("request", None)
         if not request:
@@ -401,6 +402,16 @@ class BeakerKernel(KernelProxyManager):
                 self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
                 self.debug("llm_query", request, parent_header=message.header)
                 result = await self.context.agent.react_async(request, react_context={"message": message})
+        except AuthenticationError as err:
+            self.send_response(
+                stream="iopub",
+                msg_or_type="llm_auth_failure",
+                content={
+                    "msg": str(err),
+                },
+                parent_header=message.header,
+            )
+
         except Exception as err:
             error_text = f"""LLM Error:
 {err}

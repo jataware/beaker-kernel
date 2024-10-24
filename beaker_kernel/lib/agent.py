@@ -5,6 +5,7 @@ import typing
 from functools import wraps
 
 from archytas.agent import BaseMessage
+from archytas.exceptions import AuthenticationError
 from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
@@ -54,30 +55,14 @@ class BeakerAgent(ReActAgent):
         for tool in self.tools.values():
             set_tool_execution_context(tool)
 
+    async def react_async(self, query: str, react_context: dict = None) -> str:
+        return await super().react_async(query, react_context)
 
-    async def execute(self, additional_messages: list[BaseMessage] = None) -> str:
-        import openai
-        try:
-            return await super().execute(additional_messages or [])
-        except (openai.AuthenticationError) as e:
-            raise AgentAuthenticationError(e)
-        except (openai.OpenAIError) as e:
-            if "The api_key client option must be set" in str(e):
-                raise AgentAuthenticationError(e)
-            else:
-                raise
+    async def execute(self, *args, **kwargs) -> str:
+        return await super().execute(*args, **kwargs)
 
     async def oneshot(self, prompt: str, query: str) -> str:
-        import openai
-        try:
-            return await super().oneshot(prompt, query)
-        except (openai.AuthenticationError,) as e:
-            raise AgentAuthenticationError(e)
-        except (openai.OpenAIError) as e:
-            if "The api_key client option must be set" in str(e):
-                raise AgentAuthenticationError(e)
-            else:
-                raise
+        return await super().oneshot(prompt, query)
 
     def get_info(self):
         """
