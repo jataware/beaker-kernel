@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "beaker-kernel"
-version = "1.7.1"
+version = "1.7.2"
 description = ""
 readme = "README.md"
 requires-python = ">=3.10"
@@ -73,7 +73,7 @@ path = "beaker_kernel/builder/beaker.py"
 
 
 [tool.bumpversion]
-current_version="1.7.1"
+current_version="1.7.2"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)((?P<release>[release])(?P<revision>\\d+))?"
 serialize = [
   "{major}.{minor}.{patch}{release}{revision}",
