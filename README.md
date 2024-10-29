@@ -31,19 +31,10 @@ Here is a quick demo of using Beaker to interact with a free weather API, fetch 
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY">
-    <img src="docs/assets/beaker-movie-3x-optimized.gif" alt="Watch the video">
+    <img src="docs/assets/beaker-movie-3x-optimized-higherres.gif" alt="Watch the video">
   </a>
   <br/>
   Watch original video on <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY">Youtube here</a>.
-</div>
-
-
-## Quick demo 2
-
-<div align="center">
-  <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY">
-    <img src="docs/assets/beaker-movie-3x-optimized-higherres.gif" alt="Watch the video">
-  </a>
 </div>
 
 ## Want to know more?
