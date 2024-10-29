@@ -25,6 +25,18 @@ beaker notebook
 
 Your notebook server will start up and Beaker will be ready to use at [`localhost:8888`](http://localhost:8888).
 
+## Quick demo
+
+Here is a quick demo of using Beaker to interact with a free weather API, fetch some data, perform some data transformations and a bit of analysis. This is really just scratching the surface of what you can do with Beaker, but it gives you a sense of the kinds of things it can do.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY">
+    <img src="docs/assets/beaker-movie-3x-optimized.gif" alt="Watch the video">
+  </a>
+  <br/>
+  Watch original video on [Youtube here](https://www.youtube.com/watch?v=AP9LT_cxjzY).
+</div>
+
 ## Want to know more?
 
 There is a lot more to Beaker than what we've covered here, so we've put together more detailed [docs](https://jataware.github.io/beaker-kernel/) that cover how to customize and extend Beaker in more detail. These include information on how to build your own custom contexts, toolsets, and subkernels to make Beaker meet your specific needs and usecases. It also gets into the basics of using the Beaker TypeScript SDK to build your own custom front-ends around Beaker.
