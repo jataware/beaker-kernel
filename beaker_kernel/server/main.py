@@ -5,6 +5,7 @@ import logging
 import os
 import uuid
 import urllib.parse
+from dataclasses import is_dataclass
 from typing import Dict
 
 from jupyter_core.utils import ensure_async
@@ -23,7 +24,7 @@ from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
-from beaker_kernel.lib.config import config, JUPYTER_SERVER_DEFAULT
+from beaker_kernel.lib.config import config, JUPYTER_SERVER_DEFAULT, locate_config, Config
 from beaker_kernel.server import admin_utils
 
 logger = logging.getLogger(__file__)
@@ -130,6 +131,86 @@ class MainHandler(StaticFileHandler):
         return await super().get(path, include_body=include_body)
 
 
+class ConfigController(ExtensionHandlerMixin, JupyterHandler):
+    """
+    """
+
+    @staticmethod
+    def jsonify_dataclass_schema(obj):
+        result = {}
+        for field_name, field in obj.__dataclass_fields__.items():
+            try:
+                type_str = field.type.__name__
+            except:
+                type_str = repr(field.type)
+            field_result = {
+                "name": field.name,
+                "type": type_str,
+                "description": field.metadata.get("description"),
+                "metadata": dict(field.metadata),
+            }
+
+            default_value = field.default_factory()
+            current_value = None
+            if not field.metadata.get("sensitive", True):
+                current_value = getattr(obj, field_name, None)
+                if is_dataclass(default_value):
+                    default_value = ConfigController.jsonify_dataclass_schema(default_value)
+                if is_dataclass(current_value):
+                    current_value = ConfigController.jsonify_dataclass_schema(current_value)
+            else:
+                default_value = "******" if default_value else default_value
+                current_value = "******" if current_value else current_value
+            field_result["default_value"] = default_value
+            field_result["current_value"] = current_value
+
+            result[field_name] = field_result
+        return result
+
+
+    @staticmethod
+    def jsonify_dataclass_object(obj):
+        result = {}
+        for field_name, field in obj.__dataclass_fields__.items():
+            if not field.metadata.get("sensitive", True):
+                current_value = getattr(obj, field_name, None)
+                if is_dataclass(current_value):
+                    current_value = ConfigController.jsonify_dataclass_object(current_value)
+                    if not current_value:
+                        current_value = {}
+            else:
+                current_value = "******" if getattr(obj, field_name, None) else None
+            result[field_name] = current_value
+        return result
+
+    def get(self):
+        if "schema" in self.request.query:
+            return self.get_config_schema()
+        else:
+            return self.get_config()
+
+    async def get_config_schema(self):
+        config_cls = Config
+        schema = self.jsonify_dataclass_schema(config_cls)
+        return self.write(schema)
+
+
+    async def get_config(self):
+        config_file = locate_config()
+        payload = self.jsonify_dataclass_object(config)
+
+
+        return self.write(
+            {
+                "config": payload,
+                "config_file_path": str(config_file)
+            }
+        )
+
+    def post(self):
+        return self.write('{"thank": "you"}')
+
+
 class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
     """
     Provide config via an endpoint
@@ -153,7 +234,7 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
             "appUrl": os.environ.get("APP_URL", base_url),
             "baseUrl": base_url,
             "wsUrl": os.environ.get("JUPYTER_WS_URL", ws_url),
-            "token": config.JUPYTER_TOKEN,
+            "token": config.jupyter_token,
         }
 
         # Ensure a proper xsrf cookie value is set.
@@ -336,7 +417,7 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
             },
             "sessions": sessions,
             "kernels": kernels,
-            "token": config.JUPYTER_TOKEN,
+            "token": config.jupyter_token,
         }
         return self.write(json.dumps(output))
 
@@ -389,7 +470,7 @@ class BeakerJupyterApp(LabServerApp):
     @classmethod
     def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
         # Set Jupyter token from config
-        os.environ.setdefault("JUPYTER_TOKEN", config.JUPYTER_TOKEN)
+        os.environ.setdefault("JUPYTER_TOKEN", config.jupyter_token)
         # TODO: catch and handle any custom command line arguments here
         app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
         if cls.request_log_handler:
@@ -414,6 +495,7 @@ class BeakerJupyterApp(LabServerApp):
 
         self.handlers.append((r"/api/kernels", SafeKernelHandler))
         self.handlers.append(("/contexts", ContextHandler))
+        self.handlers.append(("/config/control", ConfigController))
         self.handlers.append(("/config", ConfigHandler))
         self.handlers.append(("/stats", StatsHandler))
         self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": self.ui_path, "default_filename": "admin.html"}))

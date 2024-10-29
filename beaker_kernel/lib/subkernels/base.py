@@ -55,8 +55,8 @@ class BeakerSubkernel(abc.ABC):
             try:
                 print(f"Shutting down connected subkernel {self.jupyter_id}")
                 res = requests.delete(
-                    f"{config.JUPYTER_SERVER}/api/kernels/{self.jupyter_id}",
-                    headers={"Authorization": f"token {config.JUPYTER_TOKEN}"},
+                    f"{config.jupyter_server}/api/kernels/{self.jupyter_id}",
+                    headers={"Authorization": f"token {config.jupyter_token}"},
                 )
                 if res.status_code == 204:
                     self.jupyter_id = None
@@ -197,7 +197,7 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
 BaseSubkernel = BeakerSubkernel
 
 def is_checkpointing_enabled():
-    return getattr(config, "ENABLE_CHECKPOINTS", True)
+    return getattr(config, "enable_checkpoints", True)
 
 class CheckpointableBeakerSubkernel(BeakerSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"

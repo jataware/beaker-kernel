@@ -25,7 +25,9 @@ class AgentAuthenticationError(Exception):
 class BeakerAgent(ReActAgent):
 
     context: "BeakerContext"
-    MODEL: str = config.LLM_SERVICE_MODEL
+    # TODO: Type this
+    PROVIDER = config.provider
+    MODEL: str = config.model
 
     def __init__(
         self,
@@ -42,7 +44,7 @@ class BeakerAgent(ReActAgent):
         })
         super().__init__(
             model=model,
-            api_key=config.LLM_SERVICE_TOKEN,
+            api_key=config.llm_service_token,
             tools=tools,
             verbose=self.context.beaker_kernel.verbose,
             spinner=None,

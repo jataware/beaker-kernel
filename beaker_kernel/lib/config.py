@@ -5,7 +5,8 @@ import os
 import toml
 from dataclasses import dataclass, field, MISSING
 from pathlib import Path
-from typing import Callable, Any
+from collections.abc import Collection
+from typing import Callable, Any, TypeAlias, TypeVar, Generic, Literal
 from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
@@ -69,9 +70,9 @@ def normalize_bool(value) -> bool:
         return False
 
 
-def envfield(
-    config_var: str,
+def configfield(
     description: str,
+    env_var: str = MISSING,
     *,
     default = MISSING,
     default_factory = MISSING,
@@ -82,7 +83,10 @@ def envfield(
 ):
     def dynamic_factory():
         # Get value if defined
-        env_value = os.getenv(config_var, default=MISSING)
+        if env_var and env_var != MISSING:
+            env_value = os.getenv(env_var, default=MISSING)
+        else:
+            env_value = MISSING
 
         # If not defined and aliases are defined, check the aliases
         if env_value is MISSING and isinstance(aliases, list):
@@ -104,54 +108,98 @@ def envfield(
             value = normalize_function(value)
         return value
 
+    metadata = {
+        "description": description,
+        "sensitive": sensitive,
+        "aliases": aliases,
+        "save_default_value": save_default_value,
+    }
+    if env_var and env_var is not MISSING:
+        metadata["env_var"] = env_var
     return field(
-        metadata={
-            "config_var": config_var,
-            "description": description,
-            "sensitive": sensitive,
-            "aliases": aliases,
-            "save_default_value": save_default_value,
-        },
+        metadata=metadata,
         default_factory=dynamic_factory,
     )
 
-JUPYTER_SERVER_DEFAULT = "http://localhost:8888"
 
+T = TypeVar("T")
+
+# @dataclass
+class TableRecord(Generic[T]):
+    key: str = field()
+    value: T = field()
+
+class Table(list[TableRecord[T]]):
+    pass
+
+class Tables(list[Table[T]]):
+    pass
+
+@dataclass
+class LLM_Service_Provider:
+    import_path: str = configfield(
+        description="Dot-separated import path to the LLM Service Provider class.",
+        default="archytas.models.OpenAIModel"
+    )
+    api_key: str | None = configfield(
+        description="API key or token for authenticating to the provider, if required.",
+        default=None
+    )
 
 @dataclass
 class ConfigClass:
-    JUPYTER_SERVER: str = envfield(
-        "JUPYTER_SERVER",
+    jupyter_server: str = configfield(
         "URL of Jupyter or Beaker Server which manages subkernels.",
-        default=JUPYTER_SERVER_DEFAULT,
+        "JUPYTER_SERVER",
+        default="http://localhost:8888",
         save_default_value=False,
     )
-    JUPYTER_TOKEN: str = envfield(
-        "JUPYTER_TOKEN",
+    jupyter_token: str = configfield(
         "Token to use when communicating with the Jupyter or Beaker server.",
+        "JUPYTER_TOKEN",
         default_factory=new_token,
         save_default_value=False,
     )
-    LLM_SERVICE_MODEL: str = envfield(
-        "LLM_SERVICE_MODEL",
+    provider: LLM_Service_Provider | str = configfield(
+        description="LLM model provider to use. Maps to archytas model classes.",
+        env_var="LLM_SERVICE_PROVIDER",
+        default_factory=lambda: LLM_Service_Provider(
+            import_path="archytas.models.OpenAIModel",
+            api_key=None,
+        ),
+        save_default_value=True,
+    )
+    model: str = configfield(
         "Name of LLM model to use.",
+        "LLM_SERVICE_MODEL",
         default="gpt-4o",
         sensitive=False,
         save_default_value=True,
     )
-    LLM_SERVICE_TOKEN: str | None = envfield(
-        "LLM_SERVICE_TOKEN",
+    llm_service_token: str | None = configfield(
         "API key used for authenticating to the LLM service, if required.",
+        "LLM_SERVICE_TOKEN",
         default=None,
         sensitive=True,
         aliases=["OPENAI_API_KEY"],
     )
-    ENABLE_CHECKPOINTS: bool = envfield(
-        "ENABLE_CHECKPOINTS",
+    enable_checkpoints: bool = configfield(
         "Flag as to whether checkpoints are enabled or not.",
+        "ENABLE_CHECKPOINTS",
         default=True,
         sensitive=False,
         normalize_function=normalize_bool,
+    )
+
+    tools_enabled: Table[bool] = configfield(
+        description="This table allows you to enable/disable tools. The key is the name of the tool, and the value is a \
+boolean value which will enable/disable the tool based on the value.",
+        default_factory=lambda: []
+    )
+
+    providers: dict[str, LLM_Service_Provider] = configfield(
+        description="",
+        default_factory=lambda: []
     )
 
 
@@ -175,8 +223,8 @@ class ConfigClass:
             if option in cls.__dataclass_fields__ and not option.startswith('_')
         })
 
-        instance._tools_enabled = config_data.get('tools_enabled', {})
-        instance._model_config = config_data.get('model_config', {})
+        # instance._tools_enabled = config_data.get('tools_enabled', {})
+        # instance._model_config = config_data.get('model_config', {})
         return instance
 
     def update(self, updates: dict, config_file_path: Path|str|None = None):
@@ -209,13 +257,13 @@ class Config(ConfigClass):
             return getattr(self.config_obj, name)
         raise AttributeError
 
-    @property
-    def tools_enabled(self) -> dict[str, bool]:
-        return getattr(self.config_obj, '_tools_enabled', {})
+    # @property
+    # def tools_enabled(self) -> dict[str, bool]:
+    #     return getattr(self.config_obj, '_tools_enabled', {})
 
-    @property
-    def model_config(self) -> dict[str, any]:
-        return getattr(self.config_obj, '_model_config', {})
+    # @property
+    # def model_config(self) -> dict[str, any]:
+    #     return getattr(self.config_obj, '_model_config', {})
 
     def get_model(self):
         import importlib

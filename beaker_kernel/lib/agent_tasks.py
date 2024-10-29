@@ -16,7 +16,7 @@ class Summarizer(ReActAgent):
     ):
         super().__init__(
             model=config.LLM_SERVICE_MODEL,
-            api_key=config.LLM_SERVICE_TOKEN,
+            api_key=config.llm_service_token,
             tools=[],
             verbose=False,
             spinner=None,
