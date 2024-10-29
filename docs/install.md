@@ -7,62 +7,40 @@ has_toc: true
 
 # Install / setup
 
-## Structure
+Installing Beaker is easy! All you need to do is run:
 
-A Beaker install consists of the following:
-
-* A Jupyter kernel (`beaker-kernel`)
-* A Jupyter server (`beaker-server`) (optional but recommended)
-* LLM integration (`archytas`) (optional)
-* Custom contexts (`contexts`) (optional)
-
-
-### Installing the kernel
-
-Beaker-kernel can be installed as a normal Python package via pip, by using
-[Hatch](https://hatch.pypa.io/latest/), or as a docker image.
-
-
-
-### python
-
-Via pypi:
 ```bash
 pip install beaker-kernel
 ```
 
+Next, you'll run `beaker config update` to set up your configuration. This will create a `beaker.conf` file in your home directory's `.config` folder. You can leave everything as the default except for the `LLM_SERVICE_TOKEN` which you'll need to set to your OpenAI API (or other LLM provider) key.
 
-Local installation:
+Now that you've got things installed and set up, just simply run:
+
 ```bash
-$ pip install .
-```
+beaker notebook
+``` 
 
-Dev installation:
+Your notebook server will start up and Beaker will be ready to use at [`localhost:8888`](http://localhost:8888).
+
+## Installing custom contexts
+
+To install a custom context, you should navigate to the context's folder and run:
+
 ```bash
 $ pip install -e .
 ```
 
-During pip install, the kernel is automatically installed in the proper
-location in your development environment.
+This will install the context so that it can be automatically loaded the next time you start Beaker.
 
+For debugging your custom context, you can try navigating to [`localhost:8888/dev`](http://localhost:8888/dev) which will launch the development UI. This gives you access to enhanced logging, the ability to inspect messages, and the ability to launch custom actions from the UI.
 
-## Dev setup
+## Developer setup
 
-This package is bundled with a basic development UI for development and
-testing, via docker-compose.
+For developers interested in modifying Beaker or contributing to it, you can start by cloning the repo and running:
 
 ```bash
 $ make dev
 ```
 
-This will start the Jupyter service and launch a specialized notebook interface
-in your browser similar to if you ran `$ jupyter notebook` normally.
-
-
-## Adding python dependencies/updating requirements
-
-The python requirements are maintained by Hatch and are defined in the
-pyproject.toml file.
-
-Please see the [Hatch dependency documentation](https://hatch.pypa.io/latest/config/dependency/)
-for more details.
+This will start Beaker in development mode which will automatically reload when you make changes to the code so you can quickly iterate on your changes to the core codebase.
