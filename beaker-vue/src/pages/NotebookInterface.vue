@@ -210,6 +210,7 @@ watch(
 )
 
 const iopubMessage = (msg) => {
+    // console.log(msg);
     if (msg.header.msg_type === "preview") {
         previewData.value = msg.content;
     } else if (msg.header.msg_type === "debug_event") {

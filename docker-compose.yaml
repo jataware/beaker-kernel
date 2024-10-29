@@ -30,6 +30,8 @@ services:
       - ./beaker-vue:/ui
       - ./beaker-ts:/beaker-ts
     working_dir: "/ui"
+    environment:
+      - PROXY=http://jupyter:8888
     ports:
       - "8080:8080"
     command: ["npm", "run", "serve"]

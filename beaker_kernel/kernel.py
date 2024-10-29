@@ -411,6 +411,7 @@ class BeakerKernel(KernelProxyManager):
                 },
                 parent_header=message.header,
             )
+            return
 
         except Exception as err:
             error_text = f"""LLM Error:

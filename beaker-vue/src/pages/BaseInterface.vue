@@ -1,6 +1,6 @@
 <template>
     <BeakerSession id="beaker-session-container" ref="beakerSession">
-        <app>
+        <div id="app">
             <header>
                 <slot name="header">
                     <BeakerHeader
@@ -51,12 +51,25 @@
             <slot name="toast">
                 <Toast position="bottom-right" />
             </slot>
-        </app>
+        </div>
+        <slot name="login-dialog">
+            <Dialog v-model:visible="authDialogVisible" modal header="Model service authentication required">
+                <div>
+                    The configured LLM model service requires an authentication token.
+                </div>
+                <div>
+                    {{ authMessage }}
+                </div>
+                <input type="password" v-model="authDialogEntry">
+
+            </Dialog>
+        </slot>
     </BeakerSession>
 </template>
 
 <script setup lang="ts">
-import { defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounted, defineExpose } from 'vue';
+import { defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounted, toRaw, defineExpose } from 'vue';
+import Dialog from 'primevue/dialog';
 import BeakerSession from '../components/session/BeakerSession.vue';
 import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
 import Toast from 'primevue/toast';
@@ -74,15 +87,20 @@ const lastSaveChecksum = ref<string>();
 
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
-// Let's only use severity=success|warning|danger(=error) for now
-const showToast = ({title, detail, life=3000, severity=('success' as undefined), position='bottom-right'}) => {
+interface ShowToastOptions {
+    title: string;
+    detail: string;
+    life?: number;
+    severity?: 'success' | 'warn' | 'info' | 'error';
+}
+
+const showToast = (options: ShowToastOptions) => {
+    const {title, detail, life=3000, severity='success'} = options;
     toast.add({
         summary: title,
         detail,
         life,
-        // for options, seee https://primevue.org/toast/
         severity,
-        // position
     });
 };
 
@@ -101,6 +119,9 @@ const emit = defineEmits([
 const connectionStatus = ref('connecting');
 const saveInterval = ref();
 const beakerSession = ref<typeof BeakerSession>();
+const authDialogVisible = ref<boolean>(false);
+const authDialogEntry = ref<string>();
+const authMessage = ref<string>();
 
 const contextSelectionOpen = ref(false);
 const contextProcessing = ref(false);
@@ -123,6 +144,12 @@ onMounted(async () => {
         console.error(e);
         notebookData = {};
     }
+
+    // Connect listener for authentication message
+    session.session.ready.then(() => {
+        const sessionContext = toRaw(session.session.session)
+        sessionContext.iopubMessage.connect(iopubMessage);
+    });
 
     const sessionId = session.sessionId;
 
@@ -147,6 +174,13 @@ onMounted(async () => {
     saveInterval.value = setInterval(snapshot, 30000);
     window.addEventListener("beforeunload", snapshot);
 });
+
+const iopubMessage = (_sessionConn, msg) => {
+    if (msg.header.msg_type === "llm_auth_failure") {
+        authDialogVisible.value = true;
+        authMessage.value = msg.content;
+    }
+};
 
 onUnmounted(() => {
     clearInterval(saveInterval.value);
@@ -217,6 +251,7 @@ const snapshot = async () => {
 
 defineExpose({
     beakerSession,
+    showToast,
 });
 
 </script>
@@ -229,7 +264,7 @@ defineExpose({
     flex-direction: column;
 }
 
-app {
+#app {
     margin: 0;
     padding: 0;
     overflow: hidden;
