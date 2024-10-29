@@ -21,7 +21,7 @@ Here is a quick demo of using Beaker to interact with a [free weather API](https
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY">
-    <img src="assets/beaker-movie-3x-optimized-higherres.gif" alt="Watch the video">
+    <img src="assets/beaker-movie-3x-optimized-higherres.gif" alt="Beaker demo" width="90%">
   </a>
   <br/>
   Watch original video on <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY">Youtube here</a>.
