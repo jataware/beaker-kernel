@@ -30,7 +30,7 @@ Your notebook server will start up and Beaker will be ready to use at [`localhos
 Here is a quick demo of using Beaker to interact with a [free weather API](https://open-meteo.com/en/docs), fetch some data, perform some data transformations and a bit of analysis. This is really just scratching the surface of what you can do with Beaker, but it gives you a sense of the kinds of things it can do.
 
 <div align="center">
-  <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY">
+  <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY" target="_blank">
     <img src="docs/assets/beaker-movie-3x-optimized-higherres.gif" alt="Beaker demo" width="90%">
   </a>
   <br/>

@@ -20,11 +20,7 @@ We like to think of Beaker as a (much better!) drop in replacement for workflows
 Here is a quick demo of using Beaker to interact with a [free weather API](https://open-meteo.com/en/docs), fetch some data, perform some data transformations and a bit of analysis. This is really just scratching the surface of what you can do with Beaker, but it gives you a sense of the kinds of things it can do.
 
 <div align="center">
-  <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY">
-    <img src="assets/beaker-movie-3x-optimized-higherres.gif" alt="Beaker demo" width="90%">
-  </a>
-  <br/>
-  Watch original video on <a href="https://www.youtube.com/watch?v=AP9LT_cxjzY">Youtube here</a>.
+<iframe class="youtube" width="560" height="315" src="https://www.youtube.com/embed/AP9LT_cxjzY?si=8y-WqQzL0kUGwQIP" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </div>
 
 
