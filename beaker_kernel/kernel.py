@@ -114,6 +114,7 @@ class BeakerKernel(KernelProxyManager):
         )
         self.server.intercept_message("shell", "execute_reply", self.post_execute)
         self.server.intercept_message("stdin", "input_reply", self.input_reply)
+        self.server.intercept_message("shell", "llm_set_key", self.llm_set_key)
 
     def register_magic_commands(self):
         for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_magic_prefix")):
@@ -412,6 +413,7 @@ class BeakerKernel(KernelProxyManager):
     @message_handler
     async def llm_request(self, message):
         # Send "code" to LLM Agent. The "code" is actually the LLM query
+        from archytas.exceptions import AuthenticationError
         content = message.content
         request = content.get("request", None)
         if not request:
@@ -425,6 +427,17 @@ class BeakerKernel(KernelProxyManager):
                 self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
                 self.debug("llm_query", request, parent_header=message.header)
                 result = await self.context.agent.react_async(request, react_context={"message": message})
+        except AuthenticationError as err:
+            self.send_response(
+                stream="iopub",
+                msg_or_type="llm_auth_failure",
+                content={
+                    "msg": str(err),
+                },
+                parent_header=message.header,
+            )
+            return
+
         except Exception as err:
             error_text = f"""LLM Error:
 {err}
@@ -532,6 +545,14 @@ class BeakerKernel(KernelProxyManager):
         content = message.content
         parent_id = message.parent_header["msg_id"]
         self.user_responses[parent_id] = content["value"]
+
+    @message_handler
+    async def llm_set_key(self, message):
+        content = message.content
+        logger.warning(content)
+        api_key = content.get("api_key", None)
+        if api_key:
+            self.context.agent.set_openai_key(api_key)
 
 # Provided for backwards compatibility
 LLMKernel = BeakerKernel
