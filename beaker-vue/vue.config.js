@@ -32,8 +32,18 @@ module.exports = defineConfig({
       library: "beaker_vue",
     },
   },
+  chainWebpack: (config) => {
+    config.plugin('define').tap((definitions) => {
+      Object.assign(definitions[0], {
+        __VUE_OPTIONS_API__: 'true',
+        __VUE_PROD_DEVTOOLS__: 'false',
+        __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false'
+      });
+      return definitions;
+    });
+  },
   devServer: {
-    proxy: "http://jupyter:8888",
+    proxy: process.env.PROXY || 'http://localhost:8888',
     onBeforeSetupMiddleware (server) {
       // Proxy everything to the server except for `/ws`, webpacks websocket for hotloading, static files and pages.
       const origContext = server.options.proxy[0].context;
