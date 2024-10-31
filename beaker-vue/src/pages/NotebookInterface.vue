@@ -10,6 +10,7 @@
         :sessionId="sessionId"
         :renderers="renderers"
         :savefile="saveAsFilename"
+        :api-key-prompt="true"
         @iopub-msg="iopubMessage"
         @unhandled-msg="unhandledMessage"
         @any-msg="anyMessage"

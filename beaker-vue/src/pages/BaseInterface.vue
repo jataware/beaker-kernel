@@ -121,6 +121,7 @@ const props = defineProps([
     "titleExtra",
     "savefile",
     "headerNav",
+    "apiKeyPrompt",
 ]);
 
 const emit = defineEmits([
@@ -131,7 +132,7 @@ const emit = defineEmits([
 const connectionStatus = ref('connecting');
 const saveInterval = ref();
 const beakerSession = ref<typeof BeakerSession>();
-const authDialogVisible = ref<boolean>(false);
+const authDialogVisible = ref<boolean>(props.apiKeyPrompt || false);
 const authDialogEntry = ref<string>("");
 const authMessage = ref<string>("");
 const authRetryCell = ref();
