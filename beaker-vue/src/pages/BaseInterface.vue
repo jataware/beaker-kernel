@@ -57,13 +57,13 @@
                 <div style="margin-bottom: 1rem;">
                     The OpenAI service requires a valid authentication key.
                 </div>
-                <div style="margin-bottom: 1rem;">
+                <div v-if="authMessage" style="margin-bottom: 1rem;">
                     Message from service:<br/>
                     <span style="font-style: italic;">{{ authMessage }}</span>
                 </div>
 
                 <div style="margin-bottom: 1rem;">
-                    Please provide a valid API key to continue. It will not be saved.
+                    Please provide a valid API key to continue. It will not be used for this session but will not be saved.
                 </div>
 
                 <InputGroup>
