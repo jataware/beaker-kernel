@@ -141,9 +141,14 @@ class LLM_Service_Provider:
         description="Dot-separated import path to the LLM Service Provider class.",
         default="archytas.models.OpenAIModel"
     )
+    default_model_name: str = configfield(
+        description="Name of the default model to use with this provider.",
+        default="gpt-4o"
+    )
     api_key: str | None = configfield(
         description="API key or token for authenticating to the provider, if required.",
-        default=None
+        default=None,
+        sensitive=True,
     )
 
 @dataclass
@@ -169,7 +174,7 @@ class ConfigClass:
         ),
         save_default_value=True,
     )
-    model: str = configfield(
+    model_name: str = configfield(
         "Name of LLM model to use.",
         "LLM_SERVICE_MODEL",
         default="gpt-4o",
@@ -194,12 +199,12 @@ class ConfigClass:
     tools_enabled: Table[bool] = configfield(
         description="This table allows you to enable/disable tools. The key is the name of the tool, and the value is a \
 boolean value which will enable/disable the tool based on the value.",
-        default_factory=lambda: []
+        default_factory=lambda: {}
     )
 
-    providers: dict[str, LLM_Service_Provider] = configfield(
-        description="",
-        default_factory=lambda: []
+    providers: Table[LLM_Service_Provider] = configfield(
+        description="Allows switching between LLM Model providers/APIs.",
+        default_factory=lambda: {}
     )
 
 
@@ -266,26 +271,27 @@ class Config(ConfigClass):
     #     return getattr(self.config_obj, '_model_config', {})
 
     def get_model(self):
-        import importlib
-        default_model_name = self.model_config.get("default_model", None)
-        if 'dotted_import_path' in self.model_config and 'model_name' in self.model_config:
-            model_config = self.model_config
-        elif default_model_name and default_model_name in self.model_config:
-            model_config = self.model_config.get(default_model_name)
-        else:
-            from archytas.models import OpenAIModel
-            return OpenAIModel({})
+        pass
+        # import importlib
+        # default_model_name = self.model_config.get("model", None)
+        # if 'dotted_import_path' in self.model_config and 'model_name' in self.model_config:
+        #     model_config = self.model_config
+        # elif default_model_name and default_model_name in self.model_config:
+        #     model_config = self.model_config.get(default_model_name)
+        # else:
+        #     from archytas.models import OpenAIModel
+        #     return OpenAIModel({})
 
-        # Copying config so it doesn't get changed globally if modified in the model instance
-        model_config = model_config.copy()
+        # # Copying config so it doesn't get changed globally if modified in the model instance
+        # model_config = model_config.copy()
 
-        module_name, cls_name = model_config.pop("dotted_import_path").rsplit('.', 1)
-        module = importlib.import_module(module_name)
-        cls = getattr(module, cls_name, None)
-        if cls and isinstance(cls, type):
-            return cls(model_config)
-        else:
-            raise ImportError(f"Unable to load model identified by '{module_name}.{cls_name}'. Please make sure it is properly installed.")
+        # module_name, cls_name = model_config.pop("dotted_import_path").rsplit('.', 1)
+        # module = importlib.import_module(module_name)
+        # cls = getattr(module, cls_name, None)
+        # if cls and isinstance(cls, type):
+        #     return cls(model_config)
+        # else:
+        #     raise ImportError(f"Unable to load model identified by '{module_name}.{cls_name}'. Please make sure it is properly installed.")
 
 config = Config()
 

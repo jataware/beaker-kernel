@@ -25,9 +25,6 @@ class AgentAuthenticationError(Exception):
 class BeakerAgent(ReActAgent):
 
     context: "BeakerContext"
-    # TODO: Type this
-    PROVIDER = config.provider
-    MODEL: str = config.model
 
     def __init__(
         self,

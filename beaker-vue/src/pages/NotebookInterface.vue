@@ -76,6 +76,11 @@
                         @open-file="loadNotebook"
                     />
                 </SideMenuPanel>
+                <SideMenuPanel id="config" label="Config" icon="pi pi-cog">
+                    <ConfigPanel
+                        ref="configPanelRef"
+                    />
+                </SideMenuPanel>
             </SideMenu>
         </template>
     </BaseInterface>
@@ -97,6 +102,7 @@ import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
 import InfoPanel from '../components/panels/InfoPanel.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
+import ConfigPanel from '../components/panels/ConfigPanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
@@ -111,6 +117,7 @@ import { IBeakerTheme } from '../plugins/theme';
 const beakerNotebookRef = ref();
 const beakerInterfaceRef = ref();
 const filePanelRef = ref();
+const configPanelRef = ref();
 const sideMenuRef = ref();
 
 const urlParams = new URLSearchParams(window.location.search);

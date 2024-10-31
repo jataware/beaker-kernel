@@ -5,8 +5,10 @@ import logging
 import os
 import uuid
 import urllib.parse
-from dataclasses import is_dataclass
-from typing import Dict
+from dataclasses import is_dataclass, asdict
+from collections.abc import Mapping, Collection
+from typing import get_origin, get_args, GenericAlias, Union
+from types import UnionType
 
 from jupyter_core.utils import ensure_async
 from jupyter_server.auth.decorator import authorized
@@ -24,7 +26,7 @@ from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
-from beaker_kernel.lib.config import config, JUPYTER_SERVER_DEFAULT, locate_config, Config
+from beaker_kernel.lib.config import config, locate_config, Config, Table
 from beaker_kernel.server import admin_utils
 
 logger = logging.getLogger(__file__)
@@ -134,35 +136,58 @@ class MainHandler(StaticFileHandler):
 class ConfigController(ExtensionHandlerMixin, JupyterHandler):
     """
     """
+    @staticmethod
+    def map_type(type_obj: type):
+        type_def = {}
+        try:
+            if isinstance(type_obj, type):
+                type_def["type_str"] = type_obj.__name__
+            else:
+                type_def["type_str"] = repr(type_obj)
+            if isinstance(type_obj, (GenericAlias, UnionType)):
+                type_origin = get_origin(type_obj)
+                type_args = get_args(type_obj)
+                if type_origin:
+                    type_def["type_origin"] = ConfigController.map_type(type_origin)
+                if type_args:
+                    type_def["type_args"] = [ConfigController.map_type(type_arg) for type_arg in type_args]
+            elif is_dataclass(type_obj):
+                type_def = ConfigController.jsonify_dataclass_schema(type_obj)
+        except:
+            type_def["type_str"] = repr(type_obj)
+        return type_def
+
 
     @staticmethod
     def jsonify_dataclass_schema(obj):
         result = {}
         for field_name, field in obj.__dataclass_fields__.items():
-            try:
-                type_str = field.type.__name__
-            except:
-                type_str = repr(field.type)
+            # try:
+            type_def = ConfigController.map_type(field.type)
+            # except:
+            #     type_str = repr(field.type)
+            #     type_def = None
+            metadata = dict(field.metadata)
+            description = metadata.pop("description", None)
             field_result = {
                 "name": field.name,
-                "type": type_str,
-                "description": field.metadata.get("description"),
-                "metadata": dict(field.metadata),
+                "type": type_def,
+                "description": description,
+                "metadata": metadata,
             }
+            # if type_def:
+            #     field_result["type_def"] = type_def
+
+            # if is_dataclass(field.type):
+            #     field_result["child_type"] = ConfigController.jsonify_dataclass_schema(default_value)
 
             default_value = field.default_factory()
-            current_value = None
             if not field.metadata.get("sensitive", True):
-                current_value = getattr(obj, field_name, None)
                 if is_dataclass(default_value):
                     default_value = ConfigController.jsonify_dataclass_schema(default_value)
-                if is_dataclass(current_value):
-                    current_value = ConfigController.jsonify_dataclass_schema(current_value)
             else:
-                default_value = "******" if default_value else default_value
-                current_value = "******" if current_value else current_value
+                default_value = ""
             field_result["default_value"] = default_value
-            field_result["current_value"] = current_value
 
             result[field_name] = field_result
         return result
@@ -174,12 +199,19 @@ class ConfigController(ExtensionHandlerMixin, JupyterHandler):
         for field_name, field in obj.__dataclass_fields__.items():
             if not field.metadata.get("sensitive", True):
                 current_value = getattr(obj, field_name, None)
-                if is_dataclass(current_value):
+                if get_origin(field.type) and issubclass(get_origin(field.type), Table):
+                    record_type = get_args(field.type)[0]
+                    if is_dataclass(record_type):
+                        current_value = {
+                            key: ConfigController.jsonify_dataclass_object(record_type(**value))
+                            for key, value in current_value.items()
+                        }
+                elif is_dataclass(current_value):
                     current_value = ConfigController.jsonify_dataclass_object(current_value)
                     if not current_value:
                         current_value = {}
             else:
-                current_value = "******" if getattr(obj, field_name, None) else None
+                current_value = ""
             result[field_name] = current_value
         return result
 
@@ -256,8 +288,8 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
     def get(self):
         """Get the main page for the application's interface."""
         ksm = self.kernel_spec_manager
-        contexts: Dict[str, BeakerContext] = autodiscover("contexts")
-        possible_subkernels: Dict[str, BeakerSubkernel] = autodiscover("subkernels")
+        contexts: dict[str, BeakerContext] = autodiscover("contexts")
+        possible_subkernels: dict[str, BeakerSubkernel] = autodiscover("subkernels")
         subkernel_by_kernel_index = {subkernel.KERNEL_NAME: subkernel for subkernel in possible_subkernels.values()}
         installed_kernels = [
             subkernel_by_kernel_index[kernel_name] for kernel_name in ksm.find_kernel_specs().keys()
