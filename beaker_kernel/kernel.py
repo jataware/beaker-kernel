@@ -548,8 +548,8 @@ class BeakerKernel(KernelProxyManager):
 
     @message_handler
     async def llm_set_key(self, message):
+        """Sets the API key via a message from the user. Allows user to set/update llm api token."""
         content = message.content
-        logger.warning(content)
         api_key = content.get("api_key", None)
         if api_key:
             self.context.agent.set_openai_key(api_key)
