@@ -292,7 +292,7 @@ class BeakerContext:
         the context.
         E.g. For "beaker_kernel.contexts.pandas" the slug would be "pandas"
         """
-        if self.SLUG:
+        if hasattr(self, "SLUG"):
             return self.SLUG
 
         package_str = inspect.getmodule(self).__package__

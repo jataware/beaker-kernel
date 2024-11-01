@@ -166,7 +166,7 @@ const doubleClick = ({data}) => {
     showToast({
       title: 'Unable to handle file',
       detail: 'Unable to handle this file. Please choose a different file.',
-      severity: 'warn',
+      severity: 'warning',
       life: 2500,
     })
   }

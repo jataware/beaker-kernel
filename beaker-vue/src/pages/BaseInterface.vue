@@ -53,14 +53,31 @@
             </slot>
         </div>
         <slot name="login-dialog">
-            <Dialog v-model:visible="authDialogVisible" modal header="Model service authentication required">
+            <!-- <Dialog v-model:visible="authDialogVisible" modal header="Model service authentication required">
                 <div>
                     The configured LLM model service requires an authentication token.
                 </div>
                 <div>
                     {{ authMessage }}
                 </div>
-                <input type="password" v-model="authDialogEntry">
+                <input type="password" v-model="authDialogEntry"> -->
+            <Dialog v-model:visible="authDialogVisible" modal header="OpenAI auth error" style="max-width: 45vw;">
+                <div style="margin-bottom: 1rem;">
+                    The OpenAI service requires a valid authentication key.
+                </div>
+                <div v-if="authMessage" style="margin-bottom: 1rem;">
+                    Message from service:<br/>
+                    <span style="font-style: italic;">{{ authMessage }}</span>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    Please provide a valid API key to continue. It will not be used for this session but will not be saved.
+                </div>
+
+                <InputGroup>
+                    <InputText type="password" v-model="authDialogEntry" placeholder="OpenAI key" @keydown.enter="setApiKey" autofocus/>
+                    <Button icon="pi pi-check" @click="setApiKey"/>
+                </InputGroup>
 
             </Dialog>
         </slot>
@@ -75,6 +92,9 @@ import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import {BeakerSession as Session} from 'beaker-kernel/src'
+import InputText from 'primevue/inputtext';
+import InputGroup from 'primevue/inputgroup';
+import Button from 'primevue/button';
 import sum from 'hash-sum';
 
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
@@ -109,6 +129,7 @@ const props = defineProps([
     "titleExtra",
     "savefile",
     "headerNav",
+    "apiKeyPrompt",
 ]);
 
 const emit = defineEmits([
@@ -119,9 +140,10 @@ const emit = defineEmits([
 const connectionStatus = ref('connecting');
 const saveInterval = ref();
 const beakerSession = ref<typeof BeakerSession>();
-const authDialogVisible = ref<boolean>(false);
-const authDialogEntry = ref<string>();
-const authMessage = ref<string>();
+const authDialogVisible = ref<boolean>(props.apiKeyPrompt || false);
+const authDialogEntry = ref<string>("");
+const authMessage = ref<string>("");
+const authRetryCell = ref();
 
 const contextSelectionOpen = ref(false);
 const contextProcessing = ref(false);
@@ -178,9 +200,29 @@ onMounted(async () => {
 const iopubMessage = (_sessionConn, msg) => {
     if (msg.header.msg_type === "llm_auth_failure") {
         authDialogVisible.value = true;
-        authMessage.value = msg.content;
+        authMessage.value = msg.content.msg;
+        if (msg.cell !== undefined) {
+            console.log(msg.cell, " is ")
+            authRetryCell.value = msg.cell;
+        }
     }
 };
+
+const setApiKey = async () => {
+    const apiKey = authDialogEntry.value;
+    if (apiKey.length == 0) {
+        return;
+    }
+    const session = beakerSession.value.session;
+    await session.sendBeakerMessage("llm_set_key", {
+        api_key: apiKey
+    });
+    authDialogVisible.value = false;
+    if (authRetryCell.value) {
+        console.log(authRetryCell);
+        authRetryCell.value.execute(session);
+    }
+}
 
 onUnmounted(() => {
     clearInterval(saveInterval.value);

@@ -21,7 +21,7 @@ class DefaultContext(BeakerContext):
 
     agent_cls: "BeakerAgent" = DefaultAgent
 
-    WEIGHT: 10
+    WEIGHT: int = 10
     SLUG: str = "default"
 
     def __init__(self, beaker_kernel: "BeakerKernel", config: Dict[str, Any]):

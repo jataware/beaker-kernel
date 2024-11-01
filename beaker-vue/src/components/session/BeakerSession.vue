@@ -37,11 +37,18 @@ export const toBeakerCellComponent = (vnode: VNode): IBeakerCellComponent => {
 
 export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComponent({
   props: {
-      "connectionSettings": Object,
-      "sessionName": String,
-      "sessionId": String,
-      "defaultKernel": String,
-      "renderers": (Object as any as PropType<IMimeRenderer<HTMLElement>[]>),
+      connectionSettings: Object,
+      sessionName: String,
+      sessionId: String,
+      defaultKernel: String,
+      renderers: (Object as any as PropType<IMimeRenderer<HTMLElement>[]>),
+      context: {
+        type: Object as PropType<{
+          slug: string,
+          payload: any,
+        }>,
+        required: false,
+      },
   },
 
   emits: [
@@ -69,7 +76,8 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
         kernelName: props.defaultKernel,
         rendererOptions: {
           renderers: props.renderers || [],
-        }
+        },
+        context: props.context,
       }
     );
 
