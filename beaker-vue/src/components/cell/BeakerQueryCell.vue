@@ -236,6 +236,12 @@ function execute() {
     isEditing.value = false;
     nextTick(() => {
         const future = props.cell.execute(session);
+        // Add reference to cell for downstream processing.
+        future.registerMessageHook(
+            (msg) => {
+                msg.cell = cell.value;
+            }
+        )
     });
 }
 
