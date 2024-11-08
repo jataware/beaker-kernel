@@ -56,7 +56,12 @@
         <Column field="name" header="Name" class="filename-column" sortable>
           <template #body="slotProps">
             <span :class="[...getFileIconClass(slotProps.data), 'file-icon', slotProps.data.type]"></span>
-            <span :id="`file-list::${slotProps.data.path}`" class="file-name" :class="slotProps.data.type">
+            <span 
+              :id="`file-list::${slotProps.data.path}`" 
+              class="file-name" 
+              :class="slotProps.data.type"
+              @click="previewFile(slotProps.data.path, slotProps.data.mimetype)"
+            >
               {{ slotProps.data.name }}
             </span>
           </template>
@@ -93,12 +98,17 @@ import {filesize} from 'filesize';
 import {Time} from '@jupyterlab/coreutils/src/time';
 import scroll from 'scroll-into-view-if-needed'
 
+const previewFile = (path, mimetype) => {
+  emit("preview-file", `/files/${path}`, mimetype)
+}
+
 import { ContentsManager, Contents } from '@jupyterlab/services';
 
 const curDir = ref<string>('.');
 
 const emit = defineEmits([
-  "open-file"
+  "open-file",
+  "preview-file"
 ]);
 
 const props = defineProps([
