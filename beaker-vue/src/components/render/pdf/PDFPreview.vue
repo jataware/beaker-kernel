@@ -4,7 +4,7 @@
             page = clamp(page + 1, 1, pdf?.pages ?? 1)
         }"
         @pdf-page-prev="() => {
-            page = clamp(page -1, 1, pdf?.pages ?? 1)
+            page = clamp(page - 1, 1, pdf?.pages ?? 1)
         }"
         @pdf-zoom-in="() => {
             scaleIndex = clamp(scaleIndex + 1, 0, fixedZoomSteps.length)
