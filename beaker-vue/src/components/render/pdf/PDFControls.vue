@@ -113,7 +113,7 @@ div.pdf-ui-inputselection {
         padding: 0;
     }
     input {
-        width: 6rem;
+        width: 3rem;
     }
 }
 </style>

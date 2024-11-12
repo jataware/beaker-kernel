@@ -84,22 +84,11 @@
         </template>
         <template #right-panel>
         </template>
-        <Sidebar 
-            v-model:visible="previewVisible" 
-            position="right" 
-            style="width: 42rem;"
-            :modal="false"
-            :dismissable="false"
-            
-        >
-            <template #container="{ closeCallback }">
-                <PreviewPanel 
-                    :url="previewedFile?.url" 
-                    :mimetype="previewedFile?.mimetype" 
-                    :sidebarCallback="closeCallback"
-                />
-            </template>
-        </Sidebar>
+        <PreviewPanel 
+            :url="previewedFile?.url" 
+            :mimetype="previewedFile?.mimetype" 
+            v-model="previewVisible"
+        />
     </BaseInterface>
 </template>
 
