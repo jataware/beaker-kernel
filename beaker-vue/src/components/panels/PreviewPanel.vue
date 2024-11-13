@@ -18,8 +18,36 @@
                     class="preview-container-main"
                      :style="`max-width: calc(100% - ${dragWidth}px);`"
                 >
+                    <div class="preview-standard-toolbar" v-if="!mimetypeConfig[mime]?.overridesToolbar">
+                        <Toolbar>
+                            <template #start>
+                                <Button 
+                                    class="preview-close" 
+                                    icon="pi pi-times" 
+                                    @click="closeCallback"
+                                    severity="danger"
+                                />
+                            </template>
+                            <template #center>
+                                <span>{{ shortname }}</span>
+                            </template>
+                        </Toolbar>
+                    </div>
+                    <div v-if="contents.isLoading">
+                        <Button 
+                            class="preview-cancel" 
+                            icon="pi pi-times" 
+                            @click="contentsAborter.abort()"
+                            severity="danger"
+                            value="Cancel Preview"
+                        />
+                        <span>File is {{ contents.contentLength / 1000000 }} MB</span>
+                    </div>
                     <div class="pdf-preview" v-if="mime === 'application/pdf'">
                         <PDFPreview :url="url" :sidebarCallback="closeCallback"/>
+                    </div>
+                    <div class="text-preview" v-if="mime.startsWith('text/')">
+
                     </div>
                 </div>
             </div>
@@ -32,9 +60,13 @@ import { ref, defineProps, watch, computed, defineModel } from "vue";
 
 import PDFPreview from "../render/pdf/PDFPreview.vue";
 import Sidebar from "primevue/sidebar";
+import Toolbar from "primevue/toolbar";
+import Button from "primevue/button";
 
-const fallbackMime = ref(null)
 const sidebar = ref();
+
+// dynamically updates with result of async watch
+let fallbackMime = "";
 
 const hookResize = () => {
     const resize = event => {
@@ -49,6 +81,27 @@ const hookResize = () => {
     document.querySelector('body').addEventListener('mouseup', unhookResize);
 }
 
+type PreviewConfig = {
+    overridesToolbar?: boolean
+}
+const mimetypeConfig: {[key in string]: PreviewConfig} = {
+    "application/pdf": {
+        overridesToolbar: true
+    }
+}
+
+type PreviewContents = {
+    isLoading: boolean;
+    contents?: any;
+    contentLength: number;
+}
+const contents = ref<PreviewContents>({
+    isLoading: false,
+    contentLength: -1,
+})
+
+// max size in bytes to preview (10 MB for now)
+const maxSize = 10 * 1000000;
 
 // drag bar width in px
 const dragWidth = ref(5);
@@ -62,24 +115,59 @@ const props = defineProps([
 ])
 
 const visible = defineModel<boolean>();
+const mime = computed(() => props.mimetype ?? fallbackMime ?? '')
 
-const mime = computed(() => props.mimetype ?? fallbackMime.value)
 
-const getMimeFromURL = async (url: string): Promise<string> => 
-    fetch(url).then(response => response.headers.get('Content-Type'))
-              .catch(error => { 
-                    console.log(error);
-                    return null;
-                })
+const shortname = computed(() => {
+    const parts = props.url?.split('/');
+    return parts.length > 0 ? parts[parts.length - 1] : "";
+});
+
+const getInfoFromURL = async (url: string): Promise<string[]> => {
+    const response = await fetch(url, {method: 'HEAD'})
+    return ['Content-Type', 'Content-Length'].map((key) => response.headers.get(key))
+}
+
+const contentsAborter = new AbortController();
+const getContents = async (url: string) => {
+    const response = await fetch(url, {signal: contentsAborter.signal});
+    let fullContents = [];
+    for await (const chunk of response.body) {
+        fullContents.push(chunk);
+    }
+    // merge uint8arrays without spread syntax. 50x speedup as according to SO
+    // create a new uint8array the size of sum(chunks.length)
+    const mergedArray = new Uint8Array(
+        fullContents
+            .map((chunk) => chunk.length)
+            .reduce((a, b) => a + b));
+    // set each chunk data at the offset to effectively concatenate them by chunk, not element
+    fullContents.reduce((offset, chunk) => {
+        mergedArray.set(chunk, offset);
+        offset += chunk.length;
+    }, 0)
+    return mergedArray;
+}
+
 
 watch(() => [props.url, props.mimetype], async (f, s) => {
     // if no associated mimetype, find a fallback
-    console.log(props.mimetype)
+    const [mimetype, length] = await getInfoFromURL(props.url);
+    
     if (props.mimetype === undefined || props.mimetype == null) {
-        fallbackMime.value = await getMimeFromURL(props.url);
-        return;
+        console.log(`had to use fallback: ${mimetype}`);
+        fallbackMime = mimetype;
+    } else {
+        fallbackMime = undefined;
     }
-    fallbackMime.value = undefined;
+
+    contents.value.contentLength = parseInt(length, 10);
+    if (contents.value.contentLength > maxSize) {
+        contents.value.contents = undefined;
+    } else {
+        contents.value.contents = await getContents(props.url);
+    }
+
 })
 
 </script>
@@ -110,5 +198,22 @@ watch(() => [props.url, props.mimetype], async (f, s) => {
             margin-left: 0;
         }
     }
+}
+
+div.preview-standard-toolbar {
+    div.p-toolbar {
+        padding: 0.5rem;
+        padding-left: 0.25rem;
+        border: none;
+        border-radius: 0;
+        flex-wrap: nowrap;
+        .p-toolbar-group-start button.pdf-ui-close {
+            margin-left: 0;
+        }
+    } 
+}
+button.preview-close {
+    width: 2rem;
+    height: 2rem;
 }
 </style>
