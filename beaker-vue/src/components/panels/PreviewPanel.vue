@@ -2,7 +2,7 @@
     <Sidebar 
         v-model:visible="visible" 
         position="right" 
-        :style="`width: ${width}px;`"
+        :style="`width: ${width}px; overflow:auto;`"
         :modal="false"
         :dismissable="false"
         ref="sidebar"
@@ -33,21 +33,33 @@
                             </template>
                         </Toolbar>
                     </div>
-                    <div v-if="contents.isLoading">
-                        <Button 
-                            class="preview-cancel" 
-                            icon="pi pi-times" 
-                            @click="contentsAborter.abort()"
-                            severity="danger"
-                            value="Cancel Preview"
-                        />
-                        <span>File is {{ contents.contentLength / 1000000 }} MB</span>
-                    </div>
-                    <div class="pdf-preview" v-if="mime === 'application/pdf'">
-                        <PDFPreview :url="url" :sidebarCallback="closeCallback"/>
-                    </div>
-                    <div class="text-preview" v-if="mime.startsWith('text/')">
-
+                    <div class="preview-under-toolbar">
+                        <div v-if="contents.isLoading">
+                            <Button 
+                                class="preview-cancel" 
+                                icon="pi pi-times" 
+                                @click="contentsAborter.abort()"
+                                severity="danger"
+                                value="Cancel Preview"
+                            />
+                            <span>File is {{ contents.contentLength / 1000000 }} MB</span>
+                        </div>
+                        <div class="pdf-preview" v-if="mime === 'application/pdf'">
+                            <PDFPreview :url="url" :sidebarCallback="closeCallback"/>
+                        </div>
+                        <div class="text-preview" v-if="
+                            mime.startsWith('text/') || mime === 'application/octet-stream'
+                        ">
+                            <CodeEditor 
+                                display-mode="dark"
+                                :modelValue="contentsWrapper"
+                                ref="codeEditorRef"
+                                placeholder="Loading..."
+                            />
+                        </div>
+                        <div class="image-preview" v-if="mime.startsWith('image/')">
+                            <img :src="url"/>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -56,17 +68,19 @@
 </template>
   
 <script lang="ts" setup>
-import { ref, defineProps, watch, computed, defineModel } from "vue";
+import { ref, defineProps, watch, computed, defineModel, reactive } from "vue";
 
 import PDFPreview from "../render/pdf/PDFPreview.vue";
 import Sidebar from "primevue/sidebar";
 import Toolbar from "primevue/toolbar";
 import Button from "primevue/button";
+import CodeEditor from "../misc/CodeEditor.vue";
 
 const sidebar = ref();
+const codeEditorRef = ref();
 
 // dynamically updates with result of async watch
-let fallbackMime = "";
+const fallbackMime = ref("");
 
 const hookResize = () => {
     const resize = event => {
@@ -98,7 +112,11 @@ type PreviewContents = {
 const contents = ref<PreviewContents>({
     isLoading: false,
     contentLength: -1,
-})
+});
+
+const decoder = new TextDecoder()
+
+
 
 // max size in bytes to preview (10 MB for now)
 const maxSize = 10 * 1000000;
@@ -115,8 +133,28 @@ const props = defineProps([
 ])
 
 const visible = defineModel<boolean>();
-const mime = computed(() => props.mimetype ?? fallbackMime ?? '')
 
+const mime = computed(() => props.mimetype ?? fallbackMime.value ?? '')
+
+// contents as what is most useful by guessing at typing 
+let contentsWrapper = computed(() => {
+    const data = contents.value?.contents;
+    if (mime.value.startsWith('image/') || mime.value === 'application/pdf') {
+        return "<loaded elsewhere via url>";
+    }
+    if (data) {
+        return decoder.decode(data)
+    }
+    return "";
+});
+
+// not sure why manually refreshing this matters with reactive refs:
+// {{ contentsWrapper }} updates live, as a model of codemirror it doesn't.
+watch(() => [contentsWrapper.value], (current, old) => {
+    if (codeEditorRef.value) {
+        codeEditorRef.value.model = current[0];
+    }
+})
 
 const shortname = computed(() => {
     const parts = props.url?.split('/');
@@ -156,9 +194,9 @@ watch(() => [props.url, props.mimetype], async (f, s) => {
     
     if (props.mimetype === undefined || props.mimetype == null) {
         console.log(`had to use fallback: ${mimetype}`);
-        fallbackMime = mimetype;
+        fallbackMime.value = mimetype;
     } else {
-        fallbackMime = undefined;
+        fallbackMime.value = undefined;
     }
 
     contents.value.contentLength = parseInt(length, 10);
@@ -176,7 +214,6 @@ watch(() => [props.url, props.mimetype], async (f, s) => {
 .preview-container-pre {
     display: flex;
     flex-direction: row;
-    height: 100%;
 }
 .preview-draggable {
     width: 3px;
@@ -198,6 +235,12 @@ watch(() => [props.url, props.mimetype], async (f, s) => {
             margin-left: 0;
         }
     }
+    overflow: hidden;
+}
+
+.preview-under-toolbar {
+    height: 100%;
+    overflow: scroll;
 }
 
 div.preview-standard-toolbar {
