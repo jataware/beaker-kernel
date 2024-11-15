@@ -60,7 +60,11 @@
               :id="`file-list::${slotProps.data.path}`" 
               class="file-name" 
               :class="slotProps.data.type"
-              @click="previewFile(slotProps.data.path, slotProps.data.mimetype)"
+              @click="() => {
+                if (slotProps.data.type !== 'directory') {
+                  previewFile(slotProps.data.path, slotProps.data.mimetype)
+                }
+              }"
             >
               {{ slotProps.data.name }}
             </span>
