@@ -99,7 +99,7 @@ import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
 import { useToast } from 'primevue/usetoast';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
+import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
@@ -144,6 +144,7 @@ const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     JSONRenderer,
     LatexRenderer,
     DecapodeRenderer,
+    TableRenderer
 ];
 
 const cellComponentMapping = {

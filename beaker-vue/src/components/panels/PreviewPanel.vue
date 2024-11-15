@@ -31,6 +31,14 @@
                             <template #center>
                                 <span>{{ shortname }}</span>
                             </template>
+                            <template #end>
+                                <Button 
+                                    v-if="mimetypeConfig[mime]?.hasRawToggle"
+                                    class="preview-raw" 
+                                    @click="isRaw = !isRaw"
+                                    :label="!isRaw ? 'Raw View' : 'Rich View'"
+                                />
+                            </template>
                         </Toolbar>
                     </div>
                     <div class="preview-under-toolbar">
@@ -44,12 +52,10 @@
                             />
                             <span>File is {{ contents.contentLength / 1000000 }} MB</span>
                         </div>
-                        <div class="pdf-preview" v-if="mime === 'application/pdf'">
+                        <div class="pdf-preview" v-if="mimeCategory(mime) === 'pdf'">
                             <PDFPreview :url="url" :sidebarCallback="closeCallback"/>
                         </div>
-                        <div class="text-preview" v-if="
-                            mime.startsWith('text/') || mime === 'application/octet-stream'
-                        ">
+                        <div class="text-preview" v-if="mimeCategory(mime) === 'plaintext'">
                             <CodeEditor 
                                 display-mode="dark"
                                 :modelValue="contentsWrapper"
@@ -57,8 +63,21 @@
                                 placeholder="Loading..."
                             />
                         </div>
-                        <div class="image-preview" v-if="mime.startsWith('image/')">
+                        <div class="image-preview" v-if="mimeCategory(mime) === 'image'">
                             <img :src="url"/>
+                        </div>
+                        <div class="csv-preview" v-if="mimeCategory(mime) === 'csv'">
+                            <BeakerMimeBundle 
+                                v-if="!isRaw"
+                                :mimeBundle="{[mime]: contentsWrapper}"
+                            />
+                            <CodeEditor 
+                                v-if="isRaw"
+                                display-mode="dark"
+                                :modelValue="contentsWrapper"
+                                ref="codeEditorRef"
+                                placeholder="Loading..."
+                            />
                         </div>
                     </div>
                 </div>
@@ -75,12 +94,16 @@ import Sidebar from "primevue/sidebar";
 import Toolbar from "primevue/toolbar";
 import Button from "primevue/button";
 import CodeEditor from "../misc/CodeEditor.vue";
+import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 
 const sidebar = ref();
 const codeEditorRef = ref();
 
 // dynamically updates with result of async watch
 const fallbackMime = ref("");
+
+// should nice-looking renderers show raw instead - see config
+const isRaw = ref(false);
 
 const hookResize = () => {
     const resize = event => {
@@ -95,12 +118,41 @@ const hookResize = () => {
     document.querySelector('body').addEventListener('mouseup', unhookResize);
 }
 
+type PreviewCategory =
+    | 'image' 
+    | 'csv' 
+    | 'tsv'
+    | 'plaintext' 
+    | 'pdf'
+
+// text/csv should have more priority than text/?? or octet-stream for rich matching.
+const mimeCategory = (mimetype: string): PreviewCategory => {
+    if (mimetype.startsWith('image/')) {
+        return 'image'
+    }
+    if (mimetype === 'application/pdf') {
+        return 'pdf'
+    }
+    if (mimetype === 'text/csv') {
+        return 'csv'
+    }
+    if (mimetype === 'text/tsv') {
+        return 'tsv'
+    }
+    // application/octet-stream is a common plaintext unknown
+    return 'plaintext'
+}
+
 type PreviewConfig = {
-    overridesToolbar?: boolean
+    overridesToolbar?: boolean;
+    hasRawToggle?: boolean;
 }
 const mimetypeConfig: {[key in string]: PreviewConfig} = {
     "application/pdf": {
         overridesToolbar: true
+    },
+    "text/csv": {
+        hasRawToggle: true
     }
 }
 
@@ -115,8 +167,6 @@ const contents = ref<PreviewContents>({
 });
 
 const decoder = new TextDecoder()
-
-
 
 // max size in bytes to preview (10 MB for now)
 const maxSize = 10 * 1000000;
@@ -214,6 +264,7 @@ watch(() => [props.url, props.mimetype], async (f, s) => {
 .preview-container-pre {
     display: flex;
     flex-direction: row;
+    min-height: 100%;
 }
 .preview-draggable {
     width: 3px;
@@ -241,6 +292,10 @@ watch(() => [props.url, props.mimetype], async (f, s) => {
 .preview-under-toolbar {
     height: 100%;
     overflow: scroll;
+    // csv renderer -- hide mimetypes but don't change this for notebook
+    div.csv-preview div div.mime-select-container {
+        display: none;
+    }
 }
 
 div.preview-standard-toolbar {
@@ -258,5 +313,14 @@ div.preview-standard-toolbar {
 button.preview-close {
     width: 2rem;
     height: 2rem;
+}
+button.preview-raw {
+    height: 2rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    span.p-button-label {
+        font-weight: 400;
+        text-wrap: nowrap;
+    }
 }
 </style>
