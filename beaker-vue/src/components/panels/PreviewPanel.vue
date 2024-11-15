@@ -61,6 +61,7 @@
                                 :modelValue="contentsWrapper"
                                 ref="codeEditorRef"
                                 placeholder="Loading..."
+                                :language="mime === 'text/x-python' ? 'python' : ''"
                             />
                         </div>
                         <div class="image-preview" v-if="mimeCategory(mime) === 'image'">
