@@ -31,17 +31,26 @@ const props = defineProps([
     "mimeType"
 ]);
 
+const processSeparatedValues = (rowSeparator, valueSeparator): 
+    {columns: string[], values: object[]} => 
+{
+    const rows: string[] = props.data.split(rowSeparator); 
+    const header: string[] = rows[0].split(valueSeparator);
+    const values = rows.slice(1).map((row) => 
+        row.split(',').reduce((combined, entry, index) => 
+            ({[header[index]]: entry.trim(), ...combined}), {}))
+    return {
+        columns: header,
+        values,
+    }
+}
+
 const processedData = computed(() => {
     if (props.mimeType === 'text/csv') {
-        const lines: string[] = props.data.split('\n'); 
-        const header: string[] = lines[0].split(',');
-        const values = lines.slice(1).map((line) => 
-            line.split(',').reduce((combined, entry, index) => 
-                ({[header[index]]: entry.trim(), ...combined}), {}))
-        return {
-            columns: header,
-            values
-        }
+        return processSeparatedValues('\n', ',');
+    }
+    if (props.mimeType === 'text/tsv') {
+        return processSeparatedValues('\t', ',');
     }
     return props.data
 })
