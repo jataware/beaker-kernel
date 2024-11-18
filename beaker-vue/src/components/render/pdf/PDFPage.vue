@@ -90,8 +90,9 @@ watch(() => [props.scale, props.page], () => renderPage(props.page));
 <style scoped>
     .pdf-container {
         display: flex;
-        justify-content: center;
-        align-items: center;
+        /* should only apply when canvas width < element width. otherwise breaks scroll. */
+        /* justify-content: center;
+        align-items: center; */
         overflow: auto;
     }
     .pdf-canvas {
