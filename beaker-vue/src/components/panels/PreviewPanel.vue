@@ -42,10 +42,9 @@
                         </Toolbar>
                     </div>
                     <div class="preview-under-toolbar">
-                        <div v-if="contents.isLoading">
+                        <div v-if="showPreviewInterrupt">
                             <Button 
                                 class="preview-cancel" 
-                                icon="pi pi-times" 
                                 @click="contentsAborter.abort()"
                                 severity="danger"
                                 value="Cancel Preview"
@@ -61,7 +60,7 @@
                                 :modelValue="contentsWrapper"
                                 ref="codeEditorRef"
                                 placeholder="Loading..."
-                                :language="mime === 'text/x-python' ? 'python' : ''"
+                                :language="mime === 'text/x-python' ? 'python' : undefined"
                             />
                         </div>
                         <div class="image-preview" v-if="mimeCategory(mime) === 'image'">
@@ -166,6 +165,10 @@ const contents = ref<PreviewContents>({
     isLoading: false,
     contentLength: -1,
 });
+// should be in sync with isLoading, with false->true state change delayed by 500ms
+// (500ms being a dummy value for "when would a user want to interrupt a preview operation")
+const showPreviewInterrupt = ref(false);
+const previewInterruptTime = 500;
 
 const decoder = new TextDecoder()
 
@@ -193,8 +196,14 @@ let contentsWrapper = computed(() => {
     if (mime.value.startsWith('image/') || mime.value === 'application/pdf') {
         return "<loaded elsewhere via url>";
     }
+    // even if data exists, handle 0-byte files.
     if (data) {
-        return decoder.decode(data)
+        if (data.length > 0) {
+            return decoder.decode(data)
+        }
+        else {
+            return "<file is 0 bytes>"
+        }
     }
     return "";
 });
@@ -224,6 +233,12 @@ const getContents = async (url: string) => {
     for await (const chunk of response.body) {
         fullContents.push(chunk);
     }
+
+    // file is empty
+    if (fullContents.length === 0) {
+        return [];
+    }
+
     // merge uint8arrays without spread syntax. 50x speedup as according to SO
     // create a new uint8array the size of sum(chunks.length)
     const mergedArray = new Uint8Array(
@@ -241,6 +256,13 @@ const getContents = async (url: string) => {
 
 watch(() => [props.url, props.mimetype], async (f, s) => {
     // if no associated mimetype, find a fallback
+    contents.value = {
+        isLoading: true,
+        contentLength: 0,
+    };
+    const timeout = setTimeout(() => {
+        showPreviewInterrupt.value = true;
+    }, previewInterruptTime)
     const [mimetype, length] = await getInfoFromURL(props.url);
     
     if (props.mimetype === undefined || props.mimetype == null) {
@@ -255,6 +277,8 @@ watch(() => [props.url, props.mimetype], async (f, s) => {
         contents.value.contents = undefined;
     } else {
         contents.value.contents = await getContents(props.url);
+        contents.value.isLoading = false;
+        clearTimeout(timeout);
     }
 
 })
@@ -277,6 +301,8 @@ watch(() => [props.url, props.mimetype], async (f, s) => {
     cursor: col-resize;
 }
 .preview-container-main {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     // if pdf controls are integrated here, remove border, but don't change default control bar styling
     .pdf-preview .controls-container div.p-toolbar {
@@ -291,8 +317,8 @@ watch(() => [props.url, props.mimetype], async (f, s) => {
 }
 
 .preview-under-toolbar {
-    height: 100%;
-    overflow: scroll;
+    flex: 1;
+    overflow: auto;
     // csv renderer -- hide mimetypes but don't change this for notebook
     div.csv-preview div div.mime-select-container {
         display: none;
