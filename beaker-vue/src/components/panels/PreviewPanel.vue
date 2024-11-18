@@ -47,7 +47,7 @@
                                 class="preview-cancel" 
                                 @click="contentsAborter.abort()"
                                 severity="danger"
-                                value="Cancel Preview"
+                                label="Cancel Preview"
                             />
                             <span>File is {{ contents.contentLength / 1000000 }} MB</span>
                         </div>
