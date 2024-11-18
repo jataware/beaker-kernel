@@ -1,12 +1,18 @@
 <template>
     <div class="table-renderer">
-        <DataTable :value="processedData.values">
+        <DataTable 
+            :value="processedData.values"
+            paginator 
+            :rows="20" 
+            :rowsPerPageOptions="[10, 20, 50]"
+        >
             <Column 
                 v-for="column in processedData.columns"
                 :field="column"
                 :header="column"
                 :key="column"
             >
+            
             </Column>
         </DataTable>
     </div>
