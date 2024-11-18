@@ -51,34 +51,27 @@
             <slot name="toast">
                 <Toast position="bottom-right" />
             </slot>
+            <slot name="confirmation">
+                <ConfirmDialog></ConfirmDialog>
+            </slot>
         </div>
         <slot name="login-dialog">
-            <!-- <Dialog v-model:visible="authDialogVisible" modal header="Model service authentication required">
-                <div>
-                    The configured LLM model service requires an authentication token.
-                </div>
-                <div>
-                    {{ authMessage }}
-                </div>
-                <input type="password" v-model="authDialogEntry"> -->
-            <Dialog v-model:visible="authDialogVisible" modal header="OpenAI auth error" style="max-width: 45vw;">
-                <div style="margin-bottom: 1rem;">
-                    The OpenAI service requires a valid authentication key.
-                </div>
+            <Dialog
+                ref="loginDialogRef"
+                v-model:visible="authDialogVisible"
+                modal
+                :draggable="false"
+                header="Model Provider Configuration"
+                @show="providerConfig"
+            >
                 <div v-if="authMessage" style="margin-bottom: 1rem;">
-                    Message from service:<br/>
+                    <h3>Message from service:</h3>
                     <span style="font-style: italic;">{{ authMessage }}</span>
                 </div>
-
-                <div style="margin-bottom: 1rem;">
-                    Please provide a valid API key to continue. It will not be used for this session but will not be saved.
-                </div>
-
-                <InputGroup>
-                    <InputText type="password" v-model="authDialogEntry" placeholder="OpenAI key" @keydown.enter="setApiKey" autofocus/>
-                    <Button icon="pi pi-check" @click="setApiKey"/>
-                </InputGroup>
-
+                <ProviderSelector
+                    @set-agent-model="setAgentModel"
+                    @close-dialog="authDialogVisible = false"
+                />
             </Dialog>
         </slot>
     </BeakerSession>
@@ -87,6 +80,7 @@
 <script setup lang="ts">
 import { defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounted, toRaw, defineExpose } from 'vue';
 import Dialog from 'primevue/dialog';
+import ConfirmDialog from 'primevue/confirmdialog';
 import BeakerSession from '../components/session/BeakerSession.vue';
 import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
 import Toast from 'primevue/toast';
@@ -95,8 +89,10 @@ import {BeakerSession as Session} from 'beaker-kernel/src'
 import InputText from 'primevue/inputtext';
 import InputGroup from 'primevue/inputgroup';
 import Button from 'primevue/button';
+import ProviderSelector from '../components/misc/ProviderSelector.vue';
 import sum from 'hash-sum';
 
+import {default as ConfigPanel, getConfigAndSchema, dropUnchangedValues, objectifyTables, tablifyObjects, saveConfig} from '../components/panels/ConfigPanel.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
 
@@ -144,6 +140,7 @@ const authDialogVisible = ref<boolean>(props.apiKeyPrompt || false);
 const authDialogEntry = ref<string>("");
 const authMessage = ref<string>("");
 const authRetryCell = ref();
+const loginDialogRef = ref();
 
 const contextSelectionOpen = ref(false);
 const contextProcessing = ref(false);
@@ -203,22 +200,20 @@ const iopubMessage = (_sessionConn, msg) => {
         authMessage.value = msg.content.msg;
         if (msg.cell !== undefined) {
             console.log(msg.cell, " is ")
+            console.log(getConfigAndSchema(beakerSession.value));
             authRetryCell.value = msg.cell;
         }
     }
 };
 
-const setApiKey = async () => {
-    const apiKey = authDialogEntry.value;
-    if (apiKey.length == 0) {
-        return;
-    }
+const setAgentModel = async (modelConfig = null, rerunLastCommand = false) => {
     const session = beakerSession.value.session;
-    await session.sendBeakerMessage("llm_set_key", {
-        api_key: apiKey
-    });
-    authDialogVisible.value = false;
-    if (authRetryCell.value) {
+    const resetFuture = session.sendBeakerMessage(
+        "set_agent_model",
+        modelConfig,
+    )
+    await resetFuture.done;
+    if (rerunLastCommand && authRetryCell.value) {
         console.log(authRetryCell);
         authRetryCell.value.execute(session);
     }
@@ -291,6 +286,10 @@ const snapshot = async () => {
     }
 };
 
+const providerConfig = () => {
+    // console.log();
+}
+
 defineExpose({
     beakerSession,
     showToast,
@@ -335,7 +334,7 @@ main {
         "left-panel center-panel right-panel" 100% /
         min-content minmax(30%, 100%) min-content;
     background-color: var(--surface-0);
-    overflow: hidden auto;
+    overflow: hidden;
     max-width: 100%;
     max-height: 100%;
 }
@@ -359,6 +358,10 @@ footer {
 #right-panel {
     grid-area: right-panel;
     width: 100%;
+}
+
+.p-confirm-dialog {
+    white-space: pre-line;
 }
 
 </style>

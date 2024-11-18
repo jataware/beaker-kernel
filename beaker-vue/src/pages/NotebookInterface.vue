@@ -70,15 +70,16 @@
                 <SideMenuPanel label="Info" icon="pi pi-home">
                     <InfoPanel/>
                 </SideMenuPanel>
-                <SideMenuPanel id="files" label="Files" icon="pi pi-file-export" no-overflow>
+                <SideMenuPanel id="files" label="Files" icon="pi pi-file-export" no-overflow :lazy="true">
                     <FilePanel
                         ref="filePanelRef"
                         @open-file="loadNotebook"
                     />
                 </SideMenuPanel>
-                <SideMenuPanel id="config" label="Config" icon="pi pi-cog">
+                <SideMenuPanel id="config" label="Config" icon="pi pi-cog" :lazy="true">
                     <ConfigPanel
                         ref="configPanelRef"
+                        @restart-session="restartSession"
                     />
                 </SideMenuPanel>
             </SideMenu>
@@ -92,7 +93,6 @@ import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from '
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
@@ -245,6 +245,15 @@ const statusChanged = (newStatus) => {
     connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
 };
 
+
+const restartSession = async () => {
+    console.log(beakerSession.value);
+    const resetFuture = beakerSession.value.session.sendBeakerMessage(
+        "reset_request",
+        {}
+    )
+    await resetFuture;
+}
 
 const loadNotebook = (notebookJSON: any, filename: string) => {
     const notebook = beakerNotebookRef.value;

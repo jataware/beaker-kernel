@@ -8,22 +8,15 @@ import sys
 import traceback
 import uuid
 from functools import partial
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 import requests
 from tornado import ioloop
 
-from .contexts.default.context import DefaultContext
 from .lib.context import BeakerContext, autodiscover_contexts
-from .lib.jupyter_kernel_proxy import (KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
-                                       InterceptionFilter, JupyterMessage,
-                                       KernelProxyManager)
+from .lib.jupyter_kernel_proxy import InterceptionFilter, JupyterMessage, KernelProxyManager
 from .lib.utils import (message_handler, LogMessageEncoder, magic,
-                        handle_message, get_socket, execution_context, parent_message_context, get_parent_message)
-
-if TYPE_CHECKING:
-    from .lib.agent import BeakerAgent
-    from .lib.subkernels.base import BeakerSubkernel
+                        handle_message, get_socket, execution_context, parent_message_context)
 
 USER_RESPONSE_WAIT_TIME = 100
 
@@ -59,6 +52,7 @@ class BeakerKernel(KernelProxyManager):
     user_responses: dict[str, str]
     debug_enabled: bool
     magic_commands: dict[str, callable]
+    ready: asyncio.Future
 
     def __init__(self, session_config, kernel_id=None, connection_file=None):
         self.kernel_id = kernel_id
@@ -75,7 +69,8 @@ class BeakerKernel(KernelProxyManager):
         self.user_responses = dict()
         # Initialize context (Using the event loop to simulate `await`ing the async func in non-async setup)
         event_loop = asyncio.get_event_loop()
-        event_loop.run_until_complete(self.start_default_context())
+        context_task = event_loop.create_task(self.start_default_context())
+        context_task.add_done_callback(lambda task: None)
 
     async def start_default_context(self):
         default_context = os.environ.get('BEAKER_DEFAULT_CONTEXT')
@@ -114,7 +109,8 @@ class BeakerKernel(KernelProxyManager):
         )
         self.server.intercept_message("shell", "execute_reply", self.post_execute)
         self.server.intercept_message("stdin", "input_reply", self.input_reply)
-        self.server.intercept_message("shell", "llm_set_key", self.llm_set_key)
+        self.server.intercept_message("shell", "set_agent_model", self.set_agent_model)
+        self.server.intercept_message("shell", "reset_request", self.reset_kernel)
 
     def register_magic_commands(self):
         for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_magic_prefix")):
@@ -159,7 +155,7 @@ class BeakerKernel(KernelProxyManager):
             content={},
             parent_header=parent_header,
         )
-        self.stdout(f"Context switch complete.", parent_header=parent_header)
+        self.stdout("Context switch complete.", parent_header=parent_header)
 
         # TODO: Return the new context info
         return None
@@ -247,7 +243,7 @@ class BeakerKernel(KernelProxyManager):
             run_info = {}
         run_info.update(kwargs)
         with open(self.connection_file, "w") as connection_file:
-                json.dump(run_info, connection_file, indent=2)
+            json.dump(run_info, connection_file, indent=2)
 
     async def set_context(self, context_name, context_info, language="python3", parent_header={}):
 
@@ -422,11 +418,12 @@ class BeakerKernel(KernelProxyManager):
             raise Exception("Context has not been set")
         setattr(self.context, "current_llm_query", request)
         try:
-            # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track thoughts
-            # with parent_message_context(parent_message=message):
+            # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track
+            # thoughts
+            if self.context.agent:
                 self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
-                self.debug("llm_query", request, parent_header=message.header)
-                result = await self.context.agent.react_async(request, react_context={"message": message})
+            self.debug("llm_query", request, parent_header=message.header)
+            result = await self.context.agent.react_async(request, react_context={"message": message})
         except AuthenticationError as err:
             self.send_response(
                 stream="iopub",
@@ -480,7 +477,6 @@ class BeakerKernel(KernelProxyManager):
             # When done, put thought handler back to default to not potentially cause confused thoughts.
             self.context.agent.thought_handler = self.handle_thoughts
             setattr(self.context, "current_llm_query", None)
-
 
     @message_handler
     async def context_info_request(self, message):
@@ -547,12 +543,31 @@ class BeakerKernel(KernelProxyManager):
         self.user_responses[parent_id] = content["value"]
 
     @message_handler
-    async def llm_set_key(self, message):
-        content = message.content
-        logger.warning(content)
-        api_key = content.get("api_key", None)
-        if api_key:
-            self.context.agent.set_openai_key(api_key)
+    async def set_agent_model(self, message):
+        from beaker_kernel.lib.config import reset_config, config
+        provider_id = message.content.get("provider_id", None)
+        model_config = message.content.get("model_config", None)
+        if provider_id or model_config:
+            model = config.get_model(provider_id=provider_id, model_config=model_config)
+        else:
+            # Refresh the cached config object so we pick up any changes to the config at the source
+            reset_config()
+            model = config.get_model()
+        if model:
+            self.context.agent.model = model
+
+    @message_handler
+    async def reset_kernel(self, message):
+        from beaker_kernel.lib.config import reset_config
+        reset_config()
+        await self.set_context(
+            self.context.SLUG,
+            self.context.config,
+            language=self.context.subkernel.SLUG,
+            parent_header=message.header
+        )
+        return True
+
 
 # Provided for backwards compatibility
 LLMKernel = BeakerKernel

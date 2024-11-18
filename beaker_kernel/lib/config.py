@@ -1,15 +1,35 @@
 import binascii
 import dotenv
+import importlib
+import inspect
 import logging
 import os
 import toml
-from dataclasses import dataclass, field, MISSING
+from dataclasses import dataclass, field, MISSING, asdict, is_dataclass
+from enum import Enum
 from pathlib import Path
 from collections.abc import Collection
-from typing import Callable, Any, TypeAlias, TypeVar, Generic, Literal
+from copy import deepcopy
+from typing import Callable, Any, TypeAlias, TypeVar, Generic, Literal, get_args, get_origin
 from typing_extensions import Self
 
+from beaker_kernel.lib.utils import DefaultModel
+
 logger = logging.getLogger(__name__)
+
+
+def get_providers() -> dict[str, str]:
+    import archytas.models
+    base_class = archytas.models.BaseArchytasModel
+    items = inspect.getmembers(
+        archytas.models,
+        lambda item:
+            isinstance(item, type) and \
+            issubclass(item, base_class) and \
+            item is not base_class
+    )
+    result = {item[0]: f"{item[1].__module__}.{item[1].__name__}" for item in items}
+    return result
 
 
 CONFIG_FILE_SEARCH_LOCATIONS = [  # (path, filename, check_parent_paths, default)
@@ -79,7 +99,10 @@ def configfield(
     sensitive: bool = False,
     aliases: list[str] = None,
     save_default_value: bool = False,
-    normalize_function: Callable[[Any], Any] = MISSING
+    normalize_function: Callable[[Any], Any] = MISSING,
+    placeholder_text: str = MISSING,
+    label: str = MISSING,
+    options: Callable[[], list[Any]] = MISSING,
 ):
     def dynamic_factory():
         # Get value if defined
@@ -116,40 +139,56 @@ def configfield(
     }
     if env_var and env_var is not MISSING:
         metadata["env_var"] = env_var
+    if placeholder_text is not MISSING:
+        metadata["placeholder_text"] = placeholder_text
+    if label is not MISSING:
+        metadata["label"] = label
+    if options is not MISSING:
+        metadata["options"] = options()
     return field(
         metadata=metadata,
         default_factory=dynamic_factory,
     )
 
+from collections.abc import Iterable
+from typing import Tuple, Union, get_args
 
 T = TypeVar("T")
+C = TypeVar("C")
 
-# @dataclass
-class TableRecord(Generic[T]):
-    key: str = field()
-    value: T = field()
-
-class Table(list[TableRecord[T]]):
+class Table(dict[str, T]):
     pass
 
 class Tables(list[Table[T]]):
     pass
 
+class Choice(Generic[C]):
+    @classmethod
+    def default_value(cls):
+        return None
+
+
 @dataclass
 class LLM_Service_Provider:
     import_path: str = configfield(
         description="Dot-separated import path to the LLM Service Provider class.",
-        default="archytas.models.OpenAIModel"
+        default="archytas.models.openai.OpenAIModel",
+        options=get_providers,
     )
     default_model_name: str = configfield(
         description="Name of the default model to use with this provider.",
         default="gpt-4o"
     )
-    api_key: str | None = configfield(
+    api_key: str = configfield(
         description="API key or token for authenticating to the provider, if required.",
-        default=None,
+        default="",
         sensitive=True,
     )
+
+    @classmethod
+    def default_value(cls):
+        return asdict(cls())
+
 
 @dataclass
 class ConfigClass:
@@ -160,33 +199,16 @@ class ConfigClass:
         save_default_value=False,
     )
     jupyter_token: str = configfield(
-        "Token to use when communicating with the Jupyter or Beaker server.",
+        "Token to use when communicating with the Jupyter/Beaker server.",
         "JUPYTER_TOKEN",
         default_factory=new_token,
         save_default_value=False,
     )
-    provider: LLM_Service_Provider | str = configfield(
+    provider: Choice[Literal["providers"]] = configfield(
         description="LLM model provider to use. Maps to archytas model classes.",
         env_var="LLM_SERVICE_PROVIDER",
-        default_factory=lambda: LLM_Service_Provider(
-            import_path="archytas.models.OpenAIModel",
-            api_key=None,
-        ),
+        default_factory=lambda: "openai",
         save_default_value=True,
-    )
-    model_name: str = configfield(
-        "Name of LLM model to use.",
-        "LLM_SERVICE_MODEL",
-        default="gpt-4o",
-        sensitive=False,
-        save_default_value=True,
-    )
-    llm_service_token: str | None = configfield(
-        "API key used for authenticating to the LLM service, if required.",
-        "LLM_SERVICE_TOKEN",
-        default=None,
-        sensitive=True,
-        aliases=["OPENAI_API_KEY"],
     )
     enable_checkpoints: bool = configfield(
         "Flag as to whether checkpoints are enabled or not.",
@@ -194,22 +216,81 @@ class ConfigClass:
         default=True,
         sensitive=False,
         normalize_function=normalize_bool,
+        label="Foo???"
     )
 
     tools_enabled: Table[bool] = configfield(
         description="This table allows you to enable/disable tools. The key is the name of the tool, and the value is a \
 boolean value which will enable/disable the tool based on the value.",
-        default_factory=lambda: {}
+        default_factory=lambda: {
+            "ask_user": True,
+            "run_code": True,
+        },
+        label="Enabled?",
     )
 
     providers: Table[LLM_Service_Provider] = configfield(
         description="Allows switching between LLM Model providers/APIs.",
-        default_factory=lambda: {}
+        default_factory=lambda: {
+            "openai": {
+                "import_path": "archytas.models.openai.OpenAIModel",
+                "default_model_name": "gpt-4o-mini",
+                "api_key": ""
+            },
+            "anthropic": {
+                "import_path": "archytas.models.anthropic.AnthropicModel",
+                "default_model_name": "claude-3-5-sonnet-20241022",
+                "api_key": ""
+            },
+            "gemini": {
+                "import_path": "archytas.models.gemini.GeminiModel",
+                "default_model_name": "gemini-1.5-flash",
+                "api_key": ""
+            },
+            "groq": {
+                "import_path": "archytas.models.groq.GroqModel",
+                "default_model_name": "llama3-8b-8192",
+                "api_key": ""
+            },
+            "ollama": {
+                "import_path": "archytas.models.ollama.OllamaModel",
+                "default_model_name": "mistral-nemo",
+                "api_key": ""
+            },
+        },
+    )
+
+    model_provider_import_path: str = configfield(
+        "Name of LLM model to use.",
+        "LLM_SERVICE_MODEL",
+        default="",
+        sensitive=False,
+        save_default_value=False,
+        placeholder_text="Set this value to override default.",
+    )
+
+    model_name: str = configfield(
+        "Name of LLM model to use.",
+        "LLM_SERVICE_MODEL",
+        default="",
+        sensitive=False,
+        save_default_value=False,
+        placeholder_text="Set this value to override default.",
+    )
+
+    llm_service_token: str | None = configfield(
+        "API key used for authenticating to the LLM service, if required.",
+        "LLM_SERVICE_TOKEN",
+        default="",
+        sensitive=True,
+        aliases=["OPENAI_API_KEY"],
+        save_default_value=False,
+        placeholder_text="Set this value to override default.",
     )
 
 
     @classmethod
-    def from_config_file(cls, config_file_path: Path|str|None = None, load_dotenv=True):
+    def from_config_file(cls, config_file_path: Path|str|None = None, load_dotenv=True, **kwargs):
         config_file = locate_config(start_path=config_file_path)
         if config_file and config_file.exists():
             config_data = toml.loads(config_file.read_text())
@@ -221,6 +302,9 @@ boolean value which will enable/disable the tool based on the value.",
             env_file = locate_envfile()
             dotenv.load_dotenv(dotenv_path=env_file)
 
+        # Override defaults with passed in keyword values
+        config_data.update(kwargs)
+
         # Create instance, passing in only options that are defined as fields
         instance = cls(**{
             option: value
@@ -228,8 +312,6 @@ boolean value which will enable/disable the tool based on the value.",
             if option in cls.__dataclass_fields__ and not option.startswith('_')
         })
 
-        # instance._tools_enabled = config_data.get('tools_enabled', {})
-        # instance._model_config = config_data.get('model_config', {})
         return instance
 
     def update(self, updates: dict, config_file_path: Path|str|None = None):
@@ -251,50 +333,110 @@ boolean value which will enable/disable the tool based on the value.",
 class Config(ConfigClass):
     """Lazy loading wrapper around ConfigClass"""
     config_obj: ConfigClass | None
+    defaults: dict[str, Any]
+    config_type: "Config.ConfigTypes"
 
-    def __init__(self) -> None:
+    class ConfigTypes(str, Enum):
+        FILE = "file"
+        SESSION = "session"
+        SERVER = "server"
+        OTHER = "other"
+
+    def __init__(self, **kwargs) -> None:
         self.config_obj = None
+        config_type_str: str = kwargs.pop("config_type", os.environ.get("CONFIG_TYPE", "file"))
+        self.config_type = getattr(self.ConfigTypes, config_type_str.upper(), self.ConfigTypes.FILE)
+        self.defaults = kwargs
 
     def __getattr__(self, name: str):
         if name in (['__dataclass_fields__', '__dataclass_params__'] + list(ConfigClass.__dataclass_fields__.keys())):
             if not self.config_obj:
-                self.config_obj = ConfigClass.from_config_file()
+                if self.config_type == self.ConfigTypes.FILE:
+                    self.config_obj = ConfigClass.from_config_file(**self.defaults)
+                else:
+                    self.config_obj = ConfigClass(**self.defaults)
             return getattr(self.config_obj, name)
         raise AttributeError
 
-    # @property
-    # def tools_enabled(self) -> dict[str, bool]:
-    #     return getattr(self.config_obj, '_tools_enabled', {})
+    def get_model(self, provider_id=None, model_config=None):
+        from archytas.exceptions import AuthenticationError
+        config_obj: dict | None = None
 
-    # @property
-    # def model_config(self) -> dict[str, any]:
-    #     return getattr(self.config_obj, '_model_config', {})
+        if provider_id:
+            config_obj = self.providers.get(provider_id, None)
+            if isinstance(config_obj, dict) and isinstance(model_config, dict):
+                config_obj.update(model_config)
+        elif isinstance(model_config, dict):
+            config_obj = model_config
 
-    def get_model(self):
-        pass
-        # import importlib
-        # default_model_name = self.model_config.get("model", None)
-        # if 'dotted_import_path' in self.model_config and 'model_name' in self.model_config:
-        #     model_config = self.model_config
-        # elif default_model_name and default_model_name in self.model_config:
-        #     model_config = self.model_config.get(default_model_name)
-        # else:
-        #     from archytas.models import OpenAIModel
-        #     return OpenAIModel({})
+        # Fetch config if model_config is None or empty.
+        if not config_obj:
+            # Get model from config
+            config_obj: dict = self.providers.get(self.provider, {})
 
-        # # Copying config so it doesn't get changed globally if modified in the model instance
-        # model_config = model_config.copy()
+            # Override defaults if set
+            if self.model_provider_import_path:
+                config_obj["import_path"] = self.model_provider_import_path
+            if self.model_name:
+                config_obj["model_name"] = self.model_name
+            if self.llm_service_token:
+                config_obj["api_key"] = self.llm_service_token
 
-        # module_name, cls_name = model_config.pop("dotted_import_path").rsplit('.', 1)
-        # module = importlib.import_module(module_name)
-        # cls = getattr(module, cls_name, None)
-        # if cls and isinstance(cls, type):
-        #     return cls(model_config)
-        # else:
-        #     raise ImportError(f"Unable to load model identified by '{module_name}.{cls_name}'. Please make sure it is properly installed.")
+        # import_path key is required. If we don't have one, we don't have a valid provider.
+        if not "import_path" in config_obj:
+            return None
+
+        # Copying config so it doesn't get changed globally if modified in the model instance
+        config_obj = deepcopy(config_obj)
+        if "model_name" not in config_obj and "default_model_name" in config_obj:
+            config_obj["model_name"] = config_obj["default_model_name"]
+
+        module_name, cls_name = config_obj.pop("import_path").rsplit('.', 1)
+        module = importlib.import_module(module_name)
+
+        cls = getattr(module, cls_name, None)
+        if cls and isinstance(cls, type):
+            try:
+                return cls(config_obj)
+            except AuthenticationError:
+                return DefaultModel({})
+        else:
+            raise ImportError(f"Unable to load model identified by '{module_name}.{cls_name}'. Please make sure it is properly installed.")
 
 config = Config()
 
 
 def reset_config():
     config.config_obj = None
+
+
+def recursiveOptionalUpdate(obj: Any, update_obj: Any, obj_type=None):
+    try:
+        if obj_type is None:
+            obj_type = obj.__class__
+        if is_dataclass(obj):
+            result = {}
+            for field_name, field in obj.__dataclass_fields__.items():
+                field_value = getattr(obj, field_name)
+                new_value = recursiveOptionalUpdate(field_value, update_obj[field_name], obj_type=field.type)
+                result[field_name] = new_value
+            return result
+        elif is_dataclass(obj_type):
+            result = {}
+            for field_name, field in obj_type.__dataclass_fields__.items():
+                field_value = obj.get(field_name, field.default_factory())
+                new_value = recursiveOptionalUpdate(field_value, update_obj[field_name], obj_type=field.type)
+                result[field_name] = new_value
+            return result
+        elif isinstance(obj, Table) or (get_origin(obj_type) is not None and issubclass(get_origin(obj_type), Table)):
+            # Recursively update all values in the dict-like table.
+            # Use keys from update_obj when building to ensure adding-removing items is respected.
+            result = {
+                key:  recursiveOptionalUpdate(obj.get(key, {}), update_obj[key], get_args(obj_type)[0])
+                for key in update_obj.keys()
+            }
+            return result
+        else:
+            return update_obj if update_obj is not None else obj
+    except Exception as err:
+        raise

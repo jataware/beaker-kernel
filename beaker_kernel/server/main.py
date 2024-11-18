@@ -7,7 +7,7 @@ import uuid
 import urllib.parse
 from dataclasses import is_dataclass, asdict
 from collections.abc import Mapping, Collection
-from typing import get_origin, get_args, GenericAlias, Union
+from typing import get_origin, get_args, GenericAlias, Union, Generic
 from types import UnionType
 
 from jupyter_core.utils import ensure_async
@@ -26,7 +26,7 @@ from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
-from beaker_kernel.lib.config import config, locate_config, Config, Table
+from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, ConfigClass, recursiveOptionalUpdate, reset_config
 from beaker_kernel.server import admin_utils
 
 logger = logging.getLogger(__file__)
@@ -140,19 +140,43 @@ class ConfigController(ExtensionHandlerMixin, JupyterHandler):
     def map_type(type_obj: type):
         type_def = {}
         try:
-            if isinstance(type_obj, type):
-                type_def["type_str"] = type_obj.__name__
-            else:
-                type_def["type_str"] = repr(type_obj)
-            if isinstance(type_obj, (GenericAlias, UnionType)):
+            try:
                 type_origin = get_origin(type_obj)
                 type_args = get_args(type_obj)
+            except:
+                type_origin = None
+                type_args = None
+            if type_args:
+                if isinstance(type_obj, UnionType):
+                    type_def["type_str"] = repr(type_obj)
+                elif issubclass(type_origin, Choice):
+                    source = get_args(type_args[0])[0]
+                    type_def["type_str"] = f"{type_origin.__name__}['{source}']"
+                    type_def["choice_source"] = source
+                else:
+                    type_def["type_str"] = f"{type_origin.__name__}[{', '.join(arg.__name__ for arg in type_args)}]"
                 if type_origin:
                     type_def["type_origin"] = ConfigController.map_type(type_origin)
                 if type_args:
                     type_def["type_args"] = [ConfigController.map_type(type_arg) for type_arg in type_args]
+
             elif is_dataclass(type_obj):
-                type_def = ConfigController.jsonify_dataclass_schema(type_obj)
+                type_def.update(ConfigController.jsonify_dataclass_schema(type_obj))
+            else:
+                if isinstance(type_obj, type):
+                    type_def["type_str"] = type_obj.__name__
+                else:
+                    type_def["type_str"] = repr(type_obj)
+
+            if hasattr(type_obj, "default_value"):
+                default_value = type_obj.default_value()
+                type_def["default_value"] = default_value
+            else:
+                try:
+                    default_value = type_obj()
+                    type_def["default_value"] = default_value
+                except TypeError:
+                    pass
         except:
             type_def["type_str"] = repr(type_obj)
         return type_def
@@ -160,36 +184,22 @@ class ConfigController(ExtensionHandlerMixin, JupyterHandler):
 
     @staticmethod
     def jsonify_dataclass_schema(obj):
-        result = {}
+        result = {
+            "type_str": f"Dataclass[{obj.__name__}]",
+            "fields": {},
+        }
         for field_name, field in obj.__dataclass_fields__.items():
-            # try:
             type_def = ConfigController.map_type(field.type)
-            # except:
-            #     type_str = repr(field.type)
-            #     type_def = None
             metadata = dict(field.metadata)
             description = metadata.pop("description", None)
             field_result = {
                 "name": field.name,
-                "type": type_def,
                 "description": description,
                 "metadata": metadata,
+                **type_def,
             }
-            # if type_def:
-            #     field_result["type_def"] = type_def
+            result["fields"][field_name] = field_result
 
-            # if is_dataclass(field.type):
-            #     field_result["child_type"] = ConfigController.jsonify_dataclass_schema(default_value)
-
-            default_value = field.default_factory()
-            if not field.metadata.get("sensitive", True):
-                if is_dataclass(default_value):
-                    default_value = ConfigController.jsonify_dataclass_schema(default_value)
-            else:
-                default_value = ""
-            field_result["default_value"] = default_value
-
-            result[field_name] = field_result
         return result
 
 
@@ -197,29 +207,42 @@ class ConfigController(ExtensionHandlerMixin, JupyterHandler):
     def jsonify_dataclass_object(obj):
         result = {}
         for field_name, field in obj.__dataclass_fields__.items():
-            if not field.metadata.get("sensitive", True):
-                current_value = getattr(obj, field_name, None)
-                if get_origin(field.type) and issubclass(get_origin(field.type), Table):
-                    record_type = get_args(field.type)[0]
-                    if is_dataclass(record_type):
-                        current_value = {
-                            key: ConfigController.jsonify_dataclass_object(record_type(**value))
-                            for key, value in current_value.items()
-                        }
-                elif is_dataclass(current_value):
-                    current_value = ConfigController.jsonify_dataclass_object(current_value)
-                    if not current_value:
-                        current_value = {}
-            else:
-                current_value = ""
+            current_value = getattr(obj, field_name, None)
+            if get_origin(field.type) and issubclass(get_origin(field.type), Table):
+                record_type = get_args(field.type)[0]
+                if is_dataclass(record_type):
+                    current_value = {
+                        key: ConfigController.jsonify_dataclass_object(record_type(**value))
+                        for key, value in current_value.items()
+                    }
+            # TODO: Verify value is in choice list?
+            # elif get_origin(field.type) and issubclass(get_origin(field.type), Choice):
+            #     current_value = ""
+            elif is_dataclass(current_value):
+                current_value = ConfigController.jsonify_dataclass_object(current_value)
+                if not current_value:
+                    current_value = {}
+
+            if field.metadata.get("sensitive", True):
+                # Track if a value is defined or not.
+                current_value = None if current_value else ""
+                # current_value = ""
             result[field_name] = current_value
         return result
+
 
     def get(self):
         if "schema" in self.request.query:
             return self.get_config_schema()
         else:
             return self.get_config()
+
+    async def post(self):
+        config_changes = self.get_json_body()
+        updated_config: dict = recursiveOptionalUpdate(config, config_changes)
+        config.update(updates=updated_config)
+        reset_config()
+        return await self.get_config()
 
     async def get_config_schema(self):
         config_cls = Config
@@ -231,17 +254,13 @@ class ConfigController(ExtensionHandlerMixin, JupyterHandler):
         config_file = locate_config()
         payload = self.jsonify_dataclass_object(config)
 
-
         return self.write(
             {
                 "config": payload,
-                "config_file_path": str(config_file)
+                "config_type": config.config_type,
+                "config_id": str(config_file),
             }
         )
-
-    def post(self):
-        return self.write('{"thank": "you"}')
-
 
 class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
     """

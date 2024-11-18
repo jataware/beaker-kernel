@@ -10,16 +10,12 @@ from archytas.react import ReActAgent, Undefined
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
 from beaker_kernel.lib.config import config
-from beaker_kernel.lib.utils import env_enabled, set_tool_execution_context
+from beaker_kernel.lib.utils import env_enabled, set_tool_execution_context, DefaultModel
 
 if typing.TYPE_CHECKING:
     from .context import BeakerContext
 
 logger = logging.getLogger(__name__)
-
-
-class AgentAuthenticationError(Exception):
-    pass
 
 
 class BeakerAgent(ReActAgent):
@@ -34,6 +30,8 @@ class BeakerAgent(ReActAgent):
     ):
         self.context = context
         model = config.get_model()
+        if model is None:
+            model = DefaultModel({})
 
         self.context.beaker_kernel.debug("init-agent", {
             "debug": self.context.beaker_kernel.debug_enabled,

@@ -14,7 +14,7 @@
                 ></Button>
             </div>
             <div v-show="expanded" role="menu" class="sidemenu-panel-container">
-                <component v-for="(panel, index) in panels" :key="`panel-${index}`" :is="panel" v-show="selectedTabIndex === index" ></component>
+                <component v-for="(panel, index) in panels" :key="`panel-${index}`" :is="panel" v-show="selectedTabIndex === index" :selected="selectedTabIndex === index"></component>
             </div>
             <div v-if="expanded && !staticSize"
                 class="sidemenu-gutter"

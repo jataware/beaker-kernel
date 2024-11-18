@@ -54,6 +54,12 @@
                 <SideMenuPanel label="Files" icon="pi pi-file-export" no-overflow>
                     <FilePanel @open-file="loadNotebook" />
                 </SideMenuPanel>
+                <SideMenuPanel id="config" label="Config" icon="pi pi-cog" :lazy="true">
+                    <ConfigPanel
+                        ref="configPanelRef"
+                        @restart-session="restartSession"
+                    />
+                </SideMenuPanel>
             </SideMenu>
         </template>
                 <!-- <HelpSidebar></HelpSidebar> -->
@@ -94,6 +100,7 @@ import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
 import BeakerFilePane from '../components/dev-interface/BeakerFilePane.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
+import ConfigPanel from '../components/panels/ConfigPanel.vue';
 
 import BeakerSession from '../components/session/BeakerSession.vue';
 
@@ -207,6 +214,13 @@ const statusChanged = (newStatus) => {
     connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
 };
 
+const restartSession = async () => {
+    const resetFuture = beakerSession.value.session.sendBeakerMessage(
+        "reset_request",
+        {}
+    )
+    await resetFuture;
+}
 // onBeforeMount(() => {
 //     var notebookData: {[key: string]: any};
 //     try {

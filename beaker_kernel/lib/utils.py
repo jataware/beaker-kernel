@@ -13,11 +13,11 @@ from functools import wraps, update_wrapper
 from pathlib import Path
 from typing import Any, TYPE_CHECKING, Callable, List
 
-from archytas.tool_utils import tool
+from archytas.models.base import BaseArchytasModel
+from archytas.exceptions import AuthenticationError
 
 from .jupyter_kernel_proxy import ( KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                    JupyterMessage, JupyterMessageTuple)
-from .config import config
 
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,16 @@ def find_file_along_path(filename: str, start_path: Path | str | None = None) ->
         if potential_file.is_file():
             return potential_file
     return None
+
+class DefaultModel(BaseArchytasModel):
+    def initialize_model(self, **kwargs):
+        return
+
+    def invoke(self, input, *, config=None, stop=None, **kwargs):
+        raise AuthenticationError("Model not found or misconfigured. Please check your provider configuration.")
+
+    def ainvoke(self, input, *, config=None, stop=None, **kwargs):
+        raise AuthenticationError("Model not found or misconfigured. Please check your provider configuration.")
 
 class ExecutionError(RuntimeError):
     def __init__(self, ename: str, evalue: str, traceback: List[str]) -> None:
