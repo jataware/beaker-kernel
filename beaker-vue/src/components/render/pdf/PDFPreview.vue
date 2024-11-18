@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps } from 'vue';
+import { ref, defineProps, defineExpose } from 'vue';
 import PDFControls from './PDFControls.vue';
 import PDFPage from './PDFPage.vue';
 
@@ -47,6 +47,8 @@ const props = defineProps({
 const page = ref(1);
 const pdf = ref(null);
 const scaleIndex = ref(initialZoomIndex);
+
+defineExpose({ pdf });
 
 </script>
 

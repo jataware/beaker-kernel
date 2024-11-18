@@ -52,7 +52,7 @@
                             <span>File is {{ contents.contentLength / 1000000 }} MB</span>
                         </div>
                         <div class="pdf-preview" v-if="mimeCategory(mime) === 'pdf'">
-                            <PDFPreview :url="url" :sidebarCallback="closeCallback"/>
+                            <PDFPreview ref="pdfPreviewRef" :url="url" :sidebarCallback="closeCallback"/>
                         </div>
                         <div class="text-preview" v-if="mimeCategory(mime) === 'plaintext'">
                             <CodeEditor 
@@ -98,6 +98,7 @@ import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 
 const sidebar = ref();
 const codeEditorRef = ref();
+const pdfPreviewRef = ref();
 
 // dynamically updates with result of async watch
 const fallbackMime = ref("");
@@ -254,8 +255,15 @@ const getContents = async (url: string) => {
 }
 
 
-watch(() => [props.url, props.mimetype], async (f, s) => {
+watch(() => [props.url, props.mimetype], async (current, previous) => {
     // if no associated mimetype, find a fallback
+    if (previous.length >= 2 && previous[1] === 'application/pdf') {
+        // handler for cases where pdf rendering gets interrupted.
+        // the pdf renderer checks for a missing canvas and aborts,
+        // but the task may need to be handled here later as well.
+        console.log('interrupted pdf rendering for another preview');
+    }
+
     contents.value = {
         isLoading: true,
         contentLength: 0,

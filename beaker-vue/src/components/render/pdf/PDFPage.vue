@@ -41,13 +41,22 @@ let pdfDoc = null;
 // lock when rendering
 const isLoading = ref(false);
 const pagesRef = ref(null)
+let renderTask = null;
 
 const renderPage = async (pageNum) => {
-    if (!pdfDoc) return;
+    if (!pdfDoc) {
+        return;
+    }
 
     isLoading.value = true;
     const page = await pdfDoc.getPage(pageNum);
     const viewport = page.getViewport({ scale: props.scale });
+
+    // UI updates can remove the canvas element during this function operation.
+    if (!canvas.value) {
+        return;
+    }
+
     const context = canvas.value.getContext('2d');
     canvas.value.width = viewport.width;
     canvas.value.height = viewport.height;
@@ -55,7 +64,9 @@ const renderPage = async (pageNum) => {
         canvasContext: context,
         viewport: viewport,
     };
-    await page.render(renderContext).promise;
+    renderTask = page.render(renderContext);
+    console.log(renderTask)
+    await renderTask.promise
     isLoading.value = false;
 };
 
@@ -75,7 +86,7 @@ const loadPdf = async () => {
     }
 };
 
-defineExpose({pages: pagesRef, isLoading: isLoading});
+defineExpose({pages: pagesRef, isLoading: isLoading, renderTask });
 
 onMounted(async () => {
     await loadPdfjs();
