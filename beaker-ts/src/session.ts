@@ -49,10 +49,16 @@ export class BeakerSession {
             this._services.ready.then(async () => {
                 await this.initialize(options);
                 if (options.context) {
-                    await this.setContext({
-                        context: options.context.slug,
-                        context_info: options.context.payload,
-                    });
+                    const active_context = await this.activeContext();
+                    if (
+                        active_context.slug !== options.context.slug
+                        || JSON.stringify(active_context.config) !== JSON.stringify(options.context.payload)
+                    ) {
+                        await this.setContext({
+                            context: options.context.slug,
+                            context_info: options.context.payload,
+                        });
+                    }
                 }
             });
             resolve();

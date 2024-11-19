@@ -199,8 +199,6 @@ const iopubMessage = (_sessionConn, msg) => {
         authDialogVisible.value = true;
         authMessage.value = msg.content.msg;
         if (msg.cell !== undefined) {
-            console.log(msg.cell, " is ")
-            console.log(getConfigAndSchema(beakerSession.value));
             authRetryCell.value = msg.cell;
         }
     }
