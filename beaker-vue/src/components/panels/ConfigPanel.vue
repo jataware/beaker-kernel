@@ -37,7 +37,8 @@ import ProgressSpinner from "primevue/progressspinner";
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
-const config = ref<object>();
+
+const config = ref<IConfig>();
 const schema = ref<object>();
 const inputModel = ref<object>({});
 const undoHistory = ref<string[]>();
@@ -85,6 +86,17 @@ onBeforeMount(() => {
 </script>
 
 <script lang="ts">
+
+export interface IConfig {
+    config_type: string;
+    config_id: string;
+    config: IConfigDefinitions
+}
+
+export interface IConfigDefinitions {
+    [key: string]: any;
+}
+
 
 export function objectifyTables(schema: {[key: string]: unknown, type_str: string}, obj: unknown) {
     // Make sure to recurse through types that can hold other types

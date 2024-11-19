@@ -61,7 +61,7 @@ import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ConfigEntryComponent from '../misc/ConfigEntryComponent.vue'
 import Listbox from "primevue/listbox";
 import { useConfirm } from "primevue/useconfirm";
-import { getConfigAndSchema, tablifyObjects, objectifyTables, saveConfig } from "../panels/ConfigPanel.vue";
+import { getConfigAndSchema, tablifyObjects, objectifyTables, saveConfig, type IConfig, type IConfigDefinitions } from "../panels/ConfigPanel.vue";
 import OverlayPanel from "primevue/overlaypanel";
 import InputGroup from "primevue/inputgroup";
 import InputText from "primevue/inputtext";
@@ -69,9 +69,9 @@ import InputText from "primevue/inputtext";
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const saveAsHoverMenuRef = ref()
-const config = ref<object>();
-const schema = ref<object>();
-const inputModel = ref<object>({});
+const config = ref<IConfig>();
+const schema = ref<IConfigDefinitions>();
+const inputModel = ref<IConfigDefinitions>({});
 const undoHistory = ref<string[]>();
 const confirm = useConfirm();
 const newProviderName = ref<string>();
@@ -80,7 +80,7 @@ const newProviderNameInputRef = ref();
 const defaultProviderFactory = () => {
     if (providerSchema.value) {
         return Object.fromEntries(
-            Object.entries(providerSchema.value.fields).map(([key, value]) => {return [key, value.default_value]})
+            Object.entries(providerSchema.value.fields).map(([key, value]) => {return [key, (value as any).default_value]})
         )
     }
     else {
@@ -88,15 +88,15 @@ const defaultProviderFactory = () => {
     }
 }
 
-const selectedProviderName = computed(() => inputModel.value.provider);
-const providerNames = computed(() => {
+const selectedProviderName = computed((): string => (inputModel.value.provider as string));
+const providerNames = computed((): string[] => {
     const providers: {name: string, value: object}[] = (Array.isArray(inputModel.value?.providers) ? inputModel.value.providers : []);
     if (selectedProviderName.value && !providers.map(obj => obj.name).includes(selectedProviderName.value)) {
         providers.splice(0, 0, {name: selectedProviderName.value, value: defaultProviderFactory()});
     }
     return inputModel.value?.providers?.map(obj => obj.name);
 });
-const providerSchema = computed(() => {
+const providerSchema = computed<IConfigDefinitions>(() => {
     return schema.value?.fields.providers.type_args[0];
 });
 const selectedProviderValue = computed({
@@ -175,7 +175,6 @@ const reset = async () => {
     schema.value = schemaJson;
     config.value = configJson;
     inputModel.value = Object.assign({}, tablifyObjects(schemaJson, configJson.config));
-    selectedProviderName.value = inputModel.value.provider;
     undoHistory.value = [JSON.stringify(inputModel.value)];
 }
 
@@ -195,7 +194,7 @@ const addProvider = () => {
 }
 
 const removeProvider = () => {
-    const idx = (inputModel.value.providers as object[]).findIndex((value) => {
+    const idx = (inputModel.value.providers as any[]).findIndex((value) => {
         return value.name === inputModel.value.provider;
     });
     inputModel.value.provider = "";
