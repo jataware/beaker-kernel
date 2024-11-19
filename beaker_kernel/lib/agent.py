@@ -1,16 +1,11 @@
-import json
 import logging
-import re
 import typing
-from functools import wraps
 
-from archytas.agent import BaseMessage
-from archytas.exceptions import AuthenticationError
-from archytas.react import ReActAgent, Undefined
+from archytas.react import ReActAgent
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
 from beaker_kernel.lib.config import config
-from beaker_kernel.lib.utils import env_enabled, set_tool_execution_context, DefaultModel
+from beaker_kernel.lib.utils import set_tool_execution_context, DefaultModel
 
 if typing.TYPE_CHECKING:
     from .context import BeakerContext
