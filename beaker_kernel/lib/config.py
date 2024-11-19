@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def get_providers() -> dict[str, str]:
     import archytas.models
-    base_class = archytas.models.BaseArchytasModel
+    base_class = archytas.models.base.BaseArchytasModel
     items = inspect.getmembers(
         archytas.models,
         lambda item:
@@ -261,7 +261,7 @@ boolean value which will enable/disable the tool based on the value.",
     )
 
     model_provider_import_path: str = configfield(
-        "Name of LLM model to use.",
+        "Name of LLM model to use. (Overrides value for selected provider)",
         "LLM_SERVICE_MODEL",
         default="",
         sensitive=False,
@@ -270,7 +270,7 @@ boolean value which will enable/disable the tool based on the value.",
     )
 
     model_name: str = configfield(
-        "Name of LLM model to use.",
+        "Name of LLM model to use. (Overrides value for selected provider)",
         "LLM_SERVICE_MODEL",
         default="",
         sensitive=False,
@@ -279,7 +279,7 @@ boolean value which will enable/disable the tool based on the value.",
     )
 
     llm_service_token: str | None = configfield(
-        "API key used for authenticating to the LLM service, if required.",
+        "API key used for authenticating to the LLM service, if required. (Overrides value for selected provider)",
         "LLM_SERVICE_TOKEN",
         default="",
         sensitive=True,

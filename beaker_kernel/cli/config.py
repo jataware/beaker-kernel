@@ -1,12 +1,12 @@
 import os
 import toml
-from dataclasses import MISSING
+from dataclasses import MISSING, is_dataclass
 from pathlib import Path
 
 import click
 import dotenv
 
-from beaker_kernel.lib.config import locate_envfile, locate_config, config, ConfigClass
+from beaker_kernel.lib.config import locate_envfile, locate_config, config, ConfigClass, Table
 from beaker_kernel.lib.autodiscovery import LIB_LOCATIONS
 
 
@@ -33,6 +33,55 @@ def find():
         click.echo(f"No configuration file located.\nDefault location is: {config_file}\n")
 
 
+def _print_config_obj(obj, sensitive=False, obj_type=None, metadata=None, indent_level=0):
+    from typing import get_origin, get_args
+    description: str = metadata is not None and metadata.get("description", None)
+    if obj_type is None:
+        obj_type = obj.__class__
+    if is_dataclass(obj) or is_dataclass(obj_type):
+        if description:
+            click.echo(f"\n{'  ' * indent_level}# {description}")
+        indent_level += 1
+        for field_name, field in obj_type.__dataclass_fields__.items():
+            metadata = field.metadata
+            aliases: list[str] = field.metadata.get("aliases", None) or []
+
+            if is_dataclass(obj):
+                value = getattr(obj, field_name)
+            else:
+                value = obj.get(field_name)
+
+            vars_to_check = [field_name, *aliases]
+            for config_name in vars_to_check:
+                if config_name in obj:
+                    obj.pop(config_name)
+                    break
+
+            click.echo(f"{'  ' * indent_level}{field_name}: ", nl=False)
+            _print_config_obj(value, sensitive=sensitive, obj_type=field.type, metadata=metadata, indent_level=indent_level + 1)
+    elif isinstance(obj, Table) or (get_origin(obj_type) is not None and issubclass(get_origin(obj_type), Table)):
+        if description:
+            click.echo(f"\n{'  ' * indent_level}# {description}")
+        for key, value in obj.items():
+            click.echo(f"{'  ' * (indent_level)}{key}: ", nl=True)
+            _print_config_obj(value, sensitive=sensitive, obj_type=get_args(obj_type)[0], indent_level=indent_level+1)
+    else:
+        if description:
+            click.echo(f"{'  ' * indent_level}# {description}")
+        is_sensitive: bool = metadata is not None and metadata.get("sensitive", False) or False
+        if is_sensitive and not sensitive:
+            if obj:
+                display_value = SENSITIVE_STR_REPR  # rerun with -s flag to display value
+            else:
+                display_value = '(undefined)'
+        elif isinstance(obj, str) and obj == "":
+            display_value = '"" (empty string)'
+        else:
+            display_value = obj
+        click.echo(f"{'  ' * indent_level}{display_value}")
+
+
+
 @config_group.command()
 @click.option("--sensitive", "-s", is_flag=True, default=False, type=bool, help="By default, sensitive values are masked. Set this flag to show the actual value.")
 def show(sensitive):
@@ -44,68 +93,12 @@ def show(sensitive):
         config_data = toml.loads(config_file.read_text())
     else:
         config_data = {}
-    has_sensitive = False
 
-    click.echo(f"Current Beaker configuration:\n")
-    for field_name, field in config.__dataclass_fields__.items():
-        config_var: str = field.metadata.get("config_var", None)
-        description: str = field.metadata.get("description", "(No description provided)")
-        is_sensitive: bool = field.metadata.get("sensitive", False)
-        aliases: list[str] = field.metadata.get("aliases", None) or []
+    click.echo(f"Current Beaker configuration:")
+    _print_config_obj(config_data, sensitive=sensitive, obj_type=ConfigClass, indent_level=0)
 
-        value = getattr(config, field_name)
-
-        exists_in_config_file = False
-
-        vars_to_check = [field_name, *aliases]
-        for config_name in vars_to_check:
-            if config_name in config_data:
-                exists_in_config_file = True
-                config_data.pop(config_var)
-                break
-
-        if is_sensitive and not sensitive:
-            if value:
-                display_value = SENSITIVE_STR_REPR  # rerun with -s flag to display value
-            else:
-                display_value = '(undefined)'
-            has_sensitive = True
-        else:
-            display_value = value
-
-        click.echo(f"# {field_name}: {description}")
-        click.echo(f"{field_name}={display_value}", nl= False)
-        if not exists_in_config_file:
-            click.echo("  # (default) - Not defined in config file", nl=False)
-        click.echo("\n")
-
-    tools_enabled = config_data.pop('tools_enabled', {})
-    if tools_enabled:
-        click.echo("The following tools' have are enabled if true or disabled if false:")
-        for tool, enabled in tools_enabled.items():
-            click.echo(f"  {tool} - {enabled}" )
-        click.echo("")
-
-    model_config = config_data.pop('model_config', {})
-    if model_config:
-        click.echo("Model configuration")
-        for key, value in model_config.items():
-            click.echo(f"  {key}: {value}" )
-        click.echo("")
-
-    if config_data:
-        click.echo("\nThe following config variables are defined in the configuration file but are not defined "
-                   "in the Beaker configuration class:")
-        for var_name, value in config_data.items():
-            if sensitive:
-                click.echo(f"  {var_name}={value}")
-            else:
-                click.echo(f"  {var_name}={SENSITIVE_STR_REPR}")
-        click.echo("")
-
-    if has_sensitive:
-        click.echo("# To expose sensitive values, rerun with the -s flag")
-
+    if not sensitive:
+        click.echo("\n# To expose sensitive values, rerun with the -s flag")
 
 @config_group.command()
 @click.option("--file", "-f", "envfile", type=click.Path(exists=False))
