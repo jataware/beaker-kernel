@@ -1,4 +1,5 @@
 import binascii
+import importlib.resources
 import dotenv
 import importlib
 import inspect
@@ -20,15 +21,22 @@ logger = logging.getLogger(__name__)
 
 def get_providers() -> dict[str, str]:
     import archytas.models
-    base_class = archytas.models.base.BaseArchytasModel
-    items = inspect.getmembers(
-        archytas.models,
-        lambda item:
-            isinstance(item, type) and \
-            issubclass(item, base_class) and \
-            item is not base_class
-    )
-    result = {item[0]: f"{item[1].__module__}.{item[1].__name__}" for item in items}
+    from archytas.models.base import BaseArchytasModel
+    base_class = BaseArchytasModel
+    result = {}
+    for resource in importlib.resources.files(archytas.models).iterdir():
+        if resource.is_file() and resource.name.endswith('.py'):
+            name = resource.name.split('.', 1)[0]
+            mod_name = f'archytas.models.{name}'
+            mod = importlib.import_module(mod_name, 'archytas.models')
+            items = inspect.getmembers(
+                mod,
+                lambda item:
+                    isinstance(item, type) and \
+                    issubclass(item, base_class) and \
+                    item is not base_class
+            )
+            result.update({item[0]: f"{item[1].__module__}.{item[1].__name__}" for item in items})
     return result
 
 
@@ -144,7 +152,7 @@ def configfield(
     if label is not MISSING:
         metadata["label"] = label
     if options is not MISSING:
-        metadata["options"] = options()
+        metadata["options"] = options
     return field(
         metadata=metadata,
         default_factory=dynamic_factory,

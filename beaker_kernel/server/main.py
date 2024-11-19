@@ -192,6 +192,9 @@ class ConfigController(ExtensionHandlerMixin, JupyterHandler):
             type_def = ConfigController.map_type(field.type)
             metadata = dict(field.metadata)
             description = metadata.pop("description", None)
+            option_func = metadata.pop("options", None)
+            if option_func and callable(option_func):
+                metadata["options"] = option_func()
             field_result = {
                 "name": field.name,
                 "description": description,
