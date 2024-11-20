@@ -99,7 +99,6 @@ import { standardRendererFactories } from '@jupyterlab/rendermime';
 import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
-import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
 import InfoPanel from '../components/panels/InfoPanel.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
 import ConfigPanel from '../components/panels/ConfigPanel.vue';

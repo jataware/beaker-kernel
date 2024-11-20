@@ -82,7 +82,7 @@ import { defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounte
 import Dialog from 'primevue/dialog';
 import ConfirmDialog from 'primevue/confirmdialog';
 import BeakerSession from '../components/session/BeakerSession.vue';
-import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
+import BeakerHeader from '../components/misc/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import {BeakerSession as Session} from 'beaker-kernel/src'
@@ -94,7 +94,7 @@ import sum from 'hash-sum';
 
 import {default as ConfigPanel, getConfigAndSchema, dropUnchangedValues, objectifyTables, tablifyObjects, saveConfig} from '../components/panels/ConfigPanel.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
-import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
+import FooterDrawer from '../components/misc/FooterDrawer.vue';
 
 
 const toast = useToast();
@@ -212,7 +212,6 @@ const setAgentModel = async (modelConfig = null, rerunLastCommand = false) => {
     )
     await resetFuture.done;
     if (rerunLastCommand && authRetryCell.value) {
-        console.log(authRetryCell);
         authRetryCell.value.execute(session);
     }
 }

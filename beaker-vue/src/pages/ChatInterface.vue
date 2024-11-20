@@ -85,9 +85,6 @@
 import BaseInterface from './BaseInterface.vue';
 import AgentQuery from '../components/chat-interface/AgentQuery.vue';
 import ChatPanel from '../components/chat-interface/ChatPanel.vue';
-import DarkModeButton from '../components/chat-interface/DarkModeButton.vue';
-import HelpSidebar from '../components/chat-interface/HelpSidebar.vue';
-import VerticalToolbar from '../components/chat-interface/VerticalToolbar.vue';
 import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 import ContextPanel from '../components/panels/ContextPanel.vue';
@@ -98,7 +95,6 @@ import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
-import BeakerFilePane from '../components/dev-interface/BeakerFilePane.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
 import ConfigPanel from '../components/panels/ConfigPanel.vue';
 
@@ -108,12 +104,8 @@ import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import { JupyterMimeRenderer } from 'beaker-kernel/src';
 
-import Button from "primevue/button";
-import OverlayPanel from 'primevue/overlaypanel';
-import Toast from 'primevue/toast';
-import { useToast } from 'primevue/usetoast';
 
-import { defineProps, inject, nextTick, onBeforeMount, onUnmounted, provide, ref, defineEmits, computed, shallowRef } from 'vue';
+import { defineProps, inject, ref, computed, } from 'vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
 import { IBeakerTheme } from '../plugins/theme';
@@ -122,11 +114,6 @@ import { vKeybindings } from '../directives/keybindings';
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
-// const toast = useToast();
-
-// const contextSelectionOpen = ref(false);
-// const contextProcessing = ref(false);
-// import BeakerContextSelection from '../components/session/BeakerContextSelection.vue';
 
 
 const headerNav = computed(() => [
@@ -221,52 +208,6 @@ const restartSession = async () => {
     )
     await resetFuture;
 }
-// onBeforeMount(() => {
-//     var notebookData: {[key: string]: any};
-//     try {
-//         notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-//     }
-//     catch (e) {
-//         console.error(e);
-//         notebookData = {};
-//     }
-//     if (notebookData[sessionId]?.data) {
-//         nextTick(() => {
-//             const notebook = beakerSessionRef?.value?.session?.notebook;
-//             if (notebook) {
-//                 notebook.loadFromIPynb(notebookData[sessionId].data);
-//             }
-//         });
-//     }
-//     saveInterval.value = setInterval(snapshot, 30000);
-//     window.addEventListener("beforeunload", snapshot);
-// });
-
-// onUnmounted(() => {
-//     clearInterval(saveInterval.value);
-//     saveInterval.value = null;
-//     window.removeEventListener("beforeunload", snapshot);
-// });
-
-// const snapshot = () => {
-//     var notebookData: {[key: string]: any};
-//     try {
-//         notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-//     }
-//     catch (e) {
-//         console.error(e);
-//         notebookData = {};
-//     }
-//     // Only save state if there is state to save
-//     const notebook = beakerSessionRef.value.session?.notebook;
-//     if (notebook) {
-//         notebookData[sessionId] = {
-//             data: notebook.toIPynb(),
-//         };
-//         localStorage.setItem("notebookData", JSON.stringify(notebookData));
-//     }
-// };
-
 </script>
 
 <style lang="scss">
@@ -308,21 +249,6 @@ const restartSession = async () => {
 //     flex-direction: column;
 //     max-width: 820px;
 //     margin: auto;
-// }
-
-// .beaker-dev-interface {
-//     padding-bottom: 1rem;
-//     display: flex;
-//     grid-gap: 1px;
-//     flex-direction: row;
-//     flex: 1;
-//     height: 100%;
-//     // grid-template-areas:
-//     //     "l-sidebar main r-sidebar"
-//     //     "l-sidebar main r-sidebar"
-//     //     "l-sidebar main r-sidebar";
-//     // grid-template-columns: auto 1fr auto;
-//     // grid-template-rows: auto 1fr auto;
 // }
 
 // .beaker-session-container {
