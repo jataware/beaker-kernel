@@ -75,7 +75,12 @@ export const LatexRenderer: IMimeRenderer<BeakerRenderOutput> = {
 
 export const TableRenderer: IMimeRenderer<BeakerRenderOutput> = {
     rank: 40,
-    mimetypes: ["text/csv", "text/tsv"],
+    mimetypes: [
+        "text/csv", 
+        "text/tsv",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ],
     render: (mimeType: MimetypeString, data: PartialJSONObject, metadata: PartialJSONObject) => {
         return {
             component: TablePreview,

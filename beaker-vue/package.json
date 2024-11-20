@@ -60,7 +60,8 @@
     "strip-ansi": "^7.1.0",
     "vue": "^3.2.13",
     "vue-codemirror": "^6.1.1",
-    "vue-json-pretty": "^2.3.0"
+    "vue-json-pretty": "^2.3.0",
+    "xlsx": "file:vendor/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.4.0",

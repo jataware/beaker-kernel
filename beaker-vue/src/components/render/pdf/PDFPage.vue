@@ -65,8 +65,7 @@ const renderPage = async (pageNum) => {
         viewport: viewport,
     };
     renderTask = page.render(renderContext);
-    console.log(renderTask)
-    await renderTask.promise
+    await renderTask.promise;
     isLoading.value = false;
 };
 

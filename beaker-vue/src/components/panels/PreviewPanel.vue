@@ -66,9 +66,11 @@
                         <div class="image-preview" v-if="mimeCategory(mime) === 'image'">
                             <img :src="url"/>
                         </div>
-                        <div class="csv-preview" v-if="mimeCategory(mime) === 'csv'">
+                        <div class="csv-preview" v-if="
+                            ['csv', 'tsv', 'excel'].includes(mimeCategory(mime))
+                        ">
                             <BeakerMimeBundle 
-                                v-if="!isRaw"
+                                v-if="(!isRaw && !contents.isLoading)"
                                 :mimeBundle="{[mime]: contentsWrapper}"
                             />
                             <CodeEditor 
@@ -125,6 +127,7 @@ type PreviewCategory =
     | 'tsv'
     | 'plaintext' 
     | 'pdf'
+    | 'excel'
 
 // text/csv should have more priority than text/?? or octet-stream for rich matching.
 const mimeCategory = (mimetype: string): PreviewCategory => {
@@ -140,6 +143,12 @@ const mimeCategory = (mimetype: string): PreviewCategory => {
     if (mimetype === 'text/tsv') {
         return 'tsv'
     }
+    // todo: is this comprehensive?
+    if (mimetype === 'application/vnd.ms-excel' || 
+        mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') 
+    {
+        return 'excel'
+    }
     // application/octet-stream is a common plaintext unknown
     return 'plaintext'
 }
@@ -153,6 +162,9 @@ const mimetypeConfig: {[key in string]: PreviewConfig} = {
         overridesToolbar: true
     },
     "text/csv": {
+        hasRawToggle: true
+    },
+    "text/tsv": {
         hasRawToggle: true
     }
 }
@@ -197,16 +209,22 @@ let contentsWrapper = computed(() => {
     if (mime.value.startsWith('image/') || mime.value === 'application/pdf') {
         return "<loaded elsewhere via url>";
     }
-    // even if data exists, handle 0-byte files.
-    if (data) {
-        if (data.length > 0) {
-            return decoder.decode(data)
-        }
-        else {
-            return "<file is 0 bytes>"
-        }
+    if (!data) {
+        return "";
     }
-    return "";
+    // even if data exists, handle 0-byte files.
+    if (data.length === 0) {
+        return "<file is 0 bytes>"
+    }
+
+    // sheetJS can injest Uint8Array without decoding or re-encoding
+    // catch-all for ms-office filetypes (todo: does anything else use vnd.*)?
+    if (mime.value.startsWith('application/vnd.')) {
+        return data
+    }
+
+    // default to handling as UTF8
+    return decoder.decode(data)
 });
 
 // not sure why manually refreshing this matters with reactive refs:
@@ -249,7 +267,7 @@ const getContents = async (url: string) => {
     // set each chunk data at the offset to effectively concatenate them by chunk, not element
     fullContents.reduce((offset, chunk) => {
         mergedArray.set(chunk, offset);
-        offset += chunk.length;
+        return offset + chunk.length;
     }, 0)
     return mergedArray;
 }
