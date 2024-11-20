@@ -55,13 +55,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, toRaw, onBeforeMount, inject, defineEmits, computed, nextTick } from "vue";
+import { ref, onBeforeMount, inject, defineEmits, computed, nextTick } from "vue";
 import Button from "primevue/button";
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ConfigEntryComponent from '../misc/ConfigEntryComponent.vue'
 import Listbox from "primevue/listbox";
 import { useConfirm } from "primevue/useconfirm";
-import { getConfigAndSchema, tablifyObjects, objectifyTables, saveConfig, type IConfig, type IConfigDefinitions } from "../panels/ConfigPanel.vue";
+import {
+    getConfigAndSchema,
+    tablifyObjects,
+    saveConfig,
+    type IConfig,
+    type IConfigDefinitions,
+    type ISchema,
+} from "../panels/ConfigPanel.vue";
 import OverlayPanel from "primevue/overlaypanel";
 import InputGroup from "primevue/inputgroup";
 import InputText from "primevue/inputtext";
@@ -70,7 +77,7 @@ const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const saveAsHoverMenuRef = ref()
 const config = ref<IConfig>();
-const schema = ref<IConfigDefinitions>();
+const schema = ref<ISchema>();
 const inputModel = ref<IConfigDefinitions>({});
 const undoHistory = ref<string[]>();
 const confirm = useConfirm();

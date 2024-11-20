@@ -2,10 +2,11 @@
     <div v-if="config" class="config-panel">
         <div class="config-panel-container">
             <ConfigEntryComponent
+                :key="nonce"
                 :schema="schema"
                 v-model="inputModel"
                 key-value="config"
-                :config-object="inputModel"
+                :config-object="config.config"
             />
         </div>
         <div>
@@ -28,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeMount, inject, defineEmits } from "vue";
+import { ref, onBeforeMount, inject, defineEmits, nextTick } from "vue";
 import Button from "primevue/button";
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ConfigEntryComponent from '../misc/ConfigEntryComponent.vue'
@@ -39,10 +40,11 @@ const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 
 const config = ref<IConfig>();
-const schema = ref<object>();
+const schema = ref<ISchema>();
 const inputModel = ref<object>({});
 const undoHistory = ref<string[]>();
 const confirm = useConfirm();
+const nonce = ref<number>(0);
 
 const emit = defineEmits([
     "restartSession"
@@ -55,6 +57,10 @@ const save = async () => {
         header: "Apply Changes",
         accept: async () => {
             const result = await saveConfig(beakerSession, schema.value, inputModel.value, config.value.config);
+            const updatedConfig = await result.json();
+            config.value = updatedConfig;
+            inputModel.value = Object.assign({}, tablifyObjects(schema.value, updatedConfig.config));
+            nextTick(() => {nonce.value++;})
             if (result.ok) {
                 confirm.require({
                     header: "Restart Session",
@@ -75,6 +81,7 @@ const reset = async () => {
     config.value = configJson;
     inputModel.value = Object.assign({}, tablifyObjects(schemaJson, configJson.config));
     undoHistory.value = [JSON.stringify(inputModel.value)];
+    nextTick(() => {nonce.value++;})
 }
 
 onBeforeMount(() => {
@@ -93,12 +100,17 @@ export interface IConfig {
     config: IConfigDefinitions
 }
 
+export interface ISchema {
+    [key: string]: any;
+    type_str: string;
+}
+
 export interface IConfigDefinitions {
     [key: string]: any;
 }
 
 
-export function objectifyTables(schema: {[key: string]: unknown, type_str: string}, obj: unknown) {
+export function objectifyTables(schema: ISchema, obj: unknown) {
     // Make sure to recurse through types that can hold other types
     if (schema.type_str.startsWith('Dataclass')) {
         let output = {};
@@ -121,7 +133,7 @@ export function objectifyTables(schema: {[key: string]: unknown, type_str: strin
     }
 }
 
-export function tablifyObjects(schema: {[key: string]: unknown, type_str: string}, obj: unknown) {
+export function tablifyObjects(schema: ISchema, obj: unknown) {
     if (schema.type_str.startsWith('Dataclass')) {
         let output = {};
         for (const key of Object.keys(schema.fields)) {
@@ -146,7 +158,7 @@ export function tablifyObjects(schema: {[key: string]: unknown, type_str: string
     }
 }
 
-export function dropUnchangedValues(schema, currentConfig, originalConfig) {
+export function dropUnchangedValues(schema: ISchema, currentConfig: IConfig, originalConfig: IConfig) {
     if (schema.type_str.startsWith('Dataclass')) {
         let output = {};
         for (const key of Object.keys(schema.fields)) {
@@ -164,13 +176,10 @@ export function dropUnchangedValues(schema, currentConfig, originalConfig) {
             const newValue = dropUnchangedValues(schema.type_args[0], value, originalConfig[key]);
             output[key] = newValue;
         }
-        // return (Object.keys(output).length > 0) ? output : null;
         return output;
     }
     else {
-        return (
-            (currentConfig === originalConfig) || (currentConfig === '' && originalConfig === null)
-        ) ? null : currentConfig
+        return (currentConfig === originalConfig) ? null : currentConfig
     }
 
 }
@@ -188,7 +197,7 @@ export async function getConfigAndSchema(beakerSession) {
     return {config, schema}
 }
 
-export async function saveConfig(beakerSession, schema, inputModel, config) {
+export async function saveConfig(beakerSession, schema: ISchema, inputModel, config) {
     const serverSettings = beakerSession.session.services.serverSettings;
     const configUrl = `${serverSettings.baseUrl}config/control`;
     const updatedConfig = dropUnchangedValues(
