@@ -174,7 +174,7 @@ def action(action_name: str|None=None, docs: str|None=None, default_payload=None
     """
     Method decorator to identify and register context actions.
     """
-    if enabled is not None and enabled():
+    if enabled is not None and not enabled():
         def disable(_fn):
             def disabled_message(*args, **kwargs):
                 raise RuntimeError("This action is disabled.")
