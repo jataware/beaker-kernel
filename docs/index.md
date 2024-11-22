@@ -7,11 +7,11 @@ has_toc: true
 
 # Beaker: the AI-first coding notebook
 
-Beaker is a next generation coding notebook built for the AI era. Beaker seamlessly integrates a Jupyter-like experience with an AI agent that can be used to generate code and run code on the user's behalf. The agent has access to the entire notebook environment as its context, allowing it to make smart decisions about the code to generate and run. It can even debug itself and fix errors so that you don't have to. When the agent wants to use a library that isn't installed, it can even install it automatically. 
+Beaker is a next generation coding notebook built for the AI era. Beaker seamlessly integrates a Jupyter-like experience with an AI agent that can be used to generate and run code on the user's behalf. The agent has access to the entire notebook environment as its context, allowing it to make smart decisions about the code it generates and run. It can even debug itself and fix errors so that you don't have to. When the agent wants to use a library that isn't installed, it can even install it automatically. 
 
 Beyond that, Beaker solves one of the major challenges presented by coding notebooks--it introduces a true _undo_ mechanism so that the user can roll back to any previous state in the notebook. Beaker also lets you swap effortlessly between a notebook style coding interface and a chat style interface, giving you the best of both worlds. Since everything is interoperable with Jupyter, you can always export your notebook and use it in any other Jupyter-compatible environment.
 
-Beaker is powered by [Archytas](https://github.com/jataware/archytas), our framework for building AI agents that can interact with code and advanced users can generate their own custom agents to meet their specific needs. These agents can have custom ReAct toolsets built in and can be extended to support any number of use cases.
+Beaker is powered by [Archytas](https://github.com/jataware/archytas), our framework for building AI agents that can interact with code. Advanced users can generate their own custom agents to meet their specific needs. These agents can have custom ReAct toolsets built in and can be extended to support any number of use cases.
 
 We like to think of Beaker as a (much better!) drop in replacement for workflows where you'd normally rely on Jupyter notebooks and we hope you'll give it a try and let us know what you think!
 
@@ -45,12 +45,12 @@ Beaker, you need to set a context.
 
 ## Contexts
 
-Contexts provide behind the scene magic to make Beaker work for you. 
+Contexts provide behind-the-scenes magic to make Beaker work for you. 
 Contexts let you add extra functionality to Beaker to support your specific use case, including custom data loaders,
 bespoke tools for your agent to utilize, customized LLM prompts, and custom actions that facilitate integration with external applications.
-Though Beaker's out of the box context provides robust functionality for a wide array of data analysis tasks, 
-you can easily create and set custom [contexts](./contexts.html). With a custom context, Beaker now
-has a mission and special tools at its disposal.
+Though Beaker's out of the box context provides robust functionality for a wide array of programming and data analysis tasks, 
+you can easily create and set custom [contexts](./contexts.html). With a custom context, Beaker now understands the mission 
+and has specialized tools at its disposal.
 
 
 ## How is Beaker different from Jupyter?

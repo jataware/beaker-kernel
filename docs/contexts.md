@@ -11,14 +11,12 @@ has_children: true
 Beaker can be totally customized by creating bespoke, use case driven contexts. 
 At a high level, a context consist of the following:
 * A subkernel which acts as your notebook environment.
-  * Selecting a subkernel also sets the language you will work in and what
+  * Selecting a subkernel also sets the language you will work in and which
   libraries you have access to. Currently Beaker supports `Python`, `R`, and `Julia`.
 * Knowledge of the items/objects that you are working on in, either in
 the subkernel or via the context tool or LLM Agent.
-  * The context can automatically pre-load items at startup that you are
-  planning to work on.
-  * The context keeps a persitent state, allowing you work on items in more
-  than one way.
+  * Automatically pre-loaded items at context initialization.
+  * A persitent state, allowing you work on items in more than one way.
 * A set of tools that interacts with the subkernel and the front-end.
   * A set of subkernal procedures that manipulate the subkernel environment.
   * Message handlers that accept arbitrary requests from the front-end
