@@ -5,35 +5,23 @@ nav_order: 1
 has_toc: true
 ---
 
-# Beaker Kernel: Contextually-aware notebooks with built-in AI assistant
+# Beaker: the AI-first coding notebook
 
-Beaker is a custom Jupyter kernel that allows you not just work in notebooks in
-the language of your choice, but to integrate notebooks into any web
-application. You can design your own notebook or not even display a notebook at
-all, allowing native elements in your web application to run code in any
-language in a persistent session. And by leveraging the power of LLMs (Large
-Language Models), you can easily super-power your application and/or notebook
-with a powerful [ReAct](https://www.promptingguide.ai/techniques/react) AI agent
-powered by [Archytas](https://github.com/jataware/archytas).
+Beaker is a next generation coding notebook built for the AI era. Beaker seamlessly integrates a Jupyter-like experience with an AI agent that can be used to generate code and run code on the user's behalf. The agent has access to the entire notebook environment as its context, allowing it to make smart decisions about the code to generate and run. It can even debug itself and fix errors so that you don't have to. When the agent wants to use a library that isn't installed, it can even install it automatically. 
 
-The Beaker AI agent can generate code to populate an existing notebook, or run
-code in the notebook environment in the background, passing the updated state
-or task response to the front-end for display. Possible uses of Beaker include
-AI powered auto-complete, assistance writing code,
+Beyond that, Beaker solves one of the major challenges presented by coding notebooks--it introduces a true _undo_ mechanism so that the user can roll back to any previous state in the notebook. Beaker also lets you swap effortlessly between a notebook style coding interface and a chat style interface, giving you the best of both worlds. Since everything is interoperable with Jupyter, you can always export your notebook and use it in any other Jupyter-compatible environment.
 
+Beaker is powered by [Archytas](https://github.com/jataware/archytas), our framework for building AI agents that can interact with code and advanced users can generate their own custom agents to meet their specific needs. These agents can have custom ReAct toolsets built in and can be extended to support any number of use cases.
 
-## Components of Beaker
+We like to think of Beaker as a (much better!) drop in replacement for workflows where you'd normally rely on Jupyter notebooks and we hope you'll give it a try and let us know what you think!
 
-This package contains the following components:
+## Quick demo
 
-* The Beaker Jupyter kernel (`beaker`)
-* A stand-alone Jupyter service (`service`)
-  * Contains a both a production-ready custom server and a standalone
-  development interface
-* A library of contexts (`contexts`) that can be extended to add functionality
-to Beaker
-* The Beaker AI/LLM agent (`agent`) that brings the power of LLMs to whatever
-you are doing, wherever you are doing it
+Here is a quick demo of using Beaker to interact with a [free weather API](https://open-meteo.com/en/docs), fetch some data, perform some data transformations and a bit of analysis. This is really just scratching the surface of what you can do with Beaker, but it gives you a sense of the kinds of things it can do.
+
+<div align="center">
+<iframe class="youtube" width="560" height="315" src="https://www.youtube.com/embed/AP9LT_cxjzY?si=8y-WqQzL0kUGwQIP" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
 
 
 ## How Beaker works
@@ -57,24 +45,27 @@ Beaker, you need to set a context.
 
 ## Contexts
 
-Setting a [context](./contexts.html) adds extra functionality to the existing
-session. Where before Beaker was a slightly smarter Jupyter notebook, now it
-has a mission and special tools at its disposal. The contexts add custom
-message handlers, tools for the agent, and a specialized LLM prompt to focus
-the agent to help in the current situation at hand.
+Contexts provide behind the scene magic to make Beaker work for you. 
+Contexts let you add extra functionality to Beaker to support your specific use case, including custom data loaders,
+bespoke tools for your agent to utilize, customized LLM prompts, and custom actions that facilitate integration with external applications.
+Though Beaker's out of the box context provides robust functionality for a wide array of data analysis tasks, 
+you can easily create and set custom [contexts](./contexts.html). With a custom context, Beaker now
+has a mission and special tools at its disposal.
 
 
-## Differences from vanilla Jupyter
+## How is Beaker different from Jupyter?
 
-This setup uses stock Jupyter services as provided in the Jupyter Python
-packages.
+We like to think of Beaker as Jupyter on AI steroids. It provides much the same functionality as a 
+Jupyter notebook except that the user has access to a conversational agent that can 
+write and run code. This is hugely beneficial for speeding up data analysis tasks and for tedious things like
+generating plotting code. Since the agent has full visibility to the entire notebook environment it can write
+high fidelity code that typically works out of the box. When its code fails though, it can automatically read tracebacks
+and fix its errors. 
 
-The entry point of the docker file runs the file main.py which starts a
-JupyterLab Server App. The only differences here are:
-1. This service does not run any front-end and only provides API and websocket
-access as the expectation is for
-2. Some settings are changed to allow access through the Terarium interface and
-be accessed by the proxy kernel:
-    1. allow_orgin rule
-    2. disable_check_xsrf security issue to allow the proxy kernel to make API
-    calls
+Additionally, Beaker introduces a true undo mechanism so that the user can roll back to any previous state in the notebook.
+This is a killer feature for coding notebooks since it allows the user to experiment with ideas freely without the fear of breaking
+their environment.
+
+Finally, Beaker lets you swap effortlessly between a notebook style coding interface and a chat style interface, giving you the best of both worlds. 
+
+Since everything is interoperable with Jupyter, you can always export your notebook and use it in any other Jupyter-compatible environment.

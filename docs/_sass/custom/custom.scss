@@ -1,3 +1,10 @@
 pre.highlight {
     white-space: pre-line;
 }
+
+iframe.youtube {
+    width: 100%;
+    aspect-ratio: 10/7;
+    height: auto;
+    z-index: 5;
+}
