@@ -11,7 +11,7 @@ from enum import Enum
 from pathlib import Path
 from collections.abc import Collection
 from copy import deepcopy
-from typing import Callable, Any, TypeAlias, TypeVar, Generic, Literal, get_args, get_origin
+from typing import Callable, Any, TypeAlias, TypeVar, Generic, Literal, get_args, get_origin, Mapping
 from typing_extensions import Self
 
 from beaker_kernel.lib.utils import DefaultModel
@@ -167,9 +167,6 @@ C = TypeVar("C")
 class Table(dict[str, T]):
     pass
 
-class Tables(list[Table[T]]):
-    pass
-
 class Choice(Generic[C]):
     @classmethod
     def default_value(cls):
@@ -182,15 +179,18 @@ class LLM_Service_Provider:
         description="Dot-separated import path to the LLM Service Provider class.",
         default="archytas.models.openai.OpenAIModel",
         options=get_providers,
+        save_default_value=True,
     )
     default_model_name: str = configfield(
         description="Name of the default model to use with this provider.",
-        default="gpt-4o"
+        default="gpt-4o",
+        save_default_value=True,
     )
     api_key: str = configfield(
         description="API key or token for authenticating to the provider, if required.",
         default="",
         sensitive=True,
+        save_default_value=True,
     )
 
     @classmethod
@@ -235,10 +235,12 @@ boolean value which will enable/disable the tool based on the value.",
             "run_code": True,
         },
         label="Enabled?",
+        save_default_value=True,
     )
 
     providers: Table[LLM_Service_Provider] = configfield(
         description="Allows switching between LLM Model providers/APIs.",
+        save_default_value=True,
         default_factory=lambda: {
             "openai": {
                 "import_path": "archytas.models.openai.OpenAIModel",
@@ -418,7 +420,7 @@ def reset_config():
     config.config_obj = None
 
 
-def recursiveOptionalUpdate(obj: Any, update_obj: Any, obj_type=None):
+def recursiveOptionalUpdate(obj: Any, update_obj: Any, obj_type=None, remove_missing=True):
     try:
         if obj_type is None:
             obj_type = obj.__class__
@@ -426,23 +428,35 @@ def recursiveOptionalUpdate(obj: Any, update_obj: Any, obj_type=None):
             result = {}
             for field_name, field in obj.__dataclass_fields__.items():
                 field_value = getattr(obj, field_name)
-                new_value = recursiveOptionalUpdate(field_value, update_obj[field_name], obj_type=field.type)
+                new_value = recursiveOptionalUpdate(field_value, update_obj.get(field_name, None), obj_type=field.type, remove_missing=remove_missing)
                 result[field_name] = new_value
             return result
         elif is_dataclass(obj_type):
             result = {}
+            if not isinstance(update_obj, Mapping):
+                update_obj = {}
             for field_name, field in obj_type.__dataclass_fields__.items():
                 field_value = obj.get(field_name, field.default_factory())
-                new_value = recursiveOptionalUpdate(field_value, update_obj[field_name], obj_type=field.type)
+                new_value = recursiveOptionalUpdate(field_value, update_obj.get(field_name, None), obj_type=field.type, remove_missing=remove_missing)
                 result[field_name] = new_value
             return result
         elif isinstance(obj, Table) or (get_origin(obj_type) is not None and issubclass(get_origin(obj_type), Table)):
             # Recursively update all values in the dict-like table.
             # Use keys from update_obj when building to ensure adding-removing items is respected.
-            result = {
-                key:  recursiveOptionalUpdate(obj.get(key, {}), update_obj[key], get_args(obj_type)[0])
-                for key in update_obj.keys()
-            }
+            if isinstance(update_obj, Mapping):
+                if remove_missing:
+                    keys = list(update_obj.keys())
+                else:
+                    # Join sets of keys while retaining natural order, with any newly added keys at the bottom
+                    keys = list(obj.keys())
+                    keys += [key for key in update_obj.keys() if key not in keys]
+
+                result = {
+                    key:  recursiveOptionalUpdate(obj.get(key, {}), update_obj.get(key, None), get_args(obj_type)[0], remove_missing=remove_missing)
+                    for key in keys
+                }
+            else:
+                result = obj
             return result
         else:
             return update_obj if update_obj is not None else obj
