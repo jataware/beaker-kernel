@@ -7,10 +7,10 @@
             page = clamp(page - 1, 1, pdf?.pages ?? 1)
         }"
         @pdf-zoom-in="() => {
-            scaleIndex = clamp(scaleIndex + 1, 0, fixedZoomSteps.length)
+            scaleIndex = clamp(scaleIndex + 1, 0, fixedZoomSteps.length - 1)
         }"
         @pdf-zoom-out="() => {
-            scaleIndex = clamp(scaleIndex - 1, 0, fixedZoomSteps.length)
+            scaleIndex = clamp(scaleIndex - 1, 0, fixedZoomSteps.length - 1)
         }"
         :page="page"
         :scale="fixedZoomSteps[scaleIndex]"
@@ -34,15 +34,10 @@ const initialZoomIndex = 4;
 
 const clamp = (num, min, max) => num <= min ? min : num >= max ? max : num;
 
-const props = defineProps({
-    url: {
-        type: [String],
-        required: true,
-    },
-    sidebarCallback: {
-        type: Object
-    }
-});
+const props = defineProps<{
+    url: string 
+    sidebarCallback: () => void
+}>();
 
 const page = ref(1);
 const pdf = ref(null);

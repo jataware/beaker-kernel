@@ -35,6 +35,18 @@
     <DataTable :value="files" size="small" stripedRows class="file-table" removableSort
                @row-dblclick="doubleClick" resizableColumns columnResizeMode="fit" rowHover :loading="tableLoading"
                @dragover="fileDragOver" @drop="fileDrop"
+               @row-click="({data}) => {
+                  console.log(data)
+                  if (data.type !== 'directory') {
+                    if (data.size >= largeFileWarningSize) {
+                      largeFileSizeUILabel = `approximately ${Math.floor(data.size / 1000000)} MB`;
+                      showLargeFilePreview(() => 
+                        previewFile(data.path, data.mimetype));
+                      return;
+                    }
+                    previewFile(data.path, data.mimetype)
+                  }
+                }"
                >
         <Column header="" class="download-column">
           <template #header>
@@ -60,11 +72,6 @@
               :id="`file-list::${slotProps.data.path}`" 
               class="file-name" 
               :class="slotProps.data.type"
-              @click="() => {
-                if (slotProps.data.type !== 'directory') {
-                  previewFile(slotProps.data.path, slotProps.data.mimetype)
-                }
-              }"
             >
               {{ slotProps.data.name }}
             </span>
@@ -88,6 +95,39 @@
         </Column>
     </DataTable>
   </div>
+  <Dialog
+    modal
+    v-model:visible="largeFilePreviewDialogVisible"
+    header="Large File Preview"
+    style="width: 30em;"
+  >
+    <span class="p-text-secondary preview-dialog-text">
+      You are attempting to open a file that is <b>{{ largeFileSizeUILabel }}.</b>
+    </span>
+    <span class="p-text-secondary preview-dialog-text">
+      This requires downloading the file over the network.
+    </span>
+    <div class="preview-dialog-button-container">
+        <Button 
+          type="button" 
+          label="Cancel" 
+          outlined
+          @click="() => {
+            largeFilePreviewDialogVisible = false;
+            largeFilePreviewCallback = () => {};
+          }" 
+        />
+        <Button 
+          type="button" 
+          label="Preview" 
+          @click="() => {
+            largeFilePreviewDialogVisible = false;
+            largeFilePreviewCallback();
+            largeFilePreviewCallback = () => {};
+          }" 
+          />
+    </div>
+  </Dialog>
 </template>
 
 <script lang="ts" setup>
@@ -97,6 +137,7 @@ import Button from 'primevue/button';
 import 'vue-json-pretty/lib/styles.css';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
+import Dialog from 'primevue/dialog';
 import cookie from 'cookie';
 import {filesize} from 'filesize';
 import {Time} from '@jupyterlab/coreutils/src/time';
@@ -131,6 +172,12 @@ const fileInput = ref<HTMLInputElement|undefined>(undefined);
 const uploadForm = ref<HTMLFormElement|undefined>(undefined);
 const files = ref<any[]|undefined>(undefined);
 const tableLoading = ref<boolean>(false);
+
+const largeFilePreviewCallback = ref<() => void>();
+const largeFilePreviewDialogVisible = ref<boolean>()
+// in bytes - 10 MB
+const largeFileWarningSize = 10 * 1000000;
+const largeFileSizeUILabel = ref<string>();
 
 const formatDate = (dateString) => {
   return dateString !== null ? Time.formatHuman(dateString) : '-';
@@ -184,6 +231,11 @@ const doubleClick = ({data}) => {
       life: 2500,
     })
   }
+}
+
+const showLargeFilePreview = (callback: () => void) => {
+  largeFilePreviewDialogVisible.value = true; 
+  largeFilePreviewCallback.value = callback;
 }
 
 const getFileContents = async (fileData) => {
@@ -410,6 +462,20 @@ defineExpose({
       background-color: rgba(255, 33, 78, 0.8);
     }
   }
+
+.preview-dialog-text {
+  margin-bottom: 5px;
+  display: block;
+}
+
+.preview-dialog-button-container {
+  display: flex;
+  justify-content: end;
+  margin-top: 0.75rem;
+  button {
+    margin-left: 0.25rem;
+  }
+}
 
 @keyframes fade-out-background {
   0% {

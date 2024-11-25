@@ -16,23 +16,12 @@ const loadPdfjs = async function () {
     ).toString(); 
 };
 
-const props = defineProps({
-    url: {
-        type: [String],
-        required: true,
-    },
-    scale: {
-        type: Number,
-        default: 1.0,
-    },
-    page: {
-        type: Number,
-        default: 1,
-    },
-    sidebarCallback: {
-        type: Object
-    }
-});
+const props = defineProps([
+    "sidebarCallback",
+    "url",
+    "scale",
+    "page"
+])
 
 const pdfContainer = ref(null);
 const canvas = ref(null);
@@ -99,7 +88,6 @@ watch(() => [props.scale, props.page], () => renderPage(props.page));
 
 <style scoped>
     .pdf-container {
-        display: flex;
         /* should only apply when canvas width < element width. otherwise breaks scroll. */
         /* justify-content: center;
         align-items: center; */
@@ -108,5 +96,6 @@ watch(() => [props.scale, props.page], () => renderPage(props.page));
     .pdf-canvas {
         border: 1px solid #ddd;
         width: auto;
+        display: inline;
     }
 </style>

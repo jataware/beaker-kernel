@@ -17,7 +17,7 @@
                 <div 
                     class="preview-container-main"
                      :style="`max-width: calc(100% - ${dragWidth}px);`"
-                >
+                >   
                     <div class="preview-standard-toolbar" v-if="!mimetypeConfig[mime]?.overridesToolbar">
                         <Toolbar>
                             <template #start>
@@ -42,44 +42,48 @@
                         </Toolbar>
                     </div>
                     <div class="preview-under-toolbar">
-                        <div v-if="showPreviewInterrupt">
+                        <div v-if="showPreviewInterrupt && contents.isLoading">
                             <Button 
                                 class="preview-cancel" 
-                                @click="contentsAborter.abort()"
+                                @click="previewAborter.abort()"
                                 severity="danger"
                                 label="Cancel Preview"
                             />
                             <span>File is {{ contents.contentLength / 1000000 }} MB</span>
                         </div>
-                        <div class="pdf-preview" v-if="mimeCategory(mime) === 'pdf'">
-                            <PDFPreview ref="pdfPreviewRef" :url="url" :sidebarCallback="closeCallback"/>
-                        </div>
-                        <div class="text-preview" v-if="mimeCategory(mime) === 'plaintext'">
-                            <CodeEditor 
-                                display-mode="dark"
-                                :modelValue="contentsWrapper"
-                                ref="codeEditorRef"
-                                placeholder="Loading..."
-                                :language="mime === 'text/x-python' ? 'python' : undefined"
-                            />
-                        </div>
-                        <div class="image-preview" v-if="mimeCategory(mime) === 'image'">
-                            <img :src="url"/>
-                        </div>
-                        <div class="csv-preview" v-if="
-                            ['csv', 'tsv', 'excel'].includes(mimeCategory(mime))
-                        ">
-                            <BeakerMimeBundle 
-                                v-if="(!isRaw && !contents.isLoading)"
-                                :mimeBundle="{[mime]: contentsWrapper}"
-                            />
-                            <CodeEditor 
-                                v-if="isRaw"
-                                display-mode="dark"
-                                :modelValue="contentsWrapper"
-                                ref="codeEditorRef"
-                                placeholder="Loading..."
-                            />
+                        <div class="preview-payload"
+                            v-if="!contents.isLoading"
+                        >
+                            <div class="pdf-preview" v-if="mimeCategory(mime) === 'pdf'">
+                                <PDFPreview ref="pdfPreviewRef" :url="url" :sidebarCallback="closeCallback"/>
+                            </div>
+                            <div class="text-preview" v-if="mimeCategory(mime) === 'plaintext'">
+                                <CodeEditor 
+                                    display-mode="dark"
+                                    :modelValue="contentsWrapper"
+                                    ref="codeEditorRef"
+                                    placeholder="Loading..."
+                                    :language="mime === 'text/x-python' ? 'python' : undefined"
+                                />
+                            </div>
+                            <div class="image-preview" v-if="mimeCategory(mime) === 'image'">
+                                <img :src="url"/>
+                            </div>
+                            <div class="csv-preview" v-if="
+                                ['csv', 'tsv', 'excel'].includes(mimeCategory(mime))
+                            ">
+                                <BeakerMimeBundle 
+                                    v-if="(!isRaw && !contents.isLoading)"
+                                    :mimeBundle="{[mime]: contentsWrapper}"
+                                />
+                                <CodeEditor 
+                                    v-if="isRaw"
+                                    display-mode="dark"
+                                    :modelValue="contentsWrapper"
+                                    ref="codeEditorRef"
+                                    placeholder="Loading..."
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -155,11 +159,20 @@ const mimeCategory = (mimetype: string): PreviewCategory => {
 
 type PreviewConfig = {
     overridesToolbar?: boolean;
+    // for files that have rich and raw view, like csv
     hasRawToggle?: boolean;
+    // for files loaded via delegation to library operating on URLs;
+    //   e.x. we aren't passing raw data to PDFJS, just the url.
+    //   also applies for <img>
+    skipContents?: boolean;
 }
 const mimetypeConfig: {[key in string]: PreviewConfig} = {
     "application/pdf": {
-        overridesToolbar: true
+        overridesToolbar: true,
+        skipContents: true
+    },
+    "image/png": {
+        skipContents: true 
     },
     "text/csv": {
         hasRawToggle: true
@@ -185,9 +198,6 @@ const previewInterruptTime = 500;
 
 const decoder = new TextDecoder()
 
-// max size in bytes to preview (10 MB for now)
-const maxSize = 10 * 1000000;
-
 // drag bar width in px
 const dragWidth = ref(5);
 // default pdfjs canvas plus dragbar size
@@ -203,10 +213,13 @@ const visible = defineModel<boolean>();
 
 const mime = computed(() => props.mimetype ?? fallbackMime.value ?? '')
 
+const previewAborter = ref<AbortController>();
+
 // contents as what is most useful by guessing at typing 
 let contentsWrapper = computed(() => {
     const data = contents.value?.contents;
-    if (mime.value.startsWith('image/') || mime.value === 'application/pdf') {
+    const category = mimeCategory(mime.value)
+    if (category === 'image' || category === 'pdf') {
         return "<loaded elsewhere via url>";
     }
     if (!data) {
@@ -218,12 +231,11 @@ let contentsWrapper = computed(() => {
     }
 
     // sheetJS can injest Uint8Array without decoding or re-encoding
-    // catch-all for ms-office filetypes (todo: does anything else use vnd.*)?
-    if (mime.value.startsWith('application/vnd.')) {
+    if (category === 'excel') {
         return data
     }
 
-    // default to handling as UTF8
+    // default to handling as UTF8 (csv, tsv, plaintext, octet)
     return decoder.decode(data)
 });
 
@@ -245,9 +257,10 @@ const getInfoFromURL = async (url: string): Promise<string[]> => {
     return ['Content-Type', 'Content-Length'].map((key) => response.headers.get(key))
 }
 
-const contentsAborter = new AbortController();
+
 const getContents = async (url: string) => {
-    const response = await fetch(url, {signal: contentsAborter.signal});
+    previewAborter.value = new AbortController();
+    const response = await fetch(url, {signal: previewAborter.value.signal});
     let fullContents = [];
     for await (const chunk of response.body) {
         fullContents.push(chunk);
@@ -292,21 +305,20 @@ watch(() => [props.url, props.mimetype], async (current, previous) => {
     const [mimetype, length] = await getInfoFromURL(props.url);
     
     if (props.mimetype === undefined || props.mimetype == null) {
-        console.log(`had to use fallback: ${mimetype}`);
         fallbackMime.value = mimetype;
     } else {
         fallbackMime.value = undefined;
     }
 
     contents.value.contentLength = parseInt(length, 10);
-    if (contents.value.contentLength > maxSize) {
-        contents.value.contents = undefined;
-    } else {
+    if (!(mimetypeConfig[props.mimetype] ?? {})?.skipContents) {
         contents.value.contents = await getContents(props.url);
-        contents.value.isLoading = false;
-        clearTimeout(timeout);
     }
-
+    // reset both flags, because showPreviewInterrupt delays behind isLoading to 
+    // avoid screen flashes and repainting on fast previews.
+    contents.value.isLoading = false;
+    showPreviewInterrupt.value = false; 
+    clearTimeout(timeout);
 })
 
 </script>
@@ -343,10 +355,11 @@ watch(() => [props.url, props.mimetype], async (current, previous) => {
 }
 
 .preview-under-toolbar {
+    display: flex;
     flex: 1;
     overflow: auto;
     // csv renderer -- hide mimetypes but don't change this for notebook
-    div.csv-preview div div.mime-select-container {
+    .preview-payload div.csv-preview div div.mime-select-container {
         display: none;
     }
 }
@@ -375,5 +388,17 @@ button.preview-raw {
         font-weight: 400;
         text-wrap: nowrap;
     }
+}
+
+.preview-payload {
+    flex: 1;
+    max-height: 100%;
+    max-width: 100%;
+}
+.pdf-preview {
+    flex: 1;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 </style>
