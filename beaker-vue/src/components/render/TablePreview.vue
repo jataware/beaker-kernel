@@ -17,7 +17,7 @@
             </Column>
         </DataTable>
         <TabView 
-            v-if="mimeType.startsWith('application/vnd')"
+            v-if="isExcelDocument(mimeType)"
             :pt="{
                 panelContainer: (options) => ({
                     class: 'xlsx-panel-container'
@@ -58,6 +58,11 @@ type DataTablePayload = {
     columns: string[],
     values: object[]
 }
+
+const isExcelDocument = (mimetype) => (
+    mimetype === 'application/vnd.ms-excel' || 
+    mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+);
 
 const xlsxData = ref<XLSXRenderedSheetData[] | null>();
 
