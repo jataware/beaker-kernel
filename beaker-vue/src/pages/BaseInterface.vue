@@ -69,6 +69,7 @@
                     <span style="font-style: italic;">{{ authMessage }}</span>
                 </div>
                 <ProviderSelector
+                    :config-type="beakerSession?.connectionSettings?.config_type"
                     @set-agent-model="setAgentModel"
                     @close-dialog="authDialogVisible = false"
                 />

@@ -289,6 +289,7 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
             "baseUrl": base_url,
             "wsUrl": os.environ.get("JUPYTER_WS_URL", ws_url),
             "token": config.jupyter_token,
+            "config_type": config.config_type,
         }
 
         # Ensure a proper xsrf cookie value is set.

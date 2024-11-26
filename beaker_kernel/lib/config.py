@@ -9,10 +9,8 @@ import toml
 from dataclasses import dataclass, field, MISSING, asdict, is_dataclass
 from enum import Enum
 from pathlib import Path
-from collections.abc import Collection
 from copy import deepcopy
-from typing import Callable, Any, TypeAlias, TypeVar, Generic, Literal, get_args, get_origin, Mapping
-from typing_extensions import Self
+from typing import Callable, Any, TypeVar, Generic, Literal, get_args, get_origin, Mapping
 
 from beaker_kernel.lib.utils import DefaultModel
 
@@ -158,8 +156,6 @@ def configfield(
         default_factory=dynamic_factory,
     )
 
-from collections.abc import Iterable
-from typing import Tuple, Union, get_args
 
 T = TypeVar("T")
 C = TypeVar("C")
@@ -254,7 +250,7 @@ boolean value which will enable/disable the tool based on the value.",
             },
             "gemini": {
                 "import_path": "archytas.models.gemini.GeminiModel",
-                "default_model_name": "gemini-1.5-flash",
+                "default_model_name": "gemini-1.5-pro",
                 "api_key": ""
             },
             "groq": {
@@ -271,8 +267,8 @@ boolean value which will enable/disable the tool based on the value.",
     )
 
     model_provider_import_path: str = configfield(
-        "Name of LLM model to use. (Overrides value for selected provider)",
-        "LLM_SERVICE_MODEL",
+        "Dotted import path to archytas provider model. (Overrides value for selected provider)",
+        "LLM_PROVIDER_IMPORT_PATH",
         default="",
         sensitive=False,
         save_default_value=False,

@@ -76,7 +76,7 @@
                         @open-file="loadNotebook"
                     />
                 </SideMenuPanel>
-                <SideMenuPanel id="config" label="Config" icon="pi pi-cog" :lazy="true">
+                <SideMenuPanel v-if="props.config.config_type !== 'server'" id="config" label="Config" icon="pi pi-cog" :lazy="true">
                     <ConfigPanel
                         ref="configPanelRef"
                         @restart-session="restartSession"

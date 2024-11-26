@@ -1,6 +1,6 @@
 <template>
     <div id="provider-select">
-        <div id="provider-select-container" class="config-option">
+        <div v-if="props.configType !== 'server' && config?.config_type !== 'server'" id="provider-select-container" class="config-option">
             <div id="provider-select-selector">
                 <Listbox v-model="inputModel.provider" :options="providerNames"/>
             </div>
@@ -51,11 +51,14 @@
                 />
             </div>
         </div>
+        <div v-else>
+            <h3>Please contact the system administrator to resolve the above issue(s) with the LLM provider or service.</h3>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeMount, inject, defineEmits, computed, nextTick } from "vue";
+import { ref, defineProps, onBeforeMount, inject, defineEmits, computed, nextTick } from "vue";
 import Button from "primevue/button";
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ConfigEntryComponent from '../misc/ConfigEntryComponent.vue'
@@ -83,6 +86,10 @@ const undoHistory = ref<string[]>();
 const confirm = useConfirm();
 const newProviderName = ref<string>();
 const newProviderNameInputRef = ref();
+
+const props = defineProps([
+    "configType",
+])
 
 const defaultProviderFactory = () => {
     if (providerSchema.value) {
