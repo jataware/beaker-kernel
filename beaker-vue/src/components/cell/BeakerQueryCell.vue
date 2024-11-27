@@ -212,6 +212,7 @@ const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
     "code_cell": "Code",
     "user_answer": "Answer",
     "user_question": "Question",
+    // "background_code": "Background Code",
     "error": "Error",
     "abort": "Abort"
 }

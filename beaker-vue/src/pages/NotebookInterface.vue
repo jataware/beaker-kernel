@@ -70,10 +70,16 @@
                 <SideMenuPanel label="Info" icon="pi pi-home">
                     <InfoPanel/>
                 </SideMenuPanel>
-                <SideMenuPanel id="files" label="Files" icon="pi pi-file-export" no-overflow>
+                <SideMenuPanel id="files" label="Files" icon="pi pi-file-export" no-overflow :lazy="true">
                     <FilePanel
                         ref="filePanelRef"
                         @open-file="loadNotebook"
+                    />
+                </SideMenuPanel>
+                <SideMenuPanel v-if="props.config.config_type !== 'server'" id="config" label="Config" icon="pi pi-cog" :lazy="true">
+                    <ConfigPanel
+                        ref="configPanelRef"
+                        @restart-session="restartSession"
                     />
                 </SideMenuPanel>
             </SideMenu>
@@ -87,16 +93,15 @@ import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from '
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
-import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
 import InfoPanel from '../components/panels/InfoPanel.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
+import ConfigPanel from '../components/panels/ConfigPanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
@@ -111,6 +116,7 @@ import { IBeakerTheme } from '../plugins/theme';
 const beakerNotebookRef = ref();
 const beakerInterfaceRef = ref();
 const filePanelRef = ref();
+const configPanelRef = ref();
 const sideMenuRef = ref();
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -210,6 +216,7 @@ watch(
 )
 
 const iopubMessage = (msg) => {
+    // console.log(msg);
     if (msg.header.msg_type === "preview") {
         previewData.value = msg.content;
     } else if (msg.header.msg_type === "debug_event") {
@@ -237,6 +244,15 @@ const statusChanged = (newStatus) => {
     connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
 };
 
+
+const restartSession = async () => {
+    console.log(beakerSession.value);
+    const resetFuture = beakerSession.value.session.sendBeakerMessage(
+        "reset_request",
+        {}
+    )
+    await resetFuture;
+}
 
 const loadNotebook = (notebookJSON: any, filename: string) => {
     const notebook = beakerNotebookRef.value;

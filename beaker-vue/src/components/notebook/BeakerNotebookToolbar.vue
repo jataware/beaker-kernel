@@ -108,7 +108,7 @@ import InputText from "primevue/inputtext";
 import OverlayPanel from 'primevue/overlaypanel';
 import Toolbar from "primevue/toolbar";
 
-import OpenNotebookButton from "../dev-interface/OpenNotebookButton.vue";
+import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
 import { downloadFileDOM, getDateTime } from '../../util';
 
 const session = inject<BeakerSession>('session');

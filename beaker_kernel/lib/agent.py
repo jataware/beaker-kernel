@@ -1,15 +1,11 @@
-import json
 import logging
-import re
 import typing
-from functools import wraps
 
-from archytas.agent import Message
-from archytas.react import ReActAgent, Undefined
+from archytas.react import ReActAgent
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
 from beaker_kernel.lib.config import config
-from beaker_kernel.lib.utils import env_enabled, set_tool_execution_context
+from beaker_kernel.lib.utils import set_tool_execution_context, DefaultModel
 
 if typing.TYPE_CHECKING:
     from .context import BeakerContext
@@ -17,14 +13,9 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class AgentAuthenticationError(Exception):
-    pass
-
-
 class BeakerAgent(ReActAgent):
 
     context: "BeakerContext"
-    MODEL: str = config.LLM_SERVICE_MODEL
 
     def __init__(
         self,
@@ -33,14 +24,17 @@ class BeakerAgent(ReActAgent):
         **kwargs,
     ):
         self.context = context
+        model = config.get_model()
+        if model is None:
+            model = DefaultModel({})
 
         self.context.beaker_kernel.debug("init-agent", {
             "debug": self.context.beaker_kernel.debug_enabled,
             "verbose": self.context.beaker_kernel.verbose,
         })
         super().__init__(
-            model=self.MODEL,
-            api_key=config.LLM_SERVICE_TOKEN,
+            model=model,
+            api_key=config.llm_service_token,
             tools=tools,
             verbose=self.context.beaker_kernel.verbose,
             spinner=None,
@@ -53,30 +47,14 @@ class BeakerAgent(ReActAgent):
         for tool in self.tools.values():
             set_tool_execution_context(tool)
 
+    async def react_async(self, query: str, react_context: dict = None) -> str:
+        return await super().react_async(query, react_context)
 
-    async def execute(self, additional_messages: list[Message] = None) -> str:
-        import openai
-        try:
-            return await super().execute(additional_messages or [])
-        except (openai.AuthenticationError) as e:
-            raise AgentAuthenticationError(e)
-        except (openai.OpenAIError) as e:
-            if "The api_key client option must be set" in str(e):
-                raise AgentAuthenticationError(e)
-            else:
-                raise
+    async def execute(self, *args, **kwargs) -> str:
+        return await super().execute(*args, **kwargs)
 
     async def oneshot(self, prompt: str, query: str) -> str:
-        import openai
-        try:
-            return await super().oneshot(prompt, query)
-        except (openai.AuthenticationError,) as e:
-            raise AgentAuthenticationError(e)
-        except (openai.OpenAIError) as e:
-            if "The api_key client option must be set" in str(e):
-                raise AgentAuthenticationError(e)
-            else:
-                raise
+        return await super().oneshot(prompt, query)
 
     def get_info(self):
         """

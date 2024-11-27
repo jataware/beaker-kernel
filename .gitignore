@@ -66,4 +66,5 @@ create.sql
 shell.nix
 **/.jekyll-cache
 
+.beaker.conf
 beaker_kernel/server/ui/*

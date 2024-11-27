@@ -1,5 +1,5 @@
 <template>
-    <div class="side-panel" :class="extraClasses">
+    <div class="side-panel" :class="extraClasses" v-if="!lazy || (lazy && loaded)">
         <div class="side-panel-title">{{ props.label }}</div>
         <div class="side-panel-content">
             <slot></slot>
@@ -8,9 +8,7 @@
 </template>
 
 <script setup lang="tsx">
-import { defineProps, defineEmits, ref } from "vue";
-
-import Card from "primevue/card";
+import { defineProps, defineEmits, ref, watch } from "vue";
 
 const extraClasses = ref<string[]>([]);
 
@@ -18,11 +16,20 @@ const props = defineProps([
     "icon",
     "label",
     "noOverflow",
+    "lazy",
+    "selected",
 ]);
+const loaded = ref<boolean>(!props.lazy);
 
 if (props.noOverflow) {
     extraClasses.value.push('no-overflow')
 }
+
+watch(props, (newProps) => {
+    if (newProps.selected && !loaded.value) {
+        loaded.value = true;
+    }
+})
 
 const emit = defineEmits([
 ]);
