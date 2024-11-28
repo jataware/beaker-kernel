@@ -1,3 +1,19 @@
 pre.highlight {
     white-space: pre-line;
 }
+
+code.language-pre {
+    display: inline-block;
+    white-space: pre;
+    line-height: 1.2;
+    background: #f5f6fa;
+    color: #5c5962;
+    padding: 0.5em;
+}
+
+iframe.youtube {
+    width: 100%;
+    aspect-ratio: 10/7;
+    height: auto;
+    z-index: 5;
+}

@@ -28,6 +28,7 @@ export const toBeakerCellComponent = (vnode: VNode): IBeakerCellComponent => {
     return undefined;
   }
   return reactive({
+    // @
     ...component.proxy as unknown as {cell: IBeakerCell},
     ...component.exposed as {enter: ()=>void, exit: ()=>void, execute: ()=>void, clear: ()=>void},
     $: component,

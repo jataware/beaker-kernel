@@ -110,7 +110,7 @@ const onSelectFile = () => {
     }
     await refreshFiles();
   }).catch(async (error) => {
-    showToast({title: 'Upload failed', detail: `There was an error trying to upload: ${error}`, severity: 'error', life: 8000});
+    showToast({title: 'Upload failed', detail: `There was an error trying to upload: ${error}`, severity: 'success', life: 8000});
     await refreshFiles();
   });
 }

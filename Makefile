@@ -43,10 +43,10 @@ beaker-vue/node_modules:beaker-vue/package*.json
 	touch beaker-vue/node_modules
 
 beaker_kernel/server/ui/index.html:beaker-vue/node_modules beaker-vue/**
-	rm -r beaker_kernel/server/ui/* || true; \
 	(cd beaker-ts/ && npm install && npm run build) && \
 	(cd beaker-vue/ && npm install && npm run build) && \
 	rsync -r --exclude="*.map" beaker-vue/dist/html/* beaker_kernel/server/ui/
+	#rm -r beaker_kernel/server/ui/* || true; \
 
 .PHONY:changed-files
 changed-files:

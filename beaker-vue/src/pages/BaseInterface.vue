@@ -1,6 +1,6 @@
 <template>
     <BeakerSession id="beaker-session-container" ref="beakerSession">
-        <app>
+        <div id="app">
             <header>
                 <slot name="header">
                     <BeakerHeader
@@ -51,21 +51,51 @@
             <slot name="toast">
                 <Toast position="bottom-right" />
             </slot>
-        </app>
+            <slot name="confirmation">
+                <ConfirmDialog></ConfirmDialog>
+            </slot>
+        </div>
+        <slot name="login-dialog">
+            <Dialog
+                ref="loginDialogRef"
+                v-model:visible="authDialogVisible"
+                modal
+                :draggable="false"
+                header="Model Provider Configuration"
+                @show="providerConfig"
+            >
+                <div v-if="authMessage" style="margin-bottom: 1rem;">
+                    <h3>Message from service:</h3>
+                    <span style="font-style: italic;">{{ authMessage }}</span>
+                </div>
+                <ProviderSelector
+                    :config-type="beakerSession?.connectionSettings?.config_type"
+                    @set-agent-model="setAgentModel"
+                    @close-dialog="authDialogVisible = false"
+                />
+            </Dialog>
+        </slot>
     </BeakerSession>
 </template>
 
 <script setup lang="ts">
-import { defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounted, defineExpose } from 'vue';
+import { defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounted, toRaw, defineExpose } from 'vue';
+import Dialog from 'primevue/dialog';
+import ConfirmDialog from 'primevue/confirmdialog';
 import BeakerSession from '../components/session/BeakerSession.vue';
-import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
+import BeakerHeader from '../components/misc/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import {BeakerSession as Session} from 'beaker-kernel/src'
+import InputText from 'primevue/inputtext';
+import InputGroup from 'primevue/inputgroup';
+import Button from 'primevue/button';
+import ProviderSelector from '../components/misc/ProviderSelector.vue';
 import sum from 'hash-sum';
 
+import {default as ConfigPanel, getConfigAndSchema, dropUnchangedValues, objectifyTables, tablifyObjects, saveConfig} from '../components/panels/ConfigPanel.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
-import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
+import FooterDrawer from '../components/misc/FooterDrawer.vue';
 
 
 const toast = useToast();
@@ -74,15 +104,20 @@ const lastSaveChecksum = ref<string>();
 
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
-// Let's only use severity=success|warning|danger(=error) for now
-const showToast = ({title, detail, life=3000, severity=('success' as undefined), position='bottom-right'}) => {
+interface ShowToastOptions {
+    title: string;
+    detail: string;
+    life?: number;
+    severity?: 'success' | 'warn' | 'info' | 'error';
+}
+
+const showToast = (options: ShowToastOptions) => {
+    const {title, detail, life=3000, severity='success'} = options;
     toast.add({
         summary: title,
         detail,
         life,
-        // for options, seee https://primevue.org/toast/
         severity,
-        // position
     });
 };
 
@@ -91,6 +126,7 @@ const props = defineProps([
     "titleExtra",
     "savefile",
     "headerNav",
+    "apiKeyPrompt",
 ]);
 
 const emit = defineEmits([
@@ -101,6 +137,11 @@ const emit = defineEmits([
 const connectionStatus = ref('connecting');
 const saveInterval = ref();
 const beakerSession = ref<typeof BeakerSession>();
+const authDialogVisible = ref<boolean>(props.apiKeyPrompt || false);
+const authDialogEntry = ref<string>("");
+const authMessage = ref<string>("");
+const authRetryCell = ref();
+const loginDialogRef = ref();
 
 const contextSelectionOpen = ref(false);
 const contextProcessing = ref(false);
@@ -123,6 +164,12 @@ onMounted(async () => {
         console.error(e);
         notebookData = {};
     }
+
+    // Connect listener for authentication message
+    session.session.ready.then(() => {
+        const sessionContext = toRaw(session.session.session)
+        sessionContext.iopubMessage.connect(iopubMessage);
+    });
 
     const sessionId = session.sessionId;
 
@@ -147,6 +194,28 @@ onMounted(async () => {
     saveInterval.value = setInterval(snapshot, 30000);
     window.addEventListener("beforeunload", snapshot);
 });
+
+const iopubMessage = (_sessionConn, msg) => {
+    if (msg.header.msg_type === "llm_auth_failure") {
+        authDialogVisible.value = true;
+        authMessage.value = msg.content.msg;
+        if (msg.cell !== undefined) {
+            authRetryCell.value = msg.cell;
+        }
+    }
+};
+
+const setAgentModel = async (modelConfig = null, rerunLastCommand = false) => {
+    const session = beakerSession.value.session;
+    const resetFuture = session.sendBeakerMessage(
+        "set_agent_model",
+        modelConfig,
+    )
+    await resetFuture.done;
+    if (rerunLastCommand && authRetryCell.value) {
+        authRetryCell.value.execute(session);
+    }
+}
 
 onUnmounted(() => {
     clearInterval(saveInterval.value);
@@ -215,8 +284,13 @@ const snapshot = async () => {
     }
 };
 
+const providerConfig = () => {
+    // console.log();
+}
+
 defineExpose({
     beakerSession,
+    showToast,
 });
 
 </script>
@@ -229,7 +303,7 @@ defineExpose({
     flex-direction: column;
 }
 
-app {
+#app {
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -258,7 +332,7 @@ main {
         "left-panel center-panel right-panel" 100% /
         min-content minmax(30%, 100%) min-content;
     background-color: var(--surface-0);
-    overflow: hidden auto;
+    overflow: hidden;
     max-width: 100%;
     max-height: 100%;
 }
@@ -282,6 +356,10 @@ footer {
 #right-panel {
     grid-area: right-panel;
     width: 100%;
+}
+
+.p-confirm-dialog {
+    white-space: pre-line;
 }
 
 </style>

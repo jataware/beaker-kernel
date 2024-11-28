@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "beaker-kernel"
-version = "1.7.2"
+version = "1.7.4"
 description = ""
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,7 +22,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "archytas~=1.2.1",
+  "archytas~=1.3.0",
   "jupyterlab~=4.0",
   "jupyterlab-server>=2.22.1,<3",
   "requests>=2.24,<3",
@@ -73,8 +73,8 @@ path = "beaker_kernel/builder/beaker.py"
 
 
 [tool.bumpversion]
-current_version="1.7.2"
-parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)((?P<release>[release])(?P<revision>\\d+))?"
+current_version="1.7.4"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)((?P<release>[ab])(?P<revision>\\d+))?"
 serialize = [
   "{major}.{minor}.{patch}{release}{revision}",
   "{major}.{minor}.{patch}"
@@ -93,7 +93,7 @@ commit = true
 message = "Bump version: {current_version} → {new_version}"
 commit_args = ""
 
-[[tool.bumpversion.part.release]]
+[tool.bumpversion.parts.release]
 values = [
   "a",
   "b",

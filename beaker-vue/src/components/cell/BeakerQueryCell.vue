@@ -212,6 +212,7 @@ const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
     "code_cell": "Code",
     "user_answer": "Answer",
     "user_question": "Question",
+    // "background_code": "Background Code",
     "error": "Error",
     "abort": "Abort"
 }
@@ -236,6 +237,12 @@ function execute() {
     isEditing.value = false;
     nextTick(() => {
         const future = props.cell.execute(session);
+        // Add reference to cell for downstream processing.
+        future.registerMessageHook(
+            (msg) => {
+                msg.cell = cell.value;
+            }
+        )
     });
 }
 

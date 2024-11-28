@@ -142,11 +142,11 @@ class BeakerContext:
             subkernel.KERNEL_NAME: subkernel
             for subkernel in autodiscover("subkernels").values()
         }
-        url = urllib.parse.urljoin(config.JUPYTER_SERVER, "/api/kernels")
+        url = urllib.parse.urljoin(config.jupyter_server, "/api/kernels")
         res = requests.post(
             url,
             json={"name": language, "path": ""},
-            headers={"Authorization": f"token {config.JUPYTER_TOKEN}"},
+            headers={"Authorization": f"token {config.jupyter_token}"},
         )
         kernel_info = res.json()
         self.beaker_kernel.update_running_kernels()
