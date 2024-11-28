@@ -74,6 +74,10 @@
                     <FilePanel
                         ref="filePanelRef"
                         @open-file="loadNotebook"
+                        @preview-file="(file, mimetype) => {
+                            previewedFile = {url: file, mimetype: mimetype};
+                            previewVisible = true;
+                        }"
                     />
                 </SideMenuPanel>
                 <SideMenuPanel v-if="props.config.config_type !== 'server'" id="config" label="Config" icon="pi pi-cog" :lazy="true">
@@ -84,6 +88,13 @@
                 </SideMenuPanel>
             </SideMenu>
         </template>
+        <template #right-panel>
+        </template>
+        <PreviewPanel
+            :url="previewedFile?.url"
+            :mimetype="previewedFile?.mimetype"
+            v-model="previewVisible"
+        />
     </BaseInterface>
 </template>
 
@@ -93,10 +104,11 @@ import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from '
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
+import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
+import Sidebar from 'primevue/sidebar';
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import InfoPanel from '../components/panels/InfoPanel.vue';
@@ -105,6 +117,7 @@ import ConfigPanel from '../components/panels/ConfigPanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
+import PreviewPanel from '../components/panels/PreviewPanel.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
@@ -118,6 +131,7 @@ const beakerInterfaceRef = ref();
 const filePanelRef = ref();
 const configPanelRef = ref();
 const sideMenuRef = ref();
+const previewVisible = ref<boolean>(false);
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "notebook_dev_session";
@@ -136,6 +150,7 @@ const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     JSONRenderer,
     LatexRenderer,
     DecapodeRenderer,
+    TableRenderer
 ];
 
 const cellComponentMapping = {
@@ -159,6 +174,12 @@ const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
+
+type FilePreview = {
+    url: string,
+    mimetype?: string
+}
+const previewedFile = ref<FilePreview>();
 
 const notebookTitle = computed(() => {
     if (saveAsFilename.value) {

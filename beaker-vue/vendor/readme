@@ -1,0 +1,7 @@
+SheetJS chooses to not publish on NPM.
+
+According to the official docs, the recommended solution is just to check the tarball into VCS.
+
+https://docs.sheetjs.com/docs/getting-started/installation/frameworks/#vendoring
+
+While unfortunate, statically pinning to a version makes more sense at the moment than relying on external CDN locations and being subject to their outages and interruptions.

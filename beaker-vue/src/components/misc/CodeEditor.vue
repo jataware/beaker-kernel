@@ -117,6 +117,8 @@ defineExpose({
     focus,
     blur,
     view: codeMirrorView,
+    update: modelUpdate,
+    model: model
 })
 
 </script>
