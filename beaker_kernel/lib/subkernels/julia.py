@@ -32,7 +32,7 @@ class JuliaSubkernel(BeakerSubkernel):
 # varinfo / filter / display
     FETCH_STATE_CODE = """
 using JSON3
-    
+
 _var_syms = filter(k -> !(k in [:Base, :Core, :IJulia, :In, :Main, :Out, :ans, :clear_history, :eval, :include]), names(@__MODULE__; imported=true))
 _functions = filter(k -> isa(getfield(@__MODULE__, k), Function), _var_syms)
 _modules = filter(k -> isa(getfield(@__MODULE__, k), Module), _var_syms)
@@ -42,7 +42,7 @@ JSON3.write(Dict(
   "functions" => _functions,
   "modules" => _modules,
   "variables" => _variables
-))
+)) |> DisplayAs.unlimited
 """
 
     WEIGHT = 30

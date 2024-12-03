@@ -2,7 +2,11 @@
     <div class="code-cell-output">
         <div class="code-cell-output-box" :class="{'collapsed-output': output.metadata?.collapsed}" v-for="output of props.outputs" :key="output">
             <div class="output-collapse-box" @click.capture.stop.prevent="collapseOutput(output)"></div>
-            <div v-if="output.output_type == 'stream'" :class="output.output_type">{{ output.text }}</div>
+            <div
+                v-if="output.output_type == 'stream'"
+                :class="output.output_type"
+                v-html="ansiHtml(escapeHtml(output.text))"
+            />
             <BeakerMimeBundle
                 v-else-if="['display_data', 'execute_result'].includes(output.output_type)"
                 :mime-bundle="output.data"
@@ -20,6 +24,8 @@
 <script setup lang="ts">
 import { ref, defineProps, inject } from "vue";
 import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
+import ansiHtml from "ansi-html-community";
+import escapeHtml from "escape-html";
 
 const props = defineProps([
     "outputs",
@@ -34,8 +40,8 @@ const collapseOutput = (output) => {
 const rebundleError = (errorOutput) => {
     const traceback = (Array.isArray(errorOutput.traceback) ? errorOutput.traceback?.join('\n') : errorOutput.traceback?.toString());
     const bundle = {
-        'application/vnd.jupyter.error':  errorOutput,
-        'application/vnd.jupyter.stderr': traceback || `${errorOutput.ename}: ${errorOutput.evalue}`,
+        'application/vnd.jupyter.error':  ansiHtml(escapeHtml(errorOutput)),
+        'application/vnd.jupyter.stderr': ansiHtml(escapeHtml(traceback || `${errorOutput.ename}: ${errorOutput.evalue}`)),
     }
     return bundle;
 }
