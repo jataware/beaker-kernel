@@ -24,46 +24,6 @@ class JsonStateEncoder(json.JSONEncoder):
 import logging
 logger = logging.getLogger(__name__)
 
-
-class BeakerSubkernel(abc.ABC):
-    DISPLAY_NAME: str
-    SLUG: str
-    KERNEL_NAME: str
-
-    WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
-
-    TOOLS: list[tuple[Callable, Callable]]  = []
-
-    FETCH_STATE_CODE: str = ""
-
-    @classmethod
-    @abc.abstractmethod
-    def parse_subkernel_return(cls, execution_result) -> Any:
-        ...
-
-    @property
-    def tools(self):
-        return [tool for tool, condition in self.TOOLS if condition()]
-
-    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context: BeakerContext):
-        self.jupyter_id = jupyter_id
-        self.connected_kernel = ProxyKernelClient(subkernel_configuration, session_id=context.beaker_kernel.session_id)
-        self.context = context
-
-    def cleanup(self):
-        if self.jupyter_id is not None:
-            try:
-                print(f"Shutting down connected subkernel {self.jupyter_id}")
-                res = requests.delete(
-                    f"{config.jupyter_server}/api/kernels/{self.jupyter_id}",
-                    headers={"Authorization": f"token {config.jupyter_token}"},
-                )
-                if res.status_code == 204:
-                    self.jupyter_id = None
-            except requests.exceptions.HTTPError as err:
-                print(err)
-
-
 @tool()
 async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
     """
@@ -164,24 +124,32 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
 
     try:
         execution_task: ExecutionTask
-        checkpoint_index, execution_task = await agent.context.subkernel.checkpoint_and_execute(
-            code, not autoexecute, parent_header=message.header, identities=identities
-        )
+        if isinstance(agent.context.subkernel, CheckpointableBeakerSubkernel) and is_checkpointing_enabled():
+            checkpoint_index, execution_task = await agent.context.subkernel.checkpoint_and_execute(
+                code, not autoexecute, parent_header=message.header, identities=identities
+            )
+        else:
+            execution_task = agent.context.execute(
+                code, store_history=True, surpress_messages=(not autoexecute), parent_header=message.header, identities=identities
+            )
+            checkpoint_index = None
         execute_request_msg = {
             name: getattr(execution_task.execute_request_msg, name)
             for name in execution_task.execute_request_msg.json_field_names
         }
+        payload = {
+            "action": "code_cell",
+            "language": agent.context.subkernel.SLUG,
+            "code": code.strip(),
+            "autoexecute": autoexecute,
+            "execute_request_msg": execute_request_msg,
+        }
+        if checkpoint_index is not None:
+            payload["checkpoint_index"] = checkpoint_index
         agent.context.send_response(
             "iopub",
             "add_child_codecell",
-            {
-                "action": "code_cell",
-                "language": agent.context.subkernel.SLUG,
-                "code": code.strip(),
-                "autoexecute": autoexecute,
-                "execute_request_msg": execute_request_msg,
-                "checkpoint_index": checkpoint_index,
-            },
+            payload,
             parent_header=message.header,
             parent_identities=getattr(message, "identities", None),
         )
@@ -193,6 +161,46 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
 
     return format_execution_context(execution_context)
 
+class BeakerSubkernel(abc.ABC):
+    DISPLAY_NAME: str
+    SLUG: str
+    KERNEL_NAME: str
+
+    WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
+
+    TOOLS: list[tuple[Callable, Callable]]  = [(run_code, lambda: True)]
+
+    FETCH_STATE_CODE: str = ""
+
+    @classmethod
+    @abc.abstractmethod
+    def parse_subkernel_return(cls, execution_result) -> Any:
+        ...
+
+    @property
+    def tools(self):
+        return [tool for tool, condition in self.TOOLS if condition()]
+
+    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context: BeakerContext):
+        self.jupyter_id = jupyter_id
+        self.connected_kernel = ProxyKernelClient(subkernel_configuration, session_id=context.beaker_kernel.session_id)
+        self.context = context
+
+    def cleanup(self):
+        if self.jupyter_id is not None:
+            try:
+                print(f"Shutting down connected subkernel {self.jupyter_id}")
+                res = requests.delete(
+                    f"{config.jupyter_server}/api/kernels/{self.jupyter_id}",
+                    headers={"Authorization": f"token {config.jupyter_server}"},
+                )
+                if res.status_code == 204:
+                    self.jupyter_id = None
+            except requests.exceptions.HTTPError as err:
+                print(err)
+
+
+
 # Provided for backwards compatibility
 BaseSubkernel = BeakerSubkernel
 
@@ -201,10 +209,6 @@ def is_checkpointing_enabled():
 
 class CheckpointableBeakerSubkernel(BeakerSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"
-
-    TOOLS = [
-        (run_code, is_checkpointing_enabled),
-    ]
 
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         super().__init__(jupyter_id, subkernel_configuration, context)

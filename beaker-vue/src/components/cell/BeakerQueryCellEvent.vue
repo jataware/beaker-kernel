@@ -77,9 +77,7 @@
                                 <div>
                                 {{ code_execution.ename }}: {{ code_execution.evalue }}
                                 </div>
-                                <div class="monospace pre">
-                                    {{ stripAnsi(code_execution.traceback.join('\n').trim())}}
-                                </div>
+                                <div class="monospace pre" v-html="ansiHtml(code_execution.traceback.join('\n').trim())"/>
                             </div>
                         </div>
                     </AccordionTab>
@@ -158,6 +156,7 @@ import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import stripAnsi from "strip-ansi";
+import ansiHtml from "ansi-html-community";
 
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
