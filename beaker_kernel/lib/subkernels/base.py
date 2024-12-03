@@ -124,24 +124,32 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
 
     try:
         execution_task: ExecutionTask
-        checkpoint_index, execution_task = await agent.context.subkernel.checkpoint_and_execute(
-            code, not autoexecute, parent_header=message.header, identities=identities
-        )
+        if isinstance(agent.context.subkernel, CheckpointableBeakerSubkernel) and is_checkpointing_enabled():
+            checkpoint_index, execution_task = await agent.context.subkernel.checkpoint_and_execute(
+                code, not autoexecute, parent_header=message.header, identities=identities
+            )
+        else:
+            execution_task = agent.context.execute(
+                code, store_history=True, surpress_messages=(not autoexecute), parent_header=message.header, identities=identities
+            )
+            checkpoint_index = None
         execute_request_msg = {
             name: getattr(execution_task.execute_request_msg, name)
             for name in execution_task.execute_request_msg.json_field_names
         }
+        payload = {
+            "action": "code_cell",
+            "language": agent.context.subkernel.SLUG,
+            "code": code.strip(),
+            "autoexecute": autoexecute,
+            "execute_request_msg": execute_request_msg,
+        }
+        if checkpoint_index is not None:
+            payload["checkpoint_index"] = checkpoint_index
         agent.context.send_response(
             "iopub",
             "add_child_codecell",
-            {
-                "action": "code_cell",
-                "language": agent.context.subkernel.SLUG,
-                "code": code.strip(),
-                "autoexecute": autoexecute,
-                "execute_request_msg": execute_request_msg,
-                "checkpoint_index": checkpoint_index,
-            },
+            payload,
             parent_header=message.header,
             parent_identities=getattr(message, "identities", None),
         )
@@ -191,10 +199,6 @@ class BeakerSubkernel(abc.ABC):
             except requests.exceptions.HTTPError as err:
                 print(err)
 
-    async def checkpoint_and_execute(self, code: str, surpress_messages: bool = False, parent_header = None, identities = None) -> tuple[int, ExecutionTask]:
-        task = self.context.execute(code, store_history=True, surpress_messages=surpress_messages, parent_header=parent_header, identities=identities)
-        return 0, task
-
 
 
 # Provided for backwards compatibility
@@ -205,10 +209,6 @@ def is_checkpointing_enabled():
 
 class CheckpointableBeakerSubkernel(BeakerSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"
-
-    TOOLS = [
-        (run_code, is_checkpointing_enabled),
-    ]
 
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         super().__init__(jupyter_id, subkernel_configuration, context)
