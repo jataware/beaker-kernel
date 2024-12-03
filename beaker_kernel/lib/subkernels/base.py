@@ -24,8 +24,6 @@ class JsonStateEncoder(json.JSONEncoder):
 import logging
 logger = logging.getLogger(__name__)
 
-
-
 @tool()
 async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
     """
@@ -203,7 +201,7 @@ class BeakerSubkernel(abc.ABC):
 BaseSubkernel = BeakerSubkernel
 
 def is_checkpointing_enabled():
-    return getattr(config, "ENABLE_CHECKPOINTS", True)
+    return getattr(config, "enable_checkpoints", True)
 
 class CheckpointableBeakerSubkernel(BeakerSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"

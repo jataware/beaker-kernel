@@ -8,4 +8,4 @@ has_toc: true
 
 # util.ts module
 
-The session modulue contains classes for communicating with the beaker kernel.
+The session module contains classes for communicating with the beaker kernel.

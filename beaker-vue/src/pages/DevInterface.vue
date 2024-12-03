@@ -119,7 +119,7 @@ import BaseInterface from './BaseInterface.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
 import BeakerSession from '../components/session/BeakerSession.vue';
-import BeakerHeader from '../components/dev-interface/BeakerHeader.vue';
+import BeakerHeader from '../components/misc/BeakerHeader.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
@@ -134,11 +134,11 @@ import BeakerContextSelection from "../components/session/BeakerContextSelection
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
 import ContextPanel from '../components/panels/ContextPanel.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
-import PreviewPane from '../components/dev-interface/PreviewPane.vue';
+import PreviewPane from '../components/misc/PreviewPane.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
-import FooterDrawer from '../components/dev-interface/FooterDrawer.vue';
+import FooterDrawer from '../components/misc/FooterDrawer.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';

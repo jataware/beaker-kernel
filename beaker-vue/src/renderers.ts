@@ -5,6 +5,7 @@ import { PartialJSONObject } from '@lumino/coreutils';
 import VueJsonPretty from 'vue-json-pretty';
 import katex from 'katex';
 import DecapodePreview from './components/render/DecapodePreview.vue';
+import TablePreview from './components/render/TablePreview.vue';
 
 export interface BeakerRenderOutput {
     component: Component;
@@ -67,6 +68,25 @@ export const LatexRenderer: IMimeRenderer<BeakerRenderOutput> = {
             ),
             bindMapping: {
                 'html': html,
+            }
+        }
+    }
+}
+
+export const TableRenderer: IMimeRenderer<BeakerRenderOutput> = {
+    rank: 40,
+    mimetypes: [
+        "text/csv", 
+        "text/tsv",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ],
+    render: (mimeType: MimetypeString, data: PartialJSONObject, metadata: PartialJSONObject) => {
+        return {
+            component: TablePreview,
+            bindMapping: {
+                data: data,
+                mimeType: mimeType
             }
         }
     }

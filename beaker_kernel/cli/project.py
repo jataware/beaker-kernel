@@ -206,7 +206,7 @@ def new_project(ctx: click.Context, name, no_interact, dependencies, no_context)
 @click.argument("path", required=False, default=None, type=click.Path(path_type=Path))
 def update(path):
     """
-    (Re)installs the project in editable mode (i.e. setuptools "develop mode") in the current python environment.
+    (Re)installs the project in editable mode ("develop mode") in the current python environment.
 
     """
     pyproject_path = find_pyproject_file(path)

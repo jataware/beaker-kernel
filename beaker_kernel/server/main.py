@@ -5,7 +5,10 @@ import logging
 import os
 import uuid
 import urllib.parse
-from typing import Dict
+from dataclasses import is_dataclass, asdict
+from collections.abc import Mapping, Collection
+from typing import get_origin, get_args, GenericAlias, Union, Generic
+from types import UnionType
 
 from jupyter_core.utils import ensure_async
 from jupyter_server.auth.decorator import authorized
@@ -23,7 +26,7 @@ from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
-from beaker_kernel.lib.config import config, JUPYTER_SERVER_DEFAULT
+from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, ConfigClass, recursiveOptionalUpdate, reset_config
 from beaker_kernel.server import admin_utils
 
 logger = logging.getLogger(__file__)
@@ -130,6 +133,138 @@ class MainHandler(StaticFileHandler):
         return await super().get(path, include_body=include_body)
 
 
+class ConfigController(ExtensionHandlerMixin, JupyterHandler):
+    """
+    """
+    @staticmethod
+    def map_type(type_obj: type):
+        type_def = {}
+        try:
+            try:
+                type_origin = get_origin(type_obj)
+                type_args = get_args(type_obj)
+            except:
+                type_origin = None
+                type_args = None
+            if type_args:
+                if isinstance(type_obj, UnionType):
+                    type_def["type_str"] = repr(type_obj)
+                elif issubclass(type_origin, Choice):
+                    source = get_args(type_args[0])[0]
+                    type_def["type_str"] = f"{type_origin.__name__}['{source}']"
+                    type_def["choice_source"] = source
+                else:
+                    type_def["type_str"] = f"{type_origin.__name__}[{', '.join(arg.__name__ for arg in type_args)}]"
+                if type_origin:
+                    type_def["type_origin"] = ConfigController.map_type(type_origin)
+                if type_args:
+                    type_def["type_args"] = [ConfigController.map_type(type_arg) for type_arg in type_args]
+
+            elif is_dataclass(type_obj):
+                type_def.update(ConfigController.jsonify_dataclass_schema(type_obj))
+            else:
+                if isinstance(type_obj, type):
+                    type_def["type_str"] = type_obj.__name__
+                else:
+                    type_def["type_str"] = repr(type_obj)
+
+            if hasattr(type_obj, "default_value"):
+                default_value = type_obj.default_value()
+                type_def["default_value"] = default_value
+            else:
+                try:
+                    default_value = type_obj()
+                    type_def["default_value"] = default_value
+                except TypeError:
+                    pass
+        except:
+            type_def["type_str"] = repr(type_obj)
+        return type_def
+
+
+    @staticmethod
+    def jsonify_dataclass_schema(obj):
+        result = {
+            "type_str": f"Dataclass[{obj.__name__}]",
+            "fields": {},
+        }
+        for field_name, field in obj.__dataclass_fields__.items():
+            type_def = ConfigController.map_type(field.type)
+            metadata = dict(field.metadata)
+            description = metadata.pop("description", None)
+            option_func = metadata.pop("options", None)
+            if option_func and callable(option_func):
+                metadata["options"] = option_func()
+            field_result = {
+                "name": field.name,
+                "description": description,
+                "metadata": metadata,
+                **type_def,
+            }
+            result["fields"][field_name] = field_result
+
+        return result
+
+
+    @staticmethod
+    def jsonify_dataclass_object(obj):
+        result = {}
+        for field_name, field in obj.__dataclass_fields__.items():
+            current_value = getattr(obj, field_name, None)
+            if get_origin(field.type) and issubclass(get_origin(field.type), Table):
+                record_type = get_args(field.type)[0]
+                if is_dataclass(record_type):
+                    current_value = {
+                        key: ConfigController.jsonify_dataclass_object(record_type(**value))
+                        for key, value in current_value.items()
+                    }
+            # TODO: Verify value is in choice list?
+            # elif get_origin(field.type) and issubclass(get_origin(field.type), Choice):
+            #     current_value = ""
+            elif is_dataclass(current_value):
+                current_value = ConfigController.jsonify_dataclass_object(current_value)
+                if not current_value:
+                    current_value = {}
+
+            if field.metadata.get("sensitive", True):
+                # Track if a value is defined or not.
+                current_value = None if current_value else ""
+                # current_value = ""
+            result[field_name] = current_value
+        return result
+
+
+    def get(self):
+        if "schema" in self.request.query:
+            return self.get_config_schema()
+        else:
+            return self.get_config()
+
+    async def post(self):
+        config_changes = self.get_json_body()
+        updated_config: dict = recursiveOptionalUpdate(config, config_changes)
+        config.update(updates=updated_config)
+        reset_config()
+        return await self.get_config()
+
+    async def get_config_schema(self):
+        config_cls = Config
+        schema = self.jsonify_dataclass_schema(config_cls)
+        return self.write(schema)
+
+
+    async def get_config(self):
+        config_file = locate_config()
+        payload = self.jsonify_dataclass_object(config)
+
+        return self.write(
+            {
+                "config": payload,
+                "config_type": config.config_type,
+                "config_id": str(config_file),
+            }
+        )
+
 class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
     """
     Provide config via an endpoint
@@ -153,7 +288,8 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
             "appUrl": os.environ.get("APP_URL", base_url),
             "baseUrl": base_url,
             "wsUrl": os.environ.get("JUPYTER_WS_URL", ws_url),
-            "token": config.JUPYTER_TOKEN,
+            "token": config.jupyter_token,
+            "config_type": config.config_type,
         }
 
         # Ensure a proper xsrf cookie value is set.
@@ -175,8 +311,8 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
     def get(self):
         """Get the main page for the application's interface."""
         ksm = self.kernel_spec_manager
-        contexts: Dict[str, BeakerContext] = autodiscover("contexts")
-        possible_subkernels: Dict[str, BeakerSubkernel] = autodiscover("subkernels")
+        contexts: dict[str, BeakerContext] = autodiscover("contexts")
+        possible_subkernels: dict[str, BeakerSubkernel] = autodiscover("subkernels")
         subkernel_by_kernel_index = {subkernel.KERNEL_NAME: subkernel for subkernel in possible_subkernels.values()}
         installed_kernels = [
             subkernel_by_kernel_index[kernel_name] for kernel_name in ksm.find_kernel_specs().keys()
@@ -321,7 +457,7 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
             },
             "sessions": sessions,
             "kernels": kernels,
-            "token": config.JUPYTER_TOKEN,
+            "token": config.jupyter_token,
         }
         return self.write(json.dumps(output))
 
@@ -374,7 +510,7 @@ class BeakerJupyterApp(LabServerApp):
     @classmethod
     def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
         # Set Jupyter token from config
-        os.environ.setdefault("JUPYTER_TOKEN", config.JUPYTER_TOKEN)
+        os.environ.setdefault("JUPYTER_TOKEN", config.jupyter_token)
         # TODO: catch and handle any custom command line arguments here
         app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
         if cls.request_log_handler:
@@ -399,6 +535,7 @@ class BeakerJupyterApp(LabServerApp):
 
         self.handlers.append((r"/api/kernels", SafeKernelHandler))
         self.handlers.append(("/contexts", ContextHandler))
+        self.handlers.append(("/config/control", ConfigController))
         self.handlers.append(("/config", ConfigHandler))
         self.handlers.append(("/stats", StatsHandler))
         self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": self.ui_path, "default_filename": "admin.html"}))

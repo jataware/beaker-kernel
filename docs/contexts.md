@@ -8,17 +8,15 @@ has_children: true
 
 # Contexts
 
-Beaker works best when used within a particular context. At a high level, a
-context consist of the following:
+Beaker can be totally customized by creating bespoke, use case driven contexts. 
+At a high level, a context consist of the following:
 * A subkernel which acts as your notebook environment.
-  * Selecting a subkernel also sets the language you will work in and what
-  libraries you have access to.
-* Knowledge regarding the items/objects that you are working on in, either in
+  * Selecting a subkernel also sets the language you will work in and which
+  libraries you have access to. Currently Beaker supports `Python`, `R`, and `Julia`.
+* Knowledge of the items/objects that you are working on in, either in
 the subkernel or via the context tool or LLM Agent.
-  * The context can automatically pre-load items at startup that you are
-  planning to work on.
-  * The context keeps a persitent state, allowing you work on items in more
-  than one way.
+  * Automatically pre-loaded items at context initialization.
+  * A persitent state, allowing you work on items in more than one way.
 * A set of tools that interacts with the subkernel and the front-end.
   * A set of subkernal procedures that manipulate the subkernel environment.
   * Message handlers that accept arbitrary requests from the front-end
@@ -28,7 +26,7 @@ the subkernel or via the context tool or LLM Agent.
 * An LLM Agent that accepts human languge requests and acts on your behalf.
   * Uses all of the tools available to it, and the knowledge contained in the
   context to make decisions on how to best satisfy your request.
-  * Has its own set of ReAct tools to allow it to query the subkernel, the
+  * Has its own set of chain-of-thought style tools developed in the [Archytas framework](https://github.com/jataware/archytas) to allow it to query the subkernel, the
   internet, or custom defined services to fetch the information it needs to
   complete the request.
   * Is able to answer questions, generate code to accomplish a request in a new
@@ -36,10 +34,9 @@ the subkernel or via the context tool or LLM Agent.
   more.
 
 
-When connecting to Beaker, usually the first action following connecting is to
-set the context.
-
 ## Setting a Beaker context will do the following:
+
+To use a custom context, it must be set once the user has loaded the notebook. Checkout the [getting started guide](getting_started.md) for more information on how to load a custom context. Once the context is set, it will do the following:
 
 * Change the subkernel, recreating if needed (destroying the current subkernel
 and creating a new one)
@@ -50,13 +47,12 @@ load objects/instances  (optional)
 * Register any "post-execute" actions to run after a notebook cell is executed
 (optional)
 
-** Currently, setting a context is the only way to change the language of the
+> **Note**: currently, setting a context is the only way to change the language of the
 subkernel.
 
 ### Setting the context
 
-You set a context by sending a custom message to the beaker kernel. The message
-should have the following format:
+Contexts can be set by external applications (such as a custom frontend) by sending a custom message to the beaker kernel. The message should have the following format:
 
 `msg_type`: `context_setup_request`<br/>
 `msg_payload`:<br/>

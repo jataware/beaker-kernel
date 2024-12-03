@@ -20,10 +20,7 @@
  * %APPDATA%\beaker
  * %LOCALAPPDATA%\beaker
 
-## Structure of a Beaker library directory
-
-
 
 ## How Beaker uses the libraries
 
-Beaker loads items from the
+These folders store information on registered Subkernels, Contexts, CLI command extensions, etc.
