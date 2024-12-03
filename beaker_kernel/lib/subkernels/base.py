@@ -25,44 +25,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class BeakerSubkernel(abc.ABC):
-    DISPLAY_NAME: str
-    SLUG: str
-    KERNEL_NAME: str
-
-    WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
-
-    TOOLS: list[tuple[Callable, Callable]]  = []
-
-    FETCH_STATE_CODE: str = ""
-
-    @classmethod
-    @abc.abstractmethod
-    def parse_subkernel_return(cls, execution_result) -> Any:
-        ...
-
-    @property
-    def tools(self):
-        return [tool for tool, condition in self.TOOLS if condition()]
-
-    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context: BeakerContext):
-        self.jupyter_id = jupyter_id
-        self.connected_kernel = ProxyKernelClient(subkernel_configuration, session_id=context.beaker_kernel.session_id)
-        self.context = context
-
-    def cleanup(self):
-        if self.jupyter_id is not None:
-            try:
-                print(f"Shutting down connected subkernel {self.jupyter_id}")
-                res = requests.delete(
-                    f"{config.JUPYTER_SERVER}/api/kernels/{self.jupyter_id}",
-                    headers={"Authorization": f"token {config.JUPYTER_TOKEN}"},
-                )
-                if res.status_code == 204:
-                    self.jupyter_id = None
-            except requests.exceptions.HTTPError as err:
-                print(err)
-
 
 @tool()
 async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
@@ -192,6 +154,50 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
         raise
 
     return format_execution_context(execution_context)
+
+class BeakerSubkernel(abc.ABC):
+    DISPLAY_NAME: str
+    SLUG: str
+    KERNEL_NAME: str
+
+    WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
+
+    TOOLS: list[tuple[Callable, Callable]]  = [(run_code, lambda: True)]
+
+    FETCH_STATE_CODE: str = ""
+
+    @classmethod
+    @abc.abstractmethod
+    def parse_subkernel_return(cls, execution_result) -> Any:
+        ...
+
+    @property
+    def tools(self):
+        return [tool for tool, condition in self.TOOLS if condition()]
+
+    def __init__(self, jupyter_id: str, subkernel_configuration: dict, context: BeakerContext):
+        self.jupyter_id = jupyter_id
+        self.connected_kernel = ProxyKernelClient(subkernel_configuration, session_id=context.beaker_kernel.session_id)
+        self.context = context
+
+    def cleanup(self):
+        if self.jupyter_id is not None:
+            try:
+                print(f"Shutting down connected subkernel {self.jupyter_id}")
+                res = requests.delete(
+                    f"{config.JUPYTER_SERVER}/api/kernels/{self.jupyter_id}",
+                    headers={"Authorization": f"token {config.JUPYTER_TOKEN}"},
+                )
+                if res.status_code == 204:
+                    self.jupyter_id = None
+            except requests.exceptions.HTTPError as err:
+                print(err)
+
+    async def checkpoint_and_execute(self, code: str, surpress_messages: bool = False, parent_header = None, identities = None) -> tuple[int, ExecutionTask]:
+        task = self.context.execute(code, store_history=True, surpress_messages=surpress_messages, parent_header=parent_header, identities=identities)
+        return 0, task
+
+
 
 # Provided for backwards compatibility
 BaseSubkernel = BeakerSubkernel

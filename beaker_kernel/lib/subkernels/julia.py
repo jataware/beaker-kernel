@@ -17,7 +17,6 @@ def get_kernel_name():
             return kernel
     return None
 
-
 class JuliaSubkernel(BeakerSubkernel):
     """
     Beaker subkernel for the Julia language, using the IJulia kernel from the IJulia.jl package.
@@ -29,6 +28,11 @@ class JuliaSubkernel(BeakerSubkernel):
     DISPLAY_NAME = "Julia"
     SLUG = "julia"
     KERNEL_NAME = get_kernel_name()
+
+# varinfo / filter / display
+    FETCH_STATE_CODE = """
+
+"""
 
     WEIGHT = 30
 
