@@ -40,8 +40,8 @@ const collapseOutput = (output) => {
 const rebundleError = (errorOutput) => {
     const traceback = (Array.isArray(errorOutput.traceback) ? errorOutput.traceback?.join('\n') : errorOutput.traceback?.toString());
     const bundle = {
-        'application/vnd.jupyter.error':  ansiHtml(escapeHtml(errorOutput)),
-        'application/vnd.jupyter.stderr': ansiHtml(escapeHtml(traceback || `${errorOutput.ename}: ${errorOutput.evalue}`)),
+        'application/vnd.jupyter.error':  errorOutput,
+        'application/vnd.jupyter.stderr': traceback || `${errorOutput.ename}: ${errorOutput.evalue}`,
     }
     return bundle;
 }
