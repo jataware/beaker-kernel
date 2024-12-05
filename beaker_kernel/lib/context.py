@@ -142,6 +142,13 @@ class BeakerContext:
             subkernel.KERNEL_NAME: subkernel
             for subkernel in autodiscover("subkernels").values()
         }
+        subkernel_opts = {
+            subkernel.SLUG: subkernel
+            for subkernel in autodiscover("subkernels").values()
+        }
+        if language not in kernel_opts and language in subkernel_opts:
+            language = subkernel_opts[language].KERNEL_NAME
+
         url = urllib.parse.urljoin(self.beaker_kernel.jupyter_server, "/api/kernels")
         res = requests.post(
             url,
