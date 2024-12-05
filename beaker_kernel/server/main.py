@@ -10,7 +10,9 @@ from collections.abc import Mapping, Collection
 from typing import get_origin, get_args, GenericAlias, Union, Generic
 from types import UnionType
 
+from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
 from jupyter_core.utils import ensure_async
+from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
 from jupyter_server.auth.decorator import authorized
 from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
@@ -462,10 +464,24 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
         return self.write(json.dumps(output))
 
 
+class BeakerKernelManager(AsyncIOLoopKernelManager):
+    def write_connection_file(self, **kwargs: object) -> None:
+        return super().write_connection_file(
+            server=self.parent.parent.public_url,
+            **kwargs
+        )
+
+
+class BeakerKernelMappingManager(AsyncMappingKernelManager):
+    kernel_manager_class = "beaker_kernel.server.main.BeakerKernelManager"
+
+
 class BeakerServerApp(ServerApp):
     """
     Customizable ServerApp for use with Beaker
     """
+
+    kernel_manager_class = BeakerKernelMappingManager
 
     @property
     def public_url(self):

@@ -142,7 +142,7 @@ class BeakerContext:
             subkernel.KERNEL_NAME: subkernel
             for subkernel in autodiscover("subkernels").values()
         }
-        url = urllib.parse.urljoin(config.jupyter_server, "/api/kernels")
+        url = urllib.parse.urljoin(self.beaker_kernel.jupyter_server, "/api/kernels")
         res = requests.post(
             url,
             json={"name": language, "path": ""},

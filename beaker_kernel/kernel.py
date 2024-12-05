@@ -13,6 +13,7 @@ from typing import Optional
 import requests
 from tornado import ioloop
 
+from .lib.config import reset_config, config
 from .lib.context import BeakerContext, autodiscover_contexts
 from .lib.jupyter_kernel_proxy import InterceptionFilter, JupyterMessage, KernelProxyManager
 from .lib.utils import (message_handler, LogMessageEncoder, magic,
@@ -44,6 +45,7 @@ class BeakerKernel(KernelProxyManager):
         "file_extension": ".txt",
     }
 
+    jupyter_server: Optional[str]
     kernel_id: Optional[str]
     connection_file: Optional[str]
     context: Optional[BeakerContext]
@@ -55,6 +57,7 @@ class BeakerKernel(KernelProxyManager):
     ready: asyncio.Future
 
     def __init__(self, session_config, kernel_id=None, connection_file=None):
+        self.jupyter_server = session_config.get("server", config.jupyter_server)
         self.kernel_id = kernel_id
         self.connection_file = connection_file
         self.debug_enabled = False
@@ -262,11 +265,11 @@ class BeakerKernel(KernelProxyManager):
                 default_payload = json.loads(default_payload)
             context_info = default_payload
 
-        config = {
+        context_config = {
             "language": language,
             "context_info": context_info
         }
-        self.context = context_cls(beaker_kernel=self, config=config)
+        self.context = context_cls(beaker_kernel=self, config=context_config)
         await self.context.setup(context_info=context_info, parent_header=parent_header)
         subkernel = self.context.subkernel
         kernel_setup_func = getattr(subkernel, "setup", None)
@@ -544,7 +547,6 @@ class BeakerKernel(KernelProxyManager):
 
     @message_handler
     async def set_agent_model(self, message):
-        from beaker_kernel.lib.config import reset_config, config
         provider_id = message.content.get("provider_id", None)
         model_config = message.content.get("model_config", None)
         if provider_id or model_config:
@@ -558,7 +560,6 @@ class BeakerKernel(KernelProxyManager):
 
     @message_handler
     async def reset_kernel(self, message):
-        from beaker_kernel.lib.config import reset_config
         reset_config()
         await self.set_context(
             self.context.SLUG,
