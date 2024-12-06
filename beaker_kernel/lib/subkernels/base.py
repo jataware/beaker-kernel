@@ -199,13 +199,13 @@ class BeakerSubkernel(abc.ABC):
             except requests.exceptions.HTTPError as err:
                 print(err)
 
-
-
 # Provided for backwards compatibility
 BaseSubkernel = BeakerSubkernel
 
+
 def is_checkpointing_enabled():
     return getattr(config, "enable_checkpoints", True)
+
 
 class CheckpointableBeakerSubkernel(BeakerSubkernel):
     SERIALIZATION_EXTENSION: str = "storage"
