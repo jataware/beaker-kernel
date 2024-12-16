@@ -113,7 +113,7 @@ replace = """beaker-kernel": "^{new_version}"""
 glob = "beaker-*/package*.json"
 regex = true
 search = """
-([^\\n]*"[^\\n"]*beaker-(?:kernel|ts|vue)[^\\n"]*"[^\\n]*)
+([^\\n]*"[^\\n"]*beaker-(?:kernel|ts|vue)"[^\\n]*)
 ([\\s]*)"version": "{current_version}"([^\\n]*)"""
 replace = """
 \\1
