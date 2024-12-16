@@ -20,10 +20,10 @@
                 </div>
             </div>
         </div>
-        <div class="event-container" v-if="events.length > 0">
+        <div class="event-container" v-if="events.length > 0 || isLastEventTerminal()">
             <div class="events">
-                <div class="query-steps">Agent actions:</div>
-                <Accordion :multiple="true" :class="'query-accordion'" v-model:active-index="selectedEvents">
+                <div class="query-steps" v-if="events.length > 0">Agent actions:</div>
+                <Accordion v-if="events.length > 0" :multiple="true" :class="'query-accordion'" v-model:active-index="selectedEvents">
                     <AccordionTab
                         v-for="(event, eventIndex) in events"
                         :key="eventIndex"
