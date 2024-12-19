@@ -144,7 +144,7 @@ const instance = getCurrentInstance();
 
 
 const events = computed(() => {
-    return [...props.cell.events].filter((event) => event.type !== 'response');
+    return [...props.cell.events].filter((event) => !terminalEvents.includes(event.type));
 })
 
 const taggedCellEvents = computed(() => {
