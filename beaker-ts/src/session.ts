@@ -1,6 +1,6 @@
 import { SessionContext } from '@jupyterlab/apputils';
 import { ServerConnection } from '@jupyterlab/services/lib/serverconnection';
-import {IKernelConnection} from '@jupyterlab/services/lib/kernel/kernel'
+import { IKernelConnection} from '@jupyterlab/services/lib/kernel/kernel';
 import { ServiceManager } from '@jupyterlab/services';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import { JSONObject } from '@lumino/coreutils';
@@ -244,6 +244,17 @@ export class BeakerSession {
         messageFuture.registerMessageHook(responseHandler)
         return messageFuture;
     }
+
+    /**
+     * Interrupt the kernel activity, stopping execution in both the beaker LLM ReAct loop and the subkernel as needed.
+     * See
+     *
+     * @returns - A future
+     */
+    public interrupt(): Promise<any> {
+        return this.session.session.kernel.interrupt();
+    }
+
 
     /**
      *

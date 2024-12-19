@@ -96,24 +96,29 @@ class handle_message(AbstractAsyncContextManager):
 
     async def __aexit__(self, exc_type, exc_value, traceback_value):
         """Raise any exception triggered within the runtime context."""
-        if exc_type:
-            formatted_tb = traceback.format_exception(exc_type, exc_value, traceback_value)
-            sys.stderr.write("\n".join(formatted_tb))
-            sys.stderr.flush()
-            reply_content = {
-                "status": "error",
-                "execution_count": None,
-                "ename": exc_type.__name__,
-                "evalue": str(exc_value),
-                "traceback": formatted_tb,
-            }
-
-        else:
-            reply_content = {
-                "status": "ok",
-                "execution_count": None,
-                "return": self.return_val,
-            }
+        match exc_type:
+            case asyncio.CancelledError():
+                reply_content = {
+                    "status": "aborted",
+                    "execution_count": None,
+                }
+            case BaseException():
+                formatted_tb = traceback.format_exception(exc_type, exc_value, traceback_value)
+                sys.stderr.write("\n".join(formatted_tb))
+                sys.stderr.flush()
+                reply_content = {
+                    "status": "error",
+                    "execution_count": None,
+                    "ename": exc_type.__name__,
+                    "evalue": str(exc_value),
+                    "traceback": formatted_tb,
+                }
+            case _:
+                reply_content = {
+                    "status": "ok",
+                    "execution_count": None,
+                    "return": self.return_val,
+                }
 
         self.beaker_kernel.send_response(
             "shell", self.reply_type, reply_content, parent_header=self.message.header, parent_identities=self.message.identities

@@ -4,5 +4,6 @@
         "start", "{connection_file}"
     ],
     "display_name": "Beaker Kernel",
-    "language": "beaker"
+    "language": "beaker",
+    "interrupt_mode": "message"
 }

@@ -8,7 +8,7 @@ import sys
 import traceback
 import uuid
 from functools import partial
-from typing import Optional
+from typing import Optional, ClassVar, Awaitable
 
 import requests
 from tornado import ioloop
@@ -35,11 +35,11 @@ AVAILABLE_CONTEXTS = autodiscover_contexts()
 
 
 class BeakerKernel(KernelProxyManager):
-    implementation = "beaker-kernel"
-    implementation_version = "0.1"
-    banner = "Beaker Kernel"
+    implementation: ClassVar[str] = "beaker-kernel"
+    implementation_version: ClassVar[str] = "0.1"
+    banner: ClassVar[str] = "Beaker Kernel"
 
-    language_info = {
+    language_info: ClassVar[dict[str, str]] = {
         "mimetype": "text/plain",
         "name": "text",
         "file_extension": ".txt",
@@ -55,6 +55,7 @@ class BeakerKernel(KernelProxyManager):
     debug_enabled: bool
     magic_commands: dict[str, callable]
     ready: asyncio.Future
+    running_actions: dict[str, Awaitable]
 
     def __init__(self, session_config, kernel_id=None, connection_file=None):
         self.jupyter_server = session_config.get("server", config.jupyter_server)
@@ -65,6 +66,7 @@ class BeakerKernel(KernelProxyManager):
         self.magic_commands = {}
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
+        self.running_actions = {}
         super().__init__(session_config, session_id=f"{kernel_id}_session")
         self.register_magic_commands()
         self.add_base_intercepts()
@@ -114,6 +116,7 @@ class BeakerKernel(KernelProxyManager):
         self.server.intercept_message("stdin", "input_reply", self.input_reply)
         self.server.intercept_message("shell", "set_agent_model", self.set_agent_model)
         self.server.intercept_message("shell", "reset_request", self.reset_kernel)
+        self.server.intercept_message("control", "interrupt_request", self.interrupt)
 
     def register_magic_commands(self):
         for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_magic_prefix")):
@@ -346,6 +349,27 @@ class BeakerKernel(KernelProxyManager):
             data = message.parts
         return data
 
+    @message_handler
+    async def interrupt(self, _message):
+        try:
+            subkernel_id = self.context.subkernel.jupyter_id
+            print(f"Interrupting connected subkernel: {subkernel_id}")
+            requests.post(
+                f"{self.context.beaker_kernel.jupyter_server}/api/kernels/{subkernel_id}/interrupt",
+                headers={"Authorization": f"token {config.jupyter_token}"},
+            )
+        except requests.exceptions.HTTPError as err:
+            logger.error(f"Subkernel cannot be interrupted.\nDetails:\n  {err.request.body}", exc_info=err)
+            return None
+
+        for key, value in list(self.running_actions.items()):
+            if inspect.iscoroutine(value):
+                value.throw(asyncio.CancelledError, "Execution interrupted by user.")
+            elif isinstance(value, asyncio.Future):
+                value.cancel(msg="Execution interrupted by user.")
+            del self.running_actions[key]
+        return None
+
     async def prompt_user(self, query, parent_message=None):
         msg_id = str(uuid.uuid4())
         self.send_response(
@@ -420,66 +444,83 @@ class BeakerKernel(KernelProxyManager):
         if not self.context:
             raise Exception("Context has not been set")
         setattr(self.context, "current_llm_query", request)
+        request_key = f"llm_query:{message.header['msg_id']}"
         try:
-            # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track
-            # thoughts
-            if self.context.agent:
-                self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
-            self.debug("llm_query", request, parent_header=message.header)
-            result = await self.context.agent.react_async(request, react_context={"message": message})
-        except AuthenticationError as err:
-            self.send_response(
-                stream="iopub",
-                msg_or_type="llm_auth_failure",
-                content={
-                    "msg": str(err),
-                },
-                parent_header=message.header,
-            )
-            return
-
-        except Exception as err:
-            error_text = f"""LLM Error:
+            try:
+                # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track
+                # thoughts
+                if self.context.agent:
+                    self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
+                self.debug("llm_query", request, parent_header=message.header)
+                task = asyncio.create_task(self.context.agent.react_async(request, react_context={"message": message}))
+                self.running_actions[request_key] = task
+                result = await task
+            except AuthenticationError as err:
+                self.send_response(
+                    stream="iopub",
+                    msg_or_type="llm_auth_failure",
+                    content={
+                        "msg": str(err),
+                    },
+                    parent_header=message.header,
+                )
+                return
+            except asyncio.CancelledError as err:
+                self.send_response(
+                    stream="iopub",
+                    msg_or_type="stream",
+                    content={
+                        "name": "stderr",
+                        "text": "Request interrupted.",
+                    },
+                    parent_header=message.header,
+                )
+                raise
+            except Exception as err:
+                error_text = f"""LLM Error:
 {err}
 
 {traceback.format_exc()}
 """
-            stream_content = {"name": "stderr", "text": error_text}
-            self.send_response(
-                "iopub", "stream", stream_content, parent_header=message.header
-            )
-            raise
-        try:
-            # Normalize result
-            if isinstance(result, (str, bytes, bytearray)):
-                data = json.loads(result)
-            else:
-                data = result
-
-            if isinstance(data, dict) and data.get("action") == "code_cell":
-                stream_content = {
-                    "language": data.get("language"),
-                    "code": data.get("content"),
-                }
+                stream_content = {"name": "stderr", "text": error_text}
                 self.send_response(
-                    "iopub", "code_cell", stream_content, parent_header=message.header
+                    "iopub", "stream", stream_content, parent_header=message.header
                 )
-            else:
-                stream_content = {"name": "response_text", "text": f"{data}"}
+                raise
+            try:
+                # Normalize result
+                if isinstance(result, (str, bytes, bytearray)):
+                    data = json.loads(result)
+                else:
+                    data = result
+
+                if isinstance(data, dict) and data.get("action") == "code_cell":
+                    stream_content = {
+                        "language": data.get("language"),
+                        "code": data.get("content"),
+                    }
+                    self.send_response(
+                        "iopub", "code_cell", stream_content, parent_header=message.header
+                    )
+                else:
+                    stream_content = {"name": "response_text", "text": f"{data}"}
+                    self.send_response(
+                        "iopub", "llm_response", stream_content, parent_header=message.header
+                    )
+            except (
+                json.JSONDecodeError
+            ):  # If response is not a json, it's just text so treat it like text
+                stream_content = {"name": "response_text", "text": f"{result}"}
                 self.send_response(
                     "iopub", "llm_response", stream_content, parent_header=message.header
                 )
-        except (
-            json.JSONDecodeError
-        ):  # If response is not a json, it's just text so treat it like text
-            stream_content = {"name": "response_text", "text": f"{result}"}
-            self.send_response(
-                "iopub", "llm_response", stream_content, parent_header=message.header
-            )
+            finally:
+                # When done, put thought handler back to default to not potentially cause confused thoughts.
+                self.context.agent.thought_handler = self.handle_thoughts
+                setattr(self.context, "current_llm_query", None)
         finally:
-            # When done, put thought handler back to default to not potentially cause confused thoughts.
-            self.context.agent.thought_handler = self.handle_thoughts
-            setattr(self.context, "current_llm_query", None)
+            if request_key in self.running_actions:
+                del self.running_actions[request_key]
 
     @message_handler
     async def context_info_request(self, message):
