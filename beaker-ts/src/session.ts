@@ -6,7 +6,8 @@ import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import { JSONObject } from '@lumino/coreutils';
 import { v4 as uuidv4 } from 'uuid';
 import fetch from 'node-fetch';
-import { Slot } from '@lumino/signaling';
+import { Slot, Signal } from '@lumino/signaling';
+import { ConnectionStatus as JupyterConnectionStatus } from '@jupyterlab/services/lib/kernel/kernel';
 
 import { createMessageId, IBeakerAvailableContexts, IBeakerFuture, IActiveContextInfo } from './util';
 import { BeakerNotebook, IBeakerShellMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage } from './notebook';
@@ -27,6 +28,8 @@ export interface IBeakerSessionOptions {
     }
 };
 
+export type JupyterKernelStatus = messages.Status;
+export type BeakerKernelStatus = JupyterKernelStatus | 'connected' | 'connecting' | 'reconnecting' | 'disconnected';
 
 /**
  * Main class for connecting to and working with a Beaker kernel.
@@ -40,9 +43,12 @@ export class BeakerSession {
         this._services = new ServiceManager({
             serverSettings: this._serverSettings,
         });
-        this._services.connectionFailure.connect((sender, args) => {console.log("CONNECTION ERROR:", sender, args)});
+        this._hasBeenConnected = false;
+        this._services.connectionFailure.connect(this._connectionFailureHandler);
         this._renderer = new BeakerRenderer(options.rendererOptions);
         this._history = new BeakerHistory(this._sessionId);
+        this._lastKernelModel = undefined;
+        this._prevClientId = undefined;
 
         this.notebook = new BeakerNotebook();
         this._initialized = new Promise(async (resolve, reject) => {
@@ -78,7 +84,7 @@ export class BeakerSession {
             path: options.sessionId,
             kernelPreference: {
                 name: options.kernelName
-            }
+            },
         });
 
         // Track all messages from kernels. The disconnect on newValue is in case the kernel connection is reused, to
@@ -87,6 +93,16 @@ export class BeakerSession {
             oldValue?.anyMessage.disconnect(this._sessionMessageHandler, this);
             newValue?.anyMessage.disconnect(this._sessionMessageHandler, this);
             newValue?.anyMessage.connect(this._sessionMessageHandler, this);
+            if (newValue) {
+                this._lastKernelModel = newValue?.model;
+                this._prevClientId = newValue?.clientId;
+            }
+        });
+
+        this._sessionContext.connectionStatusChanged.connect((sender, status) => {
+            if (!this._hasBeenConnected && status == "connected") {
+                this._hasBeenConnected = true;
+            }
         });
 
         // Initialize the session
@@ -99,6 +115,17 @@ export class BeakerSession {
         else {
             this._messageHandler = undefined;
         }
+    }
+
+    /**
+     * Low-level method for reconnecting to the kernel.
+     *
+     */
+    public async reconnect() {
+        (this._sessionContext.connectionStatusChanged as Signal<SessionContext, JupyterConnectionStatus>).emit("connecting");
+        this._sessionContext.dispose;
+        await this.initialize(this._sessionOptions)
+        return this._sessionContext;
     }
 
     /**
@@ -153,6 +180,14 @@ export class BeakerSession {
         else if (msg.header.msg_type === "kernel_info_reply") {
             this._kernelInfo = msg.content;
         }
+    }
+
+    private _connectionFailureHandler(serviceManager: ServiceManager, error: Error) {
+
+        console.log("CONNECTION ERROR:", typeof(error));
+        console.log({cause: error.cause, message: error.message, name: error.name, stack: error.stack});
+        console.error(error);
+        console.error()
     }
 
     /**
@@ -375,6 +410,29 @@ export class BeakerSession {
     }
 
     /**
+     * Returns the status of the Beaker kernel
+     */
+    get status(): BeakerKernelStatus {
+        const connectionStatus = this.kernel?.connectionStatus;
+        const kernelStatus = this.kernel?.status;
+
+        // Prioritize kernel status over connection status if connected.
+        if (connectionStatus === "connected" && kernelStatus) {
+            return kernelStatus;
+        }
+        // Return "reconnecting" if we've been connected and lost connection.
+        else if (connectionStatus === "connecting" && this._hasBeenConnected) {
+            return "reconnecting";
+        }
+        else if (connectionStatus) {
+            return connectionStatus || "unknown";
+        }
+        else {
+            return "disconnected";
+        }
+    }
+
+    /**
      * A reference to the Jupyter KernelConnection object for this session.
      */
     get kernel(): IKernelConnection {
@@ -383,6 +441,14 @@ export class BeakerSession {
 
     get kernelInfo() {
         return this._kernelInfo;
+    }
+
+    get lastKernelModel() {
+        return this._lastKernelModel;
+    }
+
+    get prevClientId() {
+        return this._prevClientId;
     }
 
     /**
@@ -411,6 +477,9 @@ export class BeakerSession {
     private _sessionInfo: any;
     private _renderer: BeakerRenderer;
     private _kernelInfo: any;
+    private _lastKernelModel: any;
+    private _prevClientId: string;
+    private _hasBeenConnected: boolean;
 
     public notebook: BeakerNotebook;
 

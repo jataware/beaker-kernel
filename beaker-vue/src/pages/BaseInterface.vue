@@ -1,5 +1,9 @@
 <template>
-    <BeakerSession id="beaker-session-container" ref="beakerSession">
+    <BeakerSession
+        id="beaker-session-container"
+        ref="beakerSession"
+        @connection-failure="connectionFailure"
+    >
         <div id="app">
             <header>
                 <slot name="header">
@@ -150,7 +154,26 @@ const toggleContextSelection = () => {
     contextSelectionOpen.value = !contextSelectionOpen.value;
 };
 
+
 provide('show_toast', showToast);
+
+const connectionFailure = (error: Error) => {
+    let errorName = error.name;
+    let errorMessage = error.message;
+
+    // Handle worst-case bad error to make it more humane.
+    if (errorName === 'TypeError' && errorMessage === "Failed to fetch") {
+        errorName = "ConnectionError";
+        errorMessage = "Unable to reach server."
+    }
+
+    showToast({
+        title: `Error connecting - ${errorName}`,
+        detail: `${errorMessage}`,
+        severity: "error",
+        life: 5000,
+    });
+}
 
 onMounted(async () => {
     const session: Session = beakerSession.value.session;
