@@ -42,3 +42,7 @@ export {
     type IMimeRenderer,
     type MimetypeString,
 } from './render';
+
+export {
+    type IBeakerFuture,
+} from './util';

@@ -1,7 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { JSONObject } from '@lumino/coreutils';
 import { KernelFutureHandler } from '@jupyterlab/services/lib/kernel/future';
-import  *  as Kernel from '@jupyterlab/services/lib/kernel/kernel';
+import * as Kernel from '@jupyterlab/services/lib/kernel/kernel';
+import * as messages from '@jupyterlab/services/lib/kernel/messages';
 
 import { IBeakerShellMessage, BeakerCodeCell, IBeakerIOPubMessage, IBeakerCell } from './notebook';
 
@@ -24,7 +25,9 @@ export const createMessageId = (msgType: string): string => {
 	return `beaker-${uuid}-${msgType}`;
 };
 
-export interface IBeakerFuture extends Kernel.IShellFuture {
+// export type IBeakerFutureMessage = IBeakerShellMessage | messages.IShellMessage;
+
+export interface IBeakerFuture<REQUEST extends IBeakerShellMessage = IBeakerShellMessage, REPLY extends IBeakerShellMessage = IBeakerShellMessage> extends Kernel.IShellFuture<REQUEST, REPLY> {
     msgId?: string;
     onResponse?: (msg: any) => void | PromiseLike<void>;
 }

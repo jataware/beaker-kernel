@@ -8,14 +8,16 @@ import { BeakerSession } from './session';
 import { IBeakerFuture, BeakerCellFuture, BeakerCellFutures } from './util';
 
 
-export interface IBeakerHeader extends messages.IHeader {
+export interface IBeakerHeader extends messages.IHeader<messages.MessageType> {
     msg_type: any;
 }
 
 export interface IBeakerShellMessage extends messages.IShellMessage {
     header: IBeakerHeader;
     channel: "shell";
-    content: JSONObject;
+    // content: JSONObject | messages.IShellMessage['content'];
+    content: any;
+    parent_header: any;
 }
 
 export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
