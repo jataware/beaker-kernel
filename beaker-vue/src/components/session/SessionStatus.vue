@@ -30,7 +30,6 @@ const props = defineProps([
 ]);
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-console.log(beakerSession);
 
 const status = computed(() => props.connectionStatus || beakerSession.status);
 

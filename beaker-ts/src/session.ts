@@ -472,7 +472,7 @@ export class BeakerSession {
     private _services: ServiceManager;
     private _serverSettings: ServerConnection.ISettings;
     private _sessionContext: SessionContext;
-    private _messageHandler: Slot<any, any>; // TODO: fix any typing here
+    private _messageHandler: Slot<SessionContext, messages.IIOPubMessage>;
     private _history: BeakerHistory;
     private _sessionInfo: any;
     private _renderer: BeakerRenderer;

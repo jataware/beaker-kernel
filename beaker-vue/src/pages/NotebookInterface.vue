@@ -104,7 +104,7 @@ import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from '
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
+import { DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
@@ -149,6 +149,7 @@ const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
     JSONRenderer,
     LatexRenderer,
+    MarkdownRenderer,
     DecapodeRenderer,
     TableRenderer
 ];
