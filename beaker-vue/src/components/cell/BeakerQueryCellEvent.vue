@@ -107,6 +107,9 @@
             />
             <span class="output-hide-text">(Output hidden -- shown in full response below.)</span>
         </span>
+        <span v-else-if="props.event?.type === 'error' && props.event.content.ename === 'CancelledError'">
+            <h4 class="p-error">Request cancelled.</h4>
+        </span>
         <span v-else-if="props.event?.type === 'error'">
             <div>
                 <pre class="pre" v-if="props?.event.content.ename">

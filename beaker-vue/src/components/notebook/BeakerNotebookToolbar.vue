@@ -25,6 +25,13 @@
                     :severity="props.defaultSeverity"
                     text
                 />
+                <Button
+                    @click="session.interrupt()"
+                    icon="pi pi-stop"
+                    size="small"
+                    :severity="props.defaultSeverity"
+                    text
+                />
                 <slot name="start-extra"></slot>
             </slot>
         </template>

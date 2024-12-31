@@ -1,4 +1,5 @@
 import abc
+import asyncio
 import json
 from typing import Any, Callable
 import hashlib
@@ -155,6 +156,9 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
         )
 
         execution_context = await execution_task
+    except asyncio.CancelledError as err:
+        logger.error("Code execution was interrupted by the user.")
+        raise
     except Exception as err:
         logger.error(err, exc_info=err)
         raise
@@ -192,7 +196,7 @@ class BeakerSubkernel(abc.ABC):
                 print(f"Shutting down connected subkernel {self.jupyter_id}")
                 res = requests.delete(
                     f"{self.context.beaker_kernel.jupyter_server}/api/kernels/{self.jupyter_id}",
-                    headers={"Authorization": f"token {config.jupyter_server}"},
+                    headers={"Authorization": f"token {config.jupyter_token}"},
                 )
                 if res.status_code == 204:
                     self.jupyter_id = None
