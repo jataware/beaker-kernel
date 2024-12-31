@@ -70,14 +70,7 @@ class BeakerBuildHook(BuildHookInterface):
         # Actually import all of the modules, so we can inspect the classes to see if they are indeed the classes we
         # are looking for and, if so, extract any important information defined on them.
         for class_name, (mod_str, import_path) in class_map.items():
-            try:
-                mod = importlib.import_module(mod_str)
-            except ModuleNotFoundError as err:
-                sys.stderr.write(f"Warning: Module {mod_str} not found. There may be an issue with your "
-                                    "configuration.\n")
-                sys.stderr.write(str(err) + "\n")
-                sys.stderr.flush()
-                continue
+            mod = importlib.import_module(mod_str)
             cls = getattr(mod, class_name)
             if issubclass(cls, subclass) and cls is not subclass:
                 slug = getattr(cls, 'SLUG', None)
