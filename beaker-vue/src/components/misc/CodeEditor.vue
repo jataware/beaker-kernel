@@ -10,58 +10,29 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineModel, ref, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
+import { defineProps, ref, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView, keymap } from "@codemirror/view";
-import { EditorState, Extension, Prec } from "@codemirror/state";
-import { LanguageSupport } from "@codemirror/language";
-import { autocompletion, CompletionSource, completionKeymap } from "@codemirror/autocomplete";
-import { python } from "@codemirror/lang-python";
-import { r } from 'codemirror-lang-r';
-import { markdown } from "@codemirror/lang-markdown";
+import { Extension, Prec } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { json } from "@codemirror/lang-json";
-import { javascript } from "@codemirror/lang-javascript";
-import { julia } from "@plutojl/lang-julia";
-import { Completion, CompletionContext, CompletionResult, completionStatus, selectedCompletion, acceptCompletion, startCompletion, closeCompletion } from "@codemirror/autocomplete";
-import * as messages from '@jupyterlab/services/lib/kernel/messages';
+import { LanguageSupport } from "@codemirror/language";
+import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion } from "@codemirror/autocomplete";
 import { IBeakerTheme } from '../../plugins/theme';
-import { BeakerSession, IBeakerFuture } from 'beaker-kernel/src';
-
-declare type DisplayMode = "light" | "dark";
-declare type BeakerLanguage = "python" | "julia" | "markdown" | "json" | "javascript" | string;
+import { BeakerLanguage, LanguageRegistry, getCompletions } from "../../util/autocomplete";
+import { BeakerSession } from 'beaker-kernel/src';
 
 const session: BeakerSession = inject('session');
 
-const languageMap: {[key: string]: (options: any) => LanguageSupport} = {
-    python,
-    python3: python,
-    python2: python,
-    julia,
-    markdown,
-    json,
-    javascript,
-    rlang: r,
-    r,
-    ir: r,
-}
+declare type DisplayMode = "light" | "dark";
 
 declare interface Props {
     displayMode: DisplayMode,
-    language?: BeakerLanguage,
+    language?: string,
     languageOptions?: any,
     modelValue: string,
 
     autofocus?: boolean,
     disabled?: boolean,
-}
-
-declare interface JupyterTypedCompletion {
-    start: number;
-    end: number;
-    text: string;
-    type: "keyword" | "path" | "magic" | "variable" | string;
-    signature?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -155,127 +126,25 @@ const extensions = computed(() => {
     if (displayMode.value === "dark") {
         enabledExtensions.push(oneDark);
     }
+
+
+    const language: BeakerLanguage = LanguageRegistry.get(props.language);
+
     const autocompleteOptions = autocompletion({
-        override: [getCompletions],
+        override: [(completion) => getCompletions(completion, session)],
         defaultKeymap: false,
-        // activateOnCompletion: (completion) => {
-        //     console.log("DEADBEEF!!!!", completion, this);
-        //     // console.log("activateOnCompletion", completion);
-        //     return false
-        // },
+        activateOnCompletion: language?.activateOnCompletion,
     });
     enabledExtensions.push(autocompleteOptions);
-    if(props.language !== undefined) {
-        let language: LanguageSupport = languageMap[props.language](props.languageOptions);
+
+    if(language !== undefined) {
+        const languageSupport: LanguageSupport = language.initializer(props.languageOptions);
         enabledExtensions.push(
-            language,
+            languageSupport,
         )
     }
     return enabledExtensions;
 });
-
-const getCompletions = async (completionContext: CompletionContext): Promise<CompletionResult | null>  => {
-    const code = completionContext.state.doc.toString();
-    const cursor_pos = completionContext.pos;
-    let matchbefore = completionContext.matchBefore(/[#_([{\w]{1,}/);
-
-    if (!matchbefore && !completionContext.explicit) {
-        return null;
-    }
-
-    // Get autocompletions from subkernel
-    const complete_request: IBeakerFuture<messages.ICompleteRequestMsg, messages.ICompleteReplyMsg> = session.sendBeakerMessage(
-        "complete_request",
-        {
-            "code": code,
-            "cursor_pos": cursor_pos,
-        }
-    )
-
-    // While the kernel is processing the request, get the language autocompletes to filter against.
-    const languageAutocompletes = completionContext.state.languageDataAt("autocomplete", 0);
-    let promises: Promise<CompletionResult>[] = [];
-    if (Array.isArray(languageAutocompletes)) {
-        languageAutocompletes.forEach((autocomplete) => {
-            const result = autocomplete(completionContext);
-            promises.push(Promise.resolve(result));
-        })
-    }
-    else {
-        throw Error("languageAutoCompletes is not a list?!?!")
-    }
-    let results: CompletionResult[] = await Promise.all(promises);
-
-    const languageOptions: Completion[] = results.flatMap((result) => result.options);
-    const complete_reply = await complete_request.done;
-    let from: number, to: number;
-
-    if (results.length > 1) {
-        from = results.map(result => result.from).reduce((prevResult, result,) => {
-            return (prevResult === result ? prevResult : undefined);
-        });
-        to = results.map(result => result.to).reduce((prevResult, result,) => {
-            return (prevResult === result ? prevResult : undefined);
-        });
-    }
-    else if (results.length === 1) {
-        from = results[0].from;
-        to = results[0].to;
-    }
-    else {
-        from = undefined;
-        to = undefined;
-    }
-
-    let kernelResults: Completion[] = [];
-    let kernelOptions: Set<string> = new Set([]);
-    if (complete_reply.content.status === "ok") {
-        if (complete_reply.content.cursor_start === from || from === undefined) {
-            from = complete_reply.content.cursor_start;
-        }
-        else {
-            console.error("Cannot complete as `from` value differs");
-        }
-        if (complete_reply.content.cursor_end === to || to === undefined) {
-            to = complete_reply.content.cursor_end;
-        }
-        else {
-            console.error("Cannot complete as `to` value differs");
-        }
-
-        if ((complete_reply.content.metadata?._jupyter_types_experimental as [])?.length > 0) {
-            let typed_options: JupyterTypedCompletion[] = complete_reply.content.metadata._jupyter_types_experimental as unknown as JupyterTypedCompletion[];
-            kernelResults = typed_options.map((option) => {
-                const boost = (option.type == "param" ? 50 : 5);
-                return {
-                    label: option.text,
-                    type: option.type,
-                    boost: boost,
-                    detail: (option.signature !== "" ? option.signature : undefined),
-                }
-            });
-            kernelOptions = new Set(typed_options.map(option => option.text))
-        }
-        else if (complete_reply.content.matches?.length > 0) {
-            kernelResults = complete_reply.content.matches.map((option) => {
-                    const boost = (option.endsWith("=") ? 50 : 5);
-
-                    return {
-                        label: option,
-                        boost: boost,
-                    }
-                });
-            kernelOptions = new Set(complete_reply.content.matches)
-        }
-    }
-    const options = [...kernelResults, ...languageOptions.filter(option => !kernelOptions.has(option.label))];
-    return {
-        from,
-        to,
-        filter: false,
-        options,
-    };
-};
 
 const focus = () => {
     codeMirrorView.value?.focus();
