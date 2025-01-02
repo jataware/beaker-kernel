@@ -63,9 +63,18 @@ export class BeakerCellFuture extends KernelFutureHandler<IBeakerShellMessage, I
         msg: IBeakerShellMessage,
         expectReply: boolean,
         disposeOnDone: boolean,
-        kernel: Kernel.IKernelConnection,
-        cell: BeakerCodeCell,
+        kernel?: Kernel.IKernelConnection | null,
+        cell?: BeakerCodeCell,
     ) {
+
+        if (!kernel) {
+            throw Error("Unable to send message. Not connected to kernel.");
+        }
+        if (!cell) {
+            throw Error("Cannot execute in cell as cell is undefined or invalid.");
+        }
+
+
         const msgId = msg.header.msg_id;
         // Ensure channel is set if created via alternate means
         if (msg.channel === undefined) {
