@@ -6,9 +6,10 @@
 
 <script lang="ts">
 import { reactive, ref, inject, provide, VNode, defineComponent, PropType, ComponentInternalInstance, DefineComponent } from 'vue';
-import { BeakerSession, IBeakerRendererOptions, IMimeRenderer, IBeakerCell } from 'beaker-kernel/src';
-import { BeakerRenderOutput } from '../../renderers';
+import { BeakerSession, IMimeRenderer, IBeakerCell } from 'beaker-kernel/src';
+import { BeakerKernelStatus } from 'beaker-kernel/src/session';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
+import { ConnectionStatus as JupyterConnectionStatus } from '@jupyterlab/services/lib/kernel/kernel';
 
 
 export interface IBeakerCellComponent {
@@ -57,18 +58,19 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
       "any-msg",
       "session-status-changed",
       "context-changed",
+      "connection-failure",
   ],
 
   setup(props, { emit }) {
 
-    const status = ref("unknown");
+    const status = ref<BeakerKernelStatus>("unknown");
 
     const cellRegistry = ref<({[key: string]: VNode})>({});
 
     const activeContext = ref();
     const notebookComponent = ref();
 
-    const rawSession = new BeakerSession(
+    const rawSession: BeakerSession = new BeakerSession(
       {
         settings: props.connectionSettings,
         name: props.sessionName,
@@ -80,26 +82,37 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
         context: props.context,
       }
     );
+    rawSession.services.connectionFailure.connect((serviceManager, error) => {
+      emit('connection-failure', error);
+      console.log("Error connecting to kernel/api", error);
+    })
 
-    rawSession.sessionReady.then(async () => {
+    const _setSignalHandlers = async (session) => {
+        session.iopubMessage.connect((session, msg) => {
+          emit("iopub-msg", msg);
+          if (messages.isStatusMsg(msg)) {
+            const newStatus = msg?.content?.execution_state || 'unknown';
+            status.value = rawSession.status;
+            emit("session-status-changed", newStatus);
+          }
+        });
+        session.session.anyMessage.connect((_: unknown, {msg, direction}) => {
+          emit("any-msg", msg, direction);
+        });
+        session.unhandledMessage.connect((session, msg) => {
+          emit("unhandled-msg", msg);
+        });
+        session.connectionStatusChanged.connect((session, connectionStatus: JupyterConnectionStatus) => {
+          status.value = rawSession.status;
+        });
+      }
 
-      rawSession.session.iopubMessage.connect((session, msg) => {
-        emit("iopub-msg", msg);
-        if (messages.isStatusMsg(msg)) {
-          const newStatus = msg?.content?.execution_state || 'connecting';
-          status.value = newStatus;
-          emit("session-status-changed", newStatus);
-        }
+      rawSession?.sessionReady.then(async () => {
+        await _setSignalHandlers(rawSession.session);
       });
-      rawSession.session.session.anyMessage.connect((_: unknown, {msg, direction}) => {
-        emit("any-msg", msg, direction);
-      });
-      rawSession.session.unhandledMessage.connect((session, msg) => {
-        emit("unhandled-msg", msg);
-      });
-    });
 
     const beakerSession = reactive(rawSession);
+
 
 
     return {
@@ -108,6 +121,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
       status,
       cellRegistry,
       notebookComponent,
+      _setSignalHandlers
     }
   },
 
@@ -175,6 +189,19 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
             this.updateContextInfo();
         });
         return future;
+    },
+
+    async reconnect() {
+      const newSession = await this.session.reconnect();
+      await this._setSignalHandlers(newSession);
+      this.setContext({
+        context: this.activeContext.slug,
+        context_info: this.activeContext.config,
+        language: this.activeContext.language.slug,
+        debug: this.activeContext.info.debug,
+        verbose: this.activeContext.info.verbose,
+      });
+
     },
   },
 

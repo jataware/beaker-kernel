@@ -37,7 +37,12 @@ const renderedBundle = computed<{[key: string]: BeakerRenderOutput}>(
         return session.renderer.renderMimeBundle(props.mimeBundle) as any as {[key: string]: BeakerRenderOutput}
     }
 );
-const sortedMimetypes = computed(() => {return session.renderer.rankedMimetypesInBundle(props.mimeBundle)});
+const sortedMimetypes = computed(() => {
+    // Only display mimetypes in list that have a valid rendered payload
+    return session.renderer.rankedMimetypesInBundle(props.mimeBundle).filter((obj) => {
+        return Boolean(renderedBundle.value[obj]);
+    })
+});
 
 const selectedMimeType = ref<string>(sortedMimetypes.value[0]);
 

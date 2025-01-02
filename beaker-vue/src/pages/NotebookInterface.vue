@@ -104,7 +104,7 @@ import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from '
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
+import { DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
@@ -149,6 +149,7 @@ const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
     JSONRenderer,
     LatexRenderer,
+    MarkdownRenderer,
     DecapodeRenderer,
     TableRenderer
 ];
@@ -237,7 +238,6 @@ watch(
 )
 
 const iopubMessage = (msg) => {
-    // console.log(msg);
     if (msg.header.msg_type === "preview") {
         previewData.value = msg.content;
     } else if (msg.header.msg_type === "debug_event") {
@@ -267,7 +267,6 @@ const statusChanged = (newStatus) => {
 
 
 const restartSession = async () => {
-    console.log(beakerSession.value);
     const resetFuture = beakerSession.value.session.sendBeakerMessage(
         "reset_request",
         {}

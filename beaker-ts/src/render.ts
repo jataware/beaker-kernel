@@ -25,8 +25,8 @@ export interface IMimeRenderer<OutputType = HTMLElement> {
 
 export class MimeRenderer implements IMimeRenderer<HTMLElement> {
 
-    public rank: number;
-    public mimetypes: string[];
+    public rank: number = 100;
+    public mimetypes: string[] = [];
 
     public render(mimeType: MimetypeString, data: PartialJSONObject, metadata: PartialJSONObject): HTMLElement {
 
@@ -40,7 +40,7 @@ export class JupyterMimeRenderer extends MimeRenderer {
     constructor(factory: IRenderMime.IRendererFactory) {
         super();
         this._factory = factory
-        this.rank = factory.defaultRank;
+        this.rank = factory.defaultRank || 100;
         this.mimetypes = [...factory.mimeTypes];
     }
 
@@ -52,7 +52,7 @@ export class JupyterMimeRenderer extends MimeRenderer {
             linkHandler: null,
             latexTypesetter: null,
             markdownParser: null,
-            translator: null,
+            translator: undefined,
 
         });
         const model = new MimeModel({
@@ -74,7 +74,7 @@ export class BeakerRenderer {
             const renderer = new JupyterMimeRenderer(factory);
             this.addRenderer(renderer);
         }
-        for (const renderer of options?.renderers) {
+        for (const renderer of options?.renderers || []) {
             this.addRenderer(renderer);
         }
     }
@@ -102,16 +102,14 @@ export class BeakerRenderer {
     public render(mimeType: MimetypeString, data: PartialJSONObject, metadata?: PartialJSONObject): any {
         const renderer = this._renderers[mimeType];
         if (renderer) {
-            return renderer.render(mimeType, data, metadata);
+            return renderer.render(mimeType, data, metadata || {});
         }
     }
 
     public renderMimeBundle(bundle: IMimeBundle, metadata?: PartialJSONObject): {[key: MimetypeString]: HTMLElement} {
-        const result = {};
-        for (const mimeType in bundle) {
-            result[mimeType] = this.render(mimeType, bundle[mimeType], metadata)
-        }
-        return result;
+        return Object.fromEntries(Object.entries(bundle).map(([mimeType, content]) => {
+            return [mimeType, this.render(mimeType, content, metadata)];
+        }));
     }
 
     public rankedMimetypesInBundle(bundle: IMimeBundle): MimetypeString[] {

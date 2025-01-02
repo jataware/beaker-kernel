@@ -10,38 +10,24 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineModel, ref, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
+import { defineProps, ref, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
 import { Codemirror } from "vue-codemirror";
-import { EditorView } from "codemirror";
-import { Extension } from "@codemirror/state";
-import { python } from "@codemirror/lang-python";
-import { r } from 'codemirror-lang-r';
-import { markdown } from "@codemirror/lang-markdown";
+import { EditorView, keymap } from "@codemirror/view";
+import { Extension, Prec } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { json } from "@codemirror/lang-json";
-import { javascript } from "@codemirror/lang-javascript";
-import { julia } from "@plutojl/lang-julia";
+import { LanguageSupport } from "@codemirror/language";
+import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion } from "@codemirror/autocomplete";
 import { IBeakerTheme } from '../../plugins/theme';
+import { BeakerLanguage, LanguageRegistry, getCompletions } from "../../util/autocomplete";
+import { BeakerSession } from 'beaker-kernel/src';
+
+const session: BeakerSession = inject('session');
 
 declare type DisplayMode = "light" | "dark";
-declare type Language = "python" | "julia" | "markdown" | "json" | "javascript" | string;
-
-const languageMap: {[key: string]: (options: any) => Extension} = {
-    python,
-    python3: python,
-    python2: python,
-    julia,
-    markdown,
-    json,
-    javascript,
-    rlang: r,
-    r,
-    ir: r,
-}
 
 declare interface Props {
     displayMode: DisplayMode,
-    language?: Language,
+    language?: string,
     languageOptions?: any,
     modelValue: string,
 
@@ -85,8 +71,51 @@ const displayMode = computed<DisplayMode>(() => {
     }
 });
 
-const extensions = computed<Extension[]>(() => {
+const extensions = computed(() => {
+    const filteredCompletionKeymap = completionKeymap.filter(item => !['Tab', 'Escape'].includes(item.key));
+    const overriddenKeymap = [
+        ...filteredCompletionKeymap,
+        {key: "Tab", run: (editorView) => {
+            const state = editorView.state;
+            const selection = state.selection.main;
+            const lineStartRegex = new RegExp("^\\s*$", "m");
+            const endOfWordRegex = new RegExp("^\\w(\\b|$)","m");
+            if (completionStatus(state) === "active" && selectedCompletion(state) !== null) {
+                return acceptCompletion(editorView);
+            }
+            if (selection.empty && endOfWordRegex.test(state.sliceDoc(selection.to - 1, selection.to + 1))) {
+                return true;
+
+            }
+            // Don't indent cursor isn't a in the middle of a line
+            if (selection.empty && !lineStartRegex.test(state.sliceDoc(0, selection.to))) {
+                return true;
+            }
+
+
+            return false;
+        }},
+        // Prevent escape key from exiting cell editing if autocomplete is cancelled by pressing exec.
+        {
+            any(editorView: EditorView, event: KeyboardEvent) {
+                if (event.key === "Escape") {
+                    const state = editorView.state;
+                    if (completionStatus(state) === "active") {
+                        event.stopImmediatePropagation();
+                        event.stopPropagation();
+                        event.preventDefault();
+                        closeCompletion(editorView);
+                    }
+                    return true;
+                }
+                return false;
+            },
+        }
+    ];
+
     const enabledExtensions: Extension[] = [
+        // Keymapping
+        Prec.highest(keymap.of(overriddenKeymap)),
         EditorView.lineWrapping,
         [EditorView.theme({
             '.cm-scroller': {
@@ -97,9 +126,21 @@ const extensions = computed<Extension[]>(() => {
     if (displayMode.value === "dark") {
         enabledExtensions.push(oneDark);
     }
-    if(props.language !== undefined) {
+
+
+    const language: BeakerLanguage = LanguageRegistry.get(props.language);
+
+    const autocompleteOptions = autocompletion({
+        override: [(completion) => getCompletions(completion, session)],
+        defaultKeymap: false,
+        activateOnCompletion: language?.activateOnCompletion,
+    });
+    enabledExtensions.push(autocompleteOptions);
+
+    if(language !== undefined) {
+        const languageSupport: LanguageSupport = language.initializer(props.languageOptions);
         enabledExtensions.push(
-            languageMap[props.language](props.languageOptions)
+            languageSupport,
         )
     }
     return enabledExtensions;
@@ -124,5 +165,10 @@ defineExpose({
 </script>
 
 <style lang="scss">
+    .cm-completionIcon-instance {
+        &::after {
+            content: '𝑥';
+        }
+    }
 
 </style>

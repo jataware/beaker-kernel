@@ -3,9 +3,13 @@ import { Component, VueElement, defineComponent, h } from 'vue';
 import { IBeakerRendererOptions, IMimeRenderer, MimetypeString } from 'beaker-kernel/src';
 import { PartialJSONObject } from '@lumino/coreutils';
 import VueJsonPretty from 'vue-json-pretty';
-import katex from 'katex';
+import { marked } from 'marked';
 import DecapodePreview from './components/render/DecapodePreview.vue';
 import TablePreview from './components/render/TablePreview.vue';
+import { MathJaxTypesetter } from '@jupyterlab/mathjax-extension'
+
+const mathJaxTypsetter = new MathJaxTypesetter();
+const mathJaxDocument = await mathJaxTypsetter.mathDocument();
 
 export interface BeakerRenderOutput {
     component: Component;
@@ -46,15 +50,11 @@ export const JSONRenderer: IMimeRenderer<BeakerRenderOutput> = {
     }
 }
 
-export const LatexRenderer: IMimeRenderer<BeakerRenderOutput> = {
+export const MarkdownRenderer: IMimeRenderer<BeakerRenderOutput> = {
     rank: 40,
-    mimetypes: ["text/latex", "application/latex"],
+    mimetypes: ["text/markdown", "text/x-markdown"],
     render: (mimeType: MimetypeString, data: PartialJSONObject, metadata: PartialJSONObject) => {
-        const html = katex.renderToString(data.toString(), {
-            displayMode: true,
-            output: "mathml",
-            throwOnError: false,
-        });
+        const html = marked.parse(data.toString())
         return {
             component: defineComponent(
                 (props) => {
@@ -70,13 +70,38 @@ export const LatexRenderer: IMimeRenderer<BeakerRenderOutput> = {
                 'html': html,
             }
         }
+    },
+}
+
+
+export const LatexRenderer: IMimeRenderer<BeakerRenderOutput> = {
+    rank: 40,
+    mimetypes: ["text/latex", "application/latex"],
+    render: (mimeType: MimetypeString, data: PartialJSONObject, metadata: PartialJSONObject) => {
+        const input = data.toString();
+        const output = mathJaxDocument.convert(input, {display: false}).outerHTML;
+        return {
+            component: defineComponent(
+                (props) => {
+                    return () => {
+                        return h('div', {class: "beaker-latex", innerHTML: props.html, style: {fontSize: "1.5rem"}});
+                    }
+                    },
+                    {
+                        props: ["html"]
+                    },
+            ),
+            bindMapping: {
+                'html': output,
+            }
+        }
     }
 }
 
 export const TableRenderer: IMimeRenderer<BeakerRenderOutput> = {
     rank: 40,
     mimetypes: [
-        "text/csv", 
+        "text/csv",
         "text/tsv",
         "application/vnd.ms-excel",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

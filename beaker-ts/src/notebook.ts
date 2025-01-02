@@ -8,19 +8,25 @@ import { BeakerSession } from './session';
 import { IBeakerFuture, BeakerCellFuture, BeakerCellFutures } from './util';
 
 
-export interface IBeakerHeader extends messages.IHeader {
+export interface IBeakerHeader extends messages.IHeader<messages.MessageType> {
     msg_type: any;
 }
 
 export interface IBeakerShellMessage extends messages.IShellMessage {
     header: IBeakerHeader;
     channel: "shell";
-    content: JSONObject;
+    content: any;
+    parent_header: any;
 }
 
 export interface IBeakerIOPubMessage extends messages.IIOPubMessage {
     header: IBeakerHeader;
     channel: "iopub";
+    content: any;
+}
+
+export interface IBeakerAnyMessage extends messages.IMessage {
+    header: IBeakerHeader;
     content: any;
 }
 
@@ -54,26 +60,17 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
     // Override index type to allow methods to be defined on the class
     static IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments", "outputs", "execution_count"];
 
-    static defaults() {
-        return {
-            metadata: {},
-            source: "",
-            status: "idle",
-            children: [],
-        }
-    };
-
     [key: string]: any;
-    id: string;
-    cell_type: BeakerCellType;
-    metadata: Partial<nbformat.ICellMetadata>;
-    source: nbformat.MultilineString;
-    status: BeakerCellStatus;
-    children: BeakerBaseCell[];
+    id: string = BeakerBaseCell.generateId();
+    declare cell_type: BeakerCellType;
+    metadata: Partial<nbformat.ICellMetadata> = {};
+    source: nbformat.MultilineString = "";
+    status: BeakerCellStatus = "idle";
+    children: BeakerBaseCell[] = [];
 
     constructor(content: Partial<nbformat.IBaseCell>) {
-        Object.assign(this, BeakerBaseCell.defaults(), content)
-        if (this.id === undefined) {
+        Object.assign(this, content)
+        if (content.id === undefined) {
             this.id = BeakerBaseCell.generateId();
         }
     }
@@ -98,14 +95,11 @@ export class BeakerBaseCell implements nbformat.IBaseCell {
         })
     }
 
-    public toIPynb(object: {}=null): nbformat.IBaseCell|nbformat.IBaseCell[] {
-        const output = {};
-        if (object === null) {
-            object = this;
-        }
-        for (const key of Object.keys(object)) {
+    public toIPynb(): nbformat.IBaseCell|nbformat.IBaseCell[] {
+        const output: JSONObject = {};
+        for (const key of Object.keys(this)) {
             if (BeakerBaseCell.IPYNB_KEYS.includes(key)) {
-                output[key] = object[key];
+                output[key] = this[key];
             }
         }
         return output as nbformat.IBaseCell;
@@ -193,7 +187,7 @@ export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
     declare metadata: Partial<nbformat.IRawCellMetadata>;
 
     constructor(content: nbformat.ICell) {
-        super({cell_type: "raw", ...content});
+        super(content);
         Object.assign(this, content)
     }
 
@@ -204,31 +198,21 @@ export class BeakerRawCell extends BeakerBaseCell implements nbformat.IRawCell {
 
 export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell {
     declare cell_type: 'code';
-    outputs: nbformat.IOutput[];
-    execution_count: nbformat.ExecutionCount;
+    outputs: nbformat.IOutput[] = [];
+    execution_count: nbformat.ExecutionCount = null;
     declare metadata: Partial<nbformat.ICodeCellMetadata>;
-    last_execution?: BeakerCellExecutionStatus;
-    busy?: boolean;
-
-    static defaults() {
-        return {
-            ...super.defaults(),
-            last_execution: {status: "none"},
-            outputs: [],
-            execution_count: null,
-            busy: false,
-        }
-    }
+    last_execution?: BeakerCellExecutionStatus = {status: "none"};
+    busy?: boolean = false;
 
     constructor(content: Partial<nbformat.ICell>) {
-        super({cell_type: 'code', ...content});
-        Object.assign(this, BeakerCodeCell.defaults(), content)
+        super({ ...content});
+        Object.assign(this, content)
         if (Array.isArray(this.source)) {
             this.source = this.source.join("\n");
         }
     }
 
-    public execute(session: BeakerSession, syntheticFuture: BeakerCellFuture = undefined): IBeakerFuture | null {
+    public execute(session: BeakerSession, syntheticFuture?: BeakerCellFuture): IBeakerFuture | null {
         this.busy = true;
 
         var future: BeakerCellFuture | IShellFuture;
@@ -259,7 +243,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
             const future = session.executeAction(
                 "rollback",
                 {
-                    checkpoint_index: this.last_execution.checkpoint_index
+                    checkpoint_index: this.last_execution.checkpoint_index || null
                 }
             );
             // Treat rolling back like an execution as it may fail
@@ -288,21 +272,22 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         this.last_execution = {status: "modified"};
     }
 
-    public toIPynb(): nbformat.IBaseCell|nbformat.IBaseCell[] {
-        return super.toIPynb(
-            {
-                ...this,
-                outputs: this.outputs.map(
-                    (output) => {
-                       return {
-                        ...output,
-                        transient: undefined,
-                       }
-
+    public toIPynb(): nbformat.ICodeCell {
+        const result: nbformat.ICodeCell = {
+            ...(super.toIPynb() as nbformat.IBaseCell),
+            cell_type: "code",
+            outputs: this.outputs.map(
+                (output) => {
+                    return {
+                    ...output,
+                    transient: undefined,
                     }
-                ),
-            }
-        )
+
+                }
+            ),
+            execution_count: this.execution_count,
+        };
+        return result;
     }
 }
 
@@ -323,26 +308,18 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
 
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     declare cell_type: 'query';
-    events: BeakerQueryEvent[];
-
-    static defaults() {
-        return {
-            ...super.defaults(),
-            events: [],
-        }
-    }
-
-    _current_input_request_message: messages.IInputRequestMsg;
+    events: BeakerQueryEvent[] = [];
+    _current_input_request_message?: messages.IInputRequestMsg;
 
     constructor(content: Partial<nbformat.ICell>) {
         super({cell_type: 'query', ...content});
-        Object.assign(this, BeakerQueryCell.defaults(), content)
+        Object.assign(this, content)
     }
 
     public execute(session: BeakerSession): IBeakerFuture | null {
         this.events.splice(0, this.events.length);
         this.children.splice(0, this.children.length);
-        let current_codeblock = null;
+        let current_codeblock: messages.IIOPubMessage["content"] | null = null;
 
         const handleIOPub = async (msg: IBeakerIOPubMessage) => {
             const msg_type = msg.header.msg_type;
@@ -376,11 +353,13 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 // coupled
                 if (!(content.execution_type === 'tool' && content.execution_item_name == 'run_code')) {
                     const isThought = (object: any): object is IBeakerQueryThoughtEvent => 'type' in object && object.type === 'thought';
-                    let last_thought: IBeakerQueryThoughtEvent = this.events.findLast(isThought)
-                    last_thought.content.background_code_executions.push({
-                        ...current_codeblock,
-                        ...content,
-                    });
+                    let last_thought: IBeakerQueryThoughtEvent | undefined = this.events.findLast(isThought);
+                    if (last_thought !== undefined) {
+                        last_thought.content.background_code_executions.push({
+                            ...current_codeblock,
+                            ...content,
+                        });
+                    }
                     current_codeblock = null;
                 }
             }
@@ -462,7 +441,6 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 }
 
                 if (content.execution_status === "error") {
-                    // TODO: align to message output, placeholder
                     const error_details = {
                         ename: msg.content.ename,
                         evalue: msg.content.evalue,
@@ -544,7 +522,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
 
     public respond(response: string, session: BeakerSession) {
         // Only handle if we're awaiting input
-        if (this.status !== "awaiting_input") {
+        if (this.status !== "awaiting_input" || !this._current_input_request_message) {
             return;
         }
 
@@ -554,7 +532,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         });
 
         // Send the reply to the kernel
-        session.kernel.sendInputReply(
+        session.kernel?.sendInputReply(
             {
                 "value": response,
                 "status": "ok",
@@ -635,14 +613,15 @@ export type IBeakerCell = BeakerCodeCell | BeakerMarkdownCell | BeakerRawCell | 
 
 export class BeakerNotebookContent implements nbformat.INotebookContent {
 
-    [key: string]: PartialJSONValue | undefined;
-    nbformat: number;
-    nbformat_minor: number;
-    metadata: nbformat.INotebookMetadata;
-    cells: IBeakerCell[];
+    [key: string]: PartialJSONValue;
+    nbformat: number = 4;
+    nbformat_minor: number = 5;
+    metadata: nbformat.INotebookMetadata = {};
+    cells: BeakerBaseCell[] = [];
 }
 
 export class BeakerNotebook {
+
     constructor() {
 
         this.content = {
@@ -730,7 +709,7 @@ export class BeakerNotebook {
         return {
             nbformat: this.content.nbformat,
             nbformat_minor: this.content.nbformat_minor,
-            cells: this.content.cells.flatMap((cell: BeakerBaseCell) => cell.toIPynb()),
+            cells: this.content.cells.flatMap((cell: BeakerBaseCell): nbformat.IBaseCell | nbformat.IBaseCell[] => cell.toIPynb()),
             metadata: this.content.metadata,
         }
     }
@@ -757,7 +736,10 @@ export class BeakerNotebook {
 
     public moveCell(fromIndex: number, toIndex: number) {
         if (fromIndex !== toIndex) {
-            this.insertCell(this.cutCell(fromIndex), toIndex);
+            const cell = this.cutCell(fromIndex);
+            if (cell) {
+                this.insertCell(cell, toIndex);
+            }
         }
     }
 
@@ -770,5 +752,5 @@ export class BeakerNotebook {
 
     private content: BeakerNotebookContent;
     public cells: IBeakerCell[];
-    private subkernelInfo: nbformat.ILanguageInfoMetadata;
+    private subkernelInfo?: nbformat.ILanguageInfoMetadata;
 }

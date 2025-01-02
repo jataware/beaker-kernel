@@ -5,6 +5,7 @@
     "target": "ESNext",
     "declaration": true,
     "outDir": "./dist",
+    "strict": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
   },

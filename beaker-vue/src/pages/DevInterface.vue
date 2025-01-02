@@ -125,6 +125,7 @@ import { useToast } from 'primevue/usetoast';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 import scrollIntoView from 'scroll-into-view-if-needed';
+import * as messages from '@jupyterlab/services/lib/kernel/messages';
 
 import Button from "primevue/button";
 import Card from 'primevue/card';
@@ -224,7 +225,11 @@ watch(
     {deep: true},
 )
 
-const anyMessage = (msg, direction) => {
+const anyMessage = (msg: messages.IMessage, direction) => {
+    // Ignore auto-completion messages as they add a lot of noise.
+    if (/^complete_/.test(msg.header.msg_type)) {
+        return
+    }
     rawMessages.value.push({
         type: direction,
         body: msg,

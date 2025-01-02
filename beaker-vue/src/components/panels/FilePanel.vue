@@ -36,7 +36,6 @@
                @row-dblclick="doubleClick" resizableColumns columnResizeMode="fit" rowHover :loading="tableLoading"
                @dragover="fileDragOver" @drop="fileDrop"
                @row-click="({data}) => {
-                  console.log(data)
                   if (data.type !== 'directory') {
                     if (data.size >= largeFileWarningSize) {
                       largeFileSizeUILabel = `approximately ${Math.floor(data.size / 1000000)} MB`;

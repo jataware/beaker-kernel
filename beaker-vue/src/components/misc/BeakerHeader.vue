@@ -1,12 +1,20 @@
 <template>
     <Toolbar class="beaker-toolbar">
         <template #start>
-            <div class="status-bar">
+            <SessionStatus
+                :connection-status="beakerSession.status"
+            />
+            <!-- <div class="status-bar">
                 <span v-tooltip.right="'Kernel connection status'">
                     <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
                     {{ statusLabel }}
+                    <Button v-if="true"
+                        size="small"
+                        icon="pi pi-refresh"
+                        text
+                    />
                 </span>
-            </div>
+            </div> -->
             <Button
                 outlined
                 size="small"
@@ -71,6 +79,7 @@ import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { IBeakerTheme } from '../../plugins/theme';
+import SessionStatus from "../session/SessionStatus.vue";
 
 export interface Props {
     title: string;
