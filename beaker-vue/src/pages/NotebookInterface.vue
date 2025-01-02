@@ -238,7 +238,6 @@ watch(
 )
 
 const iopubMessage = (msg) => {
-    // console.log(msg);
     if (msg.header.msg_type === "preview") {
         previewData.value = msg.content;
     } else if (msg.header.msg_type === "debug_event") {
@@ -268,7 +267,6 @@ const statusChanged = (newStatus) => {
 
 
 const restartSession = async () => {
-    console.log(beakerSession.value);
     const resetFuture = beakerSession.value.session.sendBeakerMessage(
         "reset_request",
         {}

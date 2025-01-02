@@ -4,7 +4,7 @@ import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import { BeakerSession, IBeakerFuture } from 'beaker-kernel/src';
 
 import { pythonLanguage, python } from "@codemirror/lang-python";
-import { rLanguage as unnamedRLanguage, r } from 'codemirror-lang-r';
+import { rLanguage, r } from 'codemirror-lang-r';
 import { markdownLanguage, markdown } from "@codemirror/lang-markdown";
 import { jsonLanguage, json } from "@codemirror/lang-json";
 import { javascriptLanguage, javascript } from "@codemirror/lang-javascript";
@@ -13,11 +13,6 @@ import { Extension } from "@codemirror/state";
 
 const juliaLanguage: LRLanguage = <LRLanguage>julia().language;
 
-
-const rLanguage: LRLanguage = <LRLanguage>unnamedRLanguage;
-    // name: "rlang",
-// }
-
 export interface JupyterTypedCompletion {
     start: number;
     end: number;
@@ -25,8 +20,6 @@ export interface JupyterTypedCompletion {
     type: "keyword" | "path" | "magic" | "variable" | string;
     signature?: string;
 }
-
-// export type LanguageName = "python" | "julia" | "rlang" | "markdown" | "json" | "javascript" | string;
 
 export interface CompletionStart {
     from: number;
