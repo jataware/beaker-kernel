@@ -39,6 +39,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@types/json-schema": "^7.0.15",
     "@types/uuid": "^9.0.7",
     "typedoc": "^0.25.11"
   }
