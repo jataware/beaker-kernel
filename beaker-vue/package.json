@@ -1,6 +1,6 @@
 {
   "name": "beaker-vue",
-  "version": "1.8.7",
+  "version": "1.8.8",
   "declaration": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -45,7 +45,7 @@
     "@types/katex": "^0.16.7",
     "@types/node-fetch": "^2.6.6",
     "ansi-html-community": "^0.0.8",
-    "beaker-kernel": "^1.8.7",
+    "beaker-kernel": "^1.8.8",
     "codemirror": "^6.0.1",
     "codemirror-lang-r": "^0.1.0-2",
     "cookie": "^0.6.0",
