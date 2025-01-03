@@ -4,6 +4,14 @@
             <div class="query-steps">User Query:</div>
             <div class="llm-prompt-container">
                 <div v-show="isEditing" class="prompt-input-container">
+                    <!-- <CodeEditor
+                        ref="textarea"
+                        class="prompt-input"
+                        v-model="promptText"
+                        :style="{minHeight: `${promptEditorMinHeight}px`, flex: 1}"
+
+                    /> -->
+
                     <ContainedTextArea
                         ref="textarea"
                         class="prompt-input"
@@ -104,6 +112,7 @@ import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerQueryCellEvent from "./BeakerQueryCellEvent.vue";
 import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
+import CodeEditor from "../misc/CodeEditor.vue";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
@@ -246,12 +255,19 @@ function execute() {
     });
 }
 
-function enter() {
+function enter(position?: "start" | "end" | number) {
     if (!isEditing.value) {
         isEditing.value = true;
     }
+    if (position === "start") {
+        position = 0;
+    }
+    else if (position === "end") {
+        position = textarea.value?.$el?.value.length || -1;
+    }
     nextTick(() => {
         textarea.value?.$el?.focus();
+        textarea.value.$el.setSelectionRange(position, position);
     });
 }
 
@@ -273,6 +289,7 @@ defineExpose({
     exit,
     clear,
     cell,
+    editor: textarea,
 });
 
 onBeforeMount(() => {
