@@ -105,7 +105,7 @@ search = 'version = "{current_version}"'
 replace = 'version = "{new_version}"'
 
 [[tool.bumpversion.files]]
-glob = "beaker-vue/package.json"
+glob = "beaker-vue/package*.json"
 search = """beaker-kernel": "^{current_version}"""
 replace = """beaker-kernel": "^{new_version}"""
 
