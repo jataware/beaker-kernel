@@ -5,7 +5,7 @@
         <div class="flex-background">
             <slot name="notebook-background" />
         </div>
-        <span class="chat-help-text-display">
+        <span class="chat-help-text-display query-answer-chat-override">
             <slot name="help-text"></slot>
         </span>
         <component
@@ -36,10 +36,9 @@ const props = defineProps([
     display: flex;
     flex: 1;
     flex-direction: column;
-    background-color: var(--surface-a);
     z-index: 3;
     overflow: auto;
-    margin-top: 1rem;
+    //margin-top: 1rem;
 }
 
 .flex-background {
@@ -47,9 +46,6 @@ const props = defineProps([
 }
 
 .chat-help-text-display {
-    background-color: var(--surface-c);
-    padding: 0 1rem 0 1rem;
-    margin: 0 0rem 1rem 0rem;
-    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
 }
 </style>

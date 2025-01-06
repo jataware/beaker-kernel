@@ -11,6 +11,7 @@
         @session-status-changed="statusChanged"
         @iopub-msg="iopubMessage"
         @open-file="loadNotebook"
+        :style-overrides="['chat']"
     >
         <div class="chat-layout">
             <div class="chat-container">
@@ -336,7 +337,7 @@ const restartSession = async () => {
 
 .chat-container {
     flex: 2 0 calc(50vw - 2px);
-    border: 1px solid var(--surface-border);
+    //border: 1px solid var(--surface-border);
     display: flex;
     flex-direction: column;
 }

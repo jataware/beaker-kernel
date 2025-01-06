@@ -1,8 +1,19 @@
 <template>
     <div class="llm-query-cell">
-        <div class="query" @dblclick="promptDoubleClick">
-            <div class="query-steps">User Query:</div>
-            <div class="llm-prompt-container">
+        <div 
+            class="query" 
+            :class="{
+                'query-chat': isChat
+            }"
+            @dblclick="promptDoubleClick"
+        >
+            <div v-show="!isChat" class="query-steps">User Query:</div>
+            <div 
+                class="llm-prompt-container"
+                :class="{
+                            'llm-prompt-container-chat': isChat
+                        }"
+            >
                 <div v-show="isEditing" class="prompt-input-container">
                     <ContainedTextArea
                         ref="textarea"
@@ -15,14 +26,18 @@
                         <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
                     </div>
                 </div>
-                <div v-show="!isEditing">
-                    <div class="llm-prompt-text">{{ cell.source }}</div>
-                </div>
+                <div 
+                    v-show="!isEditing"  
+                    class="llm-prompt-text"
+                    :class="{
+                        'llm-prompt-text-chat': isChat
+                    }"
+                >{{ cell.source }}</div>
             </div>
         </div>
         <div class="event-container" v-if="events.length > 0 || isLastEventTerminal()">
             <div class="events">
-                <div class="query-steps" v-if="events.length > 0">Agent actions:</div>
+                <div class="query-steps" v-show="!isChat" v-if="events.length > 0">Agent actions:</div>
                 <Accordion v-if="events.length > 0" :multiple="true" :class="'query-accordion'" v-model:active-index="selectedEvents">
                     <AccordionTab
                         v-for="(event, eventIndex) in events"
@@ -57,8 +72,13 @@
                         />
                     </AccordionTab>
                 </Accordion>
-                <div class="query-answer" v-if="isLastEventTerminal()" >
-                    <h3 class="query-steps">Result</h3>
+                <div :class="{
+                        'query-answer': !isChat, 
+                        'query-answer-chat-override': isChat
+                    }" 
+                    v-if="isLastEventTerminal()" 
+                >
+                    <h3 v-show="!isChat" class="query-steps">Result</h3>
                     <BeakerQueryCellEvent
                         v-if="isLastEventTerminal()"
                         :event="cell?.events[cell?.events.length - 1]"
@@ -108,6 +128,7 @@ import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import ThinkingIcon from "../../assets/icon-components/BrainIcon.vue";
+import { StyleOverride } from "../../pages/BaseInterface.vue"
 
 const props = defineProps([
     'index',
@@ -140,6 +161,8 @@ const response = ref("");
 const textarea = ref();
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+const styleOverrides = inject<StyleOverride[]>("styleOverrides")
+const isChat = ref(styleOverrides.includes('chat'))
 const instance = getCurrentInstance();
 
 
@@ -315,6 +338,10 @@ export default {
     margin-bottom: 0.25rem;
 }
 
+.query-chat {
+    align-items: flex-end;
+}
+
 .thought {
     color: var(--blue-500);
 }
@@ -360,6 +387,13 @@ export default {
     border-radius: var(--border-radius);
 }
 
+.llm-prompt-container-chat {
+    width: fit-content;
+    max-width: 80%;
+    align-self: flex-end;
+    background-color: var(--surface-d);
+}
+
 div.query-steps {
     margin-bottom: 1rem;
 }
@@ -373,6 +407,11 @@ h3.query-steps {
     padding: 0.5rem;
     white-space: pre-wrap;
     width: fit-content;
+}
+
+.llm-prompt-text-chat {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
 }
 
 .event-container {
@@ -456,6 +495,15 @@ a.query-tab-headeraction > span > span.pi {
     padding-bottom: 1rem;
     border-radius: var(--border-radius);
     margin-top: 1rem;
+}
+
+.query-answer-chat-override {
+    padding-left: 1rem;
+    border-radius: var(--border-radius);
+    margin-top: 1rem;
+    max-width: 80%;
+    width: fit-content;
+    background-color: var(--surface-c);
 }
 
 .prompt-input-container {
