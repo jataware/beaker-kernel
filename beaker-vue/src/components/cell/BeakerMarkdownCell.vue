@@ -87,10 +87,15 @@ const enter = (position?: "start" | "end" | number) => {
 }
 
 const exit = () => {
-    codeEditorRef.value?.blur();
-    let target: HTMLElement = (instance.vnode.el as HTMLElement);
-    const selectableParent = findSelectableParent(target);
-    selectableParent?.focus();
+    if (editorContents.value === cell.value.source) { // Query has not changed
+        isEditing.value = false;
+    }
+    else {
+        codeEditorRef.value?.blur();
+        let target: HTMLElement = (instance.vnode.el as HTMLElement);
+        const selectableParent = findSelectableParent(target);
+        selectableParent?.focus();
+    }
 }
 
 const clear = () => {

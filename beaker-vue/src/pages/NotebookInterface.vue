@@ -306,7 +306,13 @@ const prevCellKey = () => {
 };
 
 const nextCellKey = () => {
-    beakerNotebookRef.value?.selectNextCell();
+    const lastCell = beakerNotebookRef.value.notebook.cells[beakerNotebookRef.value.notebook.cells.length-1];
+    if (beakerNotebookRef.value.selectedCell().cell.id === lastCell.id) {
+        agentQueryRef.value.$el.querySelector('textarea')?.focus()
+    }
+    else {
+        beakerNotebookRef.value?.selectNextCell();
+    }
 };
 
 const keyBindingState = {};
@@ -349,6 +355,7 @@ const notebookKeyBindings = {
             if (atStartOfInput(curCell.editor)) {
                 const prevCell = beakerNotebookRef.value.prevCell();
                 if (prevCell) {
+                    curCell.exit();
                     beakerNotebookRef.value.selectCell(prevCell.cell.id, true, "end");
                     event.preventDefault();
                     event.stopImmediatePropagation();
@@ -378,6 +385,7 @@ const notebookKeyBindings = {
             if (atEndOfInput(curCell.editor)) {
                 const nextCell = beakerNotebookRef.value.nextCell();
                 if (nextCell) {
+                    curCell.exit();
                     beakerNotebookRef.value.selectCell(nextCell.cell.id, true, "start");
                     event.preventDefault();
                     event.stopImmediatePropagation();
@@ -385,6 +393,7 @@ const notebookKeyBindings = {
                 else {
                     const lastCell = beakerNotebookRef.value.notebook.cells[beakerNotebookRef.value.notebook.cells.length-1];
                     if (beakerNotebookRef.value.selectedCell().cell.id === lastCell.id) {
+                        curCell.exit();
                         agentQueryRef.value.$el.querySelector('textarea')?.focus()
                         event.preventDefault();
                         event.stopImmediatePropagation();
