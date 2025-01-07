@@ -1,32 +1,34 @@
 <template>
     <Card class="agent-input-card">
         <template #content>
-            <div class="query-input-container">
-                <ContainedTextArea
-                    @submit="handleQuery"
+            <InputGroup>
+                <InputText 
+                    :placeholder="props.placeholder ?? 'How can the agent help?'" 
+                    @keydown.enter.exact.prevent="handleQuery"
+                    @keydown.escape.prevent.stop="$event.target.blur()"
                     v-model="query"
-                    style="flex: 1; margin-right: 0.75rem"
-                    placeholder="How can the agent help?"
                 />
+                <Button 
+                    icon="pi pi-send" 
+                    @click="handleQuery"    
+                />
+            </InputGroup>
 
-                <Button
-                    @click="handleQuery"
-                    class="agent-submit-button"
-                    icon="pi pi-reply"
-                />
-            </div>
         </template>
     </Card>
 </template>
 
 
 <script setup lang="ts">
-import { defineEmits, ref, nextTick, inject } from "vue";
+import { defineEmits, ref, nextTick, inject, defineProps } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
-import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+
+import InputGroup from 'primevue/inputgroup';
+import InputText from 'primevue/inputtext';
+
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
@@ -35,6 +37,10 @@ const emit = defineEmits([
     "select-cell",
     "run-cell",
 ]);
+
+const props = defineProps([
+    'placeholder'
+])
 
 const session: BeakerSession = inject("session");
 const handleQuery = (e: any) => {
@@ -74,6 +80,19 @@ const handleQuery = (e: any) => {
 }
 .agent-query-container div {
     padding: 0rem;
+}
+.agent-query-container-chat {
+    width: 80%;
+    align-self: flex-end;
+    div div div {
+        button {
+            background-color: var(--surface-b);
+            border-color: var(--surface-border);
+            color: var(--text-color);
+            border-left: 0px;
+        }
+    }
+    padding-bottom: 0.25rem;
 }
 .query-input-container {
     display: flex;

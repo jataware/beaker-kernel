@@ -38,7 +38,7 @@
         </template>
 
         <template #end>
-            <nav>
+            <nav class="flex">
                 <template v-for="navItem in navItems" :key="navItem">
                     <a
                         v-if="navItem.type === 'link'"
@@ -47,6 +47,7 @@
                         :rel="navItem.rel"
                         :target="navItem.target"
                         v-tooltip.bottom="navItem.label"
+                        style="margin: auto"
                     >
                         <Button
                             :icon="navItem.icon ? `pi pi-${navItem.icon}`: 'pi'"

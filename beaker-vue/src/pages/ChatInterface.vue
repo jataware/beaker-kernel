@@ -34,7 +34,9 @@
                         </template>
                     </ChatPanel>
                     <AgentQuery
-                        class="agent-query-container"
+                        class="agent-query-container agent-query-container-chat"
+                        placeholder="Message to the agent"   
+                    
                     />
             </div>
             <div v-if="!isMaximized" class="spacer right"></div>
@@ -53,7 +55,13 @@
                     <ContextPanel />
                 </SideMenuPanel>
                 <SideMenuPanel label="Files" icon="pi pi-file-export" no-overflow>
-                    <FilePanel @open-file="loadNotebook" />
+                    <FilePanel 
+                        @open-file="loadNotebook" 
+                        @preview-file="(file, mimetype) => {
+                            previewedFile = {url: file, mimetype: mimetype};
+                            previewVisible = true;
+                        }" 
+                    />
                 </SideMenuPanel>
                 <SideMenuPanel id="config" label="Config" icon="pi pi-cog" :lazy="true">
                     <ConfigPanel
@@ -79,6 +87,11 @@
                  </SideMenu> -->
             <!-- </div> -->
     <!-- </div> -->
+        <PreviewPanel
+            :url="previewedFile?.url"
+            :mimetype="previewedFile?.mimetype"
+            v-model="previewVisible"
+        />
     </BaseInterface>
 </template>
 
@@ -111,13 +124,29 @@ import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } fr
 
 import { IBeakerTheme } from '../plugins/theme';
 import { vKeybindings } from '../directives/keybindings';
+import PreviewPanel from '../components/panels/PreviewPanel.vue';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 
+type FilePreview = {
+    url: string,
+    mimetype?: string
+}
+const previewedFile = ref<FilePreview>();
+const previewVisible = ref<boolean>(false);
 
 const headerNav = computed(() => [
+    {
+        type: 'button',
+        command: () => {
+            if (window.confirm(`This will reset your entire session, clearing the notebook and removing any updates to the environment. Proceed?`))
+                beakerSession.value.session.reset();
+        },
+        icon: 'refresh',
+        label: 'Reset Session',
+    },
     {
         type: 'link',
         href: `/${window.location.search}`,
@@ -151,7 +180,7 @@ const headerNav = computed(() => [
         icon: "github",
         rel: "noopener",
         target: "_blank",
-    },
+    }
 ]);
 
 const beakerSession = computed(() => {
@@ -336,7 +365,7 @@ const restartSession = async () => {
 }
 
 .chat-container {
-    flex: 2 0 calc(50vw - 2px);
+    flex: 2 0 calc(56vw - 2px);
     //border: 1px solid var(--surface-border);
     display: flex;
     flex-direction: column;
