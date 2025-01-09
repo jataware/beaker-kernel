@@ -92,7 +92,8 @@ const handleQuery = (e: any) => {
             border-left: 0px;
         }
     }
-    padding-bottom: 0.25rem;
+    margin-top: 0.175rem;
+    margin-bottom: 0.25rem;
 }
 .query-input-container {
     display: flex;

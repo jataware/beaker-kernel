@@ -91,11 +91,40 @@
             <span class="thought-icon"><ThinkingIcon/></span> Thinking <span class="thinking-animation"></span>
         </div>
         <div
-            class="input-request"
-             v-focustrap
-             v-if="cell.status === 'awaiting_input'"
+            :class="{
+                'input-request': !isChat,
+                'input-request-chat-override': isChat
+            }"
+            v-focustrap
+            v-if="cell.status === 'awaiting_input'"
          >
-            <ContainedTextArea
+            <div 
+                class="input-request-wrapper"
+                :class="{
+                    'input-request-wrapper-chat': isChat
+                }"
+            >
+                <InputGroup>
+                    <InputGroupAddon v-show="isChat">
+                        <i class="pi pi-exclamation-triangle"></i>
+                    </InputGroupAddon>
+                    <InputText 
+                        placeholder="Reply to the agent" 
+                        @keydown.enter.exact.prevent="respond"
+                        @keydown.escape.prevent.stop="$event.target.blur()"
+                        @keydown.ctrl.enter.stop
+                        @keydown.shift.enter.stop
+                        autoFocus
+                        v-model="response"
+                    />
+                    <Button 
+                        icon="pi pi-send" 
+                        @click="respond"    
+                    />
+                </InputGroup>
+            </div>
+
+            <!-- <ContainedTextArea
                 style="margin-right: 0.75rem; flex: 1;"
                 autoFocus
                 placeholder="Enter your response here"
@@ -111,7 +140,7 @@
                 size="small"
                 label="reply"
                 @click="respond"
-            />
+            /> -->
         </div>
     </div>
 
@@ -129,6 +158,11 @@ import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import ThinkingIcon from "../../assets/icon-components/BrainIcon.vue";
 import { StyleOverride } from "../../pages/BaseInterface.vue"
+
+import InputGroup from 'primevue/inputgroup';
+import InputText from 'primevue/inputtext';
+import InputGroupAddon from 'primevue/inputgroupaddon';
+
 
 const props = defineProps([
     'index',
@@ -358,6 +392,38 @@ export default {
     width: 90%;
 }
 
+.input-request-wrapper {
+    display: flex;
+    width: 100%;
+}
+
+.input-request-chat-override {
+    align-items: flex-end;
+    width: 100%;
+    margin-bottom: 0.25rem;
+    .input-request-wrapper-chat {
+        align-items: flex-end;
+        flex-direction: column;
+        .p-inputgroup {
+            width: 80%;
+            border: 1px solid var(--yellow-500);
+            box-shadow: 0 0 4px var(--yellow-700);
+            transition: box-shadow linear 1s;
+            border-radius: var(--border-radius);
+            button {
+                background-color: var(--surface-b);
+                border-color: var(--surface-border);
+                color: var(--text-color);
+                border-left: 0px;
+            }
+            input {
+                border-color: var(--yellow-500);
+            }
+        }
+        margin-bottom: 0.25rem;
+    }
+}
+
 .actions {
     display: flex;
     .p-button-icon {
@@ -499,11 +565,19 @@ a.query-tab-headeraction > span > span.pi {
 
 .query-answer-chat-override {
     padding-left: 1rem;
+    padding-right: 1rem;
     border-radius: var(--border-radius);
     margin-top: 1rem;
     max-width: 80%;
     width: fit-content;
     background-color: var(--surface-c);
+
+    p:first-child {
+        margin-top: 0.5rem;
+    }
+    p:last-child {
+        margin-bottom: 0.5rem;
+    }
 }
 
 .prompt-input-container {
@@ -555,6 +629,7 @@ a.query-tab-headeraction > span > span.pi {
     content: "\2026\2026\2026\2026"; /* ascii code for the ellipsis character */
     width: 4em;
 }
+
 
 @keyframes thinking-ellipsis {
   from {

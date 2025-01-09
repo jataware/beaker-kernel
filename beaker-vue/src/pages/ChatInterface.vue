@@ -36,7 +36,7 @@
                     <AgentQuery
                         class="agent-query-container agent-query-container-chat"
                         placeholder="Message to the agent"   
-                    
+                        v-show="!isLastCellAwaitingInput"
                     />
             </div>
             <div v-if="!isMaximized" class="spacer right"></div>
@@ -136,6 +136,18 @@ type FilePreview = {
 }
 const previewedFile = ref<FilePreview>();
 const previewVisible = ref<boolean>(false);
+
+const isLastCellAwaitingInput = computed(() => {
+    const cells = beakerSession.value?.session?.notebook?.cells ?? [];
+    if (cells.length == 0) {
+        return false;
+    }
+    const last = cells[cells.length - 1];
+    if (last?.cell_type === 'query' && last?.status === 'awaiting_input') {
+        return true;
+    }
+    return false;
+})
 
 const headerNav = computed(() => [
     {
