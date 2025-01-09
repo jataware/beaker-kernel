@@ -1,3 +1,6 @@
+import { EditorView as CodeMirrorView } from "@codemirror/view";
+import  PrimevueTextarea from "primevue/textarea";
+
 /**
  *
  **/
@@ -9,7 +12,7 @@ export function capitalize(s: string) {
 /**
  *
  **/
-export function getDateTime() {
+export function getDateTimeString() {
     const t = new Date();
     // convert the local time zone offset from minutes to milliseconds
     const z = t.getTimezoneOffset() * 60 * 1000;
@@ -21,8 +24,8 @@ export function getDateTime() {
     let iso = tLocal.toISOString();
     // drop the milliseconds and zone
     iso = iso.split(".")[0];
-    // replace the T with _, and : with , (: aren't allowed on filenames)
-    iso = iso.replace('T', '_').replace(/:/g,',');
+    // replace the T and `:` with `_` (`:` characters aren't allowed in filenames)
+    iso = iso.replace(/[:T]/g, '_')
     return iso;
 }
 
@@ -61,4 +64,69 @@ export function findSelectableParent(target: HTMLElement): HTMLElement {
         target = target.parentElement;
     }
     return undefined;
+}
+
+export type ErrorObject = {
+    ename: string;
+    evalue: string;
+    traceback?: string[];
+}
+
+export function isErrorObject(obj): obj is ErrorObject {
+    return Object.hasOwn(obj, "ename") && Object.hasOwn(obj, "evalue");
+}
+
+type InputElement = HTMLTextAreaElement | HTMLInputElement | CodeMirrorView | PrimevueTextarea;
+
+export function normalizeInputElement(input: object): InputElement {
+    if (Object.hasOwn(input, "view") && Object.hasOwn(input["view"], "viewState")) {
+        return input["view"];
+    }
+    if (input && input["$el"]) {
+        return input["$el"] as InputElement;
+    }
+    else {
+        return input as InputElement;
+    }
+}
+
+export function is_codemirror(input: InputElement): input is CodeMirrorView {
+    const result = Object.hasOwn(input, 'viewState') && Object.hasOwn(input, 'dom') && Object.hasOwn(input, 'docView')
+    return result;
+}
+
+export function is_primevue(input: InputElement): input is PrimevueTextarea {
+    return false;
+}
+
+export function is_html_textarea(input: InputElement): input is HTMLTextAreaElement {
+    return input && input["type"] === "textarea";
+}
+
+export function atStartOfInput(input: object) {
+    const normalizedInput = normalizeInputElement(input)
+    if (is_codemirror(normalizedInput)) {
+        return normalizedInput.state.selection.main.to === 0;
+    }
+    else if (is_primevue(normalizedInput)) {
+        return false;
+    }
+    else if (is_html_textarea(normalizedInput)) {
+        return normalizedInput.selectionEnd === 0;
+    }
+    return false;
+}
+
+export function atEndOfInput(input: object) {
+    const normalizedInput = normalizeInputElement(input)
+    if (is_codemirror(normalizedInput)) {
+        return normalizedInput.state.selection.main.from === normalizedInput.state.doc.length;
+    }
+    else if (is_primevue(normalizedInput)) {
+        return false;
+    }
+    else if (is_html_textarea(normalizedInput)) {
+        return normalizedInput.selectionStart === normalizedInput.textLength;
+    }
+    return false;
 }

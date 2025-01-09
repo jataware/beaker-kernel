@@ -3,6 +3,7 @@ import datetime
 import json
 import logging
 import os
+import traceback
 import uuid
 import urllib.parse
 from dataclasses import is_dataclass, asdict
@@ -17,6 +18,7 @@ from jupyter_server.auth.decorator import authorized
 from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
 from jupyter_server.serverapp import ServerApp
+from jupyter_server.nbconvert.handlers import NbconvertPostHandler
 from jupyter_server.services.kernels.handlers import MainKernelHandler, json_default
 from jupyter_server.services.contents.handlers import ContentsHandler
 from jupyter_server.utils import url_escape, url_path_join
@@ -367,6 +369,60 @@ class DownloadHandler(RequestHandler):
             raise HTTPError(404)
 
 
+class ExportAsHandler(JupyterHandler):
+    SUPPORTED_METHODS = ("POST", )
+    auth_resource = "nbconvert"
+
+    @web.authenticated
+    @authorized
+    async def post(self, format):
+        from jupyter_server.nbconvert.handlers import get_exporter, respond_zip
+        from nbconvert.exporters.base import Exporter
+        from nbformat import from_dict
+
+        exporter: Exporter = get_exporter(format, config=self.config)
+        model = self.get_json_body()
+        assert model is not None
+        name = model.get("name", "notebook.ipynb")
+        nbnode = from_dict(model["content"])
+
+        try:
+            output, resources = exporter.from_notebook_node(
+                nbnode,
+                resources={
+                    "metadata": {"name": name[: name.rfind(".")]},
+                    "config_dir": self.application.settings["config_dir"],
+                }
+            )
+        except Exception as e:
+            self.set_status(500)
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.write(
+                json.dumps({
+                    "ename": e.__class__.__name__,
+                    "evalue": str(e),
+                    "traceback": traceback.format_exception(e),
+                })
+            )
+            self.finish()
+            return
+
+        # Some exports generate multiple files. If so, they should be zipped. The respond_zip handles everything needed
+        # to respond if it returns true, so no further action is needed in this function.
+        if respond_zip(self, name, output, resources):
+            return
+
+        # Set download filename
+        filename = os.path.splitext(name)[0] + resources["output_extension"]
+        self.set_attachment_header(filename)
+
+        # Set MIME type
+        if exporter.output_mimetype:
+            self.set_header("Content-Type", "%s; charset=utf-8" % exporter.output_mimetype)
+
+        self.finish(output)
+
+
 class SummaryHandler(ExtensionHandlerMixin, JupyterHandler):
     async def post(self):
         payload = json.loads(self.request.body)
@@ -556,6 +612,7 @@ class BeakerJupyterApp(LabServerApp):
         self.handlers.append(("/stats", StatsHandler))
         self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": self.ui_path, "default_filename": "admin.html"}))
         self.handlers.append((r"/summary", SummaryHandler))
+        self.handlers.append((r"/export/(?P<format>\w+)", ExportAsHandler)),
         self.handlers.append((f"/()", MainHandler, {"path": self.ui_path, "default_filename": "index.html"}))
         if statics:
             static_handler = ("/((" + "|".join(statics) + ").*)", StaticFileHandler, {"path": self.ui_path})

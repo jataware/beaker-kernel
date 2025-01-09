@@ -6,6 +6,7 @@
 
 <script lang="ts">
 import { reactive, ref, inject, provide, VNode, defineComponent, PropType, ComponentInternalInstance, DefineComponent } from 'vue';
+import CodeEditor from '../misc/CodeEditor.vue';
 import { BeakerSession, IMimeRenderer, IBeakerCell } from 'beaker-kernel/src';
 import { BeakerKernelStatus } from 'beaker-kernel/src/session';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
@@ -16,10 +17,11 @@ export interface IBeakerCellComponent {
   [key: string]: any,
   $: ComponentInternalInstance,
   cell: IBeakerCell,
-  enter: () => void,
+  enter: (position?: "start" | "end" | number) => void,
   exit: () => void,
   execute: () => void,
   clear: () => void,
+  editor?: typeof CodeEditor,
 }
 
 
@@ -31,7 +33,13 @@ export const toBeakerCellComponent = (vnode: VNode): IBeakerCellComponent => {
   return reactive({
     // @
     ...component.proxy as unknown as {cell: IBeakerCell},
-    ...component.exposed as {enter: ()=>void, exit: ()=>void, execute: ()=>void, clear: ()=>void},
+    ...component.exposed as {
+      enter: (position?: "start" | "end" | number)=>void,
+      exit: ()=>void,
+      execute: ()=>void,
+      clear: ()=>void,
+      editor?: typeof CodeEditor,
+    },
     $: component,
   });
 }

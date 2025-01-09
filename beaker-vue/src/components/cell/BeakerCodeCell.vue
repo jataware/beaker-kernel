@@ -120,8 +120,22 @@ const execute = (evt: any) => {
     exit();
 }
 
-const enter = () => {
+const enter = (position?: "start" | "end" | number) => {
     codeEditorRef.value?.focus();
+    if (position === "start") {
+        position = 0;
+    }
+    else if (position === "end") {
+        position = codeEditorRef.value?.view?.state?.doc?.length;
+    }
+    if (position !== undefined) {
+        codeEditorRef.value?.view?.dispatch({
+            selection: {
+                anchor: position,
+                head: position,
+            }
+        });
+    }
 }
 
 const exit = () => {
@@ -143,6 +157,7 @@ defineExpose({
     exit,
     clear,
     cell,
+    editor: codeEditorRef,
 });
 
 onBeforeMount(() => {

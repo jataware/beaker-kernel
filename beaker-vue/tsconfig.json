@@ -5,6 +5,7 @@
     "target": "ESNext",
     "strict": false,
     "jsx": "preserve",
+    "jsxImportSource": "vue",
     "declaration": true,
     "outDir": "./dist",
     "skipLibCheck": true,

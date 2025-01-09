@@ -27,6 +27,9 @@ module.exports = defineConfig({
   configureWebpack: {
     resolve: {
       extensions: ['.ts', '.tsx', '.vue'],
+      fallback: {
+        "path": require.resolve("path-browserify"),
+      }
     },
     output: {
       library: "beaker_vue",

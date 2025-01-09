@@ -2,7 +2,7 @@
   <Textarea
       @keyup="checkSize"
       @keydown.enter.exact.prevent="emit('submit')"
-      @keydown.escape.prevent.stop="$event.target.blur()"
+      @keydown.escape.prevent="$event.target.blur()"
       autoResize
       rows="1"
       :class="{'scroll-input': allowScroll}"

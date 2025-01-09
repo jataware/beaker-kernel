@@ -79,15 +79,20 @@
                 />
             </Dialog>
         </slot>
+        <DynamicDialog/>
     </BeakerSession>
 </template>
 
-<script setup lang="ts">
-import { defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounted, toRaw, defineExpose } from 'vue';
+<script setup lang="tsx">
+import { ErrorObject, isErrorObject } from '../util';
+import { h, defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounted, toRaw, defineExpose, Component } from 'vue';
 import Dialog from 'primevue/dialog';
+import DynamicDialog from 'primevue/dynamicdialog';
+import { useDialog } from 'primevue/usedialog';
 import ConfirmDialog from 'primevue/confirmdialog';
 import BeakerSession from '../components/session/BeakerSession.vue';
 import BeakerHeader from '../components/misc/BeakerHeader.vue';
+import Card from 'primevue/card';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import {BeakerSession as Session} from 'beaker-kernel/src'
@@ -100,7 +105,10 @@ import sum from 'hash-sum';
 import {default as ConfigPanel, getConfigAndSchema, dropUnchangedValues, objectifyTables, tablifyObjects, saveConfig} from '../components/panels/ConfigPanel.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import FooterDrawer from '../components/misc/FooterDrawer.vue';
+import { DynamicDialogInstance } from 'primevue/dynamicdialogoptions';
 
+
+const dialog = useDialog();
 
 const toast = useToast();
 
@@ -146,6 +154,7 @@ const authDialogEntry = ref<string>("");
 const authMessage = ref<string>("");
 const authRetryCell = ref();
 const loginDialogRef = ref();
+const overlayRef = ref<DynamicDialogInstance>();
 
 const contextSelectionOpen = ref(false);
 const contextProcessing = ref(false);
@@ -154,8 +163,51 @@ const toggleContextSelection = () => {
     contextSelectionOpen.value = !contextSelectionOpen.value;
 };
 
+const showOverlay = (contents: string | Component | HTMLElement | ErrorObject, title?: string) => {
+    var contentComponent;
+    if (typeof(contents) === "string") {
+        contents = h("div", {innerHTML: contents})
+    }
+    if (isErrorObject(contents)) {
+        contents = <div>
+            <h3>Error:</h3>
+            <div style="font-weight: bold">{contents.ename}</div>
+            <div>{ contents.evalue }</div>
+            { contents.traceback
+                ? <div>
+                    <h3>Traceback:</h3>
+                    <div class="traceback">{contents.traceback.join("")}</div>
+                  </div>
+                : undefined }
+        </div>
+    }
+    contentComponent = <div id="overlay">
+        <div id="overlay-content">{contents}</div>
+        <div id="overlay-footer" >
+            <Button label="Close" onClick={() => {
+                overlayRef.value.close();
+            }} /></div>
+    </div>
+
+    if (contentComponent) {
+        overlayRef.value = dialog.open(
+            contentComponent,
+            {
+                props: {
+                    style: {minWidth: '75vw', minHeight: '75vh'},
+                    modal: true,
+                    draggable: false,
+                    header: title || "Alert",
+                    contentStyle: {flex: 1},
+                    contentClass: "overlay-dialog"
+                },
+            }
+        );
+    }
+}
 
 provide('show_toast', showToast);
+provide('show_overlay', showOverlay);
 
 const connectionFailure = (error: Error) => {
     let errorName = error.name;
@@ -383,6 +435,33 @@ footer {
 
 .p-confirm-dialog {
     white-space: pre-line;
+}
+
+#overlay {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+#overlay-content {
+    flex: 1;
+}
+
+.overlay-dialog {
+    padding: 1em 2em 2em 2em;
+    white-space: pre-wrap;
+    display: flex;
+}
+
+#overlay-footer {
+    text-align: end;
+    min-height: "5em";
+    width: "100%"
+}
+
+#overlay-content .traceback {
+    padding: 0.5rem;
+    background-color: var(--surface-50);
 }
 
 </style>

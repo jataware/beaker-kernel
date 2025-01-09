@@ -16,7 +16,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { Extension, Prec } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { LanguageSupport } from "@codemirror/language";
-import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion } from "@codemirror/autocomplete";
+import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion } from "@codemirror/autocomplete";
 import { IBeakerTheme } from '../../plugins/theme';
 import { BeakerLanguage, LanguageRegistry, getCompletions } from "../../util/autocomplete";
 import { BeakerSession } from 'beaker-kernel/src';
@@ -72,31 +72,43 @@ const displayMode = computed<DisplayMode>(() => {
 });
 
 const extensions = computed(() => {
+    // Remove tab and esc keybindings from default CM keymapping.
     const filteredCompletionKeymap = completionKeymap.filter(item => !['Tab', 'Escape'].includes(item.key));
+    // Override default CM keymapping the keys.
     const overriddenKeymap = [
         ...filteredCompletionKeymap,
-        {key: "Tab", run: (editorView) => {
-            const state = editorView.state;
-            const selection = state.selection.main;
-            const lineStartRegex = new RegExp("^\\s*$", "m");
-            const endOfWordRegex = new RegExp("^\\w(\\b|$)","m");
-            if (completionStatus(state) === "active" && selectedCompletion(state) !== null) {
+        {key: "Tab", run: (editorView: EditorView) => {
+            const editorState = editorView.state;
+            const selection = editorState.selection.main;
+
+            const startLine = editorState.doc.lineAt(selection.from);
+            const firstNonWhitespaceOffset = startLine.text.match(/\S|$/)?.index || 0;
+            const inStartingWhitespace = (
+                selection.from >= startLine.from
+                && selection.from <= startLine.from + firstNonWhitespaceOffset
+            );
+
+            // If an autocomplete is active and something is selected, accept the completion.
+            if (completionStatus(editorState) === "active" && selectedCompletion(editorState) !== null) {
                 return acceptCompletion(editorView);
             }
-            if (selection.empty && endOfWordRegex.test(state.sliceDoc(selection.to - 1, selection.to + 1))) {
-                return true;
 
-            }
-            // Don't indent cursor isn't a in the middle of a line
-            if (selection.empty && !lineStartRegex.test(state.sliceDoc(0, selection.to))) {
-                return true;
+            // Only indent if cursor or selection is at start of line
+            if (inStartingWhitespace) {
+                // Returning false allows default action (indentation)
+                return false;
             }
 
+            // Default to starting an autocompletion, if possible.
+            startCompletion(editorView);
 
-            return false;
+            // Prevent default action
+            return true;
         }},
         // Prevent escape key from exiting cell editing if autocomplete is cancelled by pressing exec.
         {
+            // Using built-in helper "any" so we have access to the original keyboard event to allow stopping
+            // propagation, preventing blurring the node when cancelling an autocompletion via the escape key.
             any(editorView: EditorView, event: KeyboardEvent) {
                 if (event.key === "Escape") {
                     const state = editorView.state;

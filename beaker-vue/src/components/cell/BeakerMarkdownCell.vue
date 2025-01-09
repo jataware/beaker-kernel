@@ -62,21 +62,40 @@ const execute = () => {
     cell.value.source = editorContents.value;
 }
 
-const enter = () => {
+const enter = (position?: "start" | "end" | number) => {
     if (!isEditing.value) {
         isEditing.value = true;
     }
 
     nextTick(() => {
         codeEditorRef.value?.focus();
+        if (position === "start") {
+            position = 0;
+        }
+        else if (position === "end") {
+            position = codeEditorRef.value?.view?.state?.doc?.length;
+        }
+        if (position !== undefined) {
+            codeEditorRef.value?.view?.dispatch({
+                selection: {
+                    anchor: position,
+                    head: position,
+                }
+            });
+        }
     });
 }
 
 const exit = () => {
-    codeEditorRef.value?.blur();
-    let target: HTMLElement = (instance.vnode.el as HTMLElement);
-    const selectableParent = findSelectableParent(target);
-    selectableParent?.focus();
+    if (editorContents.value === cell.value.source) { // Query has not changed
+        isEditing.value = false;
+    }
+    else {
+        codeEditorRef.value?.blur();
+        let target: HTMLElement = (instance.vnode.el as HTMLElement);
+        const selectableParent = findSelectableParent(target);
+        selectableParent?.focus();
+    }
 }
 
 const clear = () => {
@@ -89,6 +108,7 @@ defineExpose({
     exit,
     clear,
     model: cell,
+    editor: codeEditorRef,
 });
 
 onBeforeMount(() => {
