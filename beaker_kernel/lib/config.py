@@ -299,7 +299,27 @@ boolean value which will enable/disable the tool based on the value.",
     def from_config_file(cls, config_file_path: Path|str|None = None, load_dotenv=True, **kwargs):
         config_file = locate_config(start_path=config_file_path)
         if config_file and config_file.exists():
-            config_data = toml.loads(config_file.read_text())
+            try:
+                text = config_file.read_text()
+                config_data = toml.loads(text)
+            except toml.TomlDecodeError as err:
+                if not text:
+                    text = '<Error reading file>'
+                logger.error(
+                    f"""\
+Error while parsing config file '{config_file.absolute()}':
+{err}
+
+File first line:
+```
+{text.splitlines()[0]}
+```
+
+Proceding with default values.
+""",
+                    exc_info=True
+                )
+                config_data = {}
         else:
             config_data = {}
 
