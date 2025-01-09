@@ -39,7 +39,7 @@
                   if (data.type !== 'directory') {
                     if (data.size >= largeFileWarningSize) {
                       largeFileSizeUILabel = `approximately ${Math.floor(data.size / 1000000)} MB`;
-                      showLargeFilePreview(() => 
+                      showLargeFilePreview(() =>
                         previewFile(data.path, data.mimetype));
                       return;
                     }
@@ -67,9 +67,9 @@
         <Column field="name" header="Name" class="filename-column" sortable>
           <template #body="slotProps">
             <span :class="[...getFileIconClass(slotProps.data), 'file-icon', slotProps.data.type]"></span>
-            <span 
-              :id="`file-list::${slotProps.data.path}`" 
-              class="file-name" 
+            <span
+              :id="`file-list::${slotProps.data.path}`"
+              class="file-name"
               :class="slotProps.data.type"
             >
               {{ slotProps.data.name }}
@@ -107,23 +107,23 @@
       This requires downloading the file over the network.
     </span>
     <div class="preview-dialog-button-container">
-        <Button 
-          type="button" 
-          label="Cancel" 
+        <Button
+          type="button"
+          label="Cancel"
           outlined
           @click="() => {
             largeFilePreviewDialogVisible = false;
             largeFilePreviewCallback = () => {};
-          }" 
+          }"
         />
-        <Button 
-          type="button" 
-          label="Preview" 
+        <Button
+          type="button"
+          label="Preview"
           @click="() => {
             largeFilePreviewDialogVisible = false;
             largeFilePreviewCallback();
             largeFilePreviewCallback = () => {};
-          }" 
+          }"
           />
     </div>
   </Dialog>
@@ -233,7 +233,7 @@ const doubleClick = ({data}) => {
 }
 
 const showLargeFilePreview = (callback: () => void) => {
-  largeFilePreviewDialogVisible.value = true; 
+  largeFilePreviewDialogVisible.value = true;
   largeFilePreviewCallback.value = callback;
 }
 

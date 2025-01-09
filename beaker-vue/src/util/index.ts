@@ -12,7 +12,7 @@ export function capitalize(s: string) {
 /**
  *
  **/
-export function getDateTime() {
+export function getDateTimeString() {
     const t = new Date();
     // convert the local time zone offset from minutes to milliseconds
     const z = t.getTimezoneOffset() * 60 * 1000;
@@ -24,8 +24,8 @@ export function getDateTime() {
     let iso = tLocal.toISOString();
     // drop the milliseconds and zone
     iso = iso.split(".")[0];
-    // replace the T with _, and : with , (: aren't allowed on filenames)
-    iso = iso.replace('T', '_').replace(/:/g,',');
+    // replace the T and `:` with `_` (`:` characters aren't allowed in filenames)
+    iso = iso.replace(/[:T]/g, '_')
     return iso;
 }
 
@@ -66,6 +66,16 @@ export function findSelectableParent(target: HTMLElement): HTMLElement {
     return undefined;
 }
 
+export type ErrorObject = {
+    ename: string;
+    evalue: string;
+    traceback?: string[];
+}
+
+export function isErrorObject(obj): obj is ErrorObject {
+    return Object.hasOwn(obj, "ename") && Object.hasOwn(obj, "evalue");
+}
+
 type InputElement = HTMLTextAreaElement | HTMLInputElement | CodeMirrorView | PrimevueTextarea;
 
 export function normalizeInputElement(input: object): InputElement {
@@ -80,16 +90,16 @@ export function normalizeInputElement(input: object): InputElement {
     }
 }
 
-function is_codemirror(input: InputElement): input is CodeMirrorView {
+export function is_codemirror(input: InputElement): input is CodeMirrorView {
     const result = Object.hasOwn(input, 'viewState') && Object.hasOwn(input, 'dom') && Object.hasOwn(input, 'docView')
     return result;
 }
 
-function is_primevue(input: InputElement): input is PrimevueTextarea {
+export function is_primevue(input: InputElement): input is PrimevueTextarea {
     return false;
 }
 
-function is_html_textarea(input: InputElement): input is HTMLTextAreaElement {
+export function is_html_textarea(input: InputElement): input is HTMLTextAreaElement {
     return input && input["type"] === "textarea";
 }
 

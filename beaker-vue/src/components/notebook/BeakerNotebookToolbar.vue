@@ -86,11 +86,13 @@
                         </InputGroup>
                     </OverlayPanel>
                 </div>
-                <Button
+                <SplitButton
                     @click="downloadNotebook"
-                    v-tooltip.bottom="{value: 'Download as .ipynb', showDelay: 300}"
+                    class="toolbar-splitbutton"
+                    v-tooltip.bottom="{value: 'Export (download) as .ipynb', showDelay: 300}"
                     icon="pi pi-download"
                     size="small"
+                    :model="exportAsTypes"
                     :severity="props.defaultSeverity"
                     text
                 />
@@ -101,10 +103,13 @@
     </Toolbar>
 </template>
 
-<script setup lang="tsx">
-import { defineEmits, defineProps, computed, inject, ref, withDefaults, capitalize, nextTick, watch } from "vue";
+<script setup lang="ts">
+import { defineEmits, defineProps, computed, inject, ref, withDefaults, capitalize, watch, onBeforeMount } from "vue";
+import { PageConfig } from '@jupyterlab/coreutils';
+import { URLExt } from '@jupyterlab/coreutils/src/url';
 import { BeakerSession, BeakerBaseCell } from 'beaker-kernel/src';
 import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
+import contentDisposition from "content-disposition";
 
 import Button from "primevue/button";
 import ChevronDownIcon from 'primevue/icons/chevrondown'
@@ -114,13 +119,15 @@ import InputGroup from "primevue/inputgroup";
 import InputText from "primevue/inputtext";
 import OverlayPanel from 'primevue/overlaypanel';
 import Toolbar from "primevue/toolbar";
+import { MenuItem } from "primevue/menuitem";
 
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
-import { downloadFileDOM, getDateTime } from '../../util';
+import { downloadFileDOM, getDateTimeString } from '../../util';
 
 const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
 const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
+const showOverlay = inject<(contents: string, header?: string) => void>('show_overlay');
 
 const addCellMenuItems = computed(() => {
     return Object.entries(cellMapping).map(([name, obj]) => {
@@ -157,6 +164,67 @@ const saveAsFilename = ref<string>(props.saveAsFilename);
 const saveAsHoverMenuRef = ref();
 const saveAsInputRef = ref();
 
+const exportAsTypes = ref<MenuItem[]>([
+    {
+        label: "Loading...",
+        disabled: true,
+    }
+]);
+
+const exportAction = (format: string, mimetype: string) => {
+    const url = URLExt.join(PageConfig.getBaseUrl(), 'export', format);
+    if (!saveAsFilename.value) {
+        resetSaveAsFilename();
+    }
+    fetch(
+        url,
+        {
+            "method": "POST",
+            "body": JSON.stringify({
+                name: saveAsFilename.value,
+                content: notebook.notebook.toIPynb(),
+            }),
+            "headers": {
+                "Content-Type": "application/json;charset=UTF-8"
+            },
+        }
+    ).then(async (result) => {
+        if (result.status === 200) {
+            const data = await result.text();
+            const dispositionHeader = result.headers.get("content-disposition")
+            const disposition = contentDisposition.parse(dispositionHeader);
+            const filename = disposition.parameters.filename;
+            downloadFileDOM(data, filename, mimetype)
+        }
+        else {
+            const errorInfo = await result.json();
+            showOverlay(errorInfo, "Error converting notebook");
+        }
+    }).catch((reason) => console.error(reason));
+}
+
+const refreshExportTypes = async () => {
+    const ignoredFormats = new Set(["custom", "qtpdf", "qtpng", "webpdf"]);
+    const formats = await session.services.nbconvert.getExportFormats();
+    exportAsTypes.value = Object.entries(formats).filter(([format]) => {
+        if (ignoredFormats.has(format)) {
+            return false;
+        }
+        return true
+    }).map(([format, formatInfo]) => {
+        const mimetype = formatInfo.output_mimetype;
+        return {
+            label: format,
+            tooltip: mimetype,
+            command: () => {exportAction(format, mimetype)},
+        }
+    });
+};
+
+onBeforeMount(async () => {
+    refreshExportTypes();
+})
+
 watch(props, (oldValue, newValue) => {
     if (saveAsFilename.value !== newValue.saveAsFilename) {
         saveAsFilename.value = newValue.saveAsFilename;
@@ -164,7 +232,7 @@ watch(props, (oldValue, newValue) => {
 });
 
 const resetSaveAsFilename = () => {
-    saveAsFilename.value = `Beaker-Notebook_${getDateTime()}.ipynb`;
+    saveAsFilename.value = `Beaker-Notebook_${getDateTimeString()}.ipynb`;
 }
 
 const resetNotebook = async () => {
@@ -206,7 +274,7 @@ async function saveAs() {
 
 function downloadNotebook() {
     const data = JSON.stringify(session.notebook.toIPynb(), null, 2);
-    const filename = `Beaker-Notebook_${getDateTime()}.ipynb`;
+    const filename = `Beaker-Notebook_${getDateTimeString()}.ipynb`;
     const mimeType = 'application/x-ipynb+json';
     downloadFileDOM(data, filename, mimeType);
 }
