@@ -400,7 +400,6 @@ export default {
 .input-request-chat-override {
     align-items: flex-end;
     width: 100%;
-    margin-bottom: 0.25rem;
     .input-request-wrapper-chat {
         align-items: flex-end;
         flex-direction: column;
@@ -420,7 +419,7 @@ export default {
                 border-color: var(--yellow-500);
             }
         }
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.5rem;
     }
 }
 
@@ -578,6 +577,8 @@ a.query-tab-headeraction > span > span.pi {
     p:last-child {
         margin-bottom: 0.5rem;
     }
+
+    margin-bottom: 1rem;
 }
 
 .prompt-input-container {
