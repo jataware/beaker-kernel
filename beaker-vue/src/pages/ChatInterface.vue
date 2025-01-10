@@ -383,6 +383,24 @@ const restartSession = async () => {
     flex-direction: column;
 }
 
+@media (width <= 960px) {
+    .left-panel .left .spacer {
+        display: none;
+    }
+    .sidemenu-container.left {
+        min-width: 0px !important;
+    }
+    .chat-container {
+        flex: 2 0 100%;
+        padding-right: 1rem;
+        padding-left: 1rem;
+        //border: 1px solid var(--surface-border);
+        display: flex;
+        flex-direction: column;
+    }
+}
+
+
 .chat-layout {
     display:flex;
     flex-direction: row;
@@ -391,6 +409,17 @@ const restartSession = async () => {
 
 .cell-container {
     // flex: 1;
+}
+
+div.footer-menu-bar {
+    border-radius: 0px;
+    padding-left: 0px;
+}
+
+.sidemenu-menu-selection.left {
+    border-top: none;
+    border-bottom: none;
+    border-left: none;
 }
 
 </style>
