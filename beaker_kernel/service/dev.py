@@ -10,7 +10,7 @@ from watchdog.observers import Observer
 from watchdog import events as watchdog_events
 
 import beaker_kernel
-from beaker_kernel.server.main import BeakerJupyterApp
+from beaker_kernel.service.notebook import BeakerNotebookApp
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.config import config
 
@@ -23,14 +23,14 @@ app_subprocess = None
 
 
 def _jupyter_server_extension_points():
-    return [{"module": "beaker_kernel.server.main", "app": DevBeakerJupyterApp}]
+    return [{"module": "beaker_kernel.service.dev", "app": DevBeakerJupyterApp}]
 
 
-class DevBeakerJupyterApp(BeakerJupyterApp):
+class DevBeakerJupyterApp(BeakerNotebookApp):
     pass
 
 
-class BeakerHandler(watchdog_events.FileSystemEventHandler):
+class BeakerWatchDog(watchdog_events.FileSystemEventHandler):
     def __init__(self, observer, modules, callback=None) -> None:
         super().__init__()
         self.observer = observer
@@ -97,7 +97,7 @@ def create_observer(extra_dirs=None, callback=None):
     print("Watching the following paths for modifications:")
     print("\n".join(f"  {path}" for path in paths))
     observer = Observer()
-    handler = BeakerHandler(observer, modules, callback=callback)
+    handler = BeakerWatchDog(observer, modules, callback=callback)
 
     for path in paths:
         observer.schedule(event_handler=handler, path=path, recursive=True)

@@ -308,7 +308,11 @@ class KernelProxyManager(object):
     def update_running_kernels(self):
         "Update self.kernels with an ordored dict where keys are file name and"
         "values are the configuration (file content) as dict"
+        connection_dir = os.environ.get("BEAKER_CONNECTION_DIR", None)
+
         files = glob.glob(os.path.join(jupyter_runtime_dir(), "kernel-*.json"))
+        if connection_dir:
+            files += glob.glob(os.path.join(connection_dir, "kernel-*.json"))
         self.kernels = OrderedDict()
         for path in reversed(sorted(files, key=lambda f: os.stat(f).st_atime)):
             try:

@@ -68,3 +68,4 @@ shell.nix
 
 .beaker.conf
 beaker_kernel/server/ui/*
+beaker_kernel/service/ui/*

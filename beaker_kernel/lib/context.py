@@ -158,6 +158,8 @@ class BeakerContext:
         kernel_info = res.json()
         self.beaker_kernel.update_running_kernels()
         kernels = self.beaker_kernel.kernels
+        print(res.status_code)
+        print("checking for: id in", kernel_info)
         subkernel_id = kernel_info["id"]
         # NOTE: MODIFIED `connect_to`
         # TODO: Refactor this into `lib/kernel_proxy_manager.py`
