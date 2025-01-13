@@ -11,7 +11,7 @@ from tornado.web import StaticFileHandler
 from beaker_kernel.lib.config import config
 from beaker_kernel.service.handlers import (
     PageHandler, StatsHandler, ConfigHandler, ContextHandler, SummaryHandler, ExportAsHandler, DownloadHandler,
-    ConfigController
+    ConfigController, sanitize_env
 )
 
 
@@ -26,24 +26,20 @@ def _jupyter_server_extension_points():
     return [{"module": "beaker_kernel.service.notebook", "app": BeakerNotebookApp}]
 
 
-def secure_env(env: dict) -> dict:
-        UNSAFE_WORDS = ["KEY", "SECRET", "TOKEN", "PASSWORD"]
-        safe_env = {}
-        for env_name, env_value in env.items():
-            for unsafe_word in UNSAFE_WORDS:
-                if unsafe_word in env_name.upper():
-                    break
-            else:
-                safe_env[env_name] = env_value
-        return safe_env
-
-
 class BeakerKernelManager(AsyncIOLoopKernelManager):
     def write_connection_file(self, **kwargs: object) -> None:
         return super().write_connection_file(
             server=self.parent.parent.public_url,
             **kwargs
         )
+
+    async def _async_pre_start_kernel(self, **kw):
+        # Fetch values from super()
+        cmd, kw = await super()._async_pre_start_kernel(**kw)
+        # Sanitize env variables for subkernels to prevent accidental spillage of credentials.
+        if self.kernel_name != "beaker_kernel":
+            kw["env"] = sanitize_env(kw.get("env", {}))
+        return cmd, kw
 
 
 class BeakerKernelMappingManager(AsyncMappingKernelManager):

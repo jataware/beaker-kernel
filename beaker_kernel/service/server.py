@@ -1,20 +1,18 @@
 import logging
 import os
+import shutil
 import urllib.parse
-from typing import Optional
 
 from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
-from jupyter_core.utils import ensure_async
 from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
 from jupyter_server.serverapp import ServerApp
-from jupyter_server.services.sessions.sessionmanager import SessionManager, KernelName, ModelName
 from jupyterlab_server import LabServerApp
 from tornado.web import StaticFileHandler
 
 from beaker_kernel.lib.config import config
 from beaker_kernel.service.handlers import (
     PageHandler, StatsHandler, ConfigHandler, ContextHandler, SummaryHandler, ExportAsHandler, DownloadHandler,
-    ConfigController
+    ConfigController, sanitize_env
 )
 
 logger = logging.getLogger(__file__)
@@ -28,89 +26,59 @@ def _jupyter_server_extension_points():
     return [{"module": "beaker_kernel.service.server", "app": BeakerJupyterApp}]
 
 
-def secure_env(env: dict) -> dict:
-        UNSAFE_WORDS = ["KEY", "SECRET", "TOKEN", "PASSWORD"]
-        safe_env = {}
-        for env_name, env_value in env.items():
-            for unsafe_word in UNSAFE_WORDS:
-                if unsafe_word in env_name.upper():
-                    break
-            else:
-                safe_env[env_name] = env_value
-        return safe_env
-
-
-
 class BeakerKernelManager(AsyncIOLoopKernelManager):
+    agent_user: str
+    subkernel_user: str
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.agent_user = os.environ.get("BEAKER_AGENT_USER", "jupyter")
+        self.subkernel_user = os.environ.get("BEAKER_SUBKERNEL_USER", "user")
+
     def write_connection_file(self, **kwargs: object) -> None:
         super().write_connection_file(
             server=self.parent.parent.public_url,
             **kwargs
         )
-        os.chmod(self.connection_file, 0o0777)
-
+        # Set file to be owned by and modifiable by the beaker user so the beaker user can modify the file.
+        os.chmod(self.connection_file, 0o0775)
+        shutil.chown(self.connection_file, user=self.agent_user)
 
     async def _async_pre_start_kernel(self, **kw):
-        if self.kernel_name == "beaker_kernel":
-            user = os.environ.get("BEAKER_AGENT_USER", "jupyter")
-        else:
-            user = os.environ.get("BEAKER_SUBKERNEL_USER", "user")
-        kw["user"] = user
-        kw["cwd"] = f"~{user}"
-        return await super()._async_pre_start_kernel(**kw)
-    pre_start_kernel = _async_pre_start_kernel
+        # Fetch values from super()
+        cmd, kw = await super()._async_pre_start_kernel(**kw)
 
-    async def _async_launch_kernel(self, kernel_cmd, **kw):
-        try:
-            print('FOO', kernel_cmd, kw, self)
-            return await super()._async_launch_kernel(kernel_cmd, **kw)
-        except Exception as err:
-            print("FOOFOOFOO", err)
-    _launch_kernel = _async_launch_kernel
+        env = kw.pop("env", {})
+
+        # Update user, env variables, and home directory based on type of kernel being started.
+        if self.kernel_name == "beaker_kernel":
+            user = self.agent_user
+        else:
+            user = self.subkernel_user
+            env = sanitize_env(env)
+        home_dir = os.path.expanduser(f"~{user}")
+        env["HOME"] = home_dir
+
+        # Update keyword args that are passed to Popen()
+        kw["user"] = user
+        kw["cwd"] = home_dir
+        kw["env"] = env
+
+        return cmd, kw
+    pre_start_kernel = _async_pre_start_kernel
 
 
 class BeakerKernelMappingManager(AsyncMappingKernelManager):
     kernel_manager_class = "beaker_kernel.service.server.BeakerKernelManager"
-    connection_dir = os.environ.get("BEAKER_CONNECTION_DIR", None)
+    connection_dir = os.environ.get("BEAKER_CONNECTION_DIR", "/var/run/beaker")
 
-    def cwd_for_path(self, path, **kwargs):
-        print(path, kwargs)
-        return super().cwd_for_path(path, **kwargs)
-
-    def _async_start_kernel(self, *, kernel_id = None, path = None, **kwargs):
-        # kwargs["_kernel_name"] = kwargs["kernel_name"]
-        return super()._async_start_kernel(kernel_id=kernel_id, path=path, **kwargs)
-
-    start_kernel = _async_start_kernel
-
-class BeakerSessionManager(SessionManager):
-
-    def get_kernel_env(self, path, name=None, kernel_name=None):
-        env = super().get_kernel_env(path, name)
-        if kernel_name != "beaker_kernel":
-            env = secure_env(env)
-        return env
-
-    async def start_kernel_for_session(
-        self,
-        session_id: str,
-        path: Optional[str],
-        name: Optional[ModelName],
-        type: Optional[str],
-        kernel_name: Optional[KernelName],
-    ) -> str:
-        print(kernel_name, type, path, session_id)
-        # allow contents manager to specify kernels cwd
-        kernel_path = await ensure_async(self.contents_manager.get_kernel_path(path=path))
-
-        kernel_env = self.get_kernel_env(path, name, kernel_name)
-
-        kernel_id = await self.kernel_manager.start_kernel(
-            path=kernel_path,
-            kernel_name=kernel_name,
-            env=kernel_env,
-        )
-        return kernel_id
+    def __init__(self, **kwargs):
+        # Ensure connection dir exists and is readable
+        if not os.path.isdir(self.connection_dir):
+            os.makedirs(self.connection_dir, mode=0o0755)
+        else:
+            os.chmod(self.connection_dir, 0o0755)
+        super().__init__(**kwargs)
 
 
 
@@ -120,7 +88,8 @@ class BeakerServerApp(ServerApp):
     """
 
     kernel_manager_class = BeakerKernelMappingManager
-    session_manager_class = BeakerSessionManager
+    root_dir = os.path.expanduser(f'~{os.environ.get("BEAKER_SUBKERNEL_USER", "user")}')
+    allow_root = True
 
     @property
     def public_url(self):
@@ -189,7 +158,6 @@ class BeakerJupyterApp(LabServerApp):
                 else:
                     statics.append(f"{file}$")
 
-        # self.handlers.append((r"/api/kernels", SafeKernelHandler))
         self.handlers.append(("/contexts", ContextHandler))
         self.handlers.append(("/config/control", ConfigController))
         self.handlers.append(("/config", ConfigHandler))

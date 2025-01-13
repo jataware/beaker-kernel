@@ -23,8 +23,7 @@ COPY --chown=1000:1000 . /jupyter
 RUN chown -R 1000:1000 /jupyter
 RUN pip install --no-build-isolation --no-cache-dir /jupyter
 
-RUN mkdir /var/run/beaker
-RUN chmod 777 /var/run/beaker
+RUN mkdir -m 755 /var/run/beaker
 
 # Set default server env variables
 ENV BEAKER_AGENT_USER=jupyter
@@ -36,4 +35,4 @@ ENV BEAKER_CONNECTION_DIR=/var/run/beaker
 USER root
 
 # Simple "notebook" service
-CMD ["python3.10", "-m", "beaker_kernel.service.server", "--ip", "0.0.0.0", "--allow-root"]
+CMD ["python3.10", "-m", "beaker_kernel.service.server", "--ip", "0.0.0.0"]

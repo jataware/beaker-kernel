@@ -35,26 +35,6 @@ def notebook(ctx, extra_args):
             app.stop()
 
 
-@click.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
-@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
-@click.pass_context
-def server(ctx, extra_args):
-    """
-    Start Beaker in server mode.
-    """
-    from beaker_kernel.service.server import BeakerServerApp
-    app = None
-    try:
-        app = BeakerServerApp.initialize_server(argv=extra_args)
-        set_config_from_app(app)
-        app.start()
-    except (InterruptedError, KeyboardInterrupt, EOFError) as err:
-        print(err)
-    finally:
-        if app:
-            app.stop()
-
-
 @click.group(name="dev", invoke_without_command=True)
 @click.option("--no-open-notebook", "-n", is_flag=True, default=False, type=bool, help="Prevent opening the notebook in a webbrowser.")
 @click.pass_context

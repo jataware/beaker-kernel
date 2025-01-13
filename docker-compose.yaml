@@ -1,9 +1,7 @@
 ---
-# Jupyter LLM docker compose by Matthew Printz
-
-version: '3'
 services:
   jupyter:
+    user: jupyter
     build:
       dockerfile: ${DOCKERFILE:-Dockerfile}
       context: .
@@ -18,16 +16,15 @@ services:
       - ENABLE_CHECKPOINTS=true
       - TOOL_ENABLED_ASK_USER=true
       - TOOL_ENABLED_RUN_CODE=true
-      - CONFIG_TYPE=server
-      # - JUPYTER_CONNECTION_DIR=/var/run/beaker
       # These veriables are useful when running in server mode
+      # - CONFIG_TYPE=server
       # - LLM_PROVIDER_IMPORT_PATH=archytas.models.openai.OpenAIModel
       # - LLM_SERVICE_MODEL=gpt-4o
       # - LLM_SERVICE_TOKEN=${OPENAI_API_KEY}
     volumes:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
-    command: [ "python3.10", "-m", "beaker_kernel.service.server", "--ip", "0.0.0.0", "--allow-root" ]
+    command: ["beaker", "dev", "watch", "--ip", "0.0.0.0"]
   ui:
     image: node:20
     user: node

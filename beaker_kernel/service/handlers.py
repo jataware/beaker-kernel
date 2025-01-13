@@ -22,6 +22,18 @@ from beaker_kernel.lib.config import config, locate_config, Config, Table, Choic
 from beaker_kernel.service import admin_utils
 
 
+def sanitize_env(env: dict[str, str]) -> dict[str, str]:
+    # Whitelist must match the env variable name exactly and is checked first.
+    # Blacklist can match any part of the variable name.
+    WHITELIST = ["JUPYTER_TOKEN",]
+    BLACKLIST = ["KEY", "SECRET", "TOKEN", "PASSWORD"]
+    safe_env = {}
+    for env_name, env_value in env.items():
+        if env_name in WHITELIST or not any([unsafe_word.upper() in env_name.upper() for unsafe_word in BLACKLIST]):
+            safe_env[env_name] = env_value
+    return safe_env
+
+
 class PageHandler(StaticFileHandler):
     """
     Special handler that
