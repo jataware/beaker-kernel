@@ -2,6 +2,8 @@ import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
+import ConfirmationService from 'primevue/confirmationservice';
+import DialogService from 'primevue/dialogservice';
 import FocusTrap from 'primevue/focustrap';
 
 import DevInterface from './DevInterface.vue';
@@ -27,6 +29,8 @@ const baseUrl = PageConfig.getBaseUrl();
 
   app.use(PrimeVue);
   app.use(ToastService);
+  app.use(ConfirmationService);
+  app.use(DialogService);
   app.use(BeakerThemePlugin);
   app.directive('tooltip', Tooltip);
   app.directive('focustrap', FocusTrap);
