@@ -508,10 +508,20 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             }
         };
 
+        const notebookState = session.notebook.toIPynb();
+        notebookState.cells = notebookState.cells.filter(
+            // Skip this cell and any children of this cell
+            cell => cell.id !== this.id && cell.metadata?.parent_cell !== this.id
+        );
+
         const future = session.sendBeakerMessage(
             "llm_request",
             {
                 request: this.source
+            },
+            undefined,
+            {
+                "notebook_state": notebookState,
             }
         );
         future.onIOPub = handleIOPub;
@@ -651,6 +661,7 @@ export class BeakerNotebook {
         Object.keys(obj).forEach((key) => {
             this.content[key] = obj[key];
         })
+        this.cells = new Proxy(this.content.cells, {});
     }
 
     public loadFromIPynb(obj: any) {

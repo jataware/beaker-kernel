@@ -136,7 +136,8 @@ export class BeakerSession {
     public sendBeakerMessage(
         messageType: string,
         content: JSONObject,
-        messageId?: string
+        messageId?: string,
+        metadata?: {[key: string]: any},
     ): IBeakerFuture {
         if (!messageId) {
             messageId = createMessageId(messageType);
@@ -149,7 +150,8 @@ export class BeakerSession {
             channel: "shell",
             msgType: messageType,
             content: content,
-            msgId: messageId
+            msgId: messageId,
+            metadata: metadata,
         });
 
         const future: IBeakerFuture<messages.IShellMessage, messages.IShellMessage> = this.kernel.sendShellMessage(

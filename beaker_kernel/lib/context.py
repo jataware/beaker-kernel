@@ -241,6 +241,52 @@ class BeakerContext:
         }
         return payload
 
+    def prepare_state(self, kernel_state=None, notebook_state=None):
+        from contextlib import AbstractContextManager
+        class StateContext(AbstractContextManager):
+            def __init__(self, context, kernel_state, notebook_state):
+                self.context: BeakerContext = context
+                self.kernel_state = kernel_state
+                self.notebook_state = notebook_state
+                super().__init__()
+
+            async def update_context(self) -> str:
+                await self.orig_auto_context_message.update_content()
+                parts = [
+                    self.orig_auto_context_message.content
+                ]
+                if self.kernel_state:
+                    parts.append(f"""\
+## Kernel state
+```application/json
+{json.dumps(self.kernel_state)}
+```\
+""")
+                if self.notebook_state:
+                    parts.append(f"""\
+## Current notebook
+```application/x-ipynb+json
+{json.dumps(self.notebook_state)}
+```
+Note: In the notebook representation above, communication with the agent is encoded as Markdown cells with metadata
+field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", then the agent generated this cell as
+part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
+loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
+""")
+                content = "\n\n".join(parts)
+                logger.warning(content)
+                return content
+
+            def __enter__(self):
+                self.orig_auto_context_message = self.context.agent.auto_context_message
+                self.context.agent.set_auto_context(self.orig_auto_context_message.content, self.update_context)
+                return super().__enter__()
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                self.context.agent.auto_context_message = self.orig_auto_context_message
+                return super().__exit__(exc_type, exc_value, traceback)
+        return StateContext(self, kernel_state, notebook_state)
+
     async def get_subkernel_state(self):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
         state = await self.evaluate(fetch_state_code)
