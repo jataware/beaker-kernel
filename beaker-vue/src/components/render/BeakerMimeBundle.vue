@@ -7,7 +7,7 @@
                   :options="sortedMimetypes"
               />
         </div>
-        <div>
+        <div class="mime-payload">
             <component
                 v-if="renderedBundle[selectedMimeType]?.component"
                 :is="renderedBundle[selectedMimeType].component"
@@ -82,5 +82,26 @@ const selectedMimeType = ref<string>(sortedMimetypes.value[0]);
 
 .preview-image {
     width: 100%;
+}
+
+.rendered-output {
+    &.text-plain div {
+        pre {
+            display: inline-block;
+            font-size: 0.75rem;
+        }
+    }
+    &.text-html div.jp-RenderedHTML {
+        div {
+            overflow-x: auto;
+        }
+    }
+    overflow-x: auto;
+}
+
+.mime-payload {
+    overflow-x: auto;
+    display: flex;
+    flex-direction: column
 }
 </style>

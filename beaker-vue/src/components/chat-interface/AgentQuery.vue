@@ -82,7 +82,7 @@ const handleQuery = (e: any) => {
     padding: 0rem;
 }
 .agent-query-container-chat {
-    width: 80%;
+    width: 100%;
     align-self: flex-end;
     div div div {
         button {

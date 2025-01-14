@@ -1,7 +1,11 @@
 <template>
     <div class="llm-query-event">
-        <span v-if="isMarkdown(event) && isValidResponse(event)" v-html="markdownBody" />
-        <span v-if="props.event?.type === 'response' && parentQueryCell?.children?.length !== 0">
+        <div 
+            v-if="isMarkdown(event) && isValidResponse(event)" 
+            v-html="markdownBody" 
+            class="md-inline"
+        />
+        <div v-if="props.event?.type === 'response' && parentQueryCell?.children?.length !== 0">
             <h4 class="agent-outputs">Outputs:</h4>
             <Accordion :multiple="true" :active-index="lastOutput">
                 <AccordionTab
@@ -31,7 +35,7 @@
                     <BeakerCodecellOutput :outputs="child?.outputs" />
                 </AccordionTab>
             </Accordion>
-        </span>
+        </div>
         <div v-else-if="props.event?.type === 'thought'">
             <div v-html="marked.parse(props.event.content.thought)" />
             <div v-if="props.event.content.background_code_executions.length">
@@ -358,7 +362,6 @@ a.agent-response-headeraction > span > span.pi {
 .agent-response-content {
     background: none;
     border: none;
-    overflow-x: auto;
 }
 
 .agent-response-content-error pre {
@@ -392,6 +395,18 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     font-weight: 400;
     margin-bottom: 0rem;
     font-size: 1.1rem;
+}
+
+.md-inline {
+    pre {
+        overflow-x: auto;
+        code {
+            display: inline-block;
+            // min-width: 100%;
+            // width: 0px;
+            font-size: 0.75rem;
+        }
+    }
 }
 
 </style>

@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        title="Beaker Chat Interface"
+        title="Beaker Chat"
         ref="beakerInterfaceRef"
         :header-nav="headerNav"
         :connectionSettings="props.config"
@@ -369,37 +369,32 @@ const restartSession = async () => {
 
 .spacer {
     &.left {
-        flex: 1 1000 25vw;
+        //flex: 0 1000 25vw;
+        display: none;
     }
     &.right {
-        flex: 1 1 25vw;
+        //flex: 0 1000 25vw;
+        display: none;
     }
 }
-
+.left-panel .left .spacer {
+    display: none;
+}
+.sidemenu-container.left {
+    min-width: 0px !important;
+}
 .chat-container {
-    flex: 2 0 calc(56vw - 2px);
+    margin-left: auto;
+    margin-right: auto;
+    flex: 0 0 100%;
+    padding-right: 1rem;
+    padding-left: 1rem;
     //border: 1px solid var(--surface-border);
     display: flex;
     flex-direction: column;
+    max-width: 860px;
+    width: 100%;
 }
-
-@media (width <= 960px) {
-    .left-panel .left .spacer {
-        display: none;
-    }
-    .sidemenu-container.left {
-        min-width: 0px !important;
-    }
-    .chat-container {
-        flex: 2 0 100%;
-        padding-right: 1rem;
-        padding-left: 1rem;
-        //border: 1px solid var(--surface-border);
-        display: flex;
-        flex-direction: column;
-    }
-}
-
 
 .chat-layout {
     display:flex;
@@ -407,8 +402,16 @@ const restartSession = async () => {
     height: 100%;
 }
 
-.cell-container {
-    // flex: 1;
+div.code-cell-output-box {
+    div.output-collapse-box {
+        display: none;
+    }
+}
+
+.jp-RenderedImage {
+    img {
+        width: 100%;
+    }
 }
 
 div.footer-menu-bar {
@@ -420,6 +423,18 @@ div.footer-menu-bar {
     border-top: none;
     border-bottom: none;
     border-left: none;
+}
+
+.title {
+    h4 {
+        text-overflow: "clip";
+        overflow: hidden;
+        text-wrap: nowrap;
+    }
+}
+
+div.status-container {
+    min-width: 0px;
 }
 
 </style>

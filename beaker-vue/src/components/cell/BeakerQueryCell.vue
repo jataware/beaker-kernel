@@ -7,7 +7,7 @@
             }"
             @dblclick="promptDoubleClick"
         >
-            <div v-show="!isChat" class="query-steps">User Query:</div>
+            <div v-if="!isChat" class="query-steps">User Query:</div>
             <div 
                 class="llm-prompt-container"
                 :class="{
@@ -35,10 +35,22 @@
                 >{{ cell.source }}</div>
             </div>
         </div>
-        <div class="event-container" v-if="events.length > 0 || isLastEventTerminal()">
+        <div class="event-container" 
+            v-if="events.length > 0 || isLastEventTerminal() || showChatEventsEarly(cell)"
+        >
             <div class="events">
-                <div class="query-steps" v-show="!isChat" v-if="events.length > 0">Agent actions:</div>
-                <Accordion v-if="events.length > 0" :multiple="true" :class="'query-accordion'" v-model:active-index="selectedEvents">
+                <div 
+                    class="query-steps" 
+                    v-if="events.length > 0 && !isChat"
+                >
+                    Agent actions:
+                </div>
+                <Accordion 
+                    v-if="events.length > 0 && !isChat" 
+                    :multiple="true" 
+                    :class="'query-accordion'" 
+                    v-model:active-index="selectedEvents"
+                >
                     <AccordionTab
                         v-for="(event, eventIndex) in events"
                         :key="eventIndex"
@@ -72,6 +84,50 @@
                         />
                     </AccordionTab>
                 </Accordion>
+                <Accordion
+                    :class="'query-accordion-chat'" 
+                    v-if="isChat"
+                >
+                    <AccordionTab
+                    :pt="{
+                            header: {
+                                class: [`query-tab`, `query-tab-thought`, `query-tab-thought-chat`]
+                            },
+                            headerAction: {
+                                class: [`query-tab-headeraction`, `query-tab-headeraction-thought`]
+                            },
+                            content: {
+                                class: [`query-tab-content-thought`]
+                            },
+                            headerIcon: {
+                                class: [`query-tab-icon-thought`]
+                            },
+                        }"
+                    >
+                        <template #header>
+                            <span class="flex align-items-center gap-2 w-full">
+                                <span class="white-space-nowrap" style="font-weight: 400;">
+                                    {{ lastEventThought }} 
+                                    <span class="thinking-animation" v-if="cell.status === 'busy'"/>
+                                    <i 
+                                        class="pi pi-check" 
+                                        style="
+                                            margin-left: 0.25rem; 
+                                            margin-right: 0.25rem;
+                                        " 
+                                        v-if="cell.status === 'idle'"
+                                    />
+                                </span>
+                            </span>
+                        </template>
+                        <BeakerQueryCellEvent
+                            v-for="(event, eventIndex) in events"
+                            :key="eventIndex"
+                            :event="event"
+                            :parentQueryCell="cell"
+                        />
+                    </AccordionTab>
+                </Accordion>
                 <div :class="{
                         'query-answer': !isChat, 
                         'query-answer-chat-override': isChat
@@ -87,7 +143,7 @@
                 </div>
             </div>
         </div>
-        <div class="thinking-indicator" v-if="cell.status === 'busy'">
+        <div class="thinking-indicator" v-if="cell.status === 'busy' && !isChat">
             <span class="thought-icon"><ThinkingIcon/></span> Thinking <span class="thinking-animation"></span>
         </div>
         <div
@@ -195,13 +251,46 @@ const response = ref("");
 const textarea = ref();
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+
 const styleOverrides = inject<StyleOverride[]>("styleOverrides")
 const isChat = ref(styleOverrides.includes('chat'))
+
 const instance = getCurrentInstance();
 
 
 const events = computed(() => {
     return [...props.cell.events].filter((event) => !terminalEvents.includes(event.type));
+})
+
+const lastEventThought = computed(() => {
+    // initial state
+    if (events.value.length < 1) {
+        return "Thinking"
+    }
+    // grab the text from the last thought. 
+    const lastEvent = events.value[events.value.length - 1];
+    if (lastEvent.type === 'thought') {
+        return lastEvent.content.thought;
+    } else {
+        // walk backwards through events to determine the last thought
+        let offset = 2;
+        let eventCursor = events.value[events.value.length - offset];
+        while (eventCursor.type !== 'thought' && events.value.length >= offset) {
+            offset += 1;
+            eventCursor = events.value[events.value.length - offset];
+        }
+        if (eventCursor.type === 'thought') {
+            const endTags = {
+                'user_question': "(awaiting user input)",
+                'user_answer': "(answer received, thinking)",
+                'code_cell': "(code is now running)"
+            }
+            return `${eventCursor.content.thought} ${endTags[lastEvent.type]}`;
+        // no thought, end of stack
+        } else {
+            return '?';
+        }
+    }
 })
 
 const taggedCellEvents = computed(() => {
@@ -233,6 +322,8 @@ const queryStatus = computed<QueryStatuses>(() => {
 
 
 })
+
+const showChatEventsEarly = (cell) => isChat.value ? (cell.status === 'busy') : false;
 
 const isLastEventTerminal = () => {
     const events: BeakerQueryEvent[] = props.cell.events;
@@ -404,7 +495,7 @@ export default {
         align-items: flex-end;
         flex-direction: column;
         .p-inputgroup {
-            width: 80%;
+            width: 100%;
             border: 1px solid var(--yellow-500);
             box-shadow: 0 0 4px var(--yellow-700);
             transition: box-shadow linear 1s;
@@ -496,6 +587,31 @@ h3.query-steps {
 .query-accordion .p-accordion-content {
     padding-top: 0.25rem;
     padding-bottom: 0rem;
+}
+
+.query-accordion-chat {
+    margin-bottom: 1rem;
+    width: 100%;
+    .p-accordion-tab {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        .p-accordion-header {
+            width: 80%;
+        }
+    }
+
+}
+
+.query-tab-title-chat {
+    font-weight: 400;
+}
+
+.query-tab-thought-chat {
+    .p-accordion-header-link svg {
+        flex-shrink: 0;
+    }
 }
 
 .query-steps {
