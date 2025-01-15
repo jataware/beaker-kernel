@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import copy
 import inspect
 import json
@@ -117,6 +118,7 @@ class BeakerKernel(KernelProxyManager):
         self.server.intercept_message("shell", "set_agent_model", self.set_agent_model)
         self.server.intercept_message("shell", "reset_request", self.reset_kernel)
         self.server.intercept_message("control", "interrupt_request", self.interrupt)
+        self.server.intercept_message("shell", "notebook_state_response", self.notebook_state_response)
 
     def register_magic_commands(self):
         for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_magic_prefix")):
@@ -612,6 +614,33 @@ class BeakerKernel(KernelProxyManager):
             parent_header=message.header
         )
         return True
+
+    async def notebook_state_response(self, server, target_stream, data):
+        async with handle_message(server, target_stream, data, send_status_updates=False, send_reply=False) as ctx:
+            setattr(self.notebook_state_response.__func__, 'result', ctx.message.content)
+            return None
+    setattr(notebook_state_response, 'result', None)
+
+    async def request_notebook_state(self, parent_message=None):
+        msg_id = str(uuid.uuid4())
+        self.send_response(
+            "iopub",
+            "notebook_state_request",
+            {},
+            parent_header=getattr(parent_message, "header", None),
+            parent_identities=getattr(parent_message, "identities", None),
+            msg_id=msg_id,
+        )
+        timeout = 1
+        steps = 10
+        sleep_duration = timeout / steps
+        for _ in range(steps):
+            result = getattr(self.notebook_state_response, 'result', None)
+            if result != None:
+                setattr(self.notebook_state_response.__func__, 'result', None)
+                return result
+            await asyncio.sleep(sleep_duration)
+        return None
 
 
 # Provided for backwards compatibility

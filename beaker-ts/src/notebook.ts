@@ -5,7 +5,7 @@ import { IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
 import { v4 as uuidv4 } from 'uuid';
 
 import { BeakerSession } from './session';
-import { IBeakerFuture, BeakerCellFuture, BeakerCellFutures } from './util';
+import { IBeakerFuture, BeakerCellFuture, BeakerCellFutures, truncateNotebookForAgent } from './util';
 
 
 export interface IBeakerHeader extends messages.IHeader<messages.MessageType> {
@@ -508,7 +508,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             }
         };
 
-        const notebookState = session.notebook.toIPynb();
+        const notebookState = truncateNotebookForAgent(session.notebook);
         notebookState.cells = notebookState.cells.filter(
             // Skip this cell and any children of this cell
             cell => cell.id !== this.id && cell.metadata?.parent_cell !== this.id
@@ -761,7 +761,7 @@ export class BeakerNotebook {
         }
     };
 
-    private content: BeakerNotebookContent;
+    public content: BeakerNotebookContent;
     public cells: IBeakerCell[];
     private subkernelInfo?: nbformat.ILanguageInfoMetadata;
 }

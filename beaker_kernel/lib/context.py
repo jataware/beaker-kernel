@@ -274,7 +274,6 @@ part of the ReAct loop associated with that query. As such, cells that follow a 
 loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
 """)
                 content = "\n\n".join(parts)
-                logger.warning(content)
                 return content
 
             def __enter__(self):
@@ -313,14 +312,13 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         """
         Returns all of the history for the LLM agent.
         """
-        agent_messages = await self.agent.all_messages()
-        self.send_response(
-            stream="iopub",
-            msg_or_type="get_agent_history_response",
-            content= agent_messages,
-            parent_header=message.header,
-        )
-        return agent_messages
+        kernel_state_future = self.get_subkernel_state()
+        notebook_state_future = self.beaker_kernel.request_notebook_state(parent_message=message)
+        kernel_state, notebook_state = await asyncio.gather(kernel_state_future, notebook_state_future)
+        with self.prepare_state(kernel_state, notebook_state):
+            agent_messages = await self.agent.all_messages()
+            json_messages = [msg.model_dump_json() for msg in agent_messages]
+            return json_messages
     get_agent_history._default_payload = '{}'
 
 
