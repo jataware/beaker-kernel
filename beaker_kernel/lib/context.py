@@ -243,18 +243,25 @@ class BeakerContext:
 
     def prepare_state(self, kernel_state=None, notebook_state=None):
         from contextlib import AbstractContextManager
+        from archytas.agent import AutoContextMessage
         class StateContext(AbstractContextManager):
+            orig_auto_context_message: AutoContextMessage
+
             def __init__(self, context, kernel_state, notebook_state):
                 self.context: BeakerContext = context
                 self.kernel_state = kernel_state
                 self.notebook_state = notebook_state
+                self.orig_auto_context_message = None
                 super().__init__()
 
             async def update_context(self) -> str:
-                await self.orig_auto_context_message.update_content()
-                parts = [
-                    self.orig_auto_context_message.content
-                ]
+                if self.orig_auto_context_message:
+                    await self.orig_auto_context_message.update_content()
+                    parts = [
+                        self.orig_auto_context_message.content
+                    ]
+                else:
+                    parts = []
                 if self.kernel_state:
                     parts.append(f"""\
 ## Kernel state
@@ -277,12 +284,14 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
                 return content
 
             def __enter__(self):
-                self.orig_auto_context_message = self.context.agent.auto_context_message
-                self.context.agent.set_auto_context(self.orig_auto_context_message.content, self.update_context)
+                if self.context.agent.auto_context_message:
+                    self.orig_auto_context_message = self.context.agent.auto_context_message
+                    self.context.agent.set_auto_context(self.orig_auto_context_message.content, self.update_context)
                 return super().__enter__()
 
             def __exit__(self, exc_type, exc_value, traceback):
-                self.context.agent.auto_context_message = self.orig_auto_context_message
+                if self.orig_auto_context_message:
+                    self.context.agent.auto_context_message = self.orig_auto_context_message
                 return super().__exit__(exc_type, exc_value, traceback)
         return StateContext(self, kernel_state, notebook_state)
 
