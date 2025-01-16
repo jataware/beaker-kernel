@@ -241,6 +241,60 @@ class BeakerContext:
         }
         return payload
 
+    def prepare_state(self, kernel_state=None, notebook_state=None):
+        from contextlib import AbstractContextManager
+        from archytas.agent import AutoContextMessage
+        class StateContext(AbstractContextManager):
+            orig_auto_context_message: AutoContextMessage
+
+            def __init__(self, context, kernel_state, notebook_state):
+                self.context: BeakerContext = context
+                self.kernel_state = kernel_state
+                self.notebook_state = notebook_state
+                self.orig_auto_context_message = None
+                super().__init__()
+
+            async def update_context(self) -> str:
+                if self.orig_auto_context_message:
+                    await self.orig_auto_context_message.update_content()
+                    parts = [
+                        self.orig_auto_context_message.content
+                    ]
+                else:
+                    parts = []
+                if self.kernel_state:
+                    parts.append(f"""\
+## Kernel state
+```application/json
+{json.dumps(self.kernel_state)}
+```\
+""")
+                if self.notebook_state:
+                    parts.append(f"""\
+## Current notebook
+```application/x-ipynb+json
+{json.dumps(self.notebook_state)}
+```
+Note: In the notebook representation above, communication with the agent is encoded as Markdown cells with metadata
+field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", then the agent generated this cell as
+part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
+loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
+""")
+                content = "\n\n".join(parts)
+                return content
+
+            def __enter__(self):
+                if self.context.agent.auto_context_message:
+                    self.orig_auto_context_message = self.context.agent.auto_context_message
+                    self.context.agent.set_auto_context(self.orig_auto_context_message.content, self.update_context)
+                return super().__enter__()
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                if self.orig_auto_context_message:
+                    self.context.agent.auto_context_message = self.orig_auto_context_message
+                return super().__exit__(exc_type, exc_value, traceback)
+        return StateContext(self, kernel_state, notebook_state)
+
     async def get_subkernel_state(self):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
         state = await self.evaluate(fetch_state_code)
@@ -267,14 +321,13 @@ class BeakerContext:
         """
         Returns all of the history for the LLM agent.
         """
-        agent_messages = await self.agent.all_messages()
-        self.send_response(
-            stream="iopub",
-            msg_or_type="get_agent_history_response",
-            content= agent_messages,
-            parent_header=message.header,
-        )
-        return agent_messages
+        kernel_state_future = self.get_subkernel_state()
+        notebook_state_future = self.beaker_kernel.request_notebook_state(parent_message=message)
+        kernel_state, notebook_state = await asyncio.gather(kernel_state_future, notebook_state_future)
+        with self.prepare_state(kernel_state, notebook_state):
+            agent_messages = await self.agent.all_messages()
+            json_messages = [msg.model_dump_json() for msg in agent_messages]
+            return json_messages
     get_agent_history._default_payload = '{}'
 
 
