@@ -607,6 +607,7 @@ h3.query-steps {
             padding: 0.25rem;
             padding-left: 1.5rem;
             margin: 1rem;
+            margin-bottom: 0rem;
             > * {
                 border-bottom: 2px solid var(--surface-d);
                 margin-right: 1rem;
