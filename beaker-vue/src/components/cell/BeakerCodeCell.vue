@@ -3,7 +3,10 @@
             <div class="code-cell-grid">
                 <div
                     class="code-data"
-                    :class="{'dark-mode': theme.mode === 'dark'}"
+                    :class="{
+                        'dark-mode': theme.mode === 'dark',
+                        'code-data-chat': isChat
+                    }"
                 >
                     <CodeEditor
                         display-mode="dark"
@@ -15,7 +18,14 @@
                         @change="handleCodeChange"
                         @click="clicked"
                     />
-                    <CodeCellOutput :outputs="cell.outputs" :busy="isBusy" v-show="!hideOutput" />
+                </div>
+                <div class="code-output">
+                    <CodeCellOutput 
+                        :outputs="cell.outputs" 
+                        :busy="isBusy" 
+                        v-show="!hideOutput" 
+                        :dropdown-layout="isChat ?? false"
+                    />
                 </div>
                 <div class="state-info">
                     <div>
@@ -54,6 +64,7 @@ import CodeEditor from "../misc/CodeEditor.vue";
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 import { IBeakerTheme } from '../../plugins/theme';
+import { StyleOverride } from "../../pages/BaseInterface.vue"
 
 const props = defineProps([
     "cell",
@@ -67,6 +78,9 @@ const codeEditorRef = ref<InstanceType<typeof CodeEditor>>();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const instance = getCurrentInstance();
+
+const styleOverrides = inject<StyleOverride[]>("styleOverrides")
+const isChat = ref(styleOverrides.includes('chat'))
 
 const emit = defineEmits([
     'blur',
@@ -172,7 +186,8 @@ export default {
     display: grid;
 
     grid-template-areas:
-        "code code code exec";
+        "code code code exec"
+        "output output output output";
 
     grid-template-columns: 1fr 1fr 1fr auto;
 }
@@ -195,6 +210,14 @@ export default {
     }
 }
 
+.code-output {
+    grid-area: output;
+}
+
+.code-data-chat {
+    background: none;
+}
+
 
 .state-info {
     grid-area: exec;
@@ -206,7 +229,7 @@ export default {
 .execution-count-badge {
     margin-left: 0.5rem;
     font-family: "'Ubuntu Mono', 'Courier New', Courier, monospace";
-    font-size: 1.1rem;
+    font-size: 1rem;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -218,11 +241,13 @@ export default {
     }
 }
 
-.rollback-button {
-    margin-top: 1rem;
-    margin-left: auto;
-    margin-right: auto;
-    max-width: 45%;
+button.rollback-button {
+    margin-top: 0.25rem;
+    margin-left: 0.5rem;
+    width: 32px;
+    height: 32px;
+    padding: 0em;
+    aspect-ratio: 1/1;
 }
 
 .busy-icon {

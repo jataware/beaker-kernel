@@ -108,7 +108,7 @@
                             <span class="flex align-items-center gap-2 w-full">
                                 <span class="white-space-nowrap" style="font-weight: 400;">
                                     {{ lastEventThought }} 
-                                    <span class="thinking-animation" v-if="cell.status === 'busy'"/>
+                                    <span class="thinking-animation" style="font-size: unset !important;" v-if="cell.status === 'busy'"/>
                                     <i 
                                         class="pi pi-check" 
                                         style="
@@ -592,14 +592,32 @@ h3.query-steps {
 .query-accordion-chat {
     margin-bottom: 1rem;
     width: 100%;
-    .p-accordion-tab {
+    > .p-accordion-tab {
+        > * {
+            max-width: 80%;
+            width: 100%;
+        }
         width: 100%;
         display: flex;
         align-items: center;
         flex-direction: column;
-        .p-accordion-header {
-            width: 80%;
+        > .p-toggleable-content > .p-accordion-content {
+            border: 2px solid var(--surface-d);
+            border-radius: var(--border-radius);
+            padding: 0.25rem;
+            padding-left: 1.5rem;
+            margin: 1rem;
+            > * {
+                border-bottom: 2px solid var(--surface-d);
+                margin-right: 1rem;
+            }
+            > *:last-child {
+                border-bottom: none;
+            }
         }
+        // .p-accordion-header {
+        //     width: 80%;
+        // }
     }
 
 }
