@@ -9,7 +9,7 @@ import fetch from 'node-fetch';
 import { Slot, Signal } from '@lumino/signaling';
 import { ConnectionStatus as JupyterConnectionStatus, IAnyMessageArgs } from '@jupyterlab/services/lib/kernel/kernel';
 
-import { createMessageId, IBeakerAvailableContexts, IBeakerFuture, IActiveContextInfo } from './util';
+import { createMessageId, IBeakerAvailableContexts, IBeakerFuture, IActiveContextInfo, truncateNotebookForAgent } from './util';
 import { BeakerNotebook, IBeakerShellMessage, IBeakerAnyMessage, BeakerRawCell, BeakerCodeCell, BeakerMarkdownCell, BeakerQueryCell, IBeakerIOPubMessage } from './notebook';
 import { BeakerHistory } from './history';
 import { BeakerRenderer, IBeakerRendererOptions } from './render';
@@ -136,7 +136,8 @@ export class BeakerSession {
     public sendBeakerMessage(
         messageType: string,
         content: JSONObject,
-        messageId?: string
+        messageId?: string,
+        metadata?: {[key: string]: any},
     ): IBeakerFuture {
         if (!messageId) {
             messageId = createMessageId(messageType);
@@ -149,7 +150,8 @@ export class BeakerSession {
             channel: "shell",
             msgType: messageType,
             content: content,
-            msgId: messageId
+            msgId: messageId,
+            metadata: metadata,
         });
 
         const future: IBeakerFuture<messages.IShellMessage, messages.IShellMessage> = this.kernel.sendShellMessage(
@@ -168,7 +170,7 @@ export class BeakerSession {
      * @param _sessionContext - The session Context related to the incoming message
      * @param msg - The incoming IOPub message
      */
-    private _sessionMessageHandler(_kernel: IKernelConnection, {msg, direction}: {msg: IBeakerAnyMessage, direction: IAnyMessageArgs["direction"]}) {
+    private _sessionMessageHandler(kernel: IKernelConnection, {msg, direction}: {msg: IBeakerAnyMessage, direction: IAnyMessageArgs["direction"]}) {
         if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
             if (msg.header.msg_type === "context_setup_response") {
                 this._sessionInfo = msg.content;
@@ -180,6 +182,21 @@ export class BeakerSession {
         }
         else if (msg.header.msg_type === "kernel_info_reply") {
             this._kernelInfo = msg.content;
+        }
+        else if (msg.header.msg_type === "notebook_state_request") {
+            const outboundMsg: IBeakerShellMessage = messages.createMessage<IBeakerShellMessage>({
+                session: kernel.clientId,
+                channel: "shell",
+                msgType: "notebook_state_response",
+                content: truncateNotebookForAgent(this.notebook),
+                msgId: msg.header.msg_id + "_reply",
+                metadata: {},
+            });
+            kernel.sendShellMessage(
+                outboundMsg,
+                false,
+                true
+            );
         }
     }
 

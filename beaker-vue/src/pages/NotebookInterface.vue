@@ -51,6 +51,7 @@
                     </template>
                 </BeakerNotebookPanel>
                 <BeakerAgentQuery
+                    ref="agentQueryRef"
                     class="agent-query-container"
                 />
             </BeakerNotebook>
@@ -101,10 +102,13 @@
 <script setup lang="ts">
 import { defineProps, ref, onBeforeMount, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
 import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel/src';
+import { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
+import { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
+import { atStartOfInput, atEndOfInput } from '../util'
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
@@ -126,11 +130,12 @@ import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
 
 
-const beakerNotebookRef = ref();
+const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
 const filePanelRef = ref();
 const configPanelRef = ref();
 const sideMenuRef = ref();
+const agentQueryRef = ref();
 const previewVisible = ref<boolean>(false);
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -222,7 +227,7 @@ const headerNav = computed(() => [
     },
 ]);
 
-const beakerSession = computed(() => {
+const beakerSession = computed<BeakerSessionComponentType>(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
 
@@ -302,7 +307,13 @@ const prevCellKey = () => {
 };
 
 const nextCellKey = () => {
-    beakerNotebookRef.value?.selectNextCell();
+    const lastCell = beakerNotebookRef.value.notebook.cells[beakerNotebookRef.value.notebook.cells.length-1];
+    if (beakerNotebookRef.value.selectedCell().cell.id === lastCell.id) {
+        agentQueryRef.value.$el.querySelector('textarea')?.focus()
+    }
+    else {
+        beakerNotebookRef.value?.selectNextCell();
+    }
 };
 
 const keyBindingState = {};
@@ -334,6 +345,64 @@ const notebookKeyBindings = {
         beakerNotebookRef.value?.selectedCell().exit();
     },
     "keydown.up.!in-editor.prevent": prevCellKey,
+    "keydown.up.in-editor.capture": (event: KeyboardEvent) => {
+        // Note: This runs BEFORE the cursor is moved.
+        const eventTarget = event.target as HTMLElement;
+        const parentCellElement = eventTarget.closest('.beaker-cell');
+        const targetCellId = parentCellElement?.getAttribute('cell-id');
+
+        if (targetCellId !== undefined) {
+            const curCell = beakerSession.value.findNotebookCellById(targetCellId);
+            if (atStartOfInput(curCell.editor)) {
+                const prevCell = beakerNotebookRef.value.prevCell();
+                if (prevCell) {
+                    curCell.exit();
+                    beakerNotebookRef.value.selectCell(prevCell.cell.id, true, "end");
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                }
+            }
+        }
+        else if (eventTarget.closest('.agent-query-container')) {
+            // In the agent query box at the bottom of the notebook.
+            eventTarget.blur();
+            beakerNotebookRef.value.selectCell(
+                beakerNotebookRef.value.notebook.cells[beakerNotebookRef.value.notebook.cells.length-1].id,
+                true,
+                "end",
+            );
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
+    },
+    "keydown.down.in-editor.capture": (event: KeyboardEvent) => {
+        // Note: This runs BEFORE the cursor is moved.
+        const eventTarget = event.target as HTMLElement;
+        const parentCellElement = eventTarget.closest('.beaker-cell');
+        const targetCellId = parentCellElement?.getAttribute('cell-id');
+
+        if (targetCellId !== undefined) {
+            const curCell = beakerSession.value.findNotebookCellById(targetCellId);
+            if (atEndOfInput(curCell.editor)) {
+                const nextCell = beakerNotebookRef.value.nextCell();
+                if (nextCell) {
+                    curCell.exit();
+                    beakerNotebookRef.value.selectCell(nextCell.cell.id, true, "start");
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                }
+                else {
+                    const lastCell = beakerNotebookRef.value.notebook.cells[beakerNotebookRef.value.notebook.cells.length-1];
+                    if (beakerNotebookRef.value.selectedCell().cell.id === lastCell.id) {
+                        curCell.exit();
+                        agentQueryRef.value.$el.querySelector('textarea')?.focus()
+                        event.preventDefault();
+                        event.stopImmediatePropagation();
+                    }
+                }
+            }
+        }
+    },
     "keydown.k.!in-editor": prevCellKey,
     "keydown.down.!in-editor.prevent": nextCellKey,
     "keydown.j.!in-editor": nextCellKey,

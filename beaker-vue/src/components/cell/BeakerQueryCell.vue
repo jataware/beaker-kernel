@@ -413,17 +413,29 @@ function execute() {
     });
 }
 
-function enter() {
+function enter(position?: "start" | "end" | number) {
     if (!isEditing.value) {
         isEditing.value = true;
     }
+    if (position === "start") {
+        position = 0;
+    }
+    else if (position === "end") {
+        position = textarea.value?.$el?.value.length || -1;
+    }
     nextTick(() => {
         textarea.value?.$el?.focus();
+        textarea.value.$el.setSelectionRange(position, position);
     });
 }
 
 function exit() {
-    textarea.value?.$el?.blur();
+    if (promptText.value === cell.value.source) { // Query has not changed
+        isEditing.value = false;
+    }
+    else {
+        textarea.value?.$el?.blur();
+    }
 }
 
 function clear() {
@@ -440,6 +452,7 @@ defineExpose({
     exit,
     clear,
     cell,
+    editor: textarea,
 });
 
 onBeforeMount(() => {

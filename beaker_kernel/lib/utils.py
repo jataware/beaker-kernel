@@ -73,10 +73,11 @@ class ExecutionTask(asyncio.Task):
 
 
 class handle_message(AbstractAsyncContextManager):
-    def __init__(self, server, target_stream, msg_data: JupyterMessageTuple, send_status_updates=True) -> None:
+    def __init__(self, server, target_stream, msg_data: JupyterMessageTuple, send_status_updates=True, send_reply=True) -> None:
         super().__init__()
         self.beaker_kernel = server.manager
         self.send_status_updates = send_status_updates
+        self.send_reply = send_reply
         message = JupyterMessage.parse(msg_data)
         self.server = server
         self.target_stream = target_stream
@@ -120,9 +121,10 @@ class handle_message(AbstractAsyncContextManager):
                     "return": self.return_val,
                 }
 
-        self.beaker_kernel.send_response(
-            "shell", self.reply_type, reply_content, parent_header=self.message.header, parent_identities=self.message.identities
-        )
+        if self.send_reply:
+            self.beaker_kernel.send_response(
+                "shell", self.reply_type, reply_content, parent_header=self.message.header, parent_identities=self.message.identities
+            )
         if self.send_status_updates:
             self.beaker_kernel.send_response(
                 "iopub", "status", {"execution_state": "idle"}, parent_header=self.message.header, parent_identities=self.message.identities
