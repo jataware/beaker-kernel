@@ -67,7 +67,14 @@
                         </template>
                         <div
                             class="monospace pre"
-                            style="border: 1px var(--surface-border) solid; background-color: var(--surface-50); padding: 0.5rem"
+                            style="
+                                border: 1px var(--surface-border) solid; 
+                                background-color: var(--surface-50); 
+                                padding: 0.5rem;
+                                padding-top: 0rem;
+                                margin-bottom: 0.5rem;
+                                overflow: auto;
+                            "
                         >
                             {{ code_execution.code.trim() }}
                         </div>
