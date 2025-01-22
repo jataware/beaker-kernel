@@ -127,8 +127,11 @@
                                     <i 
                                         class="pi pi-check" 
                                         style="
+                                            /* 
+                                            if not monospaced
                                             margin-left: 0.25rem; 
                                             margin-right: 0.25rem;
+                                             */
                                             color: var(--green-500);
                                         " 
                                         v-if="cell.status === 'idle'"
