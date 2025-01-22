@@ -228,7 +228,7 @@ export default {
 
 .execution-count-badge {
     margin-left: 0.5rem;
-    font-family: "'Ubuntu Mono', 'Courier New', Courier, monospace";
+    font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
     font-size: 1rem;
     display: flex;
     justify-content: center;

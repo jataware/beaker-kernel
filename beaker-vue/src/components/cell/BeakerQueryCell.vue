@@ -115,7 +115,13 @@
                         </template>
                         <template #header>
                             <span class="flex align-items-center gap-2 w-full">
-                                <span class="white-space-nowrap" style="font-weight: 400;">
+                                <span 
+                                    class="white-space-nowrap" 
+                                    style="
+                                        font-weight: 400; 
+                                        font-family: 'Courier New', Courier, monospace;
+                                        font-size: 0.8rem;
+                                    ">
                                     {{ lastEventThought }} 
                                     <span class="thinking-animation" style="font-size: unset !important;" v-if="cell.status === 'busy'"/>
                                     <i 
