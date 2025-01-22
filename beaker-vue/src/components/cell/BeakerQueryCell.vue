@@ -104,6 +104,15 @@
                             },
                         }"
                     >
+                        <template #headericon>
+                            <i 
+                                class="pi pi-sparkles" 
+                                style="
+                                    color: var(--yellow-500);
+                                    margin-right: 0.5rem;
+                                "
+                            />
+                        </template>
                         <template #header>
                             <span class="flex align-items-center gap-2 w-full">
                                 <span class="white-space-nowrap" style="font-weight: 400;">
@@ -114,6 +123,7 @@
                                         style="
                                             margin-left: 0.25rem; 
                                             margin-right: 0.25rem;
+                                            color: var(--green-500);
                                         " 
                                         v-if="cell.status === 'idle'"
                                     />
@@ -590,7 +600,7 @@ h3.query-steps {
 }
 
 .query-accordion-chat {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     width: 100%;
     > .p-accordion-tab {
         > * {

@@ -5,11 +5,11 @@
             v-html="markdownBody" 
             class="md-inline"
         />
-        <div v-if="props.event?.type === 'response' && parentQueryCell?.children?.length !== 0">
+        <div v-if="props.event?.type === 'response' && parentEntries !== 0">
             <!-- <h4 class="agent-outputs">Outputs:</h4> -->
             <Accordion :multiple="true" :active-index="meaningfulOutputs">
                 <AccordionTab
-                    v-for="[index, child] in parentQueryCell?.children?.entries()"
+                    v-for="[index, child] in parentEntries"
                     :key="index"
                     :pt="{
                         header: {
@@ -28,8 +28,9 @@
                 >
                     <template #header>
                         <span class="flex align-items-center gap-2 w-full">
-                            <span :class="chooseOutputIcon(child?.outputs)"/>
-                            <span class="font-bold white-space-nowrap">{{ formatOutputs(child?.outputs, ["execute_result"]) }}</span>
+                            <!-- <span :class="chooseOutputIcon(child?.outputs)"/>
+                            <span class="font-bold white-space-nowrap">{{ formatOutputs(child?.outputs, ["execute_result"]) }}</span> -->
+                            <span>Outputs</span>
                         </span>
                     </template>
                     <BeakerCodecellOutput :outputs="child?.outputs" />
@@ -212,6 +213,21 @@ const lastOutput = computed(() => {
     return [props.parentQueryCell?.children?.length - 1];
 })
 
+const parentEntries = computed(() => {
+    const isAllTextPlain = props.parentQueryCell?.children?.map((child => 
+        child?.outputs?.every(output => {
+            const mimetypes = Object.keys(output?.data);
+            // if only text/plain is returned
+            return output?.output_type === 'execute_result' 
+                && mimetypes.length === 1
+                && mimetypes[0] === 'text/plain';
+        // only handle cases where every single loop iteration returns only all text/plain
+        // to not greedily handle longer agent requests
+        }))).every(x => x);
+    // omit the list going to vue to hide it
+    return isAllTextPlain ? [] : props.parentQueryCell?.children?.entries();
+});
+
 const meaningfulOutputs = computed(() => {
     const outputs = [];
     props.parentQueryCell?.children?.entries()?.forEach(([index, child]) => {
@@ -313,6 +329,9 @@ a.agent-response-headeraction > span > span.pi {
     padding-top: 0rem;
     background: none;
     border: none;
+    div.mime-select-container {
+        display:none;
+    }
 }
 
 .agent-response-content-error pre {
