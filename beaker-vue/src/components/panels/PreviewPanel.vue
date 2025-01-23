@@ -59,6 +59,7 @@
                             </div>
                             <div class="text-preview" v-if="mimeCategory(mime) === 'plaintext'">
                                 <CodeEditor 
+                                    :readonly="true"
                                     display-mode="dark"
                                     :modelValue="contentsWrapper"
                                     ref="codeEditorRef"

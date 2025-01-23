@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        title="Beaker Chat Interface"
+        title="Beaker Chat"
         ref="beakerInterfaceRef"
         :header-nav="headerNav"
         :connectionSettings="props.config"
@@ -11,6 +11,7 @@
         @session-status-changed="statusChanged"
         @iopub-msg="iopubMessage"
         @open-file="loadNotebook"
+        :style-overrides="['chat']"
     >
         <div class="chat-layout">
             <div class="chat-container">
@@ -33,7 +34,9 @@
                         </template>
                     </ChatPanel>
                     <AgentQuery
-                        class="agent-query-container"
+                        class="agent-query-container agent-query-container-chat"
+                        placeholder="Message to the agent"   
+                        v-show="!isLastCellAwaitingInput"
                     />
             </div>
             <div v-if="!isMaximized" class="spacer right"></div>
@@ -52,7 +55,13 @@
                     <ContextPanel />
                 </SideMenuPanel>
                 <SideMenuPanel label="Files" icon="pi pi-file-export" no-overflow>
-                    <FilePanel @open-file="loadNotebook" />
+                    <FilePanel 
+                        @open-file="loadNotebook" 
+                        @preview-file="(file, mimetype) => {
+                            previewedFile = {url: file, mimetype: mimetype};
+                            previewVisible = true;
+                        }" 
+                    />
                 </SideMenuPanel>
                 <SideMenuPanel id="config" label="Config" icon="pi pi-cog" :lazy="true">
                     <ConfigPanel
@@ -78,6 +87,11 @@
                  </SideMenu> -->
             <!-- </div> -->
     <!-- </div> -->
+        <PreviewPanel
+            :url="previewedFile?.url"
+            :mimetype="previewedFile?.mimetype"
+            v-model="previewVisible"
+        />
     </BaseInterface>
 </template>
 
@@ -110,13 +124,41 @@ import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } fr
 
 import { IBeakerTheme } from '../plugins/theme';
 import { vKeybindings } from '../directives/keybindings';
+import PreviewPanel from '../components/panels/PreviewPanel.vue';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 
+type FilePreview = {
+    url: string,
+    mimetype?: string
+}
+const previewedFile = ref<FilePreview>();
+const previewVisible = ref<boolean>(false);
+
+const isLastCellAwaitingInput = computed(() => {
+    const cells = beakerSession.value?.session?.notebook?.cells ?? [];
+    if (cells.length == 0) {
+        return false;
+    }
+    const last = cells[cells.length - 1];
+    if (last?.cell_type === 'query' && last?.status === 'awaiting_input') {
+        return true;
+    }
+    return false;
+})
 
 const headerNav = computed(() => [
+    {
+        type: 'button',
+        command: () => {
+            if (window.confirm(`This will reset your entire session, clearing the notebook and removing any updates to the environment. Proceed?`))
+                beakerSession.value.session.reset();
+        },
+        icon: 'refresh',
+        label: 'Reset Session',
+    },
     {
         type: 'link',
         href: `/${window.location.search}`,
@@ -150,7 +192,7 @@ const headerNav = computed(() => [
         icon: "github",
         rel: "noopener",
         target: "_blank",
-    },
+    }
 ]);
 
 const beakerSession = computed(() => {
@@ -327,18 +369,31 @@ const restartSession = async () => {
 
 .spacer {
     &.left {
-        flex: 1 1000 25vw;
+        //flex: 0 1000 25vw;
+        display: none;
     }
     &.right {
-        flex: 1 1 25vw;
+        //flex: 0 1000 25vw;
+        display: none;
     }
 }
-
+.left-panel .left .spacer {
+    display: none;
+}
+.sidemenu-container.left {
+    min-width: 0px !important;
+}
 .chat-container {
-    flex: 2 0 calc(50vw - 2px);
-    border: 1px solid var(--surface-border);
+    margin-left: auto;
+    margin-right: auto;
+    flex: 0 0 100%;
+    padding-right: 1rem;
+    padding-left: 1rem;
+    //border: 1px solid var(--surface-border);
     display: flex;
     flex-direction: column;
+    max-width: 860px;
+    width: 100%;
 }
 
 .chat-layout {
@@ -347,8 +402,39 @@ const restartSession = async () => {
     height: 100%;
 }
 
-.cell-container {
-    // flex: 1;
+div.code-cell-output-box {
+    div.output-collapse-box {
+        display: none;
+    }
+}
+
+.jp-RenderedImage {
+    img {
+        width: 100%;
+    }
+}
+
+div.footer-menu-bar {
+    border-radius: 0px;
+    padding-left: 0px;
+}
+
+.sidemenu-menu-selection.left {
+    border-top: none;
+    border-bottom: none;
+    border-left: none;
+}
+
+.title {
+    h4 {
+        text-overflow: "clip";
+        overflow: hidden;
+        text-wrap: nowrap;
+    }
+}
+
+div.status-container {
+    min-width: 0px;
 }
 
 </style>

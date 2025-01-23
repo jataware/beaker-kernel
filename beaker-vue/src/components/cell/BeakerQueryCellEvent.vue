@@ -1,11 +1,15 @@
 <template>
     <div class="llm-query-event">
-        <span v-if="isMarkdown(event) && isValidResponse(event)" v-html="markdownBody" />
-        <span v-if="props.event?.type === 'response' && parentQueryCell?.children?.length !== 0">
-            <h4 class="agent-outputs">Outputs:</h4>
-            <Accordion :multiple="true" :active-index="lastOutput">
+        <div
+            v-if="isMarkdown(event) && isValidResponse(event)"
+            v-html="markdownBody"
+            class="md-inline"
+        />
+        <div v-if="props.event?.type === 'response' && parentEntries !== 0">
+            <!-- <h4 class="agent-outputs">Outputs:</h4> -->
+            <Accordion :multiple="true" :active-index="meaningfulOutputs">
                 <AccordionTab
-                    v-for="[index, child] in parentQueryCell?.children?.entries()"
+                    v-for="[index, child] in parentEntries"
                     :key="index"
                     :pt="{
                         header: {
@@ -24,14 +28,15 @@
                 >
                     <template #header>
                         <span class="flex align-items-center gap-2 w-full">
-                            <span :class="chooseOutputIcon(child?.outputs)"/>
-                            <span class="font-bold white-space-nowrap">{{ formatOutputs(child?.outputs, ["execute_result"]) }}</span>
+                            <!-- <span :class="chooseOutputIcon(child?.outputs)"/>
+                            <span class="font-bold white-space-nowrap">{{ formatOutputs(child?.outputs, ["execute_result"]) }}</span> -->
+                            <span>Outputs</span>
                         </span>
                     </template>
                     <BeakerCodecellOutput :outputs="child?.outputs" />
                 </AccordionTab>
             </Accordion>
-        </span>
+        </div>
         <div v-else-if="props.event?.type === 'thought'">
             <div v-html="marked.parse(props.event.content.thought)" />
             <div v-if="props.event.content.background_code_executions.length">
@@ -62,7 +67,14 @@
                         </template>
                         <div
                             class="monospace pre"
-                            style="border: 1px var(--surface-border) solid; background-color: var(--surface-50); padding: 0.5rem"
+                            style="
+                                border: 1px var(--surface-border) solid;
+                                background-color: var(--surface-50);
+                                padding: 0.5rem;
+                                padding-top: 0rem;
+                                margin-bottom: 0.5rem;
+                                overflow: auto;
+                            "
                         >
                             {{ code_execution.code.trim() }}
                         </div>
@@ -94,7 +106,7 @@
                     selected: isCodeCellSelected,
                     'query-event-code-cell': true
                 }"
-                :hide-output="true"
+                :hide-output="false"
                 ref="codeCellRef"
                 v-keybindings="{
                     'keydown.enter.ctrl.prevent.capture.in-editor': (evt) => {
@@ -105,7 +117,7 @@
                     }
                 }"
             />
-            <span class="output-hide-text">(Output hidden -- shown in full response below.)</span>
+            <!-- <span class="output-hide-text">(Output hidden -- shown in full response below.)</span> -->
         </span>
         <span v-else-if="props.event?.type === 'error' && props.event.content.ename === 'CancelledError'">
             <h4 class="p-error">Request cancelled.</h4>
@@ -160,7 +172,7 @@ import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import stripAnsi from "strip-ansi";
 import ansiHtml from "ansi-html-community";
-
+import { formatOutputs, chooseOutputIcon } from './BeakerCodeCellOutputUtilities'
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
@@ -208,6 +220,44 @@ const lastOutput = computed(() => {
     return [props.parentQueryCell?.children?.length - 1];
 })
 
+const parentEntries = computed(() => {
+    const isAllTextPlain = props.parentQueryCell?.children?.map((child =>
+        child?.outputs?.every(output => {
+            if (output?.data !== undefined) {
+                const mimetypes = Object.keys(output?.data);
+                // if only text/plain is returned
+                return output?.output_type === 'execute_result'
+                    && mimetypes.length === 1
+                    && mimetypes[0] === 'text/plain';
+            }
+            else {
+                return true;
+            }
+        // only handle cases where every single loop iteration returns only all text/plain
+        // to not greedily handle longer agent requests
+        }))).every(x => x);
+    // omit the list going to vue to hide it
+    return isAllTextPlain ? [] : props.parentQueryCell?.children?.entries();
+});
+
+const meaningfulOutputs = computed(() => {
+    const outputs = [];
+    props.parentQueryCell?.children?.entries()?.forEach(([index, child]) => {
+        child?.outputs?.forEach(output => {
+            const desiredOutputs = ['image/png', 'text/html'];
+            const desiredTypes = ['execute_result', 'display_data'];
+            if (
+                desiredTypes.includes(output?.output_type)
+                && desiredOutputs.map(value =>
+                    (Object.keys(output?.data ?? [])).includes(value)).some(found => found))
+            {
+                outputs.push(index);
+            }
+        });
+    });
+    return outputs;
+})
+
 const getCellModelById = (id): IBeakerCell | undefined => {
     const notebook = beakerSession.session.notebook;
     for (const cell of notebook.cells) {
@@ -238,78 +288,7 @@ const isValidResponse = (event: BeakerQueryEvent) => {
 }
 
 const markdownBody = computed(() =>
-    isMarkdown(props.event) ? marked.parse(props.event.content) : "");
-
-type OutputType = "stream" | "error" | "execute_result" | "display_data";
-
-
-const formatStream = (output, shortened: boolean): string => {
-    return shortened ? output.name : `stream: ${output.name}`;
-}
-
-const formatError = (output, shortened: boolean): string => {
-    return shortened ? output?.ename : `${output?.ename}: ${output?.evalue}`;
-}
-
-const formatExecuteResult = (output, shortened: boolean): string => {
-    const values = Object.keys(output?.data || {});
-    const userFacingNames = {
-        "text/plain": "Text",
-        "image/png": "Image"
-    };
-    const result = values.sort().map(
-        (format) => Object.keys(userFacingNames)
-            .includes(format) ? userFacingNames[format] : format)
-            .join(", ");
-    return shortened ? result.split(",")[0] : result;
-}
-
-const formatOutputs = (outputs: {output_type: OutputType}[], shorten: OutputType[]): string => {
-    const formatters: {[key in OutputType]: (output: object, shortened: boolean) => string} = {
-        "stream": formatStream,
-        "error": formatError,
-        "execute_result": formatExecuteResult,
-        "display_data": formatExecuteResult
-    };
-    const headers: string[] = outputs.map(output =>
-        formatters[output.output_type](output, shorten.includes(output.output_type)));
-    return headers.join(", ");
-}
-
-// get the most meaningful icon for an execute_result; e.g. plaintext is less than image/png
-const executeResultIcon = (output) => {
-    const outputTypeIconMap = {
-        "image/png": "pi pi-chart-bar",
-        "text/html": "pi pi-table",
-        "text/plain": "pi pi-align-left",
-        "": "pi pi-code",
-    };
-    const precedenceList = ["image/png", "text/html", "text/plain"];
-    const values = Object.keys(output?.data || {});
-    for (const desiredType of precedenceList) {
-        if (values.includes(desiredType)) {
-            return outputTypeIconMap[desiredType];
-        }
-    }
-    return ""
-};
-
-const chooseOutputIcon = (outputs: {output_type: OutputType}[]) => {
-    const outputTypes = outputs.map(output => output.output_type);
-
-    const result = outputs.find(output =>
-        output.output_type === "execute_result"
-        || output.output_type === "display_data");
-    if (result !== undefined) {
-        return executeResultIcon(result);
-    }
-
-    if (outputTypes.includes("error")) {
-        return "pi pi-times-circle"
-    }
-
-    return "pi pi-pen-to-square"
-}
+    isMarkdown(props.event) ? marked.parse(props.event.content).trim() : "");
 
 function execute() {
     //const future = props.cell.execute(session);
@@ -338,7 +317,7 @@ defineExpose({
     padding-left: 0px;
     background: none;
     border: none;
-    padding-bottom: 0;
+    padding-bottom: 0.5rem;
 }
 
 .p-accordion .p-accordion-header a.p-accordion-header-link.agent-response-headeraction  {
@@ -347,6 +326,9 @@ defineExpose({
     border: none;
     padding-top: 1rem;
     padding-bottom: 0;
+    svg {
+        flex-shrink: 0;
+    }
 }
 
 a.agent-response-headeraction > span > span.pi {
@@ -356,9 +338,12 @@ a.agent-response-headeraction > span > span.pi {
 }
 
 .agent-response-content {
+    padding-top: 0rem;
     background: none;
     border: none;
-    overflow-x: auto;
+    div.mime-select-container {
+        display:none;
+    }
 }
 
 .agent-response-content-error pre {
@@ -392,6 +377,25 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     font-weight: 400;
     margin-bottom: 0rem;
     font-size: 1.1rem;
+}
+
+.md-inline {
+    pre {
+        overflow-x: auto;
+        code {
+            display: inline-block;
+            // min-width: 100%;
+            // width: 0px;
+            font-size: 0.75rem;
+        }
+    }
+
+    p:first-child {
+        margin-top: 0.5rem;
+    }
+    p:last-child {
+        margin-bottom: 0.5rem;
+    }
 }
 
 </style>

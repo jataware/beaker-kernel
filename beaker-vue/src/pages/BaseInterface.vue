@@ -24,7 +24,7 @@
                         </slot>
                     </div>
 
-                    <div id="center-panel">
+                    <div :id="`center-panel${isChat ? '-chat-override': '' }`">
                         <slot>
                         </slot>
                     </div>
@@ -133,13 +133,25 @@ const showToast = (options: ShowToastOptions) => {
     });
 };
 
-const props = defineProps([
-    "title",
-    "titleExtra",
-    "savefile",
-    "headerNav",
-    "apiKeyPrompt",
-]);
+export type StyleOverride = 'chat'
+
+// const props = defineProps([
+//     "title",
+//     "titleExtra",
+//     "savefile",
+//     "headerNav",
+//     "apiKeyPrompt",
+//     "styleOverrides"
+// ]);
+
+const props = defineProps<{
+  title: string
+  titleExtra?: string
+  savefile?: string
+  headerNav?: any 
+  apiKeyPrompt?: boolean 
+  styleOverrides?: StyleOverride[]
+}>();
 
 const emit = defineEmits([
     "notebook-autosaved",
@@ -208,6 +220,10 @@ const showOverlay = (contents: string | Component | HTMLElement | ErrorObject, t
 
 provide('show_toast', showToast);
 provide('show_overlay', showOverlay);
+
+const styleOverrides = props.styleOverrides ?? [];
+provide('styleOverrides', styleOverrides)
+const isChat = styleOverrides.includes('chat')
 
 const connectionFailure = (error: Error) => {
     let errorName = error.name;
@@ -425,7 +441,10 @@ footer {
     grid-area: center-panel;
     border: 1px solid;
     border-color: var(--surface-border);
+}
 
+#center-panel-chat-override {
+    grid-area: center-panel;
 }
 
 #right-panel {
