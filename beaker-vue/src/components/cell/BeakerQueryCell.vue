@@ -1,14 +1,14 @@
 <template>
     <div class="llm-query-cell">
-        <div 
-            class="query" 
+        <div
+            class="query"
             :class="{
                 'query-chat': isChat
             }"
             @dblclick="promptDoubleClick"
         >
             <div v-if="!isChat" class="query-steps">User Query:</div>
-            <div 
+            <div
                 class="llm-prompt-container"
                 :class="{
                             'llm-prompt-container-chat': isChat
@@ -26,8 +26,8 @@
                         <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
                     </div>
                 </div>
-                <div 
-                    v-show="!isEditing"  
+                <div
+                    v-show="!isEditing"
                     class="llm-prompt-text"
                     :class="{
                         'llm-prompt-text-chat': isChat
@@ -35,20 +35,20 @@
                 >{{ cell.source }}</div>
             </div>
         </div>
-        <div class="event-container" 
+        <div class="event-container"
             v-if="events.length > 0 || isLastEventTerminal() || showChatEventsEarly(cell)"
         >
             <div class="events">
-                <div 
-                    class="query-steps" 
+                <div
+                    class="query-steps"
                     v-if="events.length > 0 && !isChat"
                 >
                     Agent actions:
                 </div>
-                <Accordion 
-                    v-if="events.length > 0 && !isChat" 
-                    :multiple="true" 
-                    :class="'query-accordion'" 
+                <Accordion
+                    v-if="events.length > 0 && !isChat"
+                    :multiple="true"
+                    :class="'query-accordion'"
                     v-model:active-index="selectedEvents"
                 >
                     <AccordionTab
@@ -85,7 +85,7 @@
                     </AccordionTab>
                 </Accordion>
                 <Accordion
-                    :class="'query-accordion-chat'" 
+                    :class="'query-accordion-chat'"
                     v-if="isChat"
                 >
                     <AccordionTab
@@ -105,8 +105,8 @@
                         }"
                     >
                         <template #headericon>
-                            <i 
-                                class="pi pi-sparkles" 
+                            <i
+                                class="pi pi-sparkles"
                                 style="
                                     color: var(--yellow-500);
                                     margin-right: 0.5rem;
@@ -115,27 +115,16 @@
                         </template>
                         <template #header>
                             <span class="flex align-items-center gap-2 w-full">
-                                <span 
-                                    class="white-space-nowrap" 
+                                <span
+                                    class="white-space-nowrap"
                                     style="
-                                        font-weight: 400; 
+                                        font-weight: 400;
                                         font-family: 'Courier New', Courier, monospace;
                                         font-size: 0.8rem;
+                                        color: var(--text-color-secondary)
                                     ">
-                                    {{ lastEventThought }} 
+                                    {{ lastEventThought }}
                                     <span class="thinking-animation" style="font-size: unset !important;" v-if="cell.status === 'busy'"/>
-                                    <i 
-                                        class="pi pi-check" 
-                                        style="
-                                            /* 
-                                            if not monospaced
-                                            margin-left: 0.25rem; 
-                                            margin-right: 0.25rem;
-                                             */
-                                            color: var(--green-500);
-                                        " 
-                                        v-if="cell.status === 'idle'"
-                                    />
                                 </span>
                             </span>
                         </template>
@@ -147,15 +136,23 @@
                         />
                     </AccordionTab>
                 </Accordion>
+                <div v-for="[messageEvent, messageClass] of messageEvents" v-bind:key="messageEvent.id">
+                    <div style="display: flex; flex-direction: column;">
+                        <BeakerQueryCellEvent
+                            :event="messageEvent"
+                            :parent-query-cell="cell"
+                            :class="messageClass"
+                        />
+                    </div>
+                </div>
                 <div :class="{
-                        'query-answer': !isChat, 
+                        'query-answer': !isChat,
                         'query-answer-chat-override': isChat
-                    }" 
-                    v-if="isLastEventTerminal()" 
+                    }"
+                    v-if="isLastEventTerminal()"
                 >
                     <h3 v-show="!isChat" class="query-steps">Result</h3>
                     <BeakerQueryCellEvent
-                        v-if="isLastEventTerminal()"
                         :event="cell?.events[cell?.events.length - 1]"
                         :parent-query-cell="cell"
                     />
@@ -173,7 +170,7 @@
             v-focustrap
             v-if="cell.status === 'awaiting_input'"
          >
-            <div 
+            <div
                 class="input-request-wrapper"
                 :class="{
                     'input-request-wrapper-chat': isChat
@@ -183,39 +180,21 @@
                     <InputGroupAddon v-show="isChat">
                         <i class="pi pi-exclamation-triangle"></i>
                     </InputGroupAddon>
-                    <InputText 
-                        placeholder="Reply to the agent" 
+                    <InputText
+                        placeholder="Reply to the agent"
                         @keydown.enter.exact.prevent="respond"
-                        @keydown.escape.prevent.stop="$event.target.blur()"
+                        @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
                         @keydown.ctrl.enter.stop
                         @keydown.shift.enter.stop
                         autoFocus
                         v-model="response"
                     />
-                    <Button 
-                        icon="pi pi-send" 
-                        @click="respond"    
+                    <Button
+                        icon="pi pi-send"
+                        @click="respond"
                     />
                 </InputGroup>
             </div>
-
-            <!-- <ContainedTextArea
-                style="margin-right: 0.75rem; flex: 1;"
-                autoFocus
-                placeholder="Enter your response here"
-                v-model="response"
-                @keydown.ctrl.enter.stop
-                @keydown.shift.enter.stop
-                @submit="respond"
-            />
-            &nbsp;
-            <Button
-                outlined
-                severity="success"
-                size="small"
-                label="reply"
-                @click="respond"
-            /> -->
         </div>
     </div>
 
@@ -278,7 +257,7 @@ const instance = getCurrentInstance();
 
 
 const events = computed(() => {
-    return [...props.cell.events].filter((event) => !terminalEvents.includes(event.type));
+    return [...props.cell.events];
 })
 
 const lastEventThought = computed(() => {
@@ -286,11 +265,12 @@ const lastEventThought = computed(() => {
     if (events.value.length < 1) {
         return "Thinking"
     }
-    // grab the text from the last thought. 
+    // grab the text from the last thought.
     const lastEvent = events.value[events.value.length - 1];
     if (lastEvent.type === 'thought') {
         return lastEvent.content.thought;
-    } else {
+    }
+    else {
         // walk backwards through events to determine the last thought
         let offset = 2;
         let eventCursor = events.value[events.value.length - offset];
@@ -299,12 +279,20 @@ const lastEventThought = computed(() => {
             eventCursor = events.value[events.value.length - offset];
         }
         if (eventCursor.type === 'thought') {
+            if (eventCursor.content.thought === "Thinking..." && lastEvent.type === "response") {
+                return "Done";
+            }
             const endTags = {
                 'user_question': "(awaiting user input)",
                 'user_answer': "(answer received, thinking)",
-                'code_cell': "(code is now running)"
+                'code_cell': "(code is now running)",
             }
-            return `${eventCursor.content.thought} ${endTags[lastEvent.type]}`;
+            if (endTags[lastEvent.type]) {
+                return `${eventCursor.content.thought} ${endTags[lastEvent.type]}`;
+            }
+            else {
+                return eventCursor.content.thought;
+            }
         // no thought, end of stack
         } else {
             return '?';
@@ -338,8 +326,23 @@ const queryStatus = computed<QueryStatuses>(() => {
     else {
         return QueryStatuses.Running;
     }
+})
 
-
+const messageEvents = computed(() => {
+    return props.cell?.events?.filter(
+        (event) => ["user_question", "user_answer"].includes(event.type)
+    ).map(
+        (event) => {
+            var messageClass;
+            if (event.type === "user_question") {
+                messageClass = "query-answer-chat query-answer-chat-override";
+            }
+            else {
+                messageClass = "llm-prompt-container llm-prompt-container-chat llm-prompt-text llm-prompt-text-chat";
+            }
+            return [event, messageClass];
+        }
+    );
 })
 
 const showChatEventsEarly = (cell) => isChat.value ? (cell.status === 'busy') : false;
@@ -648,9 +651,15 @@ h3.query-steps {
                 border-bottom: none;
             }
         }
-        // .p-accordion-header {
-        //     width: 80%;
-        // }
+        .p-accordion-header {
+            border-radius: var(--border-radius);
+            margin: 1rem;
+            transition: background-color 0.2s;
+
+            &:hover {
+                background-color: var(--surface-a);
+            }
+        }
     }
 
 }
@@ -681,11 +690,12 @@ h3.query-steps {
 
 
 div.query-tab a.p-accordion-header-link.p-accordion-header-action{
-    padding-left: 0px;
+    // padding-left: 0px;
+    padding: 0.5rem;
     background: none;
     border: none;
-    padding-top: 1rem;
-    padding-bottom: 0;
+    // padding-top: 1rem;
+    // padding-bottom: 0;
 }
 
 div.query-tab-thought a.p-accordion-header-link.p-accordion-header-action,
@@ -737,13 +747,6 @@ a.query-tab-headeraction > span > span.pi {
     max-width: 80%;
     width: fit-content;
     background-color: var(--surface-c);
-
-    p:first-child {
-        margin-top: 0.5rem;
-    }
-    p:last-child {
-        margin-bottom: 0.5rem;
-    }
 
     margin-bottom: 1rem;
 }

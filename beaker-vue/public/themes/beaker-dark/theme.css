@@ -904,6 +904,14 @@
     z-index: 1;
   }
 
+.p-inputgroup > .p-button.p-button-outlined {
+    border-color: var(--surface-d);
+}
+
+.p-inputgroup > .p-button.p-button-outlined:hover {
+    border-color: var(--primary-color);
+}
+
   .p-inputgroup-addon:first-child,
 .p-inputgroup button:first-child,
 .p-inputgroup input:first-child,

@@ -2,15 +2,16 @@
     <Card class="agent-input-card">
         <template #content>
             <InputGroup>
-                <InputText 
-                    :placeholder="props.placeholder ?? 'How can the agent help?'" 
+                <InputText
+                    :placeholder="props.placeholder ?? 'How can the agent help?'"
                     @keydown.enter.exact.prevent="handleQuery"
-                    @keydown.escape.prevent.stop="$event.target.blur()"
+                    @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
                     v-model="query"
                 />
-                <Button 
-                    icon="pi pi-send" 
-                    @click="handleQuery"    
+                <Button
+                    icon="pi pi-send"
+                    outlined
+                    @click="handleQuery"
                 />
             </InputGroup>
 
@@ -52,9 +53,9 @@ const handleQuery = (e: any) => {
     if (notebook.cells.length === 1) {
         const existingCell = notebook.cells[0];
         if (
-            existingCell.cell_type === "code" 
+            existingCell.cell_type === "code"
             && existingCell.source === ""
-            && existingCell.execution_count === null 
+            && existingCell.execution_count === null
             && (existingCell.outputs as object[]).length === 0
         ) {
             notebook.removeCell(0);
@@ -84,14 +85,14 @@ const handleQuery = (e: any) => {
 .agent-query-container-chat {
     width: 100%;
     align-self: flex-end;
-    div div div {
-        button {
-            background-color: var(--surface-b);
-            border-color: var(--surface-border);
-            color: var(--text-color);
-            border-left: 0px;
-        }
-    }
+    // div div div {
+    //     button {
+    //         background-color: var(--surface-b);
+    //         border-color: var(--surface-border);
+    //         color: var(--text-color);
+    //         border-left: 0px;
+    //     }
+    // }
     margin-top: 0.175rem;
     margin-bottom: 0.25rem;
 }

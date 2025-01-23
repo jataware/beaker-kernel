@@ -1,8 +1,8 @@
 <template>
     <div class="llm-query-event">
-        <div 
-            v-if="isMarkdown(event) && isValidResponse(event)" 
-            v-html="markdownBody" 
+        <div
+            v-if="isMarkdown(event) && isValidResponse(event)"
+            v-html="markdownBody"
             class="md-inline"
         />
         <div v-if="props.event?.type === 'response' && parentEntries !== 0">
@@ -68,8 +68,8 @@
                         <div
                             class="monospace pre"
                             style="
-                                border: 1px var(--surface-border) solid; 
-                                background-color: var(--surface-50); 
+                                border: 1px var(--surface-border) solid;
+                                background-color: var(--surface-50);
                                 padding: 0.5rem;
                                 padding-top: 0rem;
                                 margin-bottom: 0.5rem;
@@ -221,13 +221,18 @@ const lastOutput = computed(() => {
 })
 
 const parentEntries = computed(() => {
-    const isAllTextPlain = props.parentQueryCell?.children?.map((child => 
+    const isAllTextPlain = props.parentQueryCell?.children?.map((child =>
         child?.outputs?.every(output => {
-            const mimetypes = Object.keys(output?.data);
-            // if only text/plain is returned
-            return output?.output_type === 'execute_result' 
-                && mimetypes.length === 1
-                && mimetypes[0] === 'text/plain';
+            if (output?.data !== undefined) {
+                const mimetypes = Object.keys(output?.data);
+                // if only text/plain is returned
+                return output?.output_type === 'execute_result'
+                    && mimetypes.length === 1
+                    && mimetypes[0] === 'text/plain';
+            }
+            else {
+                return true;
+            }
         // only handle cases where every single loop iteration returns only all text/plain
         // to not greedily handle longer agent requests
         }))).every(x => x);
@@ -243,8 +248,8 @@ const meaningfulOutputs = computed(() => {
             const desiredTypes = ['execute_result', 'display_data'];
             if (
                 desiredTypes.includes(output?.output_type)
-                && desiredOutputs.map(value => 
-                    (Object.keys(output?.data ?? [])).includes(value)).some(found => found)) 
+                && desiredOutputs.map(value =>
+                    (Object.keys(output?.data ?? [])).includes(value)).some(found => found))
             {
                 outputs.push(index);
             }
@@ -283,7 +288,7 @@ const isValidResponse = (event: BeakerQueryEvent) => {
 }
 
 const markdownBody = computed(() =>
-    isMarkdown(props.event) ? marked.parse(props.event.content) : "");
+    isMarkdown(props.event) ? marked.parse(props.event.content).trim() : "");
 
 function execute() {
     //const future = props.cell.execute(session);
@@ -383,6 +388,13 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
             // width: 0px;
             font-size: 0.75rem;
         }
+    }
+
+    p:first-child {
+        margin-top: 0.5rem;
+    }
+    p:last-child {
+        margin-bottom: 0.5rem;
     }
 }
 
