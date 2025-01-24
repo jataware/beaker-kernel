@@ -1,9 +1,7 @@
 ---
-# Jupyter LLM docker compose by Matthew Printz
-
-version: '3'
 services:
   jupyter:
+    user: jupyter
     build:
       dockerfile: ${DOCKERFILE:-Dockerfile}
       context: .
