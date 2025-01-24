@@ -658,6 +658,7 @@ h3.query-steps {
         .p-accordion-header {
             border-radius: var(--border-radius);
             margin: 1rem;
+            margin-bottom: 0rem;
             transition: background-color 0.2s;
 
             &:hover {
