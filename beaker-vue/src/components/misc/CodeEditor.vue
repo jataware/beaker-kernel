@@ -13,7 +13,7 @@
 import { defineProps, ref, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView, keymap } from "@codemirror/view";
-import { Extension, Prec } from "@codemirror/state";
+import { EditorState, Extension, Prec } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { LanguageSupport } from "@codemirror/language";
 import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion } from "@codemirror/autocomplete";
@@ -33,6 +33,7 @@ declare interface Props {
 
     autofocus?: boolean,
     disabled?: boolean,
+    readonly?: boolean,
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -128,6 +129,7 @@ const extensions = computed(() => {
     const enabledExtensions: Extension[] = [
         // Keymapping
         Prec.highest(keymap.of(overriddenKeymap)),
+        EditorState.readOnly.of(props.readonly ?? false),
         EditorView.lineWrapping,
         [EditorView.theme({
             '.cm-scroller': {

@@ -1,10 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import { JSONObject } from '@lumino/coreutils';
 import { KernelFutureHandler } from '@jupyterlab/services/lib/kernel/future';
+import * as nbformat from '@jupyterlab/nbformat';
 import * as Kernel from '@jupyterlab/services/lib/kernel/kernel';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 
-import { IBeakerShellMessage, BeakerCodeCell, IBeakerIOPubMessage, IBeakerCell } from './notebook';
+import { IBeakerShellMessage, BeakerCodeCell, IBeakerIOPubMessage, IBeakerCell, BeakerNotebook, BeakerNotebookContent, BeakerBaseCell } from './notebook';
+import { INotebookModel } from '@jupyterlab/notebook';
 
 
 // Lower case states to match the naming in the messages.
@@ -169,4 +171,63 @@ export namespace BeakerCellFutures {
         }
     };
 
+}
+
+const maxNotebookElementSize = 1024 * 2;
+
+export function truncateNotebookForAgent(notebook: BeakerNotebook): nbformat.INotebookContent {
+    const content = notebook.toIPynb();
+    const cells: nbformat.ICell[] = content.cells;
+    content.cells = [];
+    for (const cell of cells) {
+        if (nbformat.isCode(cell)) {
+            for (const output of cell.outputs) {
+                if (nbformat.isDisplayData(output) || nbformat.isDisplayUpdate(output)) {
+                    // For display data, only include any textual descriptions, if included
+                    for (const mimetype of Object.keys(output.data)) {
+                        if (!mimetype.startsWith("text")) {
+                            delete output.data[mimetype];
+                        }
+                    }
+                }
+                else if (nbformat.isExecuteResult(output)) {
+                    for (const mimetype of Object.keys(output.data)) {
+                        var mimeData = output.data[mimetype];
+                        const dataLength = JSON.stringify(mimeData).length;
+                        if (dataLength > maxNotebookElementSize) {
+                            if (Array.isArray(mimeData) && mimeData.every((value) => {return typeof(value) === "string"})) {
+                                mimeData = mimeData.join("\n");
+                            }
+                            if (typeof(mimeData) === "string") {
+                                mimeData = mimeData.substring(0, maxNotebookElementSize) + " ... <truncated>"
+                            }
+                            else {
+                                mimeData = `<item of type ${typeof(mimeData)} removed due to size>`;
+                            }
+                            output.data[mimetype] = mimeData;
+                        }
+                    }
+
+                }
+                else if (nbformat.isStream(output)) {
+                    var streamData = output.text;
+                    const dataLength = JSON.stringify(streamData).length;
+                    if (dataLength > maxNotebookElementSize) {
+                        if (Array.isArray(streamData) && streamData.every((value) => {return typeof(value) === "string"})) {
+                            mimeData = streamData.join("\n");
+                        }
+                        if (typeof(streamData) === "string") {
+                            streamData = streamData.substring(0, maxNotebookElementSize) + " ... <truncated>"
+                        }
+                        else {
+                            streamData = `<item of type ${typeof(streamData)} removed due to size>`;
+                        }
+                        output.text = streamData;
+                    }
+                }
+            }
+        }
+        content.cells.push({...cell});
+    }
+    return content;
 }

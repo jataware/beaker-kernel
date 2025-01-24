@@ -5,7 +5,7 @@ import { IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
 import { v4 as uuidv4 } from 'uuid';
 
 import { BeakerSession } from './session';
-import { IBeakerFuture, BeakerCellFuture, BeakerCellFutures } from './util';
+import { IBeakerFuture, BeakerCellFuture, BeakerCellFutures, truncateNotebookForAgent } from './util';
 
 
 export interface IBeakerHeader extends messages.IHeader<messages.MessageType> {
@@ -508,10 +508,20 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             }
         };
 
+        const notebookState = truncateNotebookForAgent(session.notebook);
+        notebookState.cells = notebookState.cells.filter(
+            // Skip this cell and any children of this cell
+            cell => cell.id !== this.id && cell.metadata?.parent_cell !== this.id
+        );
+
         const future = session.sendBeakerMessage(
             "llm_request",
             {
                 request: this.source
+            },
+            undefined,
+            {
+                "notebook_state": notebookState,
             }
         );
         future.onIOPub = handleIOPub;
@@ -651,6 +661,7 @@ export class BeakerNotebook {
         Object.keys(obj).forEach((key) => {
             this.content[key] = obj[key];
         })
+        this.cells = new Proxy(this.content.cells, {});
     }
 
     public loadFromIPynb(obj: any) {
@@ -750,7 +761,7 @@ export class BeakerNotebook {
         }
     };
 
-    private content: BeakerNotebookContent;
+    public content: BeakerNotebookContent;
     public cells: IBeakerCell[];
     private subkernelInfo?: nbformat.ILanguageInfoMetadata;
 }
