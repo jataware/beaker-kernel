@@ -57,6 +57,7 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
             user = self.subkernel_user
             env = sanitize_env(env)
         home_dir = os.path.expanduser(f"~{user}")
+        env["USER"] = user
         env["HOME"] = home_dir
 
         # Update keyword args that are passed to Popen()

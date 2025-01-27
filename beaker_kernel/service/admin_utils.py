@@ -24,16 +24,19 @@ async def fetch_system_stats():
     return ps_info, fh_response, lsof_response
 
 async def fetch_kernel_info(kernel_manager):
-    runtime_dir = jupyter_runtime_dir()
+    import glob
+    connection_dir = os.environ.get("BEAKER_CONNECTION_DIR", None)
+    kernel_files = glob.glob(os.path.join(jupyter_runtime_dir(), "kernel-*.json"))
     kernels: dict[str, dict] = {kernel["id"]: kernel for kernel in kernel_manager.list_kernels()}
-    kernel_files = os.listdir(runtime_dir)
+    if connection_dir:
+        kernel_files += glob.glob(os.path.join(connection_dir, "kernel-*.json"))
     for kernel_file in kernel_files:
         if not kernel_file.startswith("kernel-"):
             continue
         kernel_id = kernel_file[7:-5]  # Remove 'kernel-' and '.json' from the beginning and end of the filename.
         if kernel_id not in kernels:
             continue
-        with open(os.path.join(runtime_dir, kernel_file)) as kf:
+        with open(kernel_file) as kf:
             kernels[kernel_id].update(json.load(kf))
     return kernels
 
@@ -52,7 +55,14 @@ async def build_proc_info(ps_response, fh_response):
             "cmd": cmd,
         }
     for record in fh_response.decode().split("\n\n"):
-        proc_path, file_handles = record.splitlines()
+        lines = record.splitlines()
+        if len(lines) >= 2:
+            proc_path, file_handles = lines
+        elif len(lines) == 1:
+            proc_path = lines[0]
+            file_handles = ""
+        else:
+            continue
         pid = proc_path.split('/')[2]
         fh_count = len(file_handles.split())
         if pid in proc_info:
