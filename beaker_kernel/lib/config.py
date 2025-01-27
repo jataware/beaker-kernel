@@ -5,6 +5,7 @@ import importlib
 import inspect
 import logging
 import os
+import tempfile
 import toml
 from dataclasses import dataclass, field, MISSING, asdict, is_dataclass
 from enum import Enum
@@ -222,6 +223,16 @@ class ConfigClass:
         normalize_function=normalize_bool,
         label="Foo???"
     )
+    beaker_run_path: Path = configfield(
+        description="Path to use for beaker run items such as kernel json files and checkpoint data",
+        env_var="BEAKER_RUN_PATH",
+        default_factory=lambda: "~/.local/share/beaker/runtime",
+        save_default_value=False,
+    )
+
+    @property
+    def checkpoint_storage_path(self):
+        return os.path.join(self.beaker_run_path, "checkpoints")
 
     tools_enabled: Table[bool] = configfield(
         description="This table allows you to enable/disable tools. The key is the name of the tool, and the value is a \
@@ -373,6 +384,11 @@ class Config(ConfigClass):
         config_type_str: str = kwargs.pop("config_type", os.environ.get("CONFIG_TYPE", "file"))
         self.config_type = getattr(self.ConfigTypes, config_type_str.upper(), self.ConfigTypes.FILE)
         self.defaults = kwargs
+        if self.config_type == self.ConfigTypes.SERVER:
+            if not os.path.isdir(self.checkpoint_storage_path):
+                os.makedirs(self.checkpoint_storage_path, exist_ok=True, mode=0o777)
+            if os.stat(self.checkpoint_storage_path).st_mode & 0o777 != 0o777:
+                os.chmod(self.checkpoint_storage_path, 0o777)
 
     def __getattr__(self, name: str):
         if name in (['__dataclass_fields__', '__dataclass_params__'] + list(ConfigClass.__dataclass_fields__.keys())):

@@ -4,6 +4,8 @@ import os
 from collections import defaultdict
 from jupyter_core.paths import jupyter_runtime_dir
 
+from beaker_kernel.lib.config import config
+
 async def fetch_system_stats():
     ps_process = asyncio.create_subprocess_exec('/usr/bin/ps', '-A', '-o', 'pid,ppid,%cpu,cputime,%mem,nlwp,rss,cmd', '--cumulative', 'Sww', '--no-headers', stdout=asyncio.subprocess.PIPE)
     fh_process = asyncio.create_subprocess_exec('/usr/bin/bash', '-c', 'ls -m /proc/[0-9]*/fd --color=never -w0', stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
@@ -25,11 +27,11 @@ async def fetch_system_stats():
 
 async def fetch_kernel_info(kernel_manager):
     import glob
-    connection_dir = os.environ.get("BEAKER_CONNECTION_DIR", None)
+    kernelfile_dir = os.path.join(config.beaker_run_path, "kernelfiles")
     kernel_files = glob.glob(os.path.join(jupyter_runtime_dir(), "kernel-*.json"))
     kernels: dict[str, dict] = {kernel["id"]: kernel for kernel in kernel_manager.list_kernels()}
-    if connection_dir:
-        kernel_files += glob.glob(os.path.join(connection_dir, "kernel-*.json"))
+    if kernelfile_dir:
+        kernel_files += glob.glob(os.path.join(kernelfile_dir, "kernel-*.json"))
     for kernel_file in kernel_files:
         if not kernel_file.startswith("kernel-"):
             continue

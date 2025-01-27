@@ -28,7 +28,7 @@ RUN mkdir -m 755 /var/run/beaker
 # Set default server env variables
 ENV BEAKER_AGENT_USER=jupyter
 ENV BEAKER_SUBKERNEL_USER=user
-ENV BEAKER_CONNECTION_DIR=/var/run/beaker
+ENV BEAKER_RUN_PATH=/var/run/beaker
 
 # Beaker Server should run as root, but local notebooks should not as Beaker Server sets the UID of running kernels to
 # an unprivileged user account when kernel processes are spawned

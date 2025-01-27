@@ -5,7 +5,8 @@ from typing import Any, Callable
 import hashlib
 import shutil
 from tempfile import mkdtemp
-from os import makedirs, environ
+import os
+import os.path
 import requests
 
 from archytas.tool_utils import AgentRef, tool, LoopControllerRef, ReactContextRef
@@ -217,10 +218,11 @@ class CheckpointableBeakerSubkernel(BeakerSubkernel):
     def __init__(self, jupyter_id: str, subkernel_configuration: dict, context):
         super().__init__(jupyter_id, subkernel_configuration, context)
         self.checkpoints_enabled = is_checkpointing_enabled()
+        self.storage_prefix = os.path.join(config.checkpoint_storage_path, self.jupyter_id)
+        self.checkpoints : list[Checkpoint] = []
         if self.checkpoints_enabled:
-            self.checkpoints : list[Checkpoint] = []
-            self.storage_prefix = mkdtemp()
-            makedirs(self.storage_prefix, exist_ok=True)
+            os.makedirs(self.storage_prefix, exist_ok=True, mode=0o777)
+            os.chmod(self.storage_prefix, 0o777)
 
     def store_serialization(self, filename: str) -> str:
         with open(filename, "rb") as file:

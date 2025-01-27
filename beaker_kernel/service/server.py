@@ -71,7 +71,7 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
 
 class BeakerKernelMappingManager(AsyncMappingKernelManager):
     kernel_manager_class = "beaker_kernel.service.server.BeakerKernelManager"
-    connection_dir = os.environ.get("BEAKER_CONNECTION_DIR", "/var/run/beaker")
+    connection_dir = os.path.join(config.beaker_run_path, "kernelfiles")
 
     def __init__(self, **kwargs):
         # Ensure connection dir exists and is readable
