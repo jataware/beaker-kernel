@@ -7,11 +7,10 @@ import click
 import webbrowser
 
 if TYPE_CHECKING:
-    from beaker_kernel.server.main import BeakerJupyterApp
-    from jupyter_server.serverapp import ServerApp
+    from beaker_kernel.service.notebook import BeakerNotebookApp
 
 
-def set_config_from_app(app: 'ServerApp'):
+def set_config_from_app(app: "BeakerNotebookApp"):
     os.environ.setdefault("JUPYTER_SERVER", app.connection_url)
     os.environ.setdefault("JUPYTER_TOKEN", app.identity_provider.token)
 
@@ -23,10 +22,10 @@ def notebook(ctx, extra_args):
     """
     Start Beaker in local mode and opens a notebook.
     """
-    from beaker_kernel.server.main import BeakerJupyterApp
+    from beaker_kernel.service.notebook import BeakerNotebookApp
     app = None
     try:
-        app = BeakerJupyterApp.initialize_server(argv=extra_args)
+        app = BeakerNotebookApp.initialize_server(argv=extra_args)
         set_config_from_app(app)
         app.start()
     except (InterruptedError, KeyboardInterrupt, EOFError) as err:
@@ -56,10 +55,10 @@ def dev(ctx: click.Context, no_open_notebook):
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
 @click.option("--open-notebook", "-n", is_flag=True, default=False, type=bool, help="Open a notebook in a webbrowser.")
 def serve(open_notebook, extra_args):
-    from beaker_kernel.server.dev import DevBeakerJupyterApp
+    from beaker_kernel.service.dev import BeakerNotebookApp
 
     try:
-        app = DevBeakerJupyterApp.initialize_server(argv=extra_args)
+        app = BeakerNotebookApp.initialize_server(argv=extra_args)
         set_config_from_app(app)
         if open_notebook:
             webbrowser.open(app.public_url)
@@ -73,7 +72,7 @@ def serve(open_notebook, extra_args):
 @click.option("--open-notebook", "-n", is_flag=True, default=False, type=bool, help="Open a notebook in a webbrowser.")
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
 def watch(extra_dir=None, open_notebook=None, extra_args=None):
-    from beaker_kernel.server.dev import create_observer
+    from beaker_kernel.service.dev import create_observer
     app_subprocess = None
     extra_args = extra_args or []
 

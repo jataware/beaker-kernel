@@ -58,10 +58,10 @@ packages = [
   "beaker_kernel",
 ]
 include = [
-  "beaker_kernel/server/ui",
+  "beaker_kernel/service/ui",
 ]
 artifacts = [
-  "beaker_kernel/server/ui",
+  "beaker_kernel/service/ui",
 ]
 
 # Beaker builder, loaded as a custom hook since it's not yet registered.

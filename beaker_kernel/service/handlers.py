@@ -1,28 +1,16 @@
 import asyncio
-import datetime
 import json
-import logging
 import os
 import traceback
 import uuid
 import urllib.parse
-from dataclasses import is_dataclass, asdict
-from collections.abc import Mapping, Collection
-from typing import get_origin, get_args, GenericAlias, Union, Generic
+from dataclasses import is_dataclass
+from typing import get_origin, get_args
 from types import UnionType
 
-from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
-from jupyter_core.utils import ensure_async
-from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
 from jupyter_server.auth.decorator import authorized
 from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
-from jupyter_server.serverapp import ServerApp
-from jupyter_server.nbconvert.handlers import NbconvertPostHandler
-from jupyter_server.services.kernels.handlers import MainKernelHandler, json_default
-from jupyter_server.services.contents.handlers import ContentsHandler
-from jupyter_server.utils import url_escape, url_path_join
-from jupyterlab_server import LabServerApp
 from tornado import web, httputil
 from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTPError
 
@@ -30,74 +18,25 @@ from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
-from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, ConfigClass, recursiveOptionalUpdate, reset_config
-from beaker_kernel.server import admin_utils
-
-logger = logging.getLogger(__file__)
-
-HERE = os.path.dirname(__file__)
-
-version = "0.0.1"
+from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, recursiveOptionalUpdate, reset_config
+from beaker_kernel.service import admin_utils
 
 
-def _jupyter_server_extension_points():
-    return [{"module": "beaker_kernel.server.main", "app": BeakerJupyterApp}]
+def sanitize_env(env: dict[str, str]) -> dict[str, str]:
+    # Whitelist must match the env variable name exactly and is checked first.
+    # Blacklist can match any part of the variable name.
+    WHITELIST = ["JUPYTER_TOKEN",]
+    BLACKLIST = ["KEY", "SECRET", "TOKEN", "PASSWORD"]
+    safe_env = {}
+    for env_name, env_value in env.items():
+        if env_name in WHITELIST or not any([unsafe_word.upper() in env_name.upper() for unsafe_word in BLACKLIST]):
+            safe_env[env_name] = env_value
+    return safe_env
 
 
-def secure_env(env: dict) -> dict:
-        UNSAFE_WORDS = ["KEY", "SECRET", "TOKEN", "PASSWORD"]
-        safe_env = {}
-        for env_name, env_value in env.items():
-            for unsafe_word in UNSAFE_WORDS:
-                if unsafe_word in env_name.upper():
-                    break
-            else:
-                safe_env[env_name] = env_value
-        return safe_env
-
-
-class SafeKernelHandler(MainKernelHandler):
-
-    @web.authenticated
-    @authorized
-    async def post(self):
-        km = self.kernel_manager
-        model = self.get_json_body()
-        if model is None:
-            model = {"name": km.default_kernel_name}
-        else:
-            model.setdefault("name", km.default_kernel_name)
-
-        env = self.session_manager.get_kernel_env(path=model.get("path"), name=model["name"])
-        env = secure_env(env)
-
-        kernel_id = await ensure_async(
-            km.start_kernel(  # type:ignore[has-type]
-                kernel_name=model["name"], path=model.get("path"), env=env
-            )
-        )
-        model = await ensure_async(km.kernel_model(kernel_id))
-        location = url_path_join(self.base_url, "api", "kernels", url_escape(kernel_id))
-        self.set_header("Location", location)
-        self.set_status(201)
-        self.finish(json.dumps(model, default=json_default))
-
-
-class NotebookHandler(ExtensionHandlerMixin, JupyterHandler):
-
-    def get(self):
-        return self.write(json.dumps(notebook_content))
-
-    def post(self):
-        global notebook_content
-        notebook_content = self.get_json_body()
-        notebook_content["lastSaved"] = datetime.datetime.utcnow().isoformat()
-        return self.write(json.dumps(notebook_content))
-
-
-class MainHandler(StaticFileHandler):
+class PageHandler(StaticFileHandler):
     """
-    Handle the main interface to properly set a session
+    Special handler that
     """
     async def get(self, path: str, include_body: bool = True) -> None:
 
@@ -518,115 +457,3 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
             "token": config.jupyter_token,
         }
         return self.write(json.dumps(output))
-
-
-class BeakerKernelManager(AsyncIOLoopKernelManager):
-    def write_connection_file(self, **kwargs: object) -> None:
-        return super().write_connection_file(
-            server=self.parent.parent.public_url,
-            **kwargs
-        )
-
-
-class BeakerKernelMappingManager(AsyncMappingKernelManager):
-    kernel_manager_class = "beaker_kernel.server.main.BeakerKernelManager"
-
-
-class BeakerServerApp(ServerApp):
-    """
-    Customizable ServerApp for use with Beaker
-    """
-
-    kernel_manager_class = BeakerKernelMappingManager
-
-    @property
-    def public_url(self):
-        return f"http://{self.ip}:{self.port}/"
-
-    @property
-    def local_url(self):
-        return self.public_url
-
-    @property
-    def display_url(self):
-        return f"    {self.public_url}"
-
-    def _get_urlparts(self, path: str | None = None, include_token: bool = False) -> urllib.parse.ParseResult:
-        # Always return urls without tokens
-        return super()._get_urlparts(path, False)
-
-
-class BeakerJupyterApp(LabServerApp):
-    name = "beaker_kernel"
-    serverapp_class = BeakerServerApp
-    load_other_extensions = True
-    app_name = "Beaker Jupyter App"
-    app_version = version
-    allow_origin = "*"
-    open_browser = False
-    extension_url = "/"
-
-    subcommands = {}
-
-    ui_path = os.path.join(HERE, "ui")
-
-    @classmethod
-    def get_extension_package(cls):
-        return cls.__module__
-
-    @classmethod
-    def request_log_handler(cls, request):
-        """Allow for debugging/extra logging of requests"""
-        logging.debug(f"URI: {request.request.uri}")
-
-    @classmethod
-    def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
-        # Set Jupyter token from config
-        os.environ.setdefault("JUPYTER_TOKEN", config.jupyter_token)
-        # TODO: catch and handle any custom command line arguments here
-        app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
-        if cls.request_log_handler:
-            app.web_app.log_request = cls.request_log_handler
-        return app
-
-    def initialize_handlers(self):
-        """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""
-        # Build up static and page definitions for handler pages and static files
-        pages = []
-        statics = []
-        for file in os.listdir(self.ui_path):
-            if file.startswith(('_', '.')):
-                continue
-            if file.endswith(".html"):
-                pages.append(os.path.splitext(file)[0])
-            else:
-                if os.path.isdir(os.path.join(self.ui_path, file)):
-                    statics.append(f"{file}/")
-                else:
-                    statics.append(f"{file}$")
-
-        self.handlers.append((r"/api/kernels", SafeKernelHandler))
-        self.handlers.append(("/contexts", ContextHandler))
-        self.handlers.append(("/config/control", ConfigController))
-        self.handlers.append(("/config", ConfigHandler))
-        self.handlers.append(("/stats", StatsHandler))
-        self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": self.ui_path, "default_filename": "admin.html"}))
-        self.handlers.append((r"/summary", SummaryHandler))
-        self.handlers.append((r"/export/(?P<format>\w+)", ExportAsHandler)),
-        self.handlers.append((f"/()", MainHandler, {"path": self.ui_path, "default_filename": "index.html"}))
-        if statics:
-            static_handler = ("/((" + "|".join(statics) + ").*)", StaticFileHandler, {"path": self.ui_path})
-            self.handlers.append(static_handler)
-        if pages:
-            page_handler = ("/((" + "|".join(pages) + "))", MainHandler, {"path": self.ui_path, "default_filename": "index.html"})
-            self.handlers.append(page_handler)
-        super().initialize_handlers()
-
-    def initialize_settings(self):
-        # Override to allow cross domain websockets
-        self.settings["allow_origin"] = "*"
-        self.settings["disable_check_xsrf"] = True
-
-
-if __name__ == "__main__":
-    BeakerJupyterApp.launch_instance()
