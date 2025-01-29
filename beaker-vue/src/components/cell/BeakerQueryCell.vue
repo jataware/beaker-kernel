@@ -261,9 +261,10 @@ const events = computed(() => {
 })
 
 const lastEventThought = computed(() => {
+    const fallback = "Thinking";
     // initial state
     if (events.value.length < 1) {
-        return "Thinking"
+        return fallback;
     }
     // grab the text from the last thought.
     const lastEvent = events.value[events.value.length - 1];
@@ -274,6 +275,9 @@ const lastEventThought = computed(() => {
         // walk backwards through events to determine the last thought
         let offset = 2;
         let eventCursor = events.value[events.value.length - offset];
+        if (eventCursor === undefined) {
+            return fallback;
+        }
         while (eventCursor.type !== 'thought' && events.value.length >= offset) {
             offset += 1;
             eventCursor = events.value[events.value.length - offset];
@@ -295,7 +299,7 @@ const lastEventThought = computed(() => {
             }
         // no thought, end of stack
         } else {
-            return '?';
+            return fallback;
         }
     }
 })
@@ -654,6 +658,7 @@ h3.query-steps {
         .p-accordion-header {
             border-radius: var(--border-radius);
             margin: 1rem;
+            margin-bottom: 0rem;
             transition: background-color 0.2s;
 
             &:hover {

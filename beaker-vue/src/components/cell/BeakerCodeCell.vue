@@ -79,7 +79,7 @@ const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const instance = getCurrentInstance();
 
-const styleOverrides = inject<StyleOverride[]>("styleOverrides")
+const styleOverrides = inject<StyleOverride[]>("styleOverrides") ?? [];
 const isChat = ref(styleOverrides.includes('chat'))
 
 const emit = defineEmits([
