@@ -226,7 +226,7 @@ class ConfigClass:
     beaker_run_path: Path = configfield(
         description="Path to use for beaker run items such as kernel json files and checkpoint data",
         env_var="BEAKER_RUN_PATH",
-        default_factory=lambda: "~/.local/share/beaker/runtime",
+        default_factory=lambda: os.path.expanduser("~/.local/share/beaker/runtime"),
         save_default_value=False,
     )
 
