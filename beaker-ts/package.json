@@ -1,6 +1,6 @@
 {
   "name": "beaker-kernel",
-  "version": "1.8.13",
+  "version": "1.8.14",
   "description": "Beaker kernel library",
   "repository": {
     "url": "https://github.com/jataware/beaker-kernel"
