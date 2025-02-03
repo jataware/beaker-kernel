@@ -221,13 +221,21 @@ class ConfigClass:
         default=True,
         sensitive=False,
         normalize_function=normalize_bool,
-        label="Foo???"
+        label="Enable Checkpointing?"
     )
-    beaker_run_path: Path = configfield(
+    beaker_run_path: os.PathLike = configfield(
         description="Path to use for beaker run items such as kernel json files and checkpoint data",
         env_var="BEAKER_RUN_PATH",
         default_factory=lambda: os.path.expanduser("~/.local/share/beaker/runtime"),
         save_default_value=False,
+    )
+    send_notebook_state: bool = configfield(
+        description="Flag as to whether to include the state of the notebook on agent query execution.",
+        env_var="SEND_NOTEBOOK_STATE",
+        default=False,
+        sensitive=False,
+        normalize_function=normalize_bool,
+        label="Send notebook state on query?"
     )
 
     @property

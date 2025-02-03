@@ -445,6 +445,7 @@ class BeakerKernel(KernelProxyManager):
         if not self.context:
             raise Exception("Context has not been set")
         setattr(self.context, "current_llm_query", request)
+
         notebook_state = message.metadata.get("notebook_state", None)
         kernel_state = await self.context.get_subkernel_state()
 

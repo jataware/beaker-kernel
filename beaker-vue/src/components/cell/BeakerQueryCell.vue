@@ -407,10 +407,12 @@ const respond = () => {
 };
 
 function execute() {
+    const config: any = instance?.root?.props?.config;
+    const sendNotebookState = config ? config.extra?.send_notebook_state : undefined;
     cell.value.source = promptText.value;
     isEditing.value = false;
     nextTick(() => {
-        const future = props.cell.execute(session);
+        const future = props.cell.execute(session, sendNotebookState);
         // Add reference to cell for downstream processing.
         future.registerMessageHook(
             (msg) => {

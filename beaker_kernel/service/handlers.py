@@ -233,7 +233,10 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
             "wsUrl": os.environ.get("JUPYTER_WS_URL", ws_url),
             "token": config.jupyter_token,
             "config_type": config.config_type,
+            "extra": {}
         }
+        if hasattr(config, "send_notebook_state"):
+            config_data["extra"]["send_notebook_state"] = config.send_notebook_state
 
         # Ensure a proper xsrf cookie value is set.
         cookie_name = self.settings.get("xsrf_cookie_name", "_xsrf")

@@ -316,7 +316,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         Object.assign(this, content)
     }
 
-    public execute(session: BeakerSession): IBeakerFuture | null {
+    public execute(session: BeakerSession, includeNotebookState: boolean = true): IBeakerFuture | null {
         this.events.splice(0, this.events.length);
         this.children.splice(0, this.children.length);
         let current_codeblock: messages.IIOPubMessage["content"] | null = null;
@@ -508,11 +508,16 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             }
         };
 
-        const notebookState = truncateNotebookForAgent(session.notebook);
-        notebookState.cells = notebookState.cells.filter(
-            // Skip this cell and any children of this cell
-            cell => cell.id !== this.id && cell.metadata?.parent_cell !== this.id
-        );
+        var metadata: PartialJSONObject = {};
+
+        if (includeNotebookState) {
+            const notebookState = truncateNotebookForAgent(session.notebook);
+            notebookState.cells = notebookState.cells.filter(
+                // Skip this cell and any children of this cell
+                cell => cell.id !== this.id && cell.metadata?.parent_cell !== this.id
+            );
+            metadata["notebook_state"] = notebookState
+        }
 
         const future = session.sendBeakerMessage(
             "llm_request",
@@ -520,9 +525,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 request: this.source
             },
             undefined,
-            {
-                "notebook_state": notebookState,
-            }
+            metadata,
         );
         future.onIOPub = handleIOPub;
         future.onStdin = handleStdin;
