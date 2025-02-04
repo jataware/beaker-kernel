@@ -32,8 +32,16 @@ export const toBeakerCellComponent = (vnode: VNode): IBeakerCellComponent => {
   }
   return reactive({
     // @
-    ...component.proxy as unknown as {cell: IBeakerCell},
-    ...component.exposed as {
+    ...{
+      cell: (component.proxy as unknown as {cell: IBeakerCell}).cell,
+    },
+    ...{
+      enter: component.exposed.enter,
+      exit: component.exposed.exit,
+      execute: component.exposed.execute,
+      clear: component.exposed.clear,
+      editor: component.exposed.editor,
+    } as {
       enter: (position?: "start" | "end" | number)=>void,
       exit: ()=>void,
       execute: ()=>void,
@@ -95,7 +103,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
       console.log("Error connecting to kernel/api", error);
     })
 
-    const _setSignalHandlers = async (session) => {
+    const setSignalHandlers = async (session) => {
         session.iopubMessage.connect((session, msg) => {
           emit("iopub-msg", msg);
           if (messages.isStatusMsg(msg)) {
@@ -116,7 +124,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
       }
 
       rawSession?.sessionReady.then(async () => {
-        await _setSignalHandlers(rawSession.session);
+        await setSignalHandlers(rawSession.session);
       });
 
     const beakerSession = reactive(rawSession);
@@ -129,7 +137,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
       status,
       cellRegistry,
       notebookComponent,
-      _setSignalHandlers
+      setSignalHandlers,
     }
   },
 
@@ -201,7 +209,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
 
     async reconnect() {
       const newSession = await this.session.reconnect();
-      await this._setSignalHandlers(newSession);
+      await this.setSignalHandlers(newSession);
       this.setContext({
         context: this.activeContext.slug,
         context_info: this.activeContext.config,
