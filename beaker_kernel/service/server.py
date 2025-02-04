@@ -12,7 +12,7 @@ from tornado.web import StaticFileHandler
 from beaker_kernel.lib.config import config
 from beaker_kernel.service.handlers import (
     PageHandler, StatsHandler, ConfigHandler, ContextHandler, SummaryHandler, ExportAsHandler, DownloadHandler,
-    ConfigController, sanitize_env
+    ConfigController, request_log_handler, sanitize_env
 )
 
 logger = logging.getLogger(__file__)
@@ -89,8 +89,10 @@ class BeakerServerApp(ServerApp):
     """
 
     kernel_manager_class = BeakerKernelMappingManager
-    root_dir = os.path.expanduser(f'~{os.environ.get("BEAKER_SUBKERNEL_USER", "user")}')
+    subkernel_user = "user"
+    root_dir = os.path.expanduser(f'~{os.environ.get("BEAKER_SUBKERNEL_USER", subkernel_user)}')
     allow_root = True
+    ip = "0.0.0.0"
 
     @property
     def public_url(self):
@@ -129,18 +131,12 @@ class BeakerJupyterApp(LabServerApp):
         return cls.__module__
 
     @classmethod
-    def request_log_handler(cls, request):
-        """Allow for debugging/extra logging of requests"""
-        logging.debug(f"URI: {request.request.uri}")
-
-    @classmethod
     def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
         # Set Jupyter token from config
         os.environ.setdefault("JUPYTER_TOKEN", config.jupyter_token)
-        # TODO: catch and handle any custom command line arguments here
         app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
-        if cls.request_log_handler:
-            app.web_app.log_request = cls.request_log_handler
+        # Log requests to console
+        app.web_app.settings["log_function"] = request_log_handler
         return app
 
     def initialize_handlers(self):

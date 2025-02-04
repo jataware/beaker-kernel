@@ -34,6 +34,23 @@ def sanitize_env(env: dict[str, str]) -> dict[str, str]:
     return safe_env
 
 
+def request_log_handler(handler: JupyterHandler):
+    """Allow for debugging/extra logging of requests"""
+    SKIPPED_METHODS = [
+        "OPTIONS",
+    ]
+    request_time = 1000.0 * handler.request.request_time()
+    method = handler.request.method.upper()
+    if method in SKIPPED_METHODS:
+        return
+    handler.log.info(
+        "%d %s %.2fms",
+        handler.get_status(),
+        handler._request_summary(),
+        request_time,
+    )
+
+
 class PageHandler(StaticFileHandler):
     """
     Special handler that
