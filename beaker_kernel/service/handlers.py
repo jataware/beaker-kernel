@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 import traceback
 import uuid
@@ -39,11 +40,19 @@ def request_log_handler(handler: JupyterHandler):
     SKIPPED_METHODS = [
         "OPTIONS",
     ]
+    logger: logging.Logger|None = None
+    if hasattr(handler, "log"):
+        logger = handler.log
+    elif hasattr(handler, "settings") and "serverapp" in handler.settings:
+        logger = logging.getLogger(handler.settings["serverapp"].__class__.__name__)
+    else:
+        logger = logging.getLogger(__file__)
+
     request_time = 1000.0 * handler.request.request_time()
     method = handler.request.method.upper()
     if method in SKIPPED_METHODS:
         return
-    handler.log.info(
+    logger.info(
         "%d %s %.2fms",
         handler.get_status(),
         handler._request_summary(),
