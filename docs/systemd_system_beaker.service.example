@@ -1,0 +1,20 @@
+#/etc/systemd/system/beaker.service 
+
+[Unit]
+Description=Service beaker
+After=nginx.service
+After=systemd-remount-fs.service systemd-tmpfiles-setup.service systemd-modules-load.service
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/root
+EnvironmentFile=/root/.env
+StandardOutput=append:/var/log/beaker.log
+StandardError=inherit
+ExecStart=python3.10 -m beaker_kernel.service.server
+SyslogIdentifier=beaker
+
+[Install]
+WantedBy=multi-user.target
+
