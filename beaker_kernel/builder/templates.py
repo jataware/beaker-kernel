@@ -7,6 +7,8 @@ from beaker_kernel.lib.templates.agent_file import AgentFile
 from beaker_kernel.lib.templates.context_file import ContextFile
 from beaker_kernel.lib.templates.readme_file import ReadmeFile
 from beaker_kernel.lib.templates.subkernel_file import SubkernelFile
+from beaker_kernel.lib.templates.whitelabel_file import WhiteLabelFile
+
 
 class BeakerNewProjectTemplateHook(TemplateInterface):
     PLUGIN_NAME = 'beaker-new-project'
@@ -91,5 +93,26 @@ class BeakerNewSubkernelTemplateHook(TemplateInterface):
         """Add to the list of files for new projects that are written to the file system."""
         files = [
             SubkernelFile(),
+        ]
+        return files
+
+
+class BeakerNewWhiteLabelTemplateHook(TemplateInterface):
+    PLUGIN_NAME = 'beaker-new-whitelabel'
+    PRIORITY = 125  # Run after 'default' which has priority 100
+
+
+    def initialize_config(self, config):
+        """
+        Allow modification of the configuration passed to every file for new projects
+        before the list of files are determined.
+        """
+        config.update({key: value for key, value in self.plugin_config.items() if key not in config})
+
+
+    def get_files(self, config: dict):
+        """Add to the list of files for new projects that are written to the file system."""
+        files = [
+            WhiteLabelFile(),
         ]
         return files

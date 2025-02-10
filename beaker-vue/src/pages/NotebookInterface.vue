@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        title="Beaker Notebook"
+        :title="$tmpl._('short_title', 'Beaker Noteboook')"
         :title-extra="saveAsFilename"
         :header-nav="headerNav"
         ref="beakerInterfaceRef"
@@ -109,6 +109,8 @@ import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
 import { atStartOfInput, atEndOfInput } from '../util'
+// import { _ } from '../util/whitelabel';
+import { NavOption } from '../components/misc/BeakerHeader.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
@@ -180,6 +182,9 @@ const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
+const beakerApp = inject<any>("beakerAppConfig");
+
+beakerApp.setPage("notebook");
 
 type FilePreview = {
     url: string,
@@ -187,45 +192,45 @@ type FilePreview = {
 }
 const previewedFile = ref<FilePreview>();
 
-const notebookTitle = computed(() => {
-    if (saveAsFilename.value) {
-        return `Beaker Notebook`;
+const headerNav = computed((): NavOption[] => {
+    const nav = [];
+    if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "chat"))) {
+        const href = "/" + (beakerApp?.config?.pages?.chat?.default ? '' : 'chat') + window.location.search;
+        nav.push(
+            {
+                type: 'link',
+                href: href,
+                icon: 'comment',
+                label: 'Navigate to chat view',
+            }
+        );
     }
-    else {
-        return 'Beaker Notebook';
-    }
+    nav.push(...[
+        {
+            type: 'button',
+            icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
+            command: toggleDarkMode,
+            label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
+        },
+        {
+            type: 'link',
+            href: `https://jataware.github.io/beaker-kernel`,
+            label: 'Beaker Documentation',
+            icon: "book",
+            rel: "noopener",
+            target: "_blank",
+        },
+        {
+            type: 'link',
+            href: `https://github.com/jataware/beaker-kernel`,
+            label: 'Check us out on Github',
+            icon: "github",
+            rel: "noopener",
+            target: "_blank",
+        },
+    ]);
+    return nav;
 });
-
-const headerNav = computed(() => [
-    {
-        type: 'link',
-        href: `/chat${window.location.search}`,
-        icon: 'comment',
-        label: 'Navigate to chat view',
-    },
-    {
-        type: 'button',
-        icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
-        command: toggleDarkMode,
-        label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
-    },
-    {
-        type: 'link',
-        href: `https://jataware.github.io/beaker-kernel`,
-        label: 'Beaker Documentation',
-        icon: "book",
-        rel: "noopener",
-        target: "_blank",
-    },
-    {
-        type: 'link',
-        href: `https://github.com/jataware/beaker-kernel`,
-        label: 'Check us out on Github',
-        icon: "github",
-        rel: "noopener",
-        target: "_blank",
-    },
-]);
 
 const beakerSession = computed<BeakerSessionComponentType>(() => {
     return beakerInterfaceRef?.value?.beakerSession;

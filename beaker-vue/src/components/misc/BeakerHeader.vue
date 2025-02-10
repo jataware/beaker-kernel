@@ -4,18 +4,8 @@
             <SessionStatus
                 :connection-status="beakerSession.status"
             />
-            <!-- <div class="status-bar">
-                <span v-tooltip.right="'Kernel connection status'">
-                    <i class="pi pi-circle-fill" :style="`font-size: inherit; color: var(--${connectionColor});`" />
-                    {{ statusLabel }}
-                    <Button v-if="true"
-                        size="small"
-                        icon="pi pi-refresh"
-                        text
-                    />
-                </span>
-            </div> -->
             <Button
+                v-if="!(beakerApp?.config?.default_context?.single_context === true)"
                 outlined
                 size="small"
                 icon="pi pi-angle-down"
@@ -30,6 +20,12 @@
 
         <template #center>
             <div class="title">
+                <img
+                    v-if="$tmpl.hasAsset('header_logo')"
+                    class="header-logo"
+                    :src="$tmpl.getAsset('header_logo').src"
+                    v-bind="$tmpl.getAsset('header_logo').attrs"
+                />
                 <h4>
                     {{ title || "Beaker Development Interface" }}
                 </h4>
@@ -75,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject, withDefaults } from "vue";
+import { defineProps, defineEmits, computed, inject, withDefaults, getCurrentInstance, getCurrentScope } from "vue";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
@@ -96,6 +92,7 @@ const emit = defineEmits(["selectKernel"]);
 
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+const beakerApp = inject<any>("beakerAppConfig");
 
 const navItems = computed(() => {
     if (props.nav) {
@@ -172,6 +169,19 @@ const connectionColor = computed(() => {
 
 </script>
 
+<script lang="ts">
+import { Component } from 'vue';
+export interface NavOption {
+    type: "button"|"link";
+    href?: string
+    icon?: string;
+    label?: string;
+    component?: Component;
+    componentStyle?: {[key: string]: string};
+    command?: () => void;
+}
+</script>
+
 <style lang="scss">
 
 .beaker-toolbar {
@@ -188,6 +198,11 @@ const connectionColor = computed(() => {
 
     button {
         padding: 0.5em;
+    }
+
+    .header-logo {
+        max-height: 30px;
+        margin-right: 20px;
     }
 
     .title {

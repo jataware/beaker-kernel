@@ -9,6 +9,12 @@
 
   <link id="primevue-theme" rel="stylesheet" href="">
 
+  <!--  The following script is intentionally blocking so that the app configuration is loaded prior to any of the Vue
+        rendering.
+        Care and testing should be taken if it is ever decided to make this call async or deferred.
+  -->
+  <script src="/appconfig.js"></script>
+
   <title><%= htmlWebpackPlugin.options.title %></title>
 </head>
 

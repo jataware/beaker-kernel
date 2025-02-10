@@ -1,4 +1,5 @@
 import asyncio
+import importlib
 import json
 import logging
 import os
@@ -7,6 +8,9 @@ import uuid
 import urllib.parse
 from dataclasses import is_dataclass
 from typing import get_origin, get_args
+from dataclasses import is_dataclass, asdict
+from collections.abc import Mapping, Collection
+from typing import get_origin, get_args, GenericAlias, Union, Generic, Generator, Optional
 from types import UnionType
 
 from jupyter_server.auth.decorator import authorized
@@ -16,12 +20,14 @@ from tornado import web, httputil
 from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTPError
 
 from beaker_kernel.lib.autodiscovery import autodiscover
+from beaker_kernel.lib.app import BeakerApp
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
 from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, recursiveOptionalUpdate, reset_config
 from beaker_kernel.service import admin_utils
 
+logger = logging.getLogger(__name__)
 
 def sanitize_env(env: dict[str, str]) -> dict[str, str]:
     # Whitelist must match the env variable name exactly and is checked first.
@@ -60,6 +66,17 @@ def request_log_handler(handler: JupyterHandler):
     )
 
 
+class AppConfigHandler(ExtensionHandlerMixin, JupyterHandler):
+    def get(self):
+        extension_config = self.extensionapp.extension_config
+        self.set_header("Content-Type", "application/javascript")
+        beaker_app: BeakerApp|None = extension_config.get("app", None)
+        if beaker_app:
+            output = beaker_app.to_javascript()
+            self.write(output)
+        self.finish()
+
+
 class PageHandler(StaticFileHandler):
     """
     Special handler that
@@ -89,7 +106,7 @@ class PageHandler(StaticFileHandler):
                 )
                 return self.redirect(to_url, permanent=False)
             path = os.path.relpath(validated_path, self.root)
-        # Otherwise, serve files as normal
+            self.absolute_path = validated_path
 
         # Ensure a proper xsrf cookie value is set.
         cookie_name = self.settings.get("xsrf_cookie_name", "_xsrf")

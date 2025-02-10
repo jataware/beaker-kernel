@@ -20,7 +20,7 @@ from beaker_kernel.lib.jupyter_kernel_proxy import InterceptionFilter, JupyterMe
 from beaker_kernel.lib.utils import (message_handler, LogMessageEncoder, magic,
                         handle_message, get_socket, execution_context, parent_message_context)
 
-USER_RESPONSE_WAIT_TIME = 100
+USER_RESPONSE_WAIT_TIME_SECONDS = 100
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +68,7 @@ class BeakerKernel(KernelProxyManager):
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.running_actions = {}
+        context_args = session_config.get("context", {})
         super().__init__(session_config, session_id=f"{kernel_id}_session")
         self.register_magic_commands()
         self.add_base_intercepts()
@@ -75,13 +76,13 @@ class BeakerKernel(KernelProxyManager):
         self.user_responses = dict()
         # Initialize context (Using the event loop to simulate `await`ing the async func in non-async setup)
         event_loop = asyncio.get_event_loop()
-        context_task = event_loop.create_task(self.start_default_context())
+        context_task = event_loop.create_task(self.start_default_context(**context_args))
         context_task.add_done_callback(lambda task: None)
 
-    async def start_default_context(self):
-        default_context = os.environ.get('BEAKER_DEFAULT_CONTEXT')
-        default_context_payload = os.environ.get('BEAKER_DEFAULT_CONTEXT_PAYLOAD', "{}")
-        if default_context_payload:
+    async def start_default_context(self, default_context=None, default_context_payload=None):
+        default_context = default_context or os.environ.get('BEAKER_DEFAULT_CONTEXT')
+        default_context_payload = default_context_payload or os.environ.get('BEAKER_DEFAULT_CONTEXT_PAYLOAD', "{}")
+        if isinstance(default_context_payload, str):
             try:
                 default_context_payload = json.loads(default_context_payload)
             except json.JSONDecodeError:
@@ -94,7 +95,7 @@ class BeakerKernel(KernelProxyManager):
         if not default_context:
             default_context = "default"
             default_context_payload = {}
-        await self.set_context(default_context, None)
+        await self.set_context(default_context, default_context_payload)
 
     def add_base_intercepts(self):
         """
@@ -382,12 +383,13 @@ class BeakerKernel(KernelProxyManager):
             parent_identities=getattr(parent_message, "identities", None),
             msg_id=msg_id,
         )
-        for _ in range(USER_RESPONSE_WAIT_TIME):
+        sleep_duration = 0.2
+        for _ in range(USER_RESPONSE_WAIT_TIME_SECONDS / sleep_duration):
             if msg_id in self.user_responses:
                 result = self.user_responses[msg_id]
                 del self.user_responses[msg_id]
                 return result
-            await asyncio.sleep(1)
+            await asyncio.sleep(sleep_duration)
 
         raise Exception("Query timed out. User took too long to respond.")
 
@@ -575,6 +577,7 @@ class BeakerKernel(KernelProxyManager):
 
         parent_header = copy.deepcopy(message.header)
         if content:
+            # logger.warning(f"Setting context: " + ", ".join([context_name, context_info, language, parent_header]))
             await self.set_context(context_name, context_info, language=language, parent_header=parent_header)
 
         # Send context_response
