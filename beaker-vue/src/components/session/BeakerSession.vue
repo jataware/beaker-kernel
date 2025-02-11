@@ -98,6 +98,9 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
         context: props.context,
       }
     );
+
+    status.value = "connecting";
+
     rawSession.services.connectionFailure.connect((serviceManager, error) => {
       emit('connection-failure', error);
       console.log("Error connecting to kernel/api", error);

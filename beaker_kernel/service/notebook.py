@@ -36,10 +36,11 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
 
     def write_connection_file(self, **kwargs: object) -> None:
         beaker_app: BeakerApp = self.beaker_config.get("app", None)
-        if beaker_app and beaker_app.default_context:
+        default_context = beaker_app and beaker_app._default_context
+        if default_context:
             kwargs['context'] = {
-                "default_context": beaker_app.default_context.slug,
-                "default_context_payload": beaker_app.default_context.payload,
+                "default_context": default_context.slug,
+                "default_context_payload": default_context.payload,
             }
         return super().write_connection_file(
             server=self.parent.parent.public_url,
@@ -69,6 +70,7 @@ class BeakerNotebookServer(ServerApp):
     """
 
     kernel_manager_class = BeakerKernelMappingManager
+    reraise_server_extension_failures = True
 
     @property
     def beaker_config(self):
@@ -100,6 +102,7 @@ class BeakerNotebookApp(LabServerApp):
     allow_origin = "*"
     open_browser = False
     extension_url = "/"
+    reraise_server_extension_failures = True
 
     subcommands = {}
 

@@ -38,7 +38,7 @@
                     </ChatPanel>
                     <AgentQuery
                         class="agent-query-container agent-query-container-chat"
-                        placeholder="Message to the agent"
+                        :placeholder="$tmpl._('agent_query_prompt', 'Message to the agent')"
                         v-show="!isLastCellAwaitingInput"
                     />
             </div>

@@ -2,12 +2,22 @@ from dataclasses import dataclass, field, asdict
 from collections import deque
 from collections.abc import Mapping
 import importlib.metadata
+import inspect
 import os
 import importlib
 import json
 import string
-import typing
-from typing import TypedDict, Optional, ClassVar, Sequence, Iterable, Iterator
+from typing import Optional, ClassVar, TypedDict, TypeAlias, Any
+from typing_extensions import Self, Required, NotRequired
+
+
+class AppConfig:
+    # Definition to come
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def asdict(self):
+        return self.__dict__
 
 
 class TemplateFormatter(string.Formatter):
@@ -28,6 +38,7 @@ class TemplateFormatter(string.Formatter):
             return ""
 formatter = TemplateFormatter()
 
+
 class TemplateString(str):
     _refs: set[str]
 
@@ -41,16 +52,23 @@ class TemplateString(str):
         return formatter.format(self, **bundle.render())
 
 
+TemplateBundleDict: TypeAlias = Mapping[str, TemplateString|str]
+
+
 class TemplateStringBundle(Mapping[str, TemplateString]):
     app_name: TemplateString
     short_title: TemplateString
     chat_welcome_html: TemplateString
 
     _mapping: dict[str, TemplateString]
-    _render_cache: list
+    _render_cache: Optional[dict[str, str]]
     _rendering: bool
 
-    def __init__(self, assets=None, **templates:Mapping[str, str|TemplateString]):
+    def __init__(
+            self,
+            assets: "list[BeakerAppAsset]" = [],
+            **templates: TemplateString|str,
+        ):
         self._mapping = {}
         self._render_cache = None
         self._rendering = False
@@ -77,8 +95,17 @@ class TemplateStringBundle(Mapping[str, TemplateString]):
     def __iter__(self):
         return self._mapping.__iter__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._mapping.__len__()
+
+    def update(self, **templates:Mapping[str, str|TemplateString]):
+        for key, value in templates.items():
+            self[key] = value
+
+    def clone(self) -> Self:
+        clone: Self = self.__class__()
+        clone._mapping = {**self._mapping}
+        return clone
 
     @property
     def rendered(self) -> bool:
@@ -86,8 +113,8 @@ class TemplateStringBundle(Mapping[str, TemplateString]):
 
     def sort_for_render(self) -> list[tuple[str, TemplateString]]:
         # Build the graph and in-degree count
-        graph = {key: [] for key in self}
-        in_degree = {key: 0 for key in self}
+        graph: dict[str, list] = {key: [] for key in self}
+        in_degree: dict[str, int] = {key: 0 for key in self}
 
         # Populate the graph with edges based on dependencies
         for key, item in self.items():
@@ -121,8 +148,8 @@ class TemplateStringBundle(Mapping[str, TemplateString]):
     def render(self) -> dict[str, str]:
         try:
             self._rendering = True
-            result = {}
-            if self.rendered:
+            result: dict[str, str] = {}
+            if self.rendered and self._render_cache:
                 return self._render_cache
             else:
                 for key, value in self.sort_for_render():
@@ -133,29 +160,81 @@ class TemplateStringBundle(Mapping[str, TemplateString]):
             self._rendering = False
 
 
+def get_stylesheet_url(app: "BeakerApp", stylesheet: "Optional[str|TemplateString|BeakerAppAsset]" = None) -> str:
+    if not stylesheet:
+        stylesheet = app.stylesheet
+    if isinstance(stylesheet, BeakerAppAsset):
+        stylesheet = stylesheet.src
+    result = TemplateString(stylesheet).render(app._template_bundle)
+    # Check if instead of a url, we end up with an asset slug. If so, return the url from the asset.
+    if result in app._assets:
+        asset = app._assets[result]
+        if getattr(asset, "src", None):
+            result = TemplateString(asset.src).render(app._template_bundle)
+        else:
+            raise ValueError("Stylesheet asset `%s` is missing a src attribute.", result)
+    return result
+
+
+AssetDict: TypeAlias = Mapping[str, str]
+
+
 @dataclass
 class BeakerAppAsset:
     slug: str
-    src: str
-    attrs: dict[str, str]
+    src: Optional[str|TemplateString]
+    attrs: dict[str, str|TemplateString]
 
-    def __init__(self, slug, src, **attrs):
+    def __init__(
+            self,
+            slug: str,
+            src: Optional[str|TemplateString] = None,
+            attrs: Optional[dict[str,str]] = None,
+            **kwargs: str
+        ):
         self.slug = slug
-        self.src = src
-        self.attrs = attrs
+        if src:
+            self.src = src
+        self.attrs = {}
+        if attrs:
+            self.attrs.update(attrs)
+        if kwargs:
+            self.attrs.update(kwargs)
 
-    def asdict(self):
-        return asdict(self)
+    def asdict(self, app: "BeakerApp") -> AssetDict:
+        return {
+            "slug": self.slug,
+            "src": TemplateString(self.src).render(app._template_bundle),
+            **{
+                key: TemplateString(value).render(app._template_bundle) for key, value in self.attrs.items()
+            }
+        }
+
+
+ContextDict = TypedDict("ContextDict", {
+    "slug": str,
+    "payload": NotRequired[dict[str, Any]],
+    "single_context": NotRequired[bool]
+})
 
 
 @dataclass
 class Context:
     slug: str
-    payload: dict[str, any] = field(default_factory=lambda: {})
+    payload: dict[str, Any] = field(default_factory=lambda: {})
     single_context: bool = False
 
     def asdict(self):
         return asdict(self)
+
+
+PageDict = TypedDict("PageDict", {
+    "slug": NotRequired[str],
+    "title": NotRequired[str|TemplateString],
+    "default": NotRequired[bool],
+    "stylesheet": NotRequired[str|BeakerAppAsset],
+    "template_bundle": NotRequired[TemplateStringBundle|dict[str, str]|dict[str, TemplateString]],
+})
 
 
 @dataclass
@@ -163,7 +242,8 @@ class Page:
     slug: str
     title: Optional[str|TemplateString] = None
     default: Optional[bool] = False
-    stylesheet: Optional[str] = None  # field(default_factory=lambda: {})
+    stylesheet: Optional[str|BeakerAppAsset] = None  # field(default_factory=lambda: {})
+    template_bundle: Optional[TemplateStringBundle|dict[str, str]|dict[str, TemplateString]] = None
 
     def __post_init__(self):
         if self.title is None:
@@ -172,16 +252,25 @@ class Page:
             self.stylesheet = TemplateString(self.stylesheet)
 
     def asdict(self, app: "BeakerApp"):
-        title = TemplateString(self.title).render(app.template_bundle)
-        if isinstance(self.stylesheet, TemplateString):
-            stylesheet = self.stylesheet.render(app.template_bundle)
+        bundle = app._template_bundle.clone()
+        stylesheet = get_stylesheet_url(app, self.stylesheet)
+        if self.template_bundle:
+            bundle.update(**self.template_bundle)
+            rendered_values = bundle.render()
+            template_strings = {
+                key: value
+                for key, value in rendered_values.items()
+                if key in self.template_bundle
+            }
         else:
-            stylesheet = self.stylesheet
+            template_strings = {}
+        title = TemplateString(self.title).render(bundle)
         return {
             "slug": self.slug,
             "title": title,
             "default": self.default,
             "stylesheet": stylesheet,
+            "template_strings": template_strings,
         }
 
 
@@ -194,15 +283,16 @@ class BeakerApp:
     name: ClassVar[Optional[str]] = None
     default_title: ClassVar[Optional[str]] = None
     asset_dir: ClassVar[Optional[os.PathLike]] = None
-    default_context: ClassVar[Optional[Context]] = None
-    template_bundle: ClassVar[Optional[TemplateStringBundle]] = None
-    template_bundle_cls: ClassVar[Optional[type[TemplateStringBundle]]] = None
-    pages: ClassVar[dict[str, Page]] = {}
-    stylesheet: ClassVar[Optional[str]] = None
-    assets: ClassVar[list[BeakerAppAsset]] = []
+    assets: ClassVar[dict[str, dict[str, str|TemplateString]]] = {}
+    default_context: ClassVar[Optional[Context|ContextDict]] = None
+    template_bundle: ClassVar[Optional[TemplateStringBundle|TemplateBundleDict]] = None
+    pages: ClassVar[list[Page|PageDict]|dict[str, Page|PageDict]] = {}
+    stylesheet: ClassVar[Optional[str|BeakerAppAsset]] = None
+    config: ClassVar[Optional[AppConfig]] = None
 
     # Internal
-    _assets: list[BeakerAppAsset]
+    _default_context: Context
+    _assets: dict[str, BeakerAppAsset]
     _template_bundle: TemplateStringBundle
     _default_title: str
     _pages: dict[str, Page]
@@ -210,24 +300,32 @@ class BeakerApp:
     def __init_subclass__(cls):
         if not cls.slug:
             raise ValueError("ClassVar 'slug' is required.")
+        if not cls.asset_dir:
+            cls_path = inspect.getfile(cls)
+            cls.asset_dir = os.path.abspath(os.path.join(os.path.dirname(cls_path), "assets"))
 
     def __init__(self):
-        self._assets = [
-            BeakerAppAsset(
-                slug=asset.slug,
-                src=os.path.join("/assets", self.slug, asset.src),
-                **asset.attrs
-            ) for asset in self.__class__.assets
-        ]
+        self._assets = {}
+        for asset_slug, asset_values in self.assets.items():
+            if isinstance(asset_values, BeakerAppAsset):
+                asset = asset_values
+            else:
+                slug = asset_values.pop("slug", asset_slug)
+                asset = BeakerAppAsset(
+                    slug=slug,
+                    **asset_values
+                )
+            if hasattr(asset, "src"):
+                asset.src = os.path.join("/assets", self.slug, asset.src)
+            self._assets[asset_slug] = asset
 
-        if self.template_bundle == TemplateStringBundle:
-            # A class was passed in, initialize it?
-            # TODO: Think about logic here. Should error?
-            self._template_bundle = self.template_bundle()
-        else:
+        if isinstance(self.template_bundle, TemplateStringBundle):
             self._template_bundle = self.template_bundle
+        elif isinstance(self.template_bundle, dict):
+            self._template_bundle = TemplateStringBundle(**self.template_bundle)
         self._template_bundle["app_slug"] = TemplateString(self.slug)
-        self._template_bundle.set_assets(self._assets)
+        self._template_bundle["asset_path"] = TemplateString(f"/assets/{self.slug}")
+        self._template_bundle.set_assets(self._assets.values())
 
         if self.name is None:
             try:
@@ -240,27 +338,41 @@ class BeakerApp:
             self.name = name.capitalize().replace("_", " ")
         self._template_bundle["app_name"] = TemplateString(self.name)
 
-        self._pages = {
-            slug: (page if isinstance(page, Page) else Page(slug=slug, **page)) for slug, page in self.pages.items()
-        }
+        self._pages = {}
+        if isinstance(self.pages, list):
+            for page in self.pages:
+                if isinstance(page, Page):
+                    pass
+                elif isinstance(page, dict):
+                    page = Page(**page)
+                else:
+                    raise ValueError(f"Unable to initiate page of type {page.__class__.__name__}")
+                self._pages[page.slug] = page
+        elif isinstance(self.pages, dict):
+            for slug, page in self.pages.items():
+                if isinstance(page, Page):
+                    pass
+                elif isinstance(page, dict):
+                    if slug in page:
+                        page = Page(**page)
+                    else:
+                        page = Page(slug=slug, **page)
+                else:
+                    raise ValueError(f"Unable to initiate page from provided type {page.__class__.__name__}")
+                self._pages[page.slug] = page
         self._default_title = TemplateString(self.default_title) if self.default_title else self.name
 
-
-    def get_stylesheet(self) -> dict[str, str] | str:
-        if self.stylesheet:
-            if isinstance(self.stylesheet, str):
-                return TemplateString(self.stylesheet).render(self.template_bundle)
-            elif isinstance(self.stylesheet, TemplateString):
-                return self.stylesheet.render(self.template_bundle)
-            else:
-                return self.stylesheet
+        if isinstance(self.default_context, Context):
+            self._default_context = self.default_context
+        elif isinstance(self.default_context, dict):
+            self._default_context = Context(**self.default_context)
 
 
     def get_title(self, page_slug: Optional[str]=None) -> str|None:
         title = None
         if page_slug:
-            if page_slug in self.pages:
-                title = self.pages[page_slug].title
+            if page_slug in self._pages:
+                title = self._pages[page_slug].title
             else:
                 if self._default_title:
                     title =  f"{self._default_title} {page_slug.capitalize()}"
@@ -268,7 +380,7 @@ class BeakerApp:
                     title = r"{app_name}"
         else:
             title = self._default_title
-        return TemplateString(title).render(self.template_bundle)
+        return TemplateString(title).render(self._template_bundle)
 
 
     @property
@@ -295,24 +407,20 @@ class BeakerApp:
                 rf"""window.beaker_app.templateStrings = {json.dumps(self.templates)};"""
             )
         if self.default_context:
+            context = self.default_context.asdict() if isinstance(self.default_context, Context) else self.default_context
             output.append(
-                rf"""window.beaker_app.default_context = {json.dumps(self.default_context.asdict())};"""
+                rf"""window.beaker_app.default_context = {json.dumps(context)};"""
             )
         if self._assets:
             output.append(
-                rf"""window.beaker_app.assets = {json.dumps({asset.slug: asset.asdict() for asset in self._assets})};"""
+                rf"""window.beaker_app.assets = {json.dumps({asset.slug: asset.asdict(self) for asset in self._assets.values()})};"""
             )
         if self.stylesheet:
             output.append(
-                rf"""window.beaker_app.stylesheet = {json.dumps(self.get_stylesheet())}"""
+                rf"""window.beaker_app.stylesheet = {json.dumps(get_stylesheet_url(self))}"""
             )
-#         for idx, stylesheet in enumerate(self.get_stylesheets()):
-#             output.append(
-#                 rf"""\
-# let style{idx} = document.createElement("style");
-# style{idx}.type = "text/css";
-# style{idx}.textContents = `{stylesheet}`;
-# document.head.appendChild(style{idx});
-# """
-#             )
+        if self.config:
+            output.append(
+                rf"""window.beaker_app.config = {json.dumps(self.config.asdict())}"""
+            )
         return "\n".join(output)

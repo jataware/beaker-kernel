@@ -68,13 +68,18 @@ def request_log_handler(handler: JupyterHandler):
 
 class AppConfigHandler(ExtensionHandlerMixin, JupyterHandler):
     def get(self):
-        extension_config = self.extensionapp.extension_config
-        self.set_header("Content-Type", "application/javascript")
-        beaker_app: BeakerApp|None = extension_config.get("app", None)
-        if beaker_app:
-            output = beaker_app.to_javascript()
-            self.write(output)
-        self.finish()
+        # TODO: Confirm proper error handling if app config can't be written.
+        try:
+            extension_config = self.extensionapp.extension_config
+            self.set_header("Content-Type", "application/javascript")
+            beaker_app: BeakerApp|None = extension_config.get("app", None)
+            if beaker_app:
+                output = beaker_app.to_javascript()
+                self.write(output)
+        except Exception as err:
+            self.log_exception(err.__class__, err, err.__traceback__)
+        finally:
+            self.finish()
 
 
 class PageHandler(StaticFileHandler):

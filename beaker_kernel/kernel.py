@@ -577,7 +577,6 @@ class BeakerKernel(KernelProxyManager):
 
         parent_header = copy.deepcopy(message.header)
         if content:
-            # logger.warning(f"Setting context: " + ", ".join([context_name, context_info, language, parent_header]))
             await self.set_context(context_name, context_info, language=language, parent_header=parent_header)
 
         # Send context_response

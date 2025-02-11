@@ -14,7 +14,16 @@
                 @click="selectKernel"
                 :label="beakerSession.activeContext?.slug"
                 :loading="loading"
-                v-tooltip.bottom="'Change or update the context'"
+                v-tooltip.bottom="$tmpl._('select_kernel_tooltip', 'Change or update the context')"
+            />
+            <Button
+                text
+                size="small"
+                v-else-if="loading"
+                :loading=loading
+                :disabled="true"
+
+                v-tooltip.bottom="'Connecting'"
             />
         </template>
 
@@ -27,7 +36,7 @@
                     v-bind="$tmpl.getAsset('header_logo').attrs"
                 />
                 <h4>
-                    {{ title || "Beaker Development Interface" }}
+                    {{ title ?? "Beaker Notebook" }}
                 </h4>
                 <span v-if="titleExtra" class="title-extra">{{ titleExtra }}</span>
             </div>
@@ -128,44 +137,9 @@ function selectKernel() {
     emit('selectKernel');
 }
 
-const themeIcon = computed(() => {
-    return `pi pi-${theme.mode === 'dark' ? 'sun' : 'moon'}`;
-});
-
 const loading = computed(() => {
     return !(beakerSession.activeContext?.slug);
 })
-
-const statusLabels = {
-    unknown: 'Unknown',
-    starting: 'Starting',
-    idle: 'Ready',
-    busy: 'Busy',
-    terminating: 'Terminating',
-    restarting: 'Restarting',
-    autorestarting: 'Autorestarting',
-    dead: 'Dead',
-    // This extends kernel status for now.
-    connected: 'Connected',
-    connecting: 'Connecting'
-}
-
-const statusColors = {
-    connected: 'green-300',
-    idle: 'green-400',
-    connecting: 'green-200',
-    busy: 'orange-400',
-};
-
-const statusLabel = computed(() => {
-    return statusLabels[beakerSession.status] || "unknown";
-
-});
-
-const connectionColor = computed(() => {
-    // return connectionStatusColorMap[beakerSession.status];
-    return statusColors[beakerSession.status] || "grey-200"
-});
 
 </script>
 

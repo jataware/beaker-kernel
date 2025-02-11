@@ -30,13 +30,25 @@ export const BeakerAppConfigPlugin: Plugin = {
         }
         const templateValues = beakerAppConfig.templateStrings || {};
         const assetValues = beakerAppConfig.assets || {};
+        let currentPage: string|null = null;
 
         const _ = (templateName: string, defaultValue?: string): string => {
+            // First try to fetch from current page's settings, since they take priority.
+            if (currentPage) {
+                const page = beakerAppConfig.pages?.[currentPage]
+                const pageTemplateStrings = page?.template_strings;
+                const templateValue = pageTemplateStrings?.[templateName];
+                if (templateValue) {
+                    return templateValue;
+                }
+            }
+            // If not defined per page, try to return the value defined for the app.
             if (templateName in templateValues) {
                 const template: string = templateValues[templateName];
 
                 return template
             }
+            // Otherwise, return the default value, or an empty string if the default value is not provided.
             else {
                 return defaultValue ? defaultValue : '';
             }
@@ -67,8 +79,8 @@ export const BeakerAppConfigPlugin: Plugin = {
         };
 
         const setPage = (page: string) => {
-            console.log({beakerAppConfig});
-            setPageTitle(page)
+            currentPage = page;
+            setPageTitle(page);
             const globalStyle = beakerAppConfig?.stylesheet;
             const pageStyle = beakerAppConfig?.pages?.[page]?.stylesheet;
             if (globalStyle) {
@@ -80,7 +92,6 @@ export const BeakerAppConfigPlugin: Plugin = {
         }
 
         const setStylesheet = (stylesheet: string | {[key: string]: string}, id: string) => {
-            console.log("setting stylesheet ", stylesheet);
             if (typeof(stylesheet) === "string") { // URL
                 const linkElement = document.getElementById(id) || document.createElement("link");
                 linkElement.setAttribute("href", stylesheet);
@@ -91,7 +102,6 @@ export const BeakerAppConfigPlugin: Plugin = {
         }
 
         const setPageTitle = (page: string) => {
-            console.log("settingPageTitle for ", page);
             const pageConfig = beakerAppConfig?.pages?.[page];
             if (pageConfig?.title) {
                 document.title = pageConfig.title;
