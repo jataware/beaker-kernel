@@ -323,6 +323,8 @@ class BeakerApp:
             self._template_bundle = self.template_bundle
         elif isinstance(self.template_bundle, dict):
             self._template_bundle = TemplateStringBundle(**self.template_bundle)
+        else:
+            self._template_bundle = TemplateStringBundle()
         self._template_bundle["app_slug"] = TemplateString(self.slug)
         self._template_bundle["asset_path"] = TemplateString(f"/assets/{self.slug}")
         self._template_bundle.set_assets(self._assets.values())
