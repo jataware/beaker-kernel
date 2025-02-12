@@ -8,6 +8,7 @@ import FocusTrap from 'primevue/focustrap';
 import { vKeybindings } from '../directives/keybindings';
 import { vAutoScroll } from '../directives/autoscroll';
 import BeakerThemePlugin from '../plugins/theme';
+import BeakerAppConfigPlugin from '../plugins/appconfig';
 import NotebookInterface from './NotebookInterface.vue';
 
 
@@ -30,6 +31,7 @@ const baseUrl = PageConfig.getBaseUrl();
   app.use(ToastService);
   app.use(ConfirmationService);
   app.use(DialogService);
+  app.use(BeakerAppConfigPlugin);
   app.use(BeakerThemePlugin);
   app.directive('tooltip', Tooltip);
   app.directive('focustrap', FocusTrap);

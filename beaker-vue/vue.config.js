@@ -7,6 +7,10 @@ module.exports = defineConfig({
       entry: 'src/pages/notebook-interface.ts',
       title: "Beaker Notebook",
     },
+    notebook: {
+      entry: 'src/pages/notebook-interface.ts',
+      title: "Beaker Notebook",
+    },
     chat: {
       entry: 'src/pages/chat-interface.ts',
       title: "Beaker Chat Interface",

@@ -385,6 +385,7 @@ class Config(ConfigClass):
         FILE = "file"
         SESSION = "session"
         SERVER = "server"
+        SINGLE_CONTEXT = "single"
         OTHER = "other"
 
     def __init__(self, **kwargs) -> None:

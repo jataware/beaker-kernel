@@ -9,10 +9,12 @@ from jupyter_server.serverapp import ServerApp
 from jupyterlab_server import LabServerApp
 from tornado.web import StaticFileHandler
 
+from beaker_kernel.lib.app import BeakerApp
 from beaker_kernel.lib.config import config
+from beaker_kernel.lib.utils import import_dotted_class
 from beaker_kernel.service.handlers import (
     PageHandler, StatsHandler, ConfigHandler, ContextHandler, SummaryHandler, ExportAsHandler, DownloadHandler,
-    ConfigController, request_log_handler, sanitize_env
+    ConfigController, AppConfigHandler, request_log_handler, sanitize_env
 )
 
 logger = logging.getLogger(__file__)
@@ -30,12 +32,23 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
     agent_user: str
     subkernel_user: str
 
+    @property
+    def beaker_config(self):
+        return self.parent.beaker_config
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.agent_user = os.environ.get("BEAKER_AGENT_USER", "jupyter")
         self.subkernel_user = os.environ.get("BEAKER_SUBKERNEL_USER", "user")
 
     def write_connection_file(self, **kwargs: object) -> None:
+        beaker_app: BeakerApp = self.beaker_config.get("app", None)
+        default_context = beaker_app and beaker_app._default_context
+        if default_context:
+            kwargs['context'] = {
+                "default_context": default_context.slug,
+                "default_context_payload": default_context.payload,
+            }
         super().write_connection_file(
             server=self.parent.parent.public_url,
             **kwargs
@@ -81,6 +94,9 @@ class BeakerKernelMappingManager(AsyncMappingKernelManager):
             os.chmod(self.connection_dir, 0o0755)
         super().__init__(**kwargs)
 
+    @property
+    def beaker_config(self):
+        return self.parent.beaker_config
 
 
 class BeakerServerApp(ServerApp):
@@ -93,6 +109,11 @@ class BeakerServerApp(ServerApp):
     root_dir = os.path.expanduser(f'~{os.environ.get("BEAKER_SUBKERNEL_USER", subkernel_user)}')
     allow_root = True
     ip = "0.0.0.0"
+    reraise_server_extension_failures = True
+
+    @property
+    def beaker_config(self):
+        return self.starter_app.extension_config
 
     @property
     def public_url(self):
@@ -144,30 +165,50 @@ class BeakerJupyterApp(LabServerApp):
         # Build up static and page definitions for handler pages and static files
         pages = []
         statics = []
-        for file in os.listdir(self.ui_path):
+        default_page_filename = "index.html"
+
+        beaker_app: BeakerApp = self.extension_config.get("app", None)
+        if beaker_app and beaker_app.asset_dir:
+            if os.path.isdir(beaker_app.asset_dir):
+                self.handlers.append((f"/assets/{beaker_app.slug}/(.*)", StaticFileHandler, {"path": beaker_app.asset_dir}))
+
+        try:
+            ui_files = os.listdir(self.ui_path)
+        except FileNotFoundError:
+            ui_files = []
+        for file in ui_files:
             if file.startswith(('_', '.')):
                 continue
             if file.endswith(".html"):
-                pages.append(os.path.splitext(file)[0])
+                page = os.path.splitext(file)[0]
+                if beaker_app:
+                    if page in beaker_app.pages:
+                        pages.append(page)
+                        if beaker_app._pages[page].get("default", False):
+                            default_page_filename = file
+                else:
+                    pages.append(page)
             else:
                 if os.path.isdir(os.path.join(self.ui_path, file)):
                     statics.append(f"{file}/")
                 else:
                     statics.append(f"{file}$")
 
+
         self.handlers.append(("/contexts", ContextHandler))
         self.handlers.append(("/config/control", ConfigController))
         self.handlers.append(("/config", ConfigHandler))
         self.handlers.append(("/stats", StatsHandler))
+        self.handlers.append(("/appconfig.js", AppConfigHandler))
         self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": self.ui_path, "default_filename": "admin.html"}))
         self.handlers.append((r"/summary", SummaryHandler))
         self.handlers.append((r"/export/(?P<format>\w+)", ExportAsHandler)),
-        self.handlers.append((f"/()", PageHandler, {"path": self.ui_path, "default_filename": "index.html"}))
+        self.handlers.append((f"/()", PageHandler, {"path": self.ui_path, "default_filename": default_page_filename}))
         if statics:
             static_handler = ("/((" + "|".join(statics) + ").*)", StaticFileHandler, {"path": self.ui_path})
             self.handlers.append(static_handler)
         if pages:
-            page_handler = ("/((" + "|".join(pages) + "))", PageHandler, {"path": self.ui_path, "default_filename": "index.html"})
+            page_handler = ("/(" + "|".join(pages) + ")", PageHandler, {"path": self.ui_path, "default_filename": default_page_filename})
             self.handlers.append(page_handler)
         super().initialize_handlers()
 
@@ -175,6 +216,17 @@ class BeakerJupyterApp(LabServerApp):
         # Override to allow cross domain websockets
         self.settings["allow_origin"] = "*"
         self.settings["disable_check_xsrf"] = True
+
+        beaker_app_slug = os.environ.get("BEAKER_APP", None)
+        if beaker_app_slug:
+            cls: type[BeakerApp] = import_dotted_class(beaker_app_slug)
+            beaker_app: BeakerApp = cls()
+            self.extension_config["app_cls"] = cls
+            self.extension_config["app"] = beaker_app
+        else:
+            self.extension_config["app_cls"] = None
+            self.extension_config["app"] = None
+
 
 
 if __name__ == "__main__":
