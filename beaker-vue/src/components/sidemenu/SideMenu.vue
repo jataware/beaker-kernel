@@ -24,7 +24,6 @@
                 <div v-if="!staticSize" class="sidemenu-gutter-handle"></div>
             </div>
         </div>
-        <div class="spacer"/>
     </div>
 </template>
 
@@ -153,7 +152,7 @@ const startDrag = (evt: MouseEvent) => {
     menuWidth = gutterRef.value.clientWidth + menuRef.value.clientWidth;
     closedWidth = menuWidth + MINIMIZE_INDICATION_WIDTH;
     minWidth = menuWidth + AUTO_CLOSE_MARGIN;
-    maxWidth = window.innerWidth * 0.70;
+    maxWidth = window.innerWidth * 0.70 - (props?.position === 'right' ? menuWidth : 0);
 };
 
 const moveDrag = (evt: MouseEvent) => {

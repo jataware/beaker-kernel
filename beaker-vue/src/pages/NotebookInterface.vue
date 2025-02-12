@@ -90,6 +90,19 @@
             </SideMenu>
         </template>
         <template #right-panel>
+            <SideMenu
+                position="right"
+                :show-label="true"
+                highlight="line"
+                :expanded="false"
+                initialWidth="25vi"
+            >
+                <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
+                    <PreviewPane :previewData="contextPreviewData"/>
+                </SideMenuPanel>
+                <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow :lazy="true">
+                </SideMenuPanel>
+            </SideMenu>
         </template>
         <PreviewPanel
             :url="previewedFile?.url"
@@ -122,6 +135,9 @@ import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
+
+// context preview
+import PreviewPane from '../components/misc/PreviewPane.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
@@ -171,7 +187,6 @@ const cellComponentMapping = {
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
-const previewData = ref<any>();
 const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
 const saveAsFilename = ref<string>(null);
@@ -180,6 +195,8 @@ const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
+
+const contextPreviewData = ref<any>();
 
 type FilePreview = {
     url: string,
@@ -244,7 +261,7 @@ watch(
 
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
-        previewData.value = msg.content;
+        contextPreviewData.value = msg.content;
     } else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,
