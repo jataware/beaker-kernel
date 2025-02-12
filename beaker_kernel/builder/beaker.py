@@ -73,7 +73,7 @@ class BeakerBuildHook(BuildHookInterface):
             mod = importlib.import_module(mod_str)
             cls = getattr(mod, class_name)
             if issubclass(cls, subclass) and cls is not subclass:
-                slug = getattr(cls, 'SLUG', None)
+                slug = getattr(cls, 'SLUG', None) or getattr(cls, 'slug', None)
                 if not slug:
                     continue
                 contexts[slug] = (mod_str, class_name)
