@@ -79,9 +79,24 @@ class BeakerKernel(KernelProxyManager):
         context_task = event_loop.create_task(self.start_default_context(**context_args))
         context_task.add_done_callback(lambda task: None)
 
-    async def start_default_context(self, default_context=None, default_context_payload=None):
+    async def start_default_context(self, default_context=None, default_context_payload=None, **options):
         default_context = default_context or os.environ.get('BEAKER_DEFAULT_CONTEXT')
         default_context_payload = default_context_payload or os.environ.get('BEAKER_DEFAULT_CONTEXT_PAYLOAD', "{}")
+
+        # Avoiding passing in optional args so defaults can be used
+        optional_args = {}
+        language = options.get("language", None) or os.environ.get('BEAKER_DEFAULT_CONTEXT_LANGUAGE', None)
+        if language:
+            optional_args["language"] = language
+
+        # Set context specific options
+        debug = options.get("debug", None) or os.environ.get('BEAKER_DEFAULT_CONTEXT_DEBUG', None)
+        verbose = options.get("verbose", None) or os.environ.get('BEAKER_DEFAULT_CONTEXT_VERBOSE', None)
+        if debug is not None:
+            self.debug_enabled = debug
+        if verbose is not None:
+            self.verbose = verbose
+
         if isinstance(default_context_payload, str):
             try:
                 default_context_payload = json.loads(default_context_payload)
@@ -95,7 +110,7 @@ class BeakerKernel(KernelProxyManager):
         if not default_context:
             default_context = "default"
             default_context_payload = {}
-        await self.set_context(default_context, default_context_payload)
+        await self.set_context(default_context, default_context_payload, **optional_args)
 
     def add_base_intercepts(self):
         """

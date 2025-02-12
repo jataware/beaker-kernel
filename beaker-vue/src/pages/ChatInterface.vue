@@ -135,7 +135,6 @@ const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerApp = inject<any>("beakerAppConfig");
-// beakerApp.setPageTitle("chat");
 beakerApp.setPage("chat");
 
 type FilePreview = {

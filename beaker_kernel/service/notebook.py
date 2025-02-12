@@ -38,10 +38,13 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
         beaker_app: BeakerApp = self.beaker_config.get("app", None)
         default_context = beaker_app and beaker_app._default_context
         if default_context:
+            app_context_dict = default_context.asdict()
             kwargs['context'] = {
-                "default_context": default_context.slug,
-                "default_context_payload": default_context.payload,
+                "default_context": app_context_dict.pop("slug"),
+                "default_context_payload": app_context_dict.pop("payload"),
             }
+            if app_context_dict:
+                kwargs["context"].update(**app_context_dict)
         return super().write_connection_file(
             server=self.parent.parent.public_url,
             **kwargs

@@ -7,7 +7,7 @@ import os
 import importlib
 import json
 import string
-from typing import Optional, ClassVar, TypedDict, TypeAlias, Any
+from typing import Optional, ClassVar, TypedDict, TypeAlias, Any, get_origin, get_args, Union
 from typing_extensions import Self, Required, NotRequired
 
 
@@ -225,9 +225,19 @@ class Context:
     slug: str
     payload: dict[str, Any] = field(default_factory=lambda: {})
     single_context: bool = False
+    language: Optional[str] = None
+    debug: Optional[bool] = None
+    verbose: Optional[bool] = None
 
     def asdict(self):
-        return asdict(self)
+        context_dict = {}
+        for key, value in asdict(self).items():
+            # Required fields
+            if key in ('slug', 'payload'):
+                context_dict[key] = value
+            elif value is not None:
+                context_dict[key] = value
+        return context_dict
 
 
 PageDict = TypedDict("PageDict", {
@@ -412,8 +422,9 @@ class BeakerApp:
             )
         if self.default_context:
             context = self.default_context.asdict() if isinstance(self.default_context, Context) else self.default_context
+            context = self.default_context if isinstance(self.default_context, Context) else Context(**self.default_context)
             output.append(
-                rf"""window.beaker_app.default_context = {json.dumps(context)};"""
+                rf"""window.beaker_app.default_context = {json.dumps(context.asdict())};"""
             )
         if self._assets:
             output.append(

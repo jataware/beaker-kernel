@@ -148,6 +148,9 @@ import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
 
 
+const beakerApp = inject<any>("beakerAppConfig");
+beakerApp.setPage("dev");
+
 const activeContext = ref();
 const beakerNotebookRef = ref();
 const beakerInterfaceRef = ref();

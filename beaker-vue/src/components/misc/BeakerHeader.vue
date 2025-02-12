@@ -5,7 +5,7 @@
                 :connection-status="beakerSession.status"
             />
             <Button
-                v-if="!(beakerApp?.config?.default_context?.single_context === true)"
+                v-if="showContextSelection"
                 outlined
                 size="small"
                 icon="pi pi-angle-down"
@@ -86,6 +86,7 @@ import Button from 'primevue/button';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { IBeakerTheme } from '../../plugins/theme';
 import SessionStatus from "../session/SessionStatus.vue";
+import { BeakerAppConfig } from "../../plugins/appconfig";
 
 export interface Props {
     title: string;
@@ -101,7 +102,7 @@ const emit = defineEmits(["selectKernel"]);
 
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-const beakerApp = inject<any>("beakerAppConfig");
+const beakerApp = inject<BeakerAppConfig>("beakerAppConfig");
 
 const navItems = computed(() => {
     if (props.nav) {
@@ -139,6 +140,19 @@ function selectKernel() {
 
 const loading = computed(() => {
     return !(beakerSession.activeContext?.slug);
+})
+
+const showContextSelection = computed(() => {
+    // Always show on dev page
+    if (beakerApp?.currentPage?.value === "dev") {
+        return true;
+    }
+    // Hide on non-dev pages single_context is set on the default context
+    if (beakerApp?.config?.default_context?.single_context === true) {
+        return false;
+    }
+    // Default to show
+    return true;
 })
 
 </script>

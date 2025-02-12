@@ -1,4 +1,4 @@
-import { Plugin, App, reactive, Component, computed,  } from 'vue';
+import { Plugin, App, reactive, ref, Ref, computed,  } from 'vue';
 
 // import { _, getAsset, hasAsset, hasTemplateValue, Asset } from '../util/whitelabel';
 
@@ -10,6 +10,12 @@ export interface Asset {
     };
 }
 
+export interface BeakerAppConfig {
+    config: {[key: string]: any},
+    setPageTitle: (page: string) => void,
+    setPage: (page: string) => void,
+    currentPage?: Ref<string>,
+}
 
 declare module 'vue' {
     interface ComponentCustomProperties {
@@ -30,12 +36,12 @@ export const BeakerAppConfigPlugin: Plugin = {
         }
         const templateValues = beakerAppConfig.templateStrings || {};
         const assetValues = beakerAppConfig.assets || {};
-        let currentPage: string|null = null;
+        const currentPage: Ref<string|null> = ref(null);
 
         const _ = (templateName: string, defaultValue?: string): string => {
             // First try to fetch from current page's settings, since they take priority.
-            if (currentPage) {
-                const page = beakerAppConfig.pages?.[currentPage]
+            if (currentPage.value) {
+                const page = beakerAppConfig.pages?.[currentPage.value];
                 const pageTemplateStrings = page?.template_strings;
                 const templateValue = pageTemplateStrings?.[templateName];
                 if (templateValue) {
@@ -79,7 +85,7 @@ export const BeakerAppConfigPlugin: Plugin = {
         };
 
         const setPage = (page: string) => {
-            currentPage = page;
+            currentPage.value = page;
             setPageTitle(page);
             const globalStyle = beakerAppConfig?.stylesheet;
             const pageStyle = beakerAppConfig?.pages?.[page]?.stylesheet;
@@ -109,11 +115,12 @@ export const BeakerAppConfigPlugin: Plugin = {
 
         }
 
-        app.config.globalProperties.$beakerAppConfig = <any>{
+        app.config.globalProperties.$beakerAppConfig = <BeakerAppConfig>{
             config: beakerAppConfig,
             setPageTitle,
             setPage,
-        }
+            currentPage,
+        };
         app.provide('beakerAppConfig', app.config.globalProperties.$beakerAppConfig);
     },
 }
