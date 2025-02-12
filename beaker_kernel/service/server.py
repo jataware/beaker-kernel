@@ -184,7 +184,7 @@ class BeakerJupyterApp(LabServerApp):
                 if beaker_app:
                     if page in beaker_app.pages:
                         pages.append(page)
-                        if beaker_app.pages[page].get("default", False):
+                        if beaker_app._pages[page].get("default", False):
                             default_page_filename = file
                 else:
                     pages.append(page)

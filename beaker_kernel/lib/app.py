@@ -160,11 +160,13 @@ class TemplateStringBundle(Mapping[str, TemplateString]):
             self._rendering = False
 
 
-def get_stylesheet_url(app: "BeakerApp", stylesheet: "Optional[str|TemplateString|BeakerAppAsset]" = None) -> str:
+def get_stylesheet_url(app: "BeakerApp", stylesheet: "Optional[str|TemplateString|BeakerAppAsset]" = None) -> str|None:
     if not stylesheet:
         stylesheet = app.stylesheet
     if isinstance(stylesheet, BeakerAppAsset):
         stylesheet = stylesheet.src
+    if stylesheet is None:
+        return None
     result = TemplateString(stylesheet).render(app._template_bundle)
     # Check if instead of a url, we end up with an asset slug. If so, return the url from the asset.
     if result in app._assets:

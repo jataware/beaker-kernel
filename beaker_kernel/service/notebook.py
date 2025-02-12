@@ -143,7 +143,7 @@ class BeakerNotebookApp(LabServerApp):
                 if beaker_app:
                     if page in beaker_app.pages:
                         pages.append(page)
-                        if getattr(beaker_app.pages[page], "default", False):
+                        if getattr(beaker_app._pages[page], "default", False):
                             default_page_filename = file
                 else:
                     pages.append(page)
