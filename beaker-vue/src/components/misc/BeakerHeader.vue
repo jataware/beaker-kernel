@@ -86,13 +86,13 @@ import Button from 'primevue/button';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { IBeakerTheme } from '../../plugins/theme';
 import SessionStatus from "../session/SessionStatus.vue";
-import { BeakerAppConfig } from "../../plugins/appconfig";
 
 export interface Props {
     title: string;
     titleExtra?: string;
     nav?: any[];
 }
+
 
 const props = withDefaults(defineProps<Props>(), {
     title: "Beaker",
@@ -102,7 +102,7 @@ const emit = defineEmits(["selectKernel"]);
 
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-const beakerApp = inject<BeakerAppConfig>("beakerAppConfig");
+const beakerApp = inject<any>("beakerAppConfig");
 
 const navItems = computed(() => {
     if (props.nav) {

@@ -1,6 +1,16 @@
 import { Plugin, App, reactive, ref, Ref, computed,  } from 'vue';
 
-// import { _, getAsset, hasAsset, hasTemplateValue, Asset } from '../util/whitelabel';
+declare module 'vue' {
+    interface ComponentCustomProperties {
+        $tmpl: {
+            _: (templateName: string, defaultValue?: string) => string,
+            hasTemplateValue: (templateName: string) => boolean,
+            getAsset: (assetName: string) => Asset,
+            hasAsset: (assetName: string) => boolean,
+        }
+    }
+}
+
 
 export interface Asset {
     slug: string;
@@ -15,17 +25,6 @@ export interface BeakerAppConfig {
     setPageTitle: (page: string) => void,
     setPage: (page: string) => void,
     currentPage?: Ref<string>,
-}
-
-declare module 'vue' {
-    interface ComponentCustomProperties {
-        $tmpl: {
-            _: (templateName: string, defaultValue?: string) => string,
-            hasTemplateValue: (templateName: string) => boolean,
-            getAsset: (assetName: string) => Asset,
-            hasAsset: (assetName: string) => boolean,
-        }
-    }
 }
 
 export const BeakerAppConfigPlugin: Plugin = {
