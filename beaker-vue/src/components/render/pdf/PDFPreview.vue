@@ -14,7 +14,6 @@
         }"
         :page="page"
         :scale="fixedZoomSteps[scaleIndex]"
-        :sidebarCallback="sidebarCallback"
     />
     <PDFPage 
         ref="pdf"
@@ -36,7 +35,6 @@ const clamp = (num, min, max) => num <= min ? min : num >= max ? max : num;
 
 const props = defineProps<{
     url: string 
-    sidebarCallback: () => void
 }>();
 
 const page = ref(1);

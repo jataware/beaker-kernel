@@ -81,7 +81,7 @@
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPane :previewData="contextPreviewData"/>
                 </SideMenuPanel>
-                <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow :lazy="true">
+                <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow>
                 </SideMenuPanel>
             </SideMenu>
         </template>
@@ -101,11 +101,6 @@
                  </SideMenu> -->
             <!-- </div> -->
     <!-- </div> -->
-        <PreviewPanel
-            :url="previewedFile?.url"
-            :mimetype="previewedFile?.mimetype"
-            v-model="previewVisible"
-        />
     </BaseInterface>
 </template>
 

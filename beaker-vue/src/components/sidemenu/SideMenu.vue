@@ -1,5 +1,10 @@
 <template>
-    <div class="sidemenu-container" :class="[position]" :style="{minWidth: (initialWidth && !maximized ? initialWidth : undefined)}" >
+    <div class="sidemenu-container" :class="[position]" 
+        :style="{
+            minWidth: position === 'left' 
+                ? (initialWidth && !maximized ? initialWidth : undefined)
+                : undefined}" 
+    >
         <div class="sidemenu" :class="[position, (minimizeIndicator ? 'minimize' : undefined)]" :style="containerStyle" ref="panelRef">
             <div class="sidemenu-menu-selection" :class="[position]" ref="menuRef">
                 <Button
@@ -152,7 +157,9 @@ const startDrag = (evt: MouseEvent) => {
     menuWidth = gutterRef.value.clientWidth + menuRef.value.clientWidth;
     closedWidth = menuWidth + MINIMIZE_INDICATION_WIDTH;
     minWidth = menuWidth + AUTO_CLOSE_MARGIN;
-    maxWidth = window.innerWidth * 0.70 - (props?.position === 'right' ? menuWidth : 0);
+    maxWidth = window.innerWidth 
+        * 0.70
+        - (props?.position === 'right' ? menuWidth : 0);
 };
 
 const moveDrag = (evt: MouseEvent) => {
@@ -315,6 +322,7 @@ defineExpose({
 }
 
 .sidemenu-menu-selection {
+    position: sticky;
     border: 1px solid var(--surface-border);
     grid-area: menu;
     background-color: var(--surface-b);

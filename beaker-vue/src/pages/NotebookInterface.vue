@@ -100,15 +100,15 @@
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPane :previewData="contextPreviewData"/>
                 </SideMenuPanel>
-                <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow :lazy="true">
+                <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow>
+                    <PreviewPanel
+                        :url="previewedFile?.url"
+                        :mimetype="previewedFile?.mimetype"
+                        v-model="previewVisible"
+                    />
                 </SideMenuPanel>
             </SideMenu>
         </template>
-        <PreviewPanel
-            :url="previewedFile?.url"
-            :mimetype="previewedFile?.mimetype"
-            v-model="previewVisible"
-        />
     </BaseInterface>
 </template>
 
@@ -125,7 +125,6 @@ import { atStartOfInput, atEndOfInput } from '../util'
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
-import Sidebar from 'primevue/sidebar';
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import InfoPanel from '../components/panels/InfoPanel.vue';
