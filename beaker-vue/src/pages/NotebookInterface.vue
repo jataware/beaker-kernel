@@ -107,6 +107,9 @@
                         v-model="previewVisible"
                     />
                 </SideMenuPanel>
+                <SideMenuPanel id="media" label="Media" icon="pi pi-file" no-overflow>
+                    <MediaPanel></MediaPanel>
+                </SideMenuPanel>
             </SideMenu>
         </template>
     </BaseInterface>
@@ -143,6 +146,7 @@ import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
+import MediaPanel from '../components/panels/MediaPanel.vue';
 
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
