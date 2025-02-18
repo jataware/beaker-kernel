@@ -67,9 +67,6 @@ import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 
 const session = inject<BeakerSession>('session');
 
-const props = defineProps(['dropdownValue'])
-const emit = defineEmits(['update:dropdownValue'])
-
 const currentOutputOneIndexed = ref(1);
 
 const filteredMimetypes = [
