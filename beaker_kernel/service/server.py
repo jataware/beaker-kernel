@@ -34,7 +34,7 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
 
     @property
     def beaker_config(self):
-        return self.parent.beaker_config
+        return getattr(self.parent, 'beaker_config')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -96,7 +96,7 @@ class BeakerKernelMappingManager(AsyncMappingKernelManager):
 
     @property
     def beaker_config(self):
-        return self.parent.beaker_config
+        return getattr(self.parent, 'beaker_config', None)
 
 
 class BeakerServerApp(ServerApp):
@@ -113,7 +113,7 @@ class BeakerServerApp(ServerApp):
 
     @property
     def beaker_config(self):
-        return self.starter_app.extension_config
+        return getattr(self.starter_app, 'extension_config', None)
 
     @property
     def public_url(self):
@@ -184,7 +184,7 @@ class BeakerJupyterApp(LabServerApp):
                 if beaker_app:
                     if page in beaker_app.pages:
                         pages.append(page)
-                        if beaker_app._pages[page].get("default", False):
+                        if getattr(beaker_app._pages[page], "default", False):
                             default_page_filename = file
                 else:
                     pages.append(page)
