@@ -1,10 +1,5 @@
 <template>
-    <div class="sidemenu-container" :class="[position]" 
-        :style="{
-            minWidth: position === 'left' 
-                ? (initialWidth && !maximized ? initialWidth : undefined)
-                : undefined}" 
-    >
+    <div class="sidemenu-container" :class="[position]">
         <div class="sidemenu" :class="[position, (minimizeIndicator ? 'minimize' : undefined)]" :style="containerStyle" ref="panelRef">
             <div class="sidemenu-menu-selection" :class="[position]" ref="menuRef">
                 <Button
@@ -33,7 +28,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, defineProps, defineExpose, computed, defineEmits, useSlots, isVNode, nextTick, withDefaults, onBeforeMount, onUnmounted, onMounted } from "vue";
+import { ref, defineProps, defineExpose, watch, computed, defineEmits, getCurrentInstance, useSlots, isVNode, nextTick, withDefaults, onUnmounted, onMounted } from "vue";
 
 import Button from 'primevue/button';
 import SideMenuPanel from "./SideMenuPanel.vue";
@@ -42,7 +37,7 @@ export type MenuPosition = "right" | "left";
 export type HighlightType = "full" | "shadow" | "line";
 
 export interface Props {
-    style?: any;
+    style?: {[key: string]: string};
     expanded?: boolean,
     position?: MenuPosition;
     highlight?: HighlightType;
@@ -55,7 +50,7 @@ export interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    style: {},
+    style: () => {return {}},
     expanded: true,
     highlight: "full",
     position: "right",
@@ -70,10 +65,11 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits([
     "panel-hide",
     "panel-show",
+    "resize",
 ]);
 
 const AUTO_CLOSE_MARGIN = 50;
-const MINIMIZE_INDICATION_WIDTH = 4;
+const MINIMIZE_INDICATION_WIDTH = 8;
 
 const slots = useSlots();
 
@@ -92,20 +88,15 @@ const gutterRef = ref(null);
 const minimizeIndicator = ref<boolean>(false);
 const resizeObserver = ref<ResizeObserver>();
 const resizeHistory = ref<DOMRectReadOnly>();
-
-// const minWidth = () => {
-//     return gutterRef.value.clientWidth + menuRef.value.clientWidth + AUTO_CLOSE_MARGIN;
-
-// }
+const instance = getCurrentInstance();
 
 var minWidth: number;
-var maxWidth: number;
 var menuWidth: number;
 var closedWidth: number;
 
 const expanded = computed(() => {
-    const res = selectedTabIndex.value > -1;
-    return res
+    const optionSelected = selectedTabIndex.value > -1;
+    return optionSelected
 });
 
 const panels = computed(() => {
@@ -118,9 +109,25 @@ const isStatic = computed(() => (props.staticSize || (expanded.value && panelWid
 
 const containerStyle = computed(() => {
     if (expanded.value) {
+        var width: string;
+        if (panelWidth.value !== null) {
+            width = `${panelWidth.value}px`;
+        }
+        else if (props.maximized) {
+            width = props.initialWidth;
+        }
+        else {
+            const currWidth = (instance?.vnode?.el as HTMLDivElement)?.clientWidth;
+            if (currWidth) {
+                width = `${currWidth}px`;
+            }
+            else {
+                width = props.initialWidth;
+            }
+        }
         return {
             ...props.style,
-            width: (panelWidth.value !== null ? `${panelWidth.value}px` : props.initialWidth)
+            width: width,
         };
     }
     else {
@@ -128,6 +135,16 @@ const containerStyle = computed(() => {
             ...props.style,
         };
     }
+});
+
+watch(expanded, () => {
+    nextTick(() => {
+        const offsetParent = instance.vnode.el.offsetParent;
+        const backoff = offsetParent.scrollWidth - offsetParent.offsetWidth;
+        if (backoff > 0) {
+            panelWidth.value -= backoff;
+        }
+    });
 });
 
 const toolTipArgs = computed(() => {
@@ -154,12 +171,9 @@ const startDrag = (evt: MouseEvent) => {
 
     dragStartPos.value = evt.x;
     dragStartWidth.value = panelWidth.value || panelRef.value.clientWidth;
-    menuWidth = gutterRef.value.clientWidth + menuRef.value.clientWidth;
+    menuWidth = menuRef.value.clientWidth;
     closedWidth = menuWidth + MINIMIZE_INDICATION_WIDTH;
     minWidth = menuWidth + AUTO_CLOSE_MARGIN;
-    maxWidth = window.innerWidth 
-        * 0.70
-        - (props?.position === 'right' ? menuWidth : 0);
 };
 
 const moveDrag = (evt: MouseEvent) => {
@@ -184,24 +198,25 @@ const moveDrag = (evt: MouseEvent) => {
     else {
         minimizeIndicator.value = false;
     }
-    if (width >= maxWidth) {
-        resize = false;
-        if (panelWidth.value != maxWidth) {
-            width = maxWidth
-            resize = true;
-        }
-    }
 
     if (resize) {
         panelWidth.value = width;
     }
 
-
+    nextTick(() => {
+        const offsetParent = instance.vnode.el.offsetParent;
+        const backoff = offsetParent.scrollWidth - offsetParent.offsetWidth;
+        if (backoff > 0) {
+            panelWidth.value -= backoff;
+        }
+    });
 }
 
 const endDrag = (evt: MouseEvent) => {
     document.removeEventListener("mousemove", moveDrag);
     document.removeEventListener("mouseup", endDrag);
+    // Normalize position to closes full pixel. Prevent display errors for partial pixel sizes.
+    panelWidth.value = Math.round(panelWidth.value);
     // If dragged closed, assume they want the panel to be hidden
     if (panelWidth.value <= minWidth) {
         selectedTabIndex.value = -1;
@@ -285,6 +300,8 @@ defineExpose({
 
 .spacer {
     grid-area: spacer;
+    flex-grow: 1;
+    flex-shrink: 1000;
 }
 
 .sidemenu {
@@ -296,20 +313,37 @@ defineExpose({
 
     &.right {
         grid:
-            "handle content menu" 100% /
-            max-content minmax(0px, 1fr) max-content;
+            "gutter content menu" 100% /
+            4px minmax(0px, 1fr) max-content;
+
+        .sidemenu-panel-container {
+            margin-left: 6px;
+        }
     }
 
     &.left {
         grid:
-            "menu content handle" 100% /
-            max-content minmax(0px, 1fr) max-content;
+            "menu content gutter" 100% /
+            max-content minmax(0px, 1fr) 4px;
+
+        .sidemenu-panel-container {
+            margin-right: 6px;
+        }
     }
 
     &.minimize {
         .sidemenu-gutter {
             width: 8px;
             background-color: var(--primary-color);
+            .sidemenu-gutter-handle {
+                right: -4px;
+            }
+
+        }
+        .sidemenu-panel-container, .side-panel {
+            width: 0;
+            overflow: hidden;
+            margin: 0;
         }
     }
 }
@@ -319,6 +353,7 @@ defineExpose({
     box-sizing: border-box;
     height: 100%;
     width: 100%;
+    overflow: hidden;
 }
 
 .sidemenu-menu-selection {
@@ -328,16 +363,16 @@ defineExpose({
     background-color: var(--surface-b);
     display: flex;
     flex-direction: column;
-    width: 100%;
 }
 
 .sidemenu-gutter {
-    grid-area: handle;
-    width: 4px;
-    display: flex;
+    grid-area: gutter;
+    position: relative;
+    display: grid;
     flex-direction: row;
     align-items: center;
     background-color: var(--surface-border);
+    z-index: 40;
 
     &:hover {
         cursor: col-resize;
@@ -345,23 +380,22 @@ defineExpose({
 }
 
 .sidemenu-gutter-handle {
-    position: relative;
-    width: 8px;
+    display: flex;
+    position: absolute;
+    right: -6px;
+    width: 14px;
     z-index: 100;
     height: 3rem;
     background-color: var(--surface-400);
-    display: flex;
     justify-content: space-around;
     align-items: center;
     overflow: clip;
     border: 1px outset var(--surface-500);
-    right: 2px;
 
     &:before {
         filter: blur(0.75px);
         color: var(--surface-50);
-        writing-mode: vertical-rl;
-        text-orientation: sideways-right;
+        writing-mode: sideways-lr;
         letter-spacing: -1px;
         content: "▮▮▮▮▮▮";
         position: relative;
@@ -374,6 +408,7 @@ button.menu-button {
     background-color: transparent;
     color: var(--primary-800);
     border-color: transparent;
+    aspect-ratio: 1;
 
     &.show-label {
         padding: .75rem .5rem;

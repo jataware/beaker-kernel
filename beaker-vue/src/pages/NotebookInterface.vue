@@ -32,7 +32,7 @@
 
                     <template #end-extra>
                         <Button
-                            @click="isMaximized = !isMaximized;"
+                            @click="isMaximized = !isMaximized; beakerInterfaceRef.setMaximized(isMaximized);"
                             :icon="`pi ${isMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`"
                             size="small"
                             text
@@ -55,7 +55,6 @@
                     class="agent-query-container"
                 />
             </BeakerNotebook>
-            <div v-if="!isMaximized" class="spacer right"></div>
         </div>
 
         <template #left-panel>
@@ -64,7 +63,7 @@
                 position="left"
                 :show-label="true"
                 highlight="line"
-                :expanded="false"
+                :expanded="true"
                 initialWidth="25vi"
                 :maximized="isMaximized"
             >
@@ -94,8 +93,9 @@
                 position="right"
                 :show-label="true"
                 highlight="line"
-                :expanded="false"
+                :expanded="true"
                 initialWidth="25vi"
+                :maximized="isMaximized"
             >
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPane :previewData="contextPreviewData"/>
@@ -116,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
+import { defineProps, ref, defineEmits, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
 import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel/src';
 import { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
 import { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
