@@ -13,6 +13,7 @@
                 :is="renderedBundle[selectedMimeType].component"
                 v-bind="renderedBundle[selectedMimeType].bindMapping"
                 :class="`rendered-output ${selectedMimeType.replace('/', '-')}`"
+                ref="bundleRef"
             />
         </div>
     </div>
@@ -20,10 +21,12 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, inject, computed } from "vue";
+import { ref, defineProps, inject, computed, watch } from "vue";
 import SelectButton from "primevue/selectbutton";
 import { BeakerSession } from "beaker-kernel/src";
 import { BeakerRenderOutput } from "../../renderers";
+
+const bundleRef = ref();
 
 const props = defineProps([
     "mimeBundle",
@@ -45,6 +48,28 @@ const sortedMimetypes = computed(() => {
 });
 
 const selectedMimeType = ref<string>(sortedMimetypes.value[0]);
+
+watch(bundleRef, async (newBundle, oldBundle) => {
+    const element = newBundle?.$el;
+    if (element === undefined || element?.children?.length === 0) {
+        return;
+    }
+    const firstChild = newBundle.$el?.children[0];
+    const scripts = firstChild.getElementsByTagName('script');
+    if (scripts.length === 0) {
+        return;
+    }
+    
+    const scriptBody = scripts[0].text;
+    const search = 'document.currentScript.previousElementSibling';
+    const replacement = '{id: undefined}';
+    const modifiedScript = scriptBody.split('\n')
+        .map(line => line.includes(search) ? line.replace(search, replacement) : line)
+        .join('\n');
+    console.log(modifiedScript);
+    
+    eval(modifiedScript);
+});
 
 </script>
 
