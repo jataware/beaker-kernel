@@ -23,12 +23,14 @@
                 :legend="name.toString()"
                 :toggleable="true"
             >
-                <div 
-                    v-html="item['text/html']" 
-                    v-if="item && item['text/html'] !== undefined"
-                    class="code-cell-output preview-container-table-wrapper"  
+                <BeakerMimeBundle 
+                    class="
+                        contextpreview-mime-bundle 
+                        code-cell-output 
+                        preview-container-table-wrapper
+                    " 
+                    :mimeBundle="item"
                 />
-                <MimeBundle v-else class="contextpreview-mime-bundle" :mimeBundle="item"/>
             </Fieldset>
         </AccordionTab>
     </Accordion>
@@ -40,7 +42,7 @@ import { defineProps } from "vue";
 import Accordion from 'primevue/accordion';
 import AccordionTab from 'primevue/accordiontab';
 import Fieldset from "primevue/fieldset";
-import MimeBundle from "../render/BeakerMimeBundle.vue";
+import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 
 const props = defineProps<{
     previewData: {[key: string]: {[key: string]: {[key: string]: any}}}
