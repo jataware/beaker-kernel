@@ -223,7 +223,7 @@ export async function saveConfig(beakerSession, schema: ISchema, inputModel, con
 <style lang="scss">
 
 .config-panel {
-    padding: 0.5rem 0.5rem 1rem 1rem;
+    padding: 1rem;
 }
 
 .config-panel-container {

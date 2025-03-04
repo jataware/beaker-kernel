@@ -3,15 +3,6 @@
         <Toolbar>
             <template #start>
                 <Button 
-                    class="pdf-ui-button pdf-ui-close" 
-                    icon="pi pi-times" 
-                    @click="sidebarCallback"
-                    severity="danger"
-                />
-            </template>
-
-            <template #center>
-                <Button 
                     class="pdf-ui-button" 
                     icon="pi pi-chevron-left" 
                     @click="emit('pdf-page-prev')"
@@ -31,7 +22,7 @@
                 </InputGroup>
             </template>
 
-            <template #end> 
+            <template #center> 
                 <Button 
                     class="pdf-ui-button" 
                     icon="pi pi-search-minus" 

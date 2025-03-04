@@ -125,18 +125,20 @@ export function wrapJupyterRenderer(jupyterRenderer: IMimeRenderer<HTMLElement>)
             const rawHtmlElement: HTMLElement = jupyterRenderer.render(mimeType, data, metadata);
             return {
                 component: defineComponent(
-                    (props) => {
+                    () => {
                         return () => {
-                          return h('div', {innerHTML: props.html});
+                            return h(
+                                'div',
+                                {
+                                    onVnodeBeforeMount: (vnode) => {
+                                        vnode.el.appendChild(rawHtmlElement);
+                                    },
+                                }
+                            );
                         }
-                      },
-                      {
-                        props: ["html"]
-                      }
+                    },
                 ),
-                bindMapping: {
-                    'html': rawHtmlElement.outerHTML,
-                }
+                bindMapping: {}
             }
 
         }

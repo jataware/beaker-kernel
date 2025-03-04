@@ -1,109 +1,88 @@
 <template>
-    <Sidebar 
-        v-model:visible="visible" 
-        position="right" 
-        :style="`width: ${width}px; overflow:auto;`"
-        :modal="false"
-        :dismissable="false"
-        ref="sidebar"
-    >
-        <template #container="{ closeCallback }">
-            <div class="preview-container-pre">
-                <div 
-                    class="preview-draggable" 
-                    :style="`width: ${dragWidth}px;`"
-                    @mousedown.left.prevent="hookResize()"
-                />
-                <div 
-                    class="preview-container-main"
-                     :style="`max-width: calc(100% - ${dragWidth}px);`"
-                >   
-                    <div class="preview-standard-toolbar" v-if="!mimetypeConfig[mime]?.overridesToolbar">
-                        <Toolbar>
-                            <template #start>
-                                <Button 
-                                    class="preview-close" 
-                                    icon="pi pi-times" 
-                                    @click="closeCallback"
-                                    severity="danger"
-                                />
-                            </template>
-                            <template #center>
-                                <span>{{ shortname }}</span>
-                            </template>
-                            <template #end>
-                                <Button 
-                                    v-if="mimetypeConfig[mime]?.hasRawToggle"
-                                    class="preview-raw" 
-                                    @click="isRaw = !isRaw"
-                                    :label="!isRaw ? 'Raw View' : 'Rich View'"
-                                />
-                            </template>
-                        </Toolbar>
+    <div class="preview-container-pre">
+        <div 
+            class="preview-draggable" 
+            :style="`width: ${dragWidth}px;`"
+            @mousedown.left.prevent="hookResize()"
+        />
+        <div 
+            class="preview-container-main"
+                :style="`max-width: calc(100% - ${dragWidth}px);`"
+        >   
+            <div class="preview-standard-toolbar" v-if="!mimetypeConfig[mime]?.overridesToolbar">
+                <Toolbar>
+                    <template #center>
+                        <span>{{ shortname }}</span>
+                    </template>
+                    <template #end>
+                        <Button 
+                            v-if="mimetypeConfig[mime]?.hasRawToggle"
+                            class="preview-raw" 
+                            @click="isRaw = !isRaw"
+                            :label="!isRaw ? 'Raw View' : 'Rich View'"
+                        />
+                    </template>
+                </Toolbar>
+            </div>
+            <div class="preview-under-toolbar">
+                <div v-if="showPreviewInterrupt && contents.isLoading">
+                    <Button 
+                        class="preview-cancel" 
+                        @click="previewAborter.abort()"
+                        severity="danger"
+                        label="Cancel Preview"
+                    />
+                    <span>File is {{ contents.contentLength / 1000000 }} MB</span>
+                </div>
+                <div class="preview-payload"
+                    v-if="!contents.isLoading"
+                >
+                    <div class="pdf-preview" v-if="mimeCategory(mime) === 'pdf'">
+                        <PDFPreview ref="pdfPreviewRef" :url="url"/>
                     </div>
-                    <div class="preview-under-toolbar">
-                        <div v-if="showPreviewInterrupt && contents.isLoading">
-                            <Button 
-                                class="preview-cancel" 
-                                @click="previewAborter.abort()"
-                                severity="danger"
-                                label="Cancel Preview"
-                            />
-                            <span>File is {{ contents.contentLength / 1000000 }} MB</span>
-                        </div>
-                        <div class="preview-payload"
-                            v-if="!contents.isLoading"
-                        >
-                            <div class="pdf-preview" v-if="mimeCategory(mime) === 'pdf'">
-                                <PDFPreview ref="pdfPreviewRef" :url="url" :sidebarCallback="closeCallback"/>
-                            </div>
-                            <div class="text-preview" v-if="mimeCategory(mime) === 'plaintext'">
-                                <CodeEditor 
-                                    :readonly="true"
-                                    display-mode="dark"
-                                    :modelValue="contentsWrapper"
-                                    ref="codeEditorRef"
-                                    placeholder="Loading..."
-                                    :language="mime === 'text/x-python' ? 'python' : undefined"
-                                />
-                            </div>
-                            <div class="image-preview" v-if="mimeCategory(mime) === 'image'">
-                                <img :src="url"/>
-                            </div>
-                            <div class="csv-preview" v-if="
-                                ['csv', 'tsv', 'excel'].includes(mimeCategory(mime))
-                            ">
-                                <BeakerMimeBundle 
-                                    v-if="(!isRaw && !contents.isLoading)"
-                                    :mimeBundle="{[mime]: contentsWrapper}"
-                                />
-                                <CodeEditor 
-                                    v-if="isRaw"
-                                    display-mode="dark"
-                                    :modelValue="contentsWrapper"
-                                    ref="codeEditorRef"
-                                    placeholder="Loading..."
-                                />
-                            </div>
-                        </div>
+                    <div class="text-preview" v-if="mimeCategory(mime) === 'plaintext'">
+                        <CodeEditor 
+                            :readonly="true"
+                            display-mode="dark"
+                            :modelValue="contentsWrapper"
+                            ref="codeEditorRef"
+                            placeholder="Loading..."
+                            :language="mime === 'text/x-python' ? 'python' : undefined"
+                        />
+                    </div>
+                    <div class="image-preview" v-if="mimeCategory(mime) === 'image'">
+                        <img :src="url"/>
+                    </div>
+                    <div class="csv-preview" v-if="
+                        ['csv', 'tsv', 'excel'].includes(mimeCategory(mime))
+                    ">
+                        <BeakerMimeBundle 
+                            v-if="(!isRaw && !contents.isLoading)"
+                            :mimeBundle="{[mime]: contentsWrapper}"
+                        />
+                        <CodeEditor 
+                            v-if="isRaw"
+                            display-mode="dark"
+                            :modelValue="contentsWrapper"
+                            ref="codeEditorRef"
+                            placeholder="Loading..."
+                        />
                     </div>
                 </div>
             </div>
-        </template>
-    </Sidebar>
+        </div>
+    </div>
 </template>
   
 <script lang="ts" setup>
 import { ref, defineProps, watch, computed, defineModel, reactive } from "vue";
 
 import PDFPreview from "../render/pdf/PDFPreview.vue";
-import Sidebar from "primevue/sidebar";
 import Toolbar from "primevue/toolbar";
 import Button from "primevue/button";
 import CodeEditor from "../misc/CodeEditor.vue";
 import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 
-const sidebar = ref();
 const codeEditorRef = ref();
 const pdfPreviewRef = ref();
 
@@ -210,8 +189,6 @@ const props = defineProps([
     'mimetype'
 ])
 
-const visible = defineModel<boolean>();
-
 const mime = computed(() => props.mimetype ?? fallbackMime.value ?? '')
 
 const previewAborter = ref<AbortController>();
@@ -250,6 +227,9 @@ watch(() => [contentsWrapper.value], (current, old) => {
 
 const shortname = computed(() => {
     const parts = props.url?.split('/');
+    if (parts === undefined) {
+        return 'No file selected.'
+    }
     return parts.length > 0 ? parts[parts.length - 1] : "";
 });
 

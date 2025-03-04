@@ -35,17 +35,6 @@
     <DataTable :value="files" size="small" stripedRows class="file-table" removableSort
                @row-dblclick="doubleClick" resizableColumns columnResizeMode="fit" rowHover :loading="tableLoading"
                @dragover="fileDragOver" @drop="fileDrop"
-               @row-click="({data}) => {
-                  if (data.type !== 'directory') {
-                    if (data.size >= largeFileWarningSize) {
-                      largeFileSizeUILabel = `approximately ${Math.floor(data.size / 1000000)} MB`;
-                      showLargeFilePreview(() =>
-                        previewFile(data.path, data.mimetype));
-                      return;
-                    }
-                    previewFile(data.path, data.mimetype)
-                  }
-                }"
                >
         <Column header="" class="download-column">
           <template #header>
@@ -223,12 +212,15 @@ const doubleClick = ({data}) => {
     }
   }
   else {
-    showToast({
-      title: 'Unable to handle file',
-      detail: 'Unable to handle this file. Please choose a different file.',
-      severity: 'warning',
-      life: 2500,
-    })
+    if (data.type !== 'directory') {
+      if (data.size >= largeFileWarningSize) {
+        largeFileSizeUILabel.value = `approximately ${Math.floor(data.size / 1000000)} MB`;
+        showLargeFilePreview(() =>
+          previewFile(data.path, data.mimetype));
+        return;
+      }
+      previewFile(data.path, data.mimetype)
+    }
   }
 }
 
