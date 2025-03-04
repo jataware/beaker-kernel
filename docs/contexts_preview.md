@@ -16,7 +16,133 @@ items needing preview.
 
 ## Adding a preview to your context
 
-Add a generate_preview() function!
+Add a generate_preview() function! You can show data types or specific variables as they are with `display()`, or for more custom visualization logic, add more plotting and figures through whatever library you choose.
+
+Matplotlib example:
+
+```python
+    async def generate_preview(self):
+        """
+        Preview what exists in the subkernel.
+        """
+        # Change the code here to fit your desired preview logic.
+        # Make sure to wrap it in a try/except block! 
+        user_plotting_code = r'''
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+try:
+    # Show the dataframe itself first to map to 'Raw Data' below
+    display(context_var)          
+    plt.figure(figsize=(10, 6))
+    plt.plot(context_var.mean(), marker='o', linestyle='-', color='blue')
+    plt.title('Mean Values Across Columns')
+    plt.xlabel('Column Index')
+    plt.ylabel('Mean Value')
+    plt.grid(True)
+    # Show the column means second
+    plt.show()
+except Exception as e:
+    pass
+'''
+        # Names in order of figures to show the user in Beaker's interface, handled
+        # in the logic below.
+        plot_names = [
+            "Raw Data",
+            "Column Mean"
+        ]
+
+        #
+        # Internal preview handling - collect all figures and map them to names.
+        #
+        result = await self.evaluate(user_plotting_code)
+        plots = result.get('display_data_list', None)
+        collected_plots = {
+            (plot_names[i:i+1] or [i])[0]: plots[i] 
+            for i in range(len(plots))
+        }
+        if len(plots) > 0:
+            return {
+                'Preview': collected_plots
+            }
+```
+
+Vega-Altair example -- plots an interactive bar chart around the variable `source`:
+
+(assuming `source` would later be defined in the notebook in the shape of   
+```python
+source = {
+    "values": [
+        {"a": "A", "b": 28},
+        {"a": "B", "b": 55},
+        {"a": "C", "b": 43},
+        {"a": "D", "b": 91},
+        {"a": "E", "b": 81},
+        {"a": "F", "b": 53},
+        {"a": "G", "b": 19},
+        {"a": "H", "b": 87},
+        {"a": "I", "b": 52},
+    ]
+}
+```  
+)
+
+as per https://altair-viz.github.io/gallery/interactive_bar_select_highlight.html
+
+```python
+    async def generate_preview(self):
+        """
+        Preview what exists in the subkernel.
+        """
+        # Change the code here to fit your desired preview logic.
+        # Make sure to wrap it in a try/except block! 
+        user_plotting_code = '''
+try:
+    import altair as alt
+    
+    select = alt.selection_point(name="select", on="click")
+    highlight = alt.selection_point(name="highlight", on="pointerover", empty=False)
+    stroke_width = (
+        alt.when(select).then(alt.value(2, empty=False))
+        .when(highlight).then(alt.value(1))
+        .otherwise(alt.value(0))
+    )
+                                     
+    alt.Chart(source, height=200).mark_bar(
+        fill="#4C78A8", stroke="black", cursor="pointer"
+    ).encode(
+        x="a:O",
+        y="b:Q",
+        fillOpacity=alt.when(select).then(alt.value(1)).otherwise(alt.value(0.3)),
+        strokeWidth=stroke_width,
+    ).configure_scale(bandPaddingInner=0.2).add_params(select, highlight).show()
+except Exception as e:
+    pass
+'''
+        # Names in order of figures to show the user in Beaker's interface, handled
+        # in the logic below.
+        plot_names = [
+            "Interactive Vega Plot"
+        ]
+
+        #
+        # Internal preview handling - collect all figures and map them to names.
+        #
+        result = await self.evaluate(user_plotting_code)
+        plots = result.get('display_data_list', None)
+        collected_plots = {
+            (plot_names[i:i+1] or [i])[0]: plots[i] 
+            for i in range(len(plots))
+        }
+        if len(plots) > 0:
+            return {
+                'Preview': collected_plots
+            }
+```
+
+
+For a good starting point, changing anything above the "Internal preview handling" section should be good enough for an arbitrary number of custom plots and dataframes!
 
 ## Format of a preview payload
 

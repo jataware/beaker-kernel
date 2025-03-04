@@ -1,14 +1,36 @@
 <template>
-    <Accordion v-if="props.previewData" multiple :activeIndex="[0]">
-        <AccordionTab v-for="(itemMap, previewType) in props.previewData" :key="previewType" :header="previewType.toString()">
+    <Accordion 
+        v-if="props.previewData" 
+        multiple 
+        :activeIndex="[...Array(props.previewData.length).keys()]"
+        class="preview-accordion"
+    >
+        <AccordionTab 
+            v-for="(itemMap, previewType) in props.previewData" 
+            :key="previewType" 
+            :header="previewType.toString()"
+            class="preview-accordion-tab"
+        >
             <Fieldset
                 class="preview-container"
-                v-for="(item, name) in itemMap"
+                v-for="(item, name) in Object.fromEntries(
+                    Object.entries(itemMap).map(([_name, _item]) => {
+                        const {'text/plain': _, ...significantBundle} = _item;
+                        return [_name, significantBundle];
+                    })
+                )"
                 :key="name"
                 :legend="name.toString()"
                 :toggleable="true"
             >
-                <MimeBundle :mimeBundle="item"/>
+                <BeakerMimeBundle 
+                    class="
+                        contextpreview-mime-bundle 
+                        code-cell-output 
+                        preview-container-table-wrapper
+                    " 
+                    :mimeBundle="item"
+                />
             </Fieldset>
         </AccordionTab>
     </Accordion>
@@ -20,7 +42,7 @@ import { defineProps } from "vue";
 import Accordion from 'primevue/accordion';
 import AccordionTab from 'primevue/accordiontab';
 import Fieldset from "primevue/fieldset";
-import MimeBundle from "../render/BeakerMimeBundle.vue";
+import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 
 const props = defineProps<{
     previewData: {[key: string]: {[key: string]: {[key: string]: any}}}
@@ -69,6 +91,37 @@ const props = defineProps<{
 
     pre {
         white-space: pre-wrap;
+    }
+
+    overflow: auto;
+    width: 100%;
+    height: 100%;
+}
+
+.contextpreview-mime-bundle  {
+    overflow: auto;
+    height: 100%;
+    > .mime-select-container {
+        display: none;
+    }
+    > .mime-payload img {
+        width: 100%;
+    }
+}
+
+div.preview-container-table-wrapper {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    overflow: auto;
+    white-space: normal;
+}
+
+.preview-accordion {
+    div.p-accordion-content {
+        padding: 1.25rem 0.3rem 1.25rem 0rem;
+        .p-fieldset-content {
+            padding: 1.25rem 0 1.25rem 0;
+        }
     }
 }
 </style>
