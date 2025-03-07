@@ -189,6 +189,36 @@ class LLM_Service_Provider:
         sensitive=True,
         save_default_value=True,
     )
+    region: str = configfield(
+        description="Region for the provider.",
+        default="",
+        sensitive=False,
+        save_default_value=False,
+    )
+    endpoint: str = configfield(
+        description="Endpoint URL for providers that support multiple API endpoints.",
+        default="",
+        sensitive=False,
+        save_default_value=False,
+    )
+    aws_access_key: str = configfield(
+        description="AWS Bedrock: access key",
+        default="",
+        sensitive=True,
+        save_default_value=False,
+    )
+    aws_secret_key: str = configfield(
+        description="AWS Bedrock: secret key",
+        default="",
+        sensitive=True,
+        save_default_value=False,
+    )
+    aws_session_token: str = configfield(
+        description="AWS Bedrock: session token",
+        default="",
+        sensitive=True,
+        save_default_value=False,
+    )
 
     @classmethod
     def default_value(cls):
@@ -281,6 +311,18 @@ boolean value which will enable/disable the tool based on the value.",
                 "import_path": "archytas.models.ollama.OllamaModel",
                 "default_model_name": "mistral-nemo",
                 "api_key": ""
+            },
+            "bedrock": {
+                "import_path": "archytas.models.bedrock.BedrockModel",
+                "default_model_name": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "api_key": "unused, see AWS specific keys",
+
+            },
+            "azure_openai": {
+                "import_path": "archytas.models.azure.Azure",
+                "default_model_name": "",
+                "api_key": "",
+                "endpoint": "",
             },
         },
     )
