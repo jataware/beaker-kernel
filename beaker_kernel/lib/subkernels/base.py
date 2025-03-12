@@ -1,7 +1,7 @@
 import abc
 import asyncio
 import json
-from typing import Any, Callable
+from typing import Any, Callable, TYPE_CHECKING
 import hashlib
 import shutil
 from tempfile import mkdtemp
@@ -16,6 +16,10 @@ from ..jupyter_kernel_proxy import ProxyKernelClient
 from ..config import config
 from ..context import BeakerContext
 
+if TYPE_CHECKING:
+    from langchain_core.messages import ToolMessage, AIMessage, BaseMessage, ToolCall
+    from archytas.agent import Agent
+
 Checkpoint = dict[str, str]
 
 
@@ -26,7 +30,68 @@ class JsonStateEncoder(json.JSONEncoder):
 import logging
 logger = logging.getLogger(__name__)
 
-@tool()
+
+def run_code_summarizer(message: "ToolMessage", all_messages: "list[BaseMessage]", agent: "Agent"):
+    from langchain_core.messages import AIMessage
+    size_threshold = 800
+    excision_text_template = "...skipping {} characters..."
+    split_percentage = 0.7
+    text = message.text()
+    message_len = len(text)
+    tool_call, calling_message = next(
+        (
+            (tc, msg)
+            for msg in all_messages
+            if isinstance(msg, AIMessage)
+            for tc in msg.tool_calls
+            if message.tool_call_id == tc.get("id")
+        ),
+        (None, None)
+    )
+    code = tool_call.get("args", {}).get("code", "")
+    code_len = len(code)
+
+    if message_len > size_threshold:
+        message_excision_label_len = len(excision_text_template) - 2 + len(str(message_len - size_threshold))
+        message_excision_text = excision_text_template.format(message_len - size_threshold + message_excision_label_len)
+        message_excision_start = int(size_threshold * split_percentage)
+        message_excision_end = message_len - (size_threshold - message_excision_start - len(message_excision_text))
+
+        message.additional_kwargs["orig_content"] = message.content
+        message.content = "".join([
+            text[:message_excision_start],
+            message_excision_text,
+            text[message_excision_end:],
+        ])
+    if code_len > size_threshold:
+        code_excision_label_len = len(excision_text_template) - 2 + len(str(code_len - size_threshold))
+        code_excision_text = excision_text_template.format(code_len - size_threshold + code_excision_label_len)
+        code_excision_start = int(size_threshold * split_percentage)
+        code_excision_end = code_len - (size_threshold - code_excision_start - len(code_excision_text))
+
+        message.additional_kwargs["orig_code"] = code
+        tool_call["_orig_code"] = code
+        shortened_code = "".join([
+            code[:code_excision_start],
+            code_excision_text,
+            code[code_excision_end:],
+        ])
+
+        tool_call["args"]["code"] = shortened_code
+
+        if isinstance(calling_message.content, list):
+            for content in calling_message.content:
+                if (
+                    isinstance(content, dict)
+                    and content.get("type", None) == "tool_use"
+                    and content.get("id", None) == message.tool_call_id
+                ):
+                    code_input = content.get("input", None)
+                    if isinstance(code_input, dict) and "code" in code_input:
+                        content["input"]["code"] = shortened_code
+
+
+@tool(autosummarize=True, summarizer=run_code_summarizer)
 async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
     """
     Executes code in the user's notebook on behalf of the user, but collects the outputs of the run for use by the Agent
