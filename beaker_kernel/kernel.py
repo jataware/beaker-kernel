@@ -243,6 +243,14 @@ class BeakerKernel(KernelProxyManager):
                 if preview_payload:
                     self.send_response("iopub", "preview", preview_payload, parent_header=parent_header)
 
+    async def send_kernel_state_info(self, parent_header=None):
+        if self.context.fetch_kernel_state:
+            with execution_context("kernel_state_info"):
+                state_payload = await self.context.fetch_kernel_state()
+                if state_payload:
+                    self.send_response("iopub", "kernel_state_info", state_payload, parent_header=parent_header)
+
+
     async def update_connection_file(self, **kwargs):
         try:
             with open(self.connection_file, "r") as connection_file:
@@ -285,6 +293,7 @@ class BeakerKernel(KernelProxyManager):
                 kernel_setup_func()
         await self.update_connection_file(context={"name": context_name, "config": context_info})
         await self.send_preview(parent_header=parent_header)
+        await self.send_kernel_state_info(parent_header=parent_header)
 
     async def post_execute(self, queue, message_id, data):
         message = JupyterMessage.parse(data)
@@ -312,7 +321,7 @@ class BeakerKernel(KernelProxyManager):
             # Always only generate and send preview after post_execute completes in case state changes or setup is
             # performed in the post_execute function
             await self.send_preview(parent_header=message.parent_header)
-
+            await self.send_kernel_state_info(parent_header=message.parent_header)
         if loop:
             loop.create_task(task())
         return data

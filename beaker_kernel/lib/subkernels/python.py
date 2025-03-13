@@ -46,11 +46,26 @@ for _name, _value in dict(locals()).items():
     if _name.startswith('_') or _name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open'):
         continue
     if callable(_value):
-        _result["functions"][_name] = str(_value)
+        _fndetails = {
+            'docstring': _inspect.getdoc(_value),
+            'signature': str(_inspect.signature(_value))
+        }
+        _result["functions"][_name] = _json.dumps(_fndetails)
     elif _inspect.ismodule(_value):
         _result["modules"][_name] = str(_value)
     else:
-        _result["variables"][_name] = _value
+        import pandas as _pandas
+        _size = ''
+        if isinstance(_value, _pandas.core.frame.DataFrame):
+            _size = _value.shape
+        elif isinstance(_value, list) or isinstance(_value, dict):
+            _size = len(_value)
+        _vardetails = {
+            'value': str(_value),
+            'type': str(type(_value)),
+            'size': str(_size)
+        }
+        _result["variables"][_name] = _json.dumps(_vardetails)
 
 _result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
 _result
