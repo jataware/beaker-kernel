@@ -411,7 +411,7 @@ const restartSession = async () => {
     //border: 1px solid var(--surface-border);
     display: flex;
     flex-direction: column;
-    max-width: 860px;
+    max-width: 1260px;
     width: 100%;
 }
 
