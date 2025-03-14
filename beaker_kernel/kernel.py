@@ -244,9 +244,9 @@ class BeakerKernel(KernelProxyManager):
                     self.send_response("iopub", "preview", preview_payload, parent_header=parent_header)
 
     async def send_kernel_state_info(self, parent_header=None):
-        if self.context.fetch_kernel_state:
+        if self.context.kernel_state:
             with execution_context("kernel_state_info"):
-                state_payload = await self.context.fetch_kernel_state()
+                state_payload = await self.context.kernel_state()
                 if state_payload:
                     self.send_response("iopub", "kernel_state_info", state_payload, parent_header=parent_header)
 

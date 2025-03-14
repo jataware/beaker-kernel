@@ -100,7 +100,7 @@ class BeakerContext:
             return preview_func
 
     @property
-    def fetch_kernel_state(self) -> Callable[[], Awaitable[Any]] | None:
+    def kernel_state(self) -> Callable[[], Awaitable[Any]] | None:
         state_func = getattr(self, self.kernel_state_function_name, None)
         if callable(state_func) and not inspect.iscoroutinefunction:
             raise ValueError(f"Kernel state fetching function '{self.preview_function_name}' must be a coroutine (awaitable) if defined.")

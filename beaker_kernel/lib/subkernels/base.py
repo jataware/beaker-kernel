@@ -165,7 +165,7 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
             preview_payload,
             parent_header=message.header,
         )
-        kernel_state_payload = await agent.context.fetch_kernel_state()
+        kernel_state_payload = await agent.context.kernel_state()
         agent.context.send_response(
             "iopub",
             "kernel_state_info",
