@@ -15,7 +15,7 @@ import { ref, defineProps, defineEmits, inject, computed } from "vue";
 import { BeakerQueryCell, BeakerCodeCell, BeakerSession, IBeakerCell } from 'beaker-kernel/src';
 
 import Tree from "primevue/tree"
-import { PTreeNode } from "primevue/treenode";
+import { TreeNode } from "primevue/treenode";
 import Toolbar from "primevue/toolbar";
 import Button from "primevue/button";
 import InputGroup from "primevue/inputgroup";
@@ -45,7 +45,7 @@ const data = computed(() => props?.data?.["x-application/beaker-subkernel-state"
 // the main computed property matches on fields of BeakerKernelState to only apply
 // transformations to arbitrarily defined categories to keep it as language agnostic as possible.
 
-type CustomDisplayTransform = (key: string, payload: string) => PTreeNode | object;
+type CustomDisplayTransform = (key: string, payload: string) => TreeNode | object;
 
 const pythonModuleDisplay: CustomDisplayTransform = (key, payload) => {
     if (payload.startsWith('<module') && payload.endsWith('>')) {
@@ -76,7 +76,7 @@ const pythonVariableDisplay: CustomDisplayTransform = (key, payload) => {
         'Dataset'
     ]
 
-    const node: PTreeNode = {
+    const node: TreeNode = {
         key: `variable-${key}`,
         label: `${key} (${typeDisplay}): ${value}`
                 + (specialContainerTypes.includes(typeDisplay) ? ` (size: ${size})` : '')
@@ -112,14 +112,14 @@ const pythonFunctionDisplay: CustomDisplayTransform = (key, payload) => {
 //   [transformerFunction, [<list of headers to fire on>]],
 //   ...
 // ]
-const customTransforms: [(key: string, payload: string) => PTreeNode, string[]][] =
+const customTransforms: [(key: string, payload: string) => TreeNode, string[]][] =
     [
         [pythonModuleDisplay, ['modules']],
         [pythonVariableDisplay, ['variables']],
         [pythonFunctionDisplay, ['functions']]
     ];
 
-const treeData = computed<{[header in string]: PTreeNode[]}>(() => {
+const treeData = computed<{[header in string]: TreeNode[]}>(() => {
     const source: BeakerKernelState = (data.value as BeakerKernelState);
     if (source === undefined) {
         return {}
@@ -135,7 +135,7 @@ const treeData = computed<{[header in string]: PTreeNode[]}>(() => {
             }
         })
         return payload;
-    }, {} as {[header in string]: PTreeNode[]})
+    }, {} as {[header in string]: TreeNode[]})
 })
 
 const session = inject<BeakerSession>('session');
