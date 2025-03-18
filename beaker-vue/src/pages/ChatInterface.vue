@@ -35,7 +35,7 @@
                     </ChatPanel>
                     <AgentQuery
                         class="agent-query-container agent-query-container-chat"
-                        placeholder="Message to the agent"   
+                        placeholder="Message to the agent"
                         v-show="!isLastCellAwaitingInput"
                     />
             </div>
@@ -55,12 +55,13 @@
                     <ContextPanel />
                 </SideMenuPanel>
                 <SideMenuPanel label="Files" icon="pi pi-file-export" no-overflow>
-                    <FilePanel 
-                        @open-file="loadNotebook" 
+                    <FilePanel
+                        @open-file="loadNotebook"
                         @preview-file="(file, mimetype) => {
                             previewedFile = {url: file, mimetype: mimetype};
                             previewVisible = true;
-                        }" 
+                            rightSideMenuRef.selectPanel('Contents');
+                        }"
                     />
                 </SideMenuPanel>
                 <SideMenuPanel id="config" label="Config" icon="pi pi-cog" :lazy="true">
@@ -77,11 +78,20 @@
                 :show-label="true"
                 highlight="line"
                 :expanded="false"
+                ref="rightSideMenuRef"
             >
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
-                    <PreviewPane :previewData="contextPreviewData"/>
+                    <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
                 <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow>
+                    <FileContentsPanel
+                        :url="previewedFile?.url"
+                        :mimetype="previewedFile?.mimetype"
+                        v-model="previewVisible"
+                    />
+                </SideMenuPanel>
+                <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow>
+                    <MediaPanel></MediaPanel>
                 </SideMenuPanel>
             </SideMenu>
         </template>
@@ -133,14 +143,15 @@ import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } fr
 
 import { IBeakerTheme } from '../plugins/theme';
 import { vKeybindings } from '../directives/keybindings';
+import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
-// context preview
-import PreviewPane from '../components/misc/PreviewPane.vue';
+import MediaPanel from '../components/panels/MediaPanel.vue';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 
+const rightSideMenuRef = ref();
 const contextPreviewData = ref<any>();
 
 type FilePreview = {

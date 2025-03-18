@@ -2,27 +2,19 @@
     <div class="media-focus">
         <Toolbar class="media-toolbar">
             <template #start>
-                <Button 
-                    icon="pi pi-arrow-left" 
-                    class="media-toolbar-button" 
-                    severity="primary" 
-                    outlined
-                    :onclick="() => {
-                        currentOutputOneIndexed -= (currentOutputOneIndexed - 1) < 1 
-                            ? 0 
-                            : 1
-                    }" 
+                <Button
+                    icon="pi pi-arrow-left"
+                    class="media-toolbar-button"
+                    @click="() => {
+                        currentOutput -= Math.min(currentOutput, 1)
+                    }"
                 />
-                <Button 
-                    icon="pi pi-arrow-right" 
-                    class="media-toolbar-button" 
-                    severity="primary"
-                    outlined
-                    :onclick="() => {
-                        currentOutputOneIndexed += (currentOutputOneIndexed + 1) > notebookOutputs.length 
-                            ? 0
-                            : 1
-                    }" 
+                <Button
+                    icon="pi pi-arrow-right"
+                    class="media-toolbar-button"
+                    @click="() => {
+                        currentOutput += currentOutput >= notebookOutputs.length - 1 ? 0 : 1
+                    }"
                 />
             </template>
             <template #end>
@@ -30,31 +22,26 @@
                     <InputGroupAddon class="media-dropdown-icon">
                         <i class="pi pi-chart-bar"></i>
                     </InputGroupAddon>
-                    <Dropdown 
-                        v-model="currentOutputOneIndexed"
-                        :options="[...Array(notebookOutputs.length + 1).keys()].slice(1)"
-                    />
+                    <Dropdown
+                        v-model="currentOutput"
+                        :options="Array.from(notebookOutputs.keys().map(i => {return {label: i + 1, value: i}}))"
+                        option-label="label"
+                        option-value="value"                    />
 
                     <InputGroupAddon>/ {{ notebookOutputs.length ?? 0 }}</InputGroupAddon>
                 </InputGroup>
             </template>
         </Toolbar>
         <div class="media-mime-bundle">
-            <div 
-                v-html="currentMimeBundle['text/html']" 
-                v-if="currentMimeBundle && currentMimeBundle['text/html'] !== undefined"
+            <BeakerMimeBundle
+                v-if="currentMimeBundle !== undefined"
+                :mime-bundle="currentMimeBundle"
                 class="code-cell-output"
-                
             />
-            <BeakerMimeBundle 
-                :mime-bundle="currentMimeBundle" 
-                v-else-if="currentMimeBundle !== undefined"
-            />
-
         </div>
     </div>
 </template>
-  
+
 <script lang="ts" setup>
 import { ref, defineProps, defineEmits, inject, computed } from "vue";
 import { BeakerQueryCell, BeakerCodeCell, BeakerSession, IBeakerCell } from 'beaker-kernel/src';
@@ -67,17 +54,17 @@ import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 
 const session = inject<BeakerSession>('session');
 
-const currentOutputOneIndexed = ref(1);
+const currentOutput = ref(0);
 
 const filteredMimetypes = [
     'image/png',
-    'text/html'
+    'text/html',
 ]
 
 const notebookOutputs = computed(() => {
     const outputs = [];
     const cells = session.notebook.cells;
-    
+
     const getOutputs = (cell: IBeakerCell) => {
         const outputs = [];
         if (cell.cell_type === 'query') {
@@ -96,7 +83,7 @@ const notebookOutputs = computed(() => {
             }
         }
         return outputs;
-    }; 
+    };
 
     for (const cell of cells) {
         outputs.push(...getOutputs(cell));
@@ -106,15 +93,7 @@ const notebookOutputs = computed(() => {
 })
 
 const currentMimeBundle = computed(() => {
-    if (notebookOutputs.value.length === 0 || notebookOutputs.value === undefined) {
-        return undefined;
-    }
-    const target = notebookOutputs.value[currentOutputOneIndexed.value - 1]?.data;
-    if (target === undefined) {
-        return undefined;
-    }
-    const {'text/plain': _, ...significantBundle} = target;
-    return significantBundle;
+    return notebookOutputs?.value?.[currentOutput?.value]?.data;
 })
 
 </script>
@@ -122,9 +101,11 @@ const currentMimeBundle = computed(() => {
 <style lang="scss">
 
 div.media-toolbar {
-    padding: 0.5rem;
-    background: none;
+    padding: 3px;
+    background: var(--surface-d);
+    border-radius: 0;
     border: none;
+    margin-bottom: 0.5rem;
     button {
         width: 2em;
         height: 2em;
@@ -149,11 +130,9 @@ div.media-toolbar {
 }
 
 .media-mime-bundle > div {
+    background: none;
     overflow: auto;
     height: 100%;
-    > .mime-select-container {
-        display: none;
-    }
     > .mime-payload img {
         width: 100%;
     }

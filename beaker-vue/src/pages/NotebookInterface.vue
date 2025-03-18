@@ -77,6 +77,7 @@
                         @preview-file="(file, mimetype) => {
                             previewedFile = {url: file, mimetype: mimetype};
                             previewVisible = true;
+                            rightSideMenuRef.selectPanel('Contents');
                         }"
                     />
                 </SideMenuPanel>
@@ -90,6 +91,7 @@
         </template>
         <template #right-panel>
             <SideMenu
+                ref="rightSideMenuRef"
                 position="right"
                 :show-label="true"
                 highlight="line"
@@ -98,16 +100,16 @@
                 :maximized="isMaximized"
             >
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
-                    <PreviewPane :previewData="contextPreviewData"/>
+                    <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
                 <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow>
-                    <PreviewPanel
+                    <FileContentsPanel
                         :url="previewedFile?.url"
                         :mimetype="previewedFile?.mimetype"
                         v-model="previewVisible"
                     />
                 </SideMenuPanel>
-                <SideMenuPanel id="media" label="Media" icon="pi pi-file" no-overflow>
+                <SideMenuPanel id="media" label="Media" icon="pi pi-chart" no-overflow no-title>
                     <MediaPanel></MediaPanel>
                 </SideMenuPanel>
             </SideMenu>
@@ -136,10 +138,10 @@ import ConfigPanel from '../components/panels/ConfigPanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
-import PreviewPanel from '../components/panels/PreviewPanel.vue';
+import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 
 // context preview
-import PreviewPane from '../components/misc/PreviewPane.vue';
+import PreviewPanel from '../components/panels/PreviewPanel.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
@@ -154,6 +156,8 @@ const beakerInterfaceRef = ref();
 const filePanelRef = ref();
 const configPanelRef = ref();
 const sideMenuRef = ref();
+const rightSideMenuRef = ref();
+
 const agentQueryRef = ref();
 const previewVisible = ref<boolean>(false);
 

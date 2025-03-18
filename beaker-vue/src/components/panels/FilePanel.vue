@@ -211,16 +211,13 @@ const doubleClick = ({data}) => {
       })
     }
   }
+  else if (data.size >= largeFileWarningSize) {
+    largeFileSizeUILabel.value = `approximately ${Math.floor(data.size / 1000000)} MB`;
+    showLargeFilePreview(() =>
+      previewFile(data.path, data.mimetype));
+  }
   else {
-    if (data.type !== 'directory') {
-      if (data.size >= largeFileWarningSize) {
-        largeFileSizeUILabel.value = `approximately ${Math.floor(data.size / 1000000)} MB`;
-        showLargeFilePreview(() =>
-          previewFile(data.path, data.mimetype));
-        return;
-      }
-      previewFile(data.path, data.mimetype)
-    }
+    previewFile(data.path, data.mimetype)
   }
 }
 
