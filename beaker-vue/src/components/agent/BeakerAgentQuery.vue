@@ -17,7 +17,8 @@
                     @click="handleQuery"
                     class="agent-submit-button"
                     icon="pi pi-reply"
-                    label="enter"
+                    :label="$tmpl._('agent_submit_button_label', 'enter')"
+                    :foo="$tmpl"
                 />
             </div>
         </template>

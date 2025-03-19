@@ -18,7 +18,7 @@ def set_config_from_app(app: "BeakerNotebookApp"):
 @click.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
-def notebook(ctx, extra_args):
+def notebook(ctx, extra_args, beakerapp_cls=None):
     """
     Start Beaker in local mode and opens a notebook.
     """

@@ -50,14 +50,13 @@ SocketGroup = namedtuple("SocketGroup", KERNEL_SOCKETS_NAMES)
 JupyterMessageTuple = namedtuple(
     "JupyterMessageTuple",
     (
-        "identities",  # type: list of byte strings
-        # "<IDS|MSG>" delimiter goes here
-        "signature",  # type: bytes
-        "header",  # \
-        "parent_header",  #  \ type: dict or bytes (JSON)
-        "metadata",  #  /
-        "content",  # /
-        "buffers",  # type: list of byte strings
+        "identities",  # -type: list of byte strings # "<IDS|MSG>" delimiter goes here
+        "signature",  # -type: bytes
+        "header",  #
+        "parent_header",  # -type: dict or bytes (JSON)
+        "metadata",  #
+        "content",  #
+        "buffers",  # -type: list of byte strings
     ),
 )
 

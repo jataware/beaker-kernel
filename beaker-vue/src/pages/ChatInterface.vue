@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        title="Beaker Chat"
+        :title="$tmpl._('short_title', 'Beaker Chat')"
         ref="beakerInterfaceRef"
         :header-nav="headerNav"
         :connectionSettings="props.config"
@@ -20,13 +20,16 @@
                         v-autoscroll
                     >
                         <template #help-text>
-                            <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
-                            <p>Feel free to ask me about whatever the context specializes in..</p>
-                            <p>
-                                On top of answering questions, I can actually run code in a python environment, and evaluate the results.
-                                This lets me do some pretty awesome things like: web scraping, or plotting and exploring data.
-                                Just shoot me a message when you're ready to get started.
-                            </p>
+                            <div v-html="$tmpl._('chat_welcome_html', `
+                                <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
+                                <p>Feel free to ask me about whatever the context specializes in..</p>
+                                <p>
+                                    On top of answering questions, I can actually run code in a python environment, and evaluate the results.
+                                    This lets me do some pretty awesome things like: web scraping, or plotting and exploring data.
+                                    Just shoot me a message when you're ready to get started.
+                                </p>
+                            `)"
+                            />
                         </template>
                         <template #notebook-background>
                             <div class="welcome-placeholder">
@@ -35,7 +38,7 @@
                     </ChatPanel>
                     <AgentQuery
                         class="agent-query-container agent-query-container-chat"
-                        placeholder="Message to the agent"
+                        :placeholder="$tmpl._('agent_query_prompt', 'Message to the agent')"
                         v-show="!isLastCellAwaitingInput"
                     />
             </div>
@@ -136,9 +139,11 @@ import BeakerSession from '../components/session/BeakerSession.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import { JupyterMimeRenderer } from 'beaker-kernel/src';
+// import { _ } from '../util/whitelabel';
+import { NavOption } from '../components/misc/BeakerHeader.vue';
 
 
-import { defineProps, inject, ref, computed, } from 'vue';
+import { defineProps, inject, ref, computed, ComponentInstance, Component, StyleHTMLAttributes, ComputedRef, } from 'vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
 import { IBeakerTheme } from '../plugins/theme';
@@ -150,6 +155,8 @@ import MediaPanel from '../components/panels/MediaPanel.vue';
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
+const beakerApp = inject<any>("beakerAppConfig");
+beakerApp.setPage("chat");
 
 const rightSideMenuRef = ref();
 const contextPreviewData = ref<any>();
@@ -173,51 +180,63 @@ const isLastCellAwaitingInput = computed(() => {
     return false;
 })
 
-const headerNav = computed(() => [
-    {
-        type: 'button',
-        command: () => {
-            if (window.confirm(`This will reset your entire session, clearing the notebook and removing any updates to the environment. Proceed?`))
-                beakerSession.value.session.reset();
-        },
-        icon: 'refresh',
-        label: 'Reset Session',
-    },
-    {
-        type: 'link',
-        href: `/${window.location.search}`,
-        component: NotebookSvg,
-        componentStyle: {
-            fill: 'currentColor',
-            stroke: 'currentColor',
-            height: '1rem',
-            width: '1rem',
-        },
-        label: 'Navigate to notebook view',
-    },
-    {
-        type: 'button',
-        icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
-        command: toggleDarkMode,
-        label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
-    },
-    {
-        type: 'link',
-        href: `https://jataware.github.io/beaker-kernel`,
-        label: 'Beaker Documentation',
-        icon: "book",
-        rel: "noopener",
-        target: "_blank",
-    },
-    {
-        type: 'link',
-        href: `https://github.com/jataware/beaker-kernel`,
-        label: 'Check us out on Github',
-        icon: "github",
-        rel: "noopener",
-        target: "_blank",
+
+const headerNav = computed((): NavOption[] => {
+    const nav: NavOption[] = [
+        {
+            type: 'button',
+            command: () => {
+                if (window.confirm(`This will reset your entire session, clearing the notebook and removing any updates to the environment. Proceed?`))
+                    beakerSession.value.session.reset();
+            },
+            icon: 'refresh',
+            label: 'Reset Session',
+        }
+
+    ];
+    if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "notebook"))) {
+        const href = "/" + (beakerApp?.config?.pages?.notebook?.default ? '' : 'notebook') + window.location.search;
+        nav.push(
+            {
+                type: 'link',
+                href: href,
+                component: NotebookSvg,
+                componentStyle: {
+                    fill: 'currentColor',
+                    stroke: 'currentColor',
+                    height: '1rem',
+                    width: '1rem',
+                },
+                label: 'Navigate to notebook view',
+            }
+        );
     }
-]);
+    nav.push(...([
+        {
+            type: 'button',
+            icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
+            command: toggleDarkMode,
+            label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
+        },
+        {
+            type: 'link',
+            href: `https://jataware.github.io/beaker-kernel`,
+            label: 'Beaker Documentation',
+            icon: "book",
+            rel: "noopener",
+            target: "_blank",
+        },
+        {
+            type: 'link',
+            href: `https://github.com/jataware/beaker-kernel`,
+            label: 'Check us out on Github',
+            icon: "github",
+            rel: "noopener",
+            target: "_blank",
+        }
+    ] as NavOption[]));
+    return nav;
+});
 
 const beakerSession = computed(() => {
     return beakerInterfaceRef?.value?.beakerSession;
