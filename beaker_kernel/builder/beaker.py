@@ -73,7 +73,7 @@ class BeakerBuildHook(BuildHookInterface):
             mod = importlib.import_module(mod_str)
             cls = getattr(mod, class_name)
             if issubclass(cls, subclass) and cls is not subclass:
-                slug = getattr(cls, 'SLUG', None)
+                slug = getattr(cls, 'SLUG', None) or getattr(cls, 'slug', None)
                 if not slug:
                     continue
                 contexts[slug] = (mod_str, class_name)
@@ -111,6 +111,7 @@ class BeakerBuildHook(BuildHookInterface):
             sys.path.insert(0, local_path)
             self.inserted_paths.add(local_path)
 
+        from beaker_kernel.lib.app import BeakerApp
         from beaker_kernel.lib.context import BeakerContext
         from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 
@@ -137,6 +138,7 @@ class BeakerBuildHook(BuildHookInterface):
         self.add_packages_to_path()
         context_classes = self.find_slugged_subclasses_of(BeakerContext)
         subkernel_classes = self.find_slugged_subclasses_of(BeakerSubkernel)
+        app_classes = self.find_slugged_subclasses_of(BeakerApp)
         self.remove_packages_from_path()
 
         if context_classes:
@@ -149,6 +151,10 @@ class BeakerBuildHook(BuildHookInterface):
             for slug, (pkg, cls) in subkernel_classes.items():
                 print(f"  '{slug}': {cls} in package {pkg}")
             print()
+        if app_classes:
+            print("Found app: ")
+            for slug, (pkg, cls) in app_classes.items():
+                print(f"  '{slug}': {cls} in package {pkg}")
 
         # Recreate the destination directory, clearing any existing build artifacts
         if os.path.exists(dest):
@@ -156,7 +162,7 @@ class BeakerBuildHook(BuildHookInterface):
         os.makedirs(dest)
 
         # Write out mappings for each context and subkernel to an individual json file
-        for typename, src in [("contexts", context_classes), ("subkernels", subkernel_classes)]:
+        for typename, src in [("contexts", context_classes), ("subkernels", subkernel_classes), ("apps", app_classes)]:
             dest_dir = os.path.join(dest, typename)
             os.makedirs(dest_dir, exist_ok=True)
             for slug, (package_name, class_name) in src.items():

@@ -84,7 +84,7 @@
                 :maximized="isMaximized"
             >
                 <SideMenuPanel tabId="preview" label="Preview" icon="pi pi-eye">
-                    <PreviewPane :previewData="previewData"/>
+                    <PreviewPanel :previewData="previewData"/>
                 </SideMenuPanel>
 
                 <SideMenuPanel tabId="action" label="Actions" icon="pi pi-send">
@@ -135,7 +135,7 @@ import BeakerContextSelection from "../components/session/BeakerContextSelection
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
 import ContextPanel from '../components/panels/ContextPanel.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
-import PreviewPane from '../components/misc/PreviewPane.vue';
+import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
@@ -147,6 +147,9 @@ import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
 
+
+const beakerApp = inject<any>("beakerAppConfig");
+beakerApp.setPage("dev");
 
 const activeContext = ref();
 const beakerNotebookRef = ref();

@@ -10,6 +10,7 @@ import warnings
 from frozendict import frozendict
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from functools import wraps, update_wrapper
+from importlib import import_module
 from pathlib import Path
 from typing import Any, TYPE_CHECKING, Callable, List
 
@@ -33,6 +34,14 @@ def get_socket(stream_name: str):
     socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_name)]
     return socket
 
+def import_dotted_class(import_string: str):
+    try:
+        module_name, class_name = import_string.rsplit('.', 1)
+    except Exception as err:
+        raise
+    module = import_module(module_name)
+    cls = getattr(module, class_name, None)
+    return cls
 
 def find_file_along_path(filename: str, start_path: Path | str | None = None) -> Path | None:
     if start_path is None:
