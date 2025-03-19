@@ -32,6 +32,10 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
     agent_user: str
     subkernel_user: str
 
+    # Longer wait_time for shutdown before killing processed due to potentially needing to shutdown both the subkernel
+    # and the beaker kernel.
+    shutdown_wait_time = 10.0
+
     @property
     def beaker_config(self):
         return getattr(self.parent, 'beaker_config')

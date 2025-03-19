@@ -18,7 +18,8 @@ from beaker_kernel.lib.config import reset_config, config
 from beaker_kernel.lib.context import BeakerContext, autodiscover_contexts
 from beaker_kernel.lib.jupyter_kernel_proxy import InterceptionFilter, JupyterMessage, KernelProxyManager
 from beaker_kernel.lib.utils import (message_handler, LogMessageEncoder, magic,
-                        handle_message, get_socket, execution_context, parent_message_context)
+                        handle_message, get_socket, execution_context, parent_message_context,
+                        ForwardMessage)
 
 USER_RESPONSE_WAIT_TIME_SECONDS = 100
 
@@ -134,6 +135,7 @@ class BeakerKernel(KernelProxyManager):
         self.server.intercept_message("shell", "set_agent_model", self.set_agent_model)
         self.server.intercept_message("shell", "reset_request", self.reset_kernel)
         self.server.intercept_message("control", "interrupt_request", self.interrupt)
+        self.server.intercept_message("control", "shutdown_request", self.shutdown)
         self.server.intercept_message("shell", "notebook_state_response", self.notebook_state_response)
 
     def register_magic_commands(self):
@@ -386,6 +388,16 @@ class BeakerKernel(KernelProxyManager):
             elif isinstance(value, asyncio.Future):
                 value.cancel(msg="Execution interrupted by user.")
             del self.running_actions[key]
+        return None
+
+    @message_handler
+    async def shutdown(self, message):
+        def stop_loop(loop: ioloop.IOLoop):
+            loop.stop()
+        self.context.cleanup()
+        # Stop loop after short delay to allow cleanup to run.
+        loop = ioloop.IOLoop.current()
+        loop.call_later(0.2, stop_loop, loop)
         return None
 
     async def prompt_user(self, query, parent_message=None):
@@ -686,7 +698,7 @@ def start(connection_file):
 
     try:
         loop.start()
-    except KeyboardInterrupt:
+    finally:
         # Perform shutdown cleanup here
         cleanup(kernel)
         sys.exit(0)

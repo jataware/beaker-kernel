@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 execution_context_var = contextvars.ContextVar('execution_context', default=None)
 parent_message_var = contextvars.ContextVar('parent_message_var', default={})
 
+class ForwardMessage: pass
 
 def env_enabled(env_var: str):
     return os.environ.get(env_var, "false").lower() == "true"
@@ -150,11 +151,18 @@ def message_handler(fn):
         async with handle_message(server, target_stream, data) as ctx:
             with parent_message_context(ctx.message):
                 result = await fn(self, ctx.message)
-                ctx.return_val = result
                 # If message data is returned, then the message should be proxied, but if None or any other type is
                 # returned, the message should be dropped and not continue on to the proxied server.
-                if isinstance(result, JupyterMessageTuple) or result is None:
-                    return result
+                match result:
+                    case JupyterMessage():
+                        ctx.send_reply = False
+                        return result.parts
+                    case ForwardMessage, ForwardMessage():
+                        ctx.send_reply = False
+                        return data
+                    case _:
+                        ctx.return_val = result
+                        return None
     return wrapper
 
 
