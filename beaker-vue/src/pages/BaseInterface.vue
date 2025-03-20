@@ -17,7 +17,7 @@
                 </slot>
             </header>
 
-            <main>
+            <main ref="mainRef">
                 <slot name="main">
                     <div id="left-panel">
                         <slot name="left-panel">
@@ -85,7 +85,7 @@
 
 <script setup lang="tsx">
 import { ErrorObject, isErrorObject } from '../util';
-import { h, defineEmits, defineProps, ref, onMounted, provide, nextTick, onUnmounted, toRaw, defineExpose, Component } from 'vue';
+import { h, defineEmits, defineProps, useSlots, isVNode, ref, onMounted, provide, nextTick, onUnmounted, toRaw, defineExpose, Component, ComponentInstance } from 'vue';
 import Dialog from 'primevue/dialog';
 import DynamicDialog from 'primevue/dynamicdialog';
 import { useDialog } from 'primevue/usedialog';
@@ -103,17 +103,16 @@ import ProviderSelector from '../components/misc/ProviderSelector.vue';
 import sum from 'hash-sum';
 
 import {default as ConfigPanel, getConfigAndSchema, dropUnchangedValues, objectifyTables, tablifyObjects, saveConfig} from '../components/panels/ConfigPanel.vue';
+import SideMenu, { type MenuPosition } from '../components/sidemenu/SideMenu.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import FooterDrawer from '../components/misc/FooterDrawer.vue';
 import { DynamicDialogInstance } from 'primevue/dynamicdialogoptions';
 
-
 const dialog = useDialog();
-
 const toast = useToast();
 
 const lastSaveChecksum = ref<string>();
-
+const mainRef = ref();
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
 interface ShowToastOptions {
@@ -148,8 +147,8 @@ const props = defineProps<{
   title: string
   titleExtra?: string
   savefile?: string
-  headerNav?: any 
-  apiKeyPrompt?: boolean 
+  headerNav?: any
+  apiKeyPrompt?: boolean
   styleOverrides?: StyleOverride[]
 }>();
 
@@ -174,6 +173,16 @@ const contextProcessing = ref(false);
 const toggleContextSelection = () => {
     contextSelectionOpen.value = !contextSelectionOpen.value;
 };
+
+const setMaximized = (maximized: boolean) => {
+    const main: HTMLDivElement = mainRef.value;
+    if (maximized) {
+        main.classList.add("maximized");
+    }
+    else {
+        main.classList.remove("maximized");
+    }
+}
 
 const showOverlay = (contents: string | Component | HTMLElement | ErrorObject, title?: string) => {
     var contentComponent;
@@ -382,6 +391,7 @@ const providerConfig = () => {
 defineExpose({
     beakerSession,
     showToast,
+    setMaximized,
 });
 
 </script>
@@ -397,7 +407,7 @@ defineExpose({
 #app {
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    overflow: visible hidden;
     height: 100vh;
     width: 100vw;
     display: grid;
@@ -416,16 +426,21 @@ header {
 }
 
 main {
+    --columns: 1fr minmax(30%, 50%) 1fr;
     grid-area: main;
     position: relative;
     display: grid;
-    grid-template:
-        "left-panel center-panel right-panel" 100% /
-        min-content minmax(30%, 100%) min-content;
+    grid-template: "left-panel center-panel right-panel";
+    grid-template-columns: var(--columns);
+    grid-template-rows: 100%;
     background-color: var(--surface-0);
-    overflow: hidden;
+    overflow: visible hidden;
     max-width: 100%;
     max-height: 100%;
+
+    &.maximized {
+        --columns: 1fr minmax(30%, 100%) 1fr;
+    }
 }
 
 footer {
@@ -434,7 +449,6 @@ footer {
 
 #left-panel {
     grid-area: left-panel;
-    width: 100%;
 }
 
 #center-panel {
@@ -449,7 +463,6 @@ footer {
 
 #right-panel {
     grid-area: right-panel;
-    width: 100%;
 }
 
 .p-confirm-dialog {

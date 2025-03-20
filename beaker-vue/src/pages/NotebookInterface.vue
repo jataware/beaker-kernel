@@ -32,7 +32,7 @@
 
                     <template #end-extra>
                         <Button
-                            @click="isMaximized = !isMaximized;"
+                            @click="isMaximized = !isMaximized; beakerInterfaceRef.setMaximized(isMaximized);"
                             :icon="`pi ${isMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`"
                             size="small"
                             text
@@ -55,7 +55,6 @@
                     class="agent-query-container"
                 />
             </BeakerNotebook>
-            <div v-if="!isMaximized" class="spacer right"></div>
         </div>
 
         <template #left-panel>
@@ -64,7 +63,7 @@
                 position="left"
                 :show-label="true"
                 highlight="line"
-                :expanded="false"
+                :expanded="true"
                 initialWidth="25vi"
                 :maximized="isMaximized"
             >
@@ -78,6 +77,7 @@
                         @preview-file="(file, mimetype) => {
                             previewedFile = {url: file, mimetype: mimetype};
                             previewVisible = true;
+                            rightSideMenuRef.selectPanel('Contents');
                         }"
                     />
                 </SideMenuPanel>
@@ -90,17 +90,35 @@
             </SideMenu>
         </template>
         <template #right-panel>
+            <SideMenu
+                ref="rightSideMenuRef"
+                position="right"
+                :show-label="true"
+                highlight="line"
+                :expanded="true"
+                initialWidth="25vi"
+                :maximized="isMaximized"
+            >
+                <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
+                    <PreviewPanel :previewData="contextPreviewData"/>
+                </SideMenuPanel>
+                <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow>
+                    <FileContentsPanel
+                        :url="previewedFile?.url"
+                        :mimetype="previewedFile?.mimetype"
+                        v-model="previewVisible"
+                    />
+                </SideMenuPanel>
+                <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow no-title>
+                    <MediaPanel></MediaPanel>
+                </SideMenuPanel>
+            </SideMenu>
         </template>
-        <PreviewPanel
-            :url="previewedFile?.url"
-            :mimetype="previewedFile?.mimetype"
-            v-model="previewVisible"
-        />
     </BaseInterface>
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, onBeforeMount, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
+import { defineProps, ref, defineEmits, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
 import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel/src';
 import { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
 import { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
@@ -114,7 +132,6 @@ import { NavOption } from '../components/misc/BeakerHeader.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
-import Sidebar from 'primevue/sidebar';
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import InfoPanel from '../components/panels/InfoPanel.vue';
@@ -123,6 +140,9 @@ import ConfigPanel from '../components/panels/ConfigPanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
+import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
+
+// context preview
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
@@ -130,6 +150,7 @@ import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
+import MediaPanel from '../components/panels/MediaPanel.vue';
 
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
@@ -137,6 +158,8 @@ const beakerInterfaceRef = ref();
 const filePanelRef = ref();
 const configPanelRef = ref();
 const sideMenuRef = ref();
+const rightSideMenuRef = ref();
+
 const agentQueryRef = ref();
 const previewVisible = ref<boolean>(false);
 
@@ -173,7 +196,6 @@ const cellComponentMapping = {
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
-const previewData = ref<any>();
 const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
 const saveAsFilename = ref<string>(null);
@@ -185,6 +207,8 @@ const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerApp = inject<any>("beakerAppConfig");
 
 beakerApp.setPage("notebook");
+
+const contextPreviewData = ref<any>();
 
 type FilePreview = {
     url: string,
@@ -249,7 +273,7 @@ watch(
 
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
-        previewData.value = msg.content;
+        contextPreviewData.value = msg.content;
     } else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,

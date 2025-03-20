@@ -63,6 +63,7 @@
                         @preview-file="(file, mimetype) => {
                             previewedFile = {url: file, mimetype: mimetype};
                             previewVisible = true;
+                            rightSideMenuRef.selectPanel('Contents');
                         }"
                     />
                 </SideMenuPanel>
@@ -71,6 +72,29 @@
                         ref="configPanelRef"
                         @restart-session="restartSession"
                     />
+                </SideMenuPanel>
+            </SideMenu>
+        </template>
+        <template #right-panel>
+            <SideMenu
+                position="right"
+                :show-label="true"
+                highlight="line"
+                :expanded="false"
+                ref="rightSideMenuRef"
+            >
+                <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
+                    <PreviewPanel :previewData="contextPreviewData"/>
+                </SideMenuPanel>
+                <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow>
+                    <FileContentsPanel
+                        :url="previewedFile?.url"
+                        :mimetype="previewedFile?.mimetype"
+                        v-model="previewVisible"
+                    />
+                </SideMenuPanel>
+                <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow>
+                    <MediaPanel></MediaPanel>
                 </SideMenuPanel>
             </SideMenu>
         </template>
@@ -90,11 +114,6 @@
                  </SideMenu> -->
             <!-- </div> -->
     <!-- </div> -->
-        <PreviewPanel
-            :url="previewedFile?.url"
-            :mimetype="previewedFile?.mimetype"
-            v-model="previewVisible"
-        />
     </BaseInterface>
 </template>
 
@@ -129,13 +148,18 @@ import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } fr
 
 import { IBeakerTheme } from '../plugins/theme';
 import { vKeybindings } from '../directives/keybindings';
+import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
+import MediaPanel from '../components/panels/MediaPanel.vue';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerApp = inject<any>("beakerAppConfig");
 beakerApp.setPage("chat");
+
+const rightSideMenuRef = ref();
+const contextPreviewData = ref<any>();
 
 type FilePreview = {
     url: string,
@@ -253,6 +277,9 @@ const beakerSessionRef = ref<typeof BeakerSession>();
 
 
 const iopubMessage = (msg) => {
+    if (msg.header.msg_type === "preview") {
+        contextPreviewData.value = msg.content;
+    }
     if (msg.header.msg_type === "job_response") {
         beakerSessionRef.value.session.addMarkdownCell(msg.content.response);
     }

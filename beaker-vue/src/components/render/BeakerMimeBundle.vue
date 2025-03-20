@@ -20,7 +20,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, inject, computed } from "vue";
+import { ref, defineProps, inject, computed, watch } from "vue";
 import SelectButton from "primevue/selectbutton";
 import { BeakerSession } from "beaker-kernel/src";
 import { BeakerRenderOutput } from "../../renderers";
@@ -45,6 +45,15 @@ const sortedMimetypes = computed(() => {
 });
 
 const selectedMimeType = ref<string>(sortedMimetypes.value[0]);
+
+// selectedMimeType needs to fulfill two things:
+//   - user-selectable and not constantly computed
+//   - but pick the most-relevant sorted mimetype when the bundle changes
+// given that it's a ref the user can pick that needs to recompute on changed bundle,
+// without this watcher, BeakerMimeBundles that don't unmount will ignore sorted types
+watch(sortedMimetypes, (newSortedTypes, _) => {
+    selectedMimeType.value = newSortedTypes[0];
+})
 
 </script>
 
