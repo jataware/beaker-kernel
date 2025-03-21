@@ -142,28 +142,35 @@ class handle_message(AbstractAsyncContextManager):
         return None
 
 
-def message_handler(fn):
+def message_handler(func=None, /, *, send_status_updates=True, send_reply=True) -> None:
     """
     Method decorator that handles the parsing and responding to of messages.
     """
-    @wraps(fn)
-    async def wrapper(self, server, target_stream, data: JupyterMessageTuple):
-        async with handle_message(server, target_stream, data) as ctx:
-            with parent_message_context(ctx.message):
-                result = await fn(self, ctx.message)
-                # If message data is returned, then the message should be proxied, but if None or any other type is
-                # returned, the message should be dropped and not continue on to the proxied server.
-                match result:
-                    case JupyterMessage():
-                        ctx.send_reply = False
-                        return result.parts
-                    case ForwardMessage, ForwardMessage():
-                        ctx.send_reply = False
-                        return data
-                    case _:
-                        ctx.return_val = result
-                        return None
-    return wrapper
+
+    def decorator(fn):
+        @wraps(fn)
+        async def wrapper(self, server, target_stream, data: JupyterMessageTuple):
+            async with handle_message(server, target_stream, data, send_status_updates=send_status_updates, send_reply=send_reply) as ctx:
+                with parent_message_context(ctx.message):
+                    result = await fn(self, ctx.message)
+                    # If message data is returned, then the message should be proxied, but if None or any other type is
+                    # returned, the message should be dropped and not continue on to the proxied server.
+                    match result:
+                        case JupyterMessage():
+                            ctx.send_reply = False
+                            return result.parts
+                        case ForwardMessage, ForwardMessage():
+                            ctx.send_reply = False
+                            return data
+                        case _:
+                            ctx.return_val = result
+                            return None
+        return wrapper
+
+    if func is not None:
+        return decorator(func)
+    else:
+        return decorator
 
 
 def intercept(msg_type=None, stream="shell", docs: str|None=None, default_payload=None):

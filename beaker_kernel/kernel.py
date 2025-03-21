@@ -411,7 +411,7 @@ class BeakerKernel(KernelProxyManager):
             msg_id=msg_id,
         )
         sleep_duration = 0.2
-        for _ in range(USER_RESPONSE_WAIT_TIME_SECONDS / sleep_duration):
+        for _ in range(round(USER_RESPONSE_WAIT_TIME_SECONDS / sleep_duration)):
             if msg_id in self.user_responses:
                 result = self.user_responses[msg_id]
                 del self.user_responses[msg_id]
@@ -615,7 +615,7 @@ class BeakerKernel(KernelProxyManager):
             parent_header=parent_header,
         )
 
-    @message_handler
+    @message_handler(send_status_updates=False, send_reply=False)
     async def input_reply(self, message):
         content = message.content
         parent_id = message.parent_header["msg_id"]
