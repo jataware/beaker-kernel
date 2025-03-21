@@ -409,7 +409,7 @@ class Config(ConfigClass):
             return getattr(self.config_obj, name)
         raise AttributeError
 
-    def get_model(self, provider_id=None, model_config=None):
+    def get_model(self, provider_id=None, model_config=None, **config_overrides):
         from archytas.exceptions import AuthenticationError
         config_obj: dict | None = None
 
@@ -424,6 +424,9 @@ class Config(ConfigClass):
         if not config_obj:
             # Get model from config
             config_obj: dict = self.providers.get(self.provider, {})
+
+            # Update config with passed in overrides
+            config_obj.update(config_overrides)
 
             # Override defaults if set
             if self.model_provider_import_path:
