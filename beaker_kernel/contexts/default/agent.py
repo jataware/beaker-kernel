@@ -8,6 +8,8 @@ from beaker_kernel.lib.agent import BeakerAgent
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.utils import ExecutionError
 
+from archytas.summarizers import llm_message_summarizer
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ class DefaultAgent(BeakerAgent):
     prompt.
     """
 
-    @tool()
+    @tool(autosummarize=True, summarizer=llm_message_summarizer)
     async def tell_a_joke(self, topic: str, agent: AgentRef, loop: LoopControllerRef) -> str:
         """
         Generates a joke for the user.
