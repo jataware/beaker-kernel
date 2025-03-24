@@ -50,22 +50,53 @@ for _name, _value in dict(locals()).items():
             'docstring': _inspect.getdoc(_value),
             'signature': str(_inspect.signature(_value))
         }
-        _result["functions"][_name] = _json.dumps(_fndetails)
+        _result["functions"][_name] = _fndetails
     elif _inspect.ismodule(_value):
-        _result["modules"][_name] = str(_value)
+        _result["modules"][_name] = {
+            'path': str(_value.__file__),
+            'full_name': str(_value.__name__)
+        }
     else:
         import pandas as _pandas
         _size = ''
-        if isinstance(_value, _pandas.core.frame.DataFrame):
-            _size = _value.shape
-        elif isinstance(_value, list) or isinstance(_value, dict):
-            _size = len(_value)
-        _vardetails = {
-            'value': str(_value),
-            'type': str(type(_value)),
-            'size': str(_size)
-        }
-        _result["variables"][_name] = _json.dumps(_vardetails)
+        if id(_value) in (id(globals()), id(locals)):
+            _vardetails = {
+                'value': "{...skipped...}",
+                'type': str(type(_value)),
+                'size': '',
+            }
+        else:
+            _size = ''
+            if hasattr(_value, "shape"):
+                _size = _value.shape
+            elif hasattr(_value, "__len__"):
+                try:
+                    _size = len(_value)
+                except Exception:
+                    pass
+
+            # bounds check long sequences for size and things like Ellipsis not being serializable
+            _safe_value = _value
+            _truncated = False
+            try:
+                _safe_value = _value.head()
+                _truncated = True
+            except AttributeError:
+                pass
+            try:
+                _safe_value = _value[:99]
+                if len(_value) > 99:
+                    _truncated = True
+            except TypeError:
+                pass
+
+            _vardetails = {
+                'value': _safe_value,
+                'type': type(_value).__name__,
+                'size': str(_size),
+                'truncated': _truncated
+            }
+        _result["variables"][_name] = _vardetails
 
 _result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
 _result
