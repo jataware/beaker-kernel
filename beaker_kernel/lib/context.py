@@ -1,4 +1,5 @@
 import asyncio
+from copy import deepcopy
 import inspect
 import json
 import logging
@@ -401,9 +402,13 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         identities=None,
         cc_messages=True,
         raise_on_error=True,
+        additional_debug_info=None
     ) -> ExecutionTask:
+        debug_payload = {"command": command}
+        if additional_debug_info is not None:
+            debug_payload["metadata"] = additional_debug_info
+        self.beaker_kernel.debug("execution_start", debug_payload, parent_header=parent_header)
 
-        self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
         stream = self.subkernel.connected_kernel.streams.shell
 
         execution_context = get_execution_context() or {}
@@ -603,13 +608,19 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             # Wait for any straggling messages
             await asyncio.sleep(0.2)
             self.beaker_kernel.internal_executions.remove(message_id)
-            self.beaker_kernel.debug("execution_end", message_context, parent_header=parent_header)
+
+            if additional_debug_info is not None:
+                debug_payload = deepcopy(message_context)
+                debug_payload["metadata"] = additional_debug_info
+            else:
+                debug_payload = message_context
+            self.beaker_kernel.debug("execution_end", debug_payload, parent_header=parent_header)
             return message_context
         task = ExecutionTask(coro=execution_coro(), execute_request_msg=execute_request_msg)
         return task
 
-    async def evaluate(self, expression, parent_header={}):
-        result = await self.execute(expression, parent_header=parent_header)
+    async def evaluate(self, expression, parent_header={}, additional_debug_info=None):
+        result = await self.execute(expression, parent_header=parent_header, additional_debug_info=additional_debug_info)
         try:
             parsed_result = self.subkernel.parse_subkernel_return(result)
             result["return"] = parsed_result

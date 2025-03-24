@@ -45,7 +45,7 @@ class DefaultContext(BeakerContext):
         Preview what exists in the subkernel.
         """
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
-        result = await self.evaluate(fetch_state_code)
+        result = await self.evaluate(fetch_state_code, additional_debug_info={'type': 'preview'})
         state = result.get("return", None)
         if state:
             return {
@@ -61,7 +61,7 @@ class DefaultContext(BeakerContext):
         Preview what exists in the subkernel.
         """
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
-        result = await self.evaluate(fetch_state_code)
+        result = await self.evaluate(fetch_state_code, additional_debug_info={'type': 'get_subkernel_state'})
         state = result.get("return", None)
         if state:
             return {
