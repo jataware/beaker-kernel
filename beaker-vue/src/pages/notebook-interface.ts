@@ -15,6 +15,8 @@ import NotebookInterface from './NotebookInterface.vue';
 import 'primeicons/primeicons.css';
 import '../index.scss';
 
+import Panel from 'panel';
+
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';
 
 const baseUrl = PageConfig.getBaseUrl();
