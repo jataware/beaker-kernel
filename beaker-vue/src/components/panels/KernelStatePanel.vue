@@ -48,6 +48,14 @@ const treeData = computed<{[header in string]: TreeNode[]}>(() => {
     let keyedNodes: {[header in string]: TreeNode[]} = {}
     for (const [header, symbols] of Object.entries(source)) {
         keyedNodes[header] = []
+
+        // if, rather than a BeakerKernelStateNode, there is only a string in the object here -
+        // for backwards compatibility, coerce it into a node with the string body -> label and key
+        if (Array.isArray(symbols)) {
+            keyedNodes[header] = symbols.map((symbol) => ({label: symbol, key: symbol, children: []}))
+            continue
+        }
+
         for (const [_variableName, value] of Object.entries(symbols)) {
             keyedNodes[header].push(attachKeysToNodes(value))
         }

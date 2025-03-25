@@ -12,8 +12,6 @@ if TYPE_CHECKING:
     from beaker_kernel.lib.agent import BeakerAgent
     from beaker_kernel.lib.subkernels.base import BeakerSubkernel
 
-VARIABLE_MAX_SHORT_CONTENTS_DISPLAY = 10
-
 class DefaultContext(BeakerContext):
     """
     Default Beaker context
@@ -66,55 +64,9 @@ class DefaultContext(BeakerContext):
         result = await self.evaluate(fetch_state_code)
         state = result.get("return", None)
 
-        def format_kernel_state(state):
-
-            formatted_state = {
-                "modules": {},
-                "variables": {},
-                "functions": {}
-            }
-            for module, details in state["modules"].items():
-                aliased_name = f": {details['full_name']}" if module != details["full_name"] else ""
-                label = f"{module}{aliased_name}"
-                children = [{"label": f'import path: {details["path"]}'}]
-                formatted_state["modules"][module] = {
-                    "label": label,
-                    "children": children
-                }
-
-            for variable, details in state["variables"].items():
-                size_suffix = f"[{details['size']}]" if details["size"] != "" else ""
-                label = f"{variable} ({details['type']}{size_suffix}): "
-
-                contents = str(details["value"])
-                if len(contents) > VARIABLE_MAX_SHORT_CONTENTS_DISPLAY:
-                    label += f"{contents[:VARIABLE_MAX_SHORT_CONTENTS_DISPLAY]}..."
-                else:
-                    label += contents
-
-                if details["truncated"]:
-                    dropdown_contents = f"(truncated)\n{contents}"
-                else:
-                    dropdown_contents = contents
-
-                formatted_state["variables"][variable] = {
-                    "label": label,
-                    "children": [{"label": dropdown_contents}]
-                }
-
-            for function, details in state["functions"].items():
-                payload: dict[str, Any] = {
-                    "label": f"{function} {details['signature']}"
-                }
-                if details["docstring"] is not None:
-                    payload["children"] = [{"label": details["docstring"]}]
-                formatted_state["functions"][function] = payload
-
-            return formatted_state
-
         if state:
             return {
                 "x-application/beaker-subkernel-state": {
-                    "application/json": format_kernel_state(state)
+                    "application/json": self.subkernel.format_kernel_state(state)
                 },
             }

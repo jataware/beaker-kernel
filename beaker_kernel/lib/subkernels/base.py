@@ -219,6 +219,9 @@ class BeakerSubkernel(abc.ABC):
             except requests.exceptions.HTTPError as err:
                 print(err)
 
+    def format_kernel_state(self, state: dict) -> dict:
+        return state
+
 # Provided for backwards compatibility
 BaseSubkernel = BeakerSubkernel
 
