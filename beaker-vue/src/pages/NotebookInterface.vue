@@ -165,6 +165,8 @@ const rightSideMenuRef = ref();
 const agentQueryRef = ref();
 const previewVisible = ref<boolean>(false);
 
+const urlParams = new URLSearchParams(window.location.search);
+const sessionId = urlParams.has("session") ? urlParams.get("session") : "notebook_dev_session";
 
 const props = defineProps([
     "config",
