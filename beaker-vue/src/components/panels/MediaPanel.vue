@@ -24,7 +24,7 @@
                     </InputGroupAddon>
                     <Dropdown
                         v-model="currentOutput"
-                        :options="Array.from(notebookOutputs.keys().map(i => {return {label: i + 1, value: i}}))"
+                        :options="Array.from(notebookOutputs.map((_v, i) => {return {label: i + 1, value: i}}))"
                         option-label="label"
                         option-value="value"                    />
 

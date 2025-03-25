@@ -18,7 +18,8 @@ from beaker_kernel.lib.config import reset_config, config
 from beaker_kernel.lib.context import BeakerContext, autodiscover_contexts
 from beaker_kernel.lib.jupyter_kernel_proxy import InterceptionFilter, JupyterMessage, KernelProxyManager
 from beaker_kernel.lib.utils import (message_handler, LogMessageEncoder, magic,
-                        handle_message, get_socket, execution_context, parent_message_context)
+                        handle_message, get_socket, execution_context, parent_message_context,
+                        ForwardMessage)
 
 USER_RESPONSE_WAIT_TIME_SECONDS = 100
 
@@ -134,6 +135,7 @@ class BeakerKernel(KernelProxyManager):
         self.server.intercept_message("shell", "set_agent_model", self.set_agent_model)
         self.server.intercept_message("shell", "reset_request", self.reset_kernel)
         self.server.intercept_message("control", "interrupt_request", self.interrupt)
+        self.server.intercept_message("control", "shutdown_request", self.shutdown)
         self.server.intercept_message("shell", "notebook_state_response", self.notebook_state_response)
 
     def register_magic_commands(self):
@@ -397,6 +399,16 @@ class BeakerKernel(KernelProxyManager):
             del self.running_actions[key]
         return None
 
+    @message_handler
+    async def shutdown(self, message):
+        def stop_loop(loop: ioloop.IOLoop):
+            loop.stop()
+        self.context.cleanup()
+        # Stop loop after short delay to allow cleanup to run.
+        loop = ioloop.IOLoop.current()
+        loop.call_later(0.2, stop_loop, loop)
+        return None
+
     async def prompt_user(self, query, parent_message=None):
         msg_id = str(uuid.uuid4())
         self.send_response(
@@ -408,7 +420,7 @@ class BeakerKernel(KernelProxyManager):
             msg_id=msg_id,
         )
         sleep_duration = 0.2
-        for _ in range(USER_RESPONSE_WAIT_TIME_SECONDS / sleep_duration):
+        for _ in range(round(USER_RESPONSE_WAIT_TIME_SECONDS / sleep_duration)):
             if msg_id in self.user_responses:
                 result = self.user_responses[msg_id]
                 del self.user_responses[msg_id]
@@ -612,7 +624,7 @@ class BeakerKernel(KernelProxyManager):
             parent_header=parent_header,
         )
 
-    @message_handler
+    @message_handler(send_status_updates=False, send_reply=False)
     async def input_reply(self, message):
         content = message.content
         parent_id = message.parent_header["msg_id"]
@@ -695,7 +707,7 @@ def start(connection_file):
 
     try:
         loop.start()
-    except KeyboardInterrupt:
+    finally:
         # Perform shutdown cleanup here
         cleanup(kernel)
         sys.exit(0)
