@@ -6,6 +6,7 @@ from .base import CheckpointableBeakerSubkernel, Checkpoint
 import logging
 logger = logging.getLogger(__name__)
 
+VARIABLE_MAX_SHORT_CONTENTS_DISPLAY = 10
 
 class PythonSubkernel(CheckpointableBeakerSubkernel):
     """
@@ -46,11 +47,57 @@ for _name, _value in dict(locals()).items():
     if _name.startswith('_') or _name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open'):
         continue
     if callable(_value):
-        _result["functions"][_name] = str(_value)
+        _fndetails = {
+            'docstring': _inspect.getdoc(_value),
+            'signature': str(_inspect.signature(_value))
+        }
+        _result["functions"][_name] = _fndetails
     elif _inspect.ismodule(_value):
-        _result["modules"][_name] = str(_value)
+        _result["modules"][_name] = {
+            'path': str(_value.__file__),
+            'full_name': str(_value.__name__)
+        }
     else:
-        _result["variables"][_name] = _value
+        import pandas as _pandas
+        _size = ''
+        if id(_value) in (id(globals()), id(locals)):
+            _vardetails = {
+                'value': "{...skipped...}",
+                'type': str(type(_value)),
+                'size': '',
+            }
+        else:
+            _size = ''
+            if hasattr(_value, "shape"):
+                _size = _value.shape
+            elif hasattr(_value, "__len__"):
+                try:
+                    _size = len(_value)
+                except Exception:
+                    pass
+
+            # bounds check long sequences for size and things like Ellipsis not being serializable
+            _safe_value = _value
+            _truncated = False
+            try:
+                _safe_value = _value.head()
+                _truncated = True
+            except AttributeError:
+                pass
+            try:
+                _safe_value = _value[:99]
+                if len(_value) > 99:
+                    _truncated = True
+            except TypeError:
+                pass
+
+            _vardetails = {
+                'value': _safe_value,
+                'type': type(_value).__name__,
+                'size': str(_size),
+                'truncated': _truncated
+            }
+        _result["variables"][_name] = _vardetails
 
 _result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
 _result
@@ -129,3 +176,48 @@ if site.USER_SITE not in sys.path:
 del importlib, os, site, sys
 """
         await self.context.execute(setup_code)
+
+    def format_kernel_state(self, state):
+        formatted_state = {
+            "modules": {},
+            "variables": {},
+            "functions": {}
+        }
+        for module, details in state["modules"].items():
+            aliased_name = f": {details['full_name']}" if module != details["full_name"] else ""
+            label = f"{module}{aliased_name}"
+            children = [{"label": f'import path: {details["path"]}'}]
+            formatted_state["modules"][module] = {
+                "label": label,
+                "children": children
+            }
+
+        for variable, details in state["variables"].items():
+            size_suffix = f"[{details['size']}]" if details["size"] != "" else ""
+            label = f"{variable} ({details['type']}{size_suffix}): "
+
+            contents = str(details["value"])
+            if len(contents) > VARIABLE_MAX_SHORT_CONTENTS_DISPLAY:
+                label += f"{contents[:VARIABLE_MAX_SHORT_CONTENTS_DISPLAY]}..."
+            else:
+                label += contents
+
+            if details["truncated"]:
+                dropdown_contents = f"(truncated)\n{contents}"
+            else:
+                dropdown_contents = contents
+
+            formatted_state["variables"][variable] = {
+                "label": label,
+                "children": [{"label": dropdown_contents}]
+            }
+
+        for function, details in state["functions"].items():
+            payload: dict[str, Any] = {
+                "label": f"{function} {details['signature']}"
+            }
+            if details["docstring"] is not None:
+                payload["children"] = [{"label": details["docstring"]}]
+            formatted_state["functions"][function] = payload
+
+        return formatted_state
