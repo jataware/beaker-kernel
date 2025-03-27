@@ -393,8 +393,8 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         cc_messages=True,
         raise_on_error=True,
     ) -> ExecutionTask:
-        self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
 
+        self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
         stream = self.subkernel.connected_kernel.streams.shell
 
         execution_context = get_execution_context() or {}
@@ -594,7 +594,6 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             # Wait for any straggling messages
             await asyncio.sleep(0.2)
             self.beaker_kernel.internal_executions.remove(message_id)
-
             self.beaker_kernel.debug("execution_end", message_context, parent_header=parent_header)
             return message_context
         task = ExecutionTask(coro=execution_coro(), execute_request_msg=execute_request_msg)

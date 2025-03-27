@@ -330,6 +330,7 @@ class BeakerKernel(KernelProxyManager):
             # Always only generate and send preview after post_execute completes in case state changes or setup is
             # performed in the post_execute function
             await self.send_preview(parent_header=message.parent_header)
+
         if loop:
             loop.create_task(task())
         return data
