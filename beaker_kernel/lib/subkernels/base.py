@@ -222,21 +222,6 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
         )
 
         execution_context = await execution_task
-
-        preview_payload = await agent.context.preview()
-        agent.context.send_response(
-            "iopub",
-            "preview",
-            preview_payload,
-            parent_header=message.header,
-        )
-        kernel_state_payload = await agent.context.kernel_state()
-        agent.context.send_response(
-            "iopub",
-            "kernel_state_info",
-            kernel_state_payload,
-            parent_header=message.header,
-        )
     except asyncio.CancelledError as err:
         logger.error("Code execution was interrupted by the user.")
         raise

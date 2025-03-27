@@ -1,5 +1,4 @@
 import asyncio
-from copy import deepcopy
 import inspect
 import json
 import logging
@@ -45,7 +44,6 @@ class BeakerContext:
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
     preview_function_name: str = "generate_preview"
-    kernel_state_function_name: str = "fetch_kernel_state"
 
     SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
@@ -99,14 +97,6 @@ class BeakerContext:
             raise ValueError(f"Preview function '{self.preview_function_name}' must be a coroutine (awaitable) if defined.")
         if preview_func and inspect.iscoroutinefunction(preview_func):
             return preview_func
-
-    @property
-    def kernel_state(self) -> Callable[[], Awaitable[Any]] | None:
-        state_func = getattr(self, self.kernel_state_function_name, None)
-        if callable(state_func) and not inspect.iscoroutinefunction:
-            raise ValueError(f"Kernel state fetching function '{self.preview_function_name}' must be a coroutine (awaitable) if defined.")
-        if state_func and inspect.iscoroutinefunction(state_func):
-            return state_func
 
     def disable_tools(self):
         # TODO: Identical toolnames don't work
@@ -402,12 +392,8 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         identities=None,
         cc_messages=True,
         raise_on_error=True,
-        additional_debug_info=None
     ) -> ExecutionTask:
-        debug_payload = {"command": command}
-        if additional_debug_info is not None:
-            debug_payload["metadata"] = additional_debug_info
-        self.beaker_kernel.debug("execution_start", debug_payload, parent_header=parent_header)
+        self.beaker_kernel.debug("execution_start", {"command": command}, parent_header=parent_header)
 
         stream = self.subkernel.connected_kernel.streams.shell
 
@@ -609,18 +595,13 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             await asyncio.sleep(0.2)
             self.beaker_kernel.internal_executions.remove(message_id)
 
-            if additional_debug_info is not None:
-                debug_payload = deepcopy(message_context)
-                debug_payload["metadata"] = additional_debug_info
-            else:
-                debug_payload = message_context
-            self.beaker_kernel.debug("execution_end", debug_payload, parent_header=parent_header)
+            self.beaker_kernel.debug("execution_end", message_context, parent_header=parent_header)
             return message_context
         task = ExecutionTask(coro=execution_coro(), execute_request_msg=execute_request_msg)
         return task
 
-    async def evaluate(self, expression, parent_header={}, additional_debug_info=None):
-        result = await self.execute(expression, parent_header=parent_header, additional_debug_info=additional_debug_info)
+    async def evaluate(self, expression, parent_header={}):
+        result = await self.execute(expression, parent_header=parent_header)
         try:
             parsed_result = self.subkernel.parse_subkernel_return(result)
             result["return"] = parsed_result

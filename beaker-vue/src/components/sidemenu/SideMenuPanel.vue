@@ -1,5 +1,6 @@
 <template>
     <div class="side-panel" :class="extraClasses" v-if="!lazy || (lazy && loaded)">
+        <div class="side-panel-title">{{ props.label }}</div>
         <div class="side-panel-content">
             <slot></slot>
         </div>

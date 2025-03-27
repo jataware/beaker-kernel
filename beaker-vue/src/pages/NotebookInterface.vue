@@ -143,9 +143,6 @@ import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 // context preview
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 
-// context preview
-import PreviewPane from '../components/misc/PreviewPane.vue';
-
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
@@ -210,8 +207,6 @@ const beakerApp = inject<any>("beakerAppConfig");
 beakerApp.setPage("notebook");
 
 const contextPreviewData = ref<any>();
-
-const kernelStateInfo = ref();
 
 type FilePreview = {
     url: string,
