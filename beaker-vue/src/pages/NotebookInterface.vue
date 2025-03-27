@@ -29,7 +29,6 @@
                     @notebook-saved="handleNotebookSaved"
                     @open-file="loadNotebook"
                 >
-
                     <template #end-extra>
                         <Button
                             @click="isMaximized = !isMaximized; beakerInterfaceRef.setMaximized(isMaximized);"
@@ -42,7 +41,6 @@
                 <BeakerNotebookPanel
                     :selected-cell="beakerNotebookRef?.selectedCellId"
                     v-autoscroll
-
                 >
                     <template #notebook-background>
                         <div class="welcome-placeholder">
