@@ -64,6 +64,7 @@ const filteredMimetypes = [
 const notebookOutputs = computed(() => {
     const outputs = [];
     const cells = session.notebook.cells;
+
     const getOutputs = (cell: IBeakerCell) => {
         const outputs = [];
         if (cell.cell_type === 'query') {
