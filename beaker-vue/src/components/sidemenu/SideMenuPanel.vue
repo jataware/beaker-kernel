@@ -20,7 +20,7 @@ const props = defineProps([
 ]);
 const loaded = ref<boolean>(!props.lazy);
 
-if (props.noOverflow) {
+if (props.noOverflow !== undefined) {
     extraClasses.value.push('no-overflow')
 }
 

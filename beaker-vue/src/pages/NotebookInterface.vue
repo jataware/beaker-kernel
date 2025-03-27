@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        title="Beaker Notebook"
+        :title="$tmpl._('short_title', 'Beaker Noteboook')"
         :title-extra="saveAsFilename"
         :header-nav="headerNav"
         ref="beakerInterfaceRef"
@@ -75,6 +75,7 @@
                         @preview-file="(file, mimetype) => {
                             previewedFile = {url: file, mimetype: mimetype};
                             previewVisible = true;
+                            rightSideMenuRef.selectPanel('Contents');
                         }"
                     />
                 </SideMenuPanel>
@@ -88,6 +89,7 @@
         </template>
         <template #right-panel>
             <SideMenu
+                ref="rightSideMenuRef"
                 position="right"
                 :show-label="true"
                 highlight="line"
@@ -96,20 +98,17 @@
                 :maximized="isMaximized"
             >
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
-                    <PreviewPane :previewData="contextPreviewData"/>
+                    <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
                 <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow>
-                    <PreviewPanel
+                    <FileContentsPanel
                         :url="previewedFile?.url"
                         :mimetype="previewedFile?.mimetype"
                         v-model="previewVisible"
                     />
                 </SideMenuPanel>
-                <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow>
-                    <MediaPanel />
-                </SideMenuPanel>
-                <SideMenuPanel id="kernel-state" label="State" icon="pi pi-code" no-overflow>
-                    <KernelStatePanel :data="kernelStateInfo"/>
+                <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow no-title>
+                    <MediaPanel></MediaPanel>
                 </SideMenuPanel>
             </SideMenu>
         </template>
@@ -126,6 +125,8 @@ import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
 import { atStartOfInput, atEndOfInput } from '../util'
+// import { _ } from '../util/whitelabel';
+import { NavOption } from '../components/misc/BeakerHeader.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
@@ -137,6 +138,9 @@ import ConfigPanel from '../components/panels/ConfigPanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
+import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
+
+// context preview
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 
 // context preview
@@ -148,7 +152,6 @@ import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
 import MediaPanel from '../components/panels/MediaPanel.vue';
-import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
@@ -156,6 +159,8 @@ const beakerInterfaceRef = ref();
 const filePanelRef = ref();
 const configPanelRef = ref();
 const sideMenuRef = ref();
+const rightSideMenuRef = ref();
+
 const agentQueryRef = ref();
 const previewVisible = ref<boolean>(false);
 
@@ -200,8 +205,12 @@ const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
+const beakerApp = inject<any>("beakerAppConfig");
+
+beakerApp.setPage("notebook");
 
 const contextPreviewData = ref<any>();
+
 const kernelStateInfo = ref();
 
 type FilePreview = {
@@ -210,45 +219,45 @@ type FilePreview = {
 }
 const previewedFile = ref<FilePreview>();
 
-const notebookTitle = computed(() => {
-    if (saveAsFilename.value) {
-        return `Beaker Notebook`;
+const headerNav = computed((): NavOption[] => {
+    const nav = [];
+    if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "chat"))) {
+        const href = "/" + (beakerApp?.config?.pages?.chat?.default ? '' : 'chat') + window.location.search;
+        nav.push(
+            {
+                type: 'link',
+                href: href,
+                icon: 'comment',
+                label: 'Navigate to chat view',
+            }
+        );
     }
-    else {
-        return 'Beaker Notebook';
-    }
+    nav.push(...[
+        {
+            type: 'button',
+            icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
+            command: toggleDarkMode,
+            label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
+        },
+        {
+            type: 'link',
+            href: `https://jataware.github.io/beaker-kernel`,
+            label: 'Beaker Documentation',
+            icon: "book",
+            rel: "noopener",
+            target: "_blank",
+        },
+        {
+            type: 'link',
+            href: `https://github.com/jataware/beaker-kernel`,
+            label: 'Check us out on Github',
+            icon: "github",
+            rel: "noopener",
+            target: "_blank",
+        },
+    ]);
+    return nav;
 });
-
-const headerNav = computed(() => [
-    {
-        type: 'link',
-        href: `/chat${window.location.search}`,
-        icon: 'comment',
-        label: 'Navigate to chat view',
-    },
-    {
-        type: 'button',
-        icon: (theme.mode === 'dark' ? 'sun' : 'moon'),
-        command: toggleDarkMode,
-        label: `Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} mode.`,
-    },
-    {
-        type: 'link',
-        href: `https://jataware.github.io/beaker-kernel`,
-        label: 'Beaker Documentation',
-        icon: "book",
-        rel: "noopener",
-        target: "_blank",
-    },
-    {
-        type: 'link',
-        href: `https://github.com/jataware/beaker-kernel`,
-        label: 'Check us out on Github',
-        icon: "github",
-        rel: "noopener",
-        target: "_blank",
-    },
-]);
 
 const beakerSession = computed<BeakerSessionComponentType>(() => {
     return beakerInterfaceRef?.value?.beakerSession;
@@ -268,8 +277,6 @@ watch(
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
         contextPreviewData.value = msg.content;
-    } else if (msg.header.msg_type === "kernel_state_info") {
-        kernelStateInfo.value = msg.content;
     } else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,

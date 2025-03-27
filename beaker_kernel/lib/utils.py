@@ -10,6 +10,7 @@ import warnings
 from frozendict import frozendict
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from functools import wraps, update_wrapper
+from importlib import import_module
 from pathlib import Path
 from typing import Any, TYPE_CHECKING, Callable, List
 
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 execution_context_var = contextvars.ContextVar('execution_context', default=None)
 parent_message_var = contextvars.ContextVar('parent_message_var', default={})
 
+class ForwardMessage: pass
 
 def env_enabled(env_var: str):
     return os.environ.get(env_var, "false").lower() == "true"
@@ -33,6 +35,14 @@ def get_socket(stream_name: str):
     socket = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_name)]
     return socket
 
+def import_dotted_class(import_string: str):
+    try:
+        module_name, class_name = import_string.rsplit('.', 1)
+    except Exception as err:
+        raise
+    module = import_module(module_name)
+    cls = getattr(module, class_name, None)
+    return cls
 
 def find_file_along_path(filename: str, start_path: Path | str | None = None) -> Path | None:
     if start_path is None:
@@ -132,21 +142,35 @@ class handle_message(AbstractAsyncContextManager):
         return None
 
 
-def message_handler(fn):
+def message_handler(func=None, /, *, send_status_updates=True, send_reply=True) -> None:
     """
     Method decorator that handles the parsing and responding to of messages.
     """
-    @wraps(fn)
-    async def wrapper(self, server, target_stream, data: JupyterMessageTuple):
-        async with handle_message(server, target_stream, data) as ctx:
-            with parent_message_context(ctx.message):
-                result = await fn(self, ctx.message)
-                ctx.return_val = result
-                # If message data is returned, then the message should be proxied, but if None or any other type is
-                # returned, the message should be dropped and not continue on to the proxied server.
-                if isinstance(result, JupyterMessageTuple) or result is None:
-                    return result
-    return wrapper
+
+    def decorator(fn):
+        @wraps(fn)
+        async def wrapper(self, server, target_stream, data: JupyterMessageTuple):
+            async with handle_message(server, target_stream, data, send_status_updates=send_status_updates, send_reply=send_reply) as ctx:
+                with parent_message_context(ctx.message):
+                    result = await fn(self, ctx.message)
+                    # If message data is returned, then the message should be proxied, but if None or any other type is
+                    # returned, the message should be dropped and not continue on to the proxied server.
+                    match result:
+                        case JupyterMessage():
+                            ctx.send_reply = False
+                            return result.parts
+                        case ForwardMessage, ForwardMessage():
+                            ctx.send_reply = False
+                            return data
+                        case _:
+                            ctx.return_val = result
+                            return None
+        return wrapper
+
+    if func is not None:
+        return decorator(func)
+    else:
+        return decorator
 
 
 def intercept(msg_type=None, stream="shell", docs: str|None=None, default_payload=None):

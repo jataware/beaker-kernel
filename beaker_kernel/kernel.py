@@ -18,9 +18,10 @@ from beaker_kernel.lib.config import reset_config, config
 from beaker_kernel.lib.context import BeakerContext, autodiscover_contexts
 from beaker_kernel.lib.jupyter_kernel_proxy import InterceptionFilter, JupyterMessage, KernelProxyManager
 from beaker_kernel.lib.utils import (message_handler, LogMessageEncoder, magic,
-                        handle_message, get_socket, execution_context, parent_message_context)
+                        handle_message, get_socket, execution_context, parent_message_context,
+                        ForwardMessage)
 
-USER_RESPONSE_WAIT_TIME = 100
+USER_RESPONSE_WAIT_TIME_SECONDS = 100
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,7 @@ class BeakerKernel(KernelProxyManager):
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.running_actions = {}
+        context_args = session_config.get("context", {})
         super().__init__(session_config, session_id=f"{kernel_id}_session")
         self.register_magic_commands()
         self.add_base_intercepts()
@@ -75,13 +77,28 @@ class BeakerKernel(KernelProxyManager):
         self.user_responses = dict()
         # Initialize context (Using the event loop to simulate `await`ing the async func in non-async setup)
         event_loop = asyncio.get_event_loop()
-        context_task = event_loop.create_task(self.start_default_context())
+        context_task = event_loop.create_task(self.start_default_context(**context_args))
         context_task.add_done_callback(lambda task: None)
 
-    async def start_default_context(self):
-        default_context = os.environ.get('BEAKER_DEFAULT_CONTEXT')
-        default_context_payload = os.environ.get('BEAKER_DEFAULT_CONTEXT_PAYLOAD', "{}")
-        if default_context_payload:
+    async def start_default_context(self, default_context=None, default_context_payload=None, **options):
+        default_context = default_context or os.environ.get('BEAKER_DEFAULT_CONTEXT')
+        default_context_payload = default_context_payload or os.environ.get('BEAKER_DEFAULT_CONTEXT_PAYLOAD', "{}")
+
+        # Avoiding passing in optional args so defaults can be used
+        optional_args = {}
+        language = options.get("language", None) or os.environ.get('BEAKER_DEFAULT_CONTEXT_LANGUAGE', None)
+        if language:
+            optional_args["language"] = language
+
+        # Set context specific options
+        debug = options.get("debug", None) or os.environ.get('BEAKER_DEFAULT_CONTEXT_DEBUG', None)
+        verbose = options.get("verbose", None) or os.environ.get('BEAKER_DEFAULT_CONTEXT_VERBOSE', None)
+        if debug is not None:
+            self.debug_enabled = debug
+        if verbose is not None:
+            self.verbose = verbose
+
+        if isinstance(default_context_payload, str):
             try:
                 default_context_payload = json.loads(default_context_payload)
             except json.JSONDecodeError:
@@ -94,7 +111,7 @@ class BeakerKernel(KernelProxyManager):
         if not default_context:
             default_context = "default"
             default_context_payload = {}
-        await self.set_context(default_context, None)
+        await self.set_context(default_context, default_context_payload, **optional_args)
 
     def add_base_intercepts(self):
         """
@@ -118,6 +135,7 @@ class BeakerKernel(KernelProxyManager):
         self.server.intercept_message("shell", "set_agent_model", self.set_agent_model)
         self.server.intercept_message("shell", "reset_request", self.reset_kernel)
         self.server.intercept_message("control", "interrupt_request", self.interrupt)
+        self.server.intercept_message("control", "shutdown_request", self.shutdown)
         self.server.intercept_message("shell", "notebook_state_response", self.notebook_state_response)
 
     def register_magic_commands(self):
@@ -381,6 +399,16 @@ class BeakerKernel(KernelProxyManager):
             del self.running_actions[key]
         return None
 
+    @message_handler
+    async def shutdown(self, message):
+        def stop_loop(loop: ioloop.IOLoop):
+            loop.stop()
+        self.context.cleanup()
+        # Stop loop after short delay to allow cleanup to run.
+        loop = ioloop.IOLoop.current()
+        loop.call_later(0.2, stop_loop, loop)
+        return None
+
     async def prompt_user(self, query, parent_message=None):
         msg_id = str(uuid.uuid4())
         self.send_response(
@@ -391,12 +419,13 @@ class BeakerKernel(KernelProxyManager):
             parent_identities=getattr(parent_message, "identities", None),
             msg_id=msg_id,
         )
-        for _ in range(USER_RESPONSE_WAIT_TIME):
+        sleep_duration = 0.2
+        for _ in range(round(USER_RESPONSE_WAIT_TIME_SECONDS / sleep_duration)):
             if msg_id in self.user_responses:
                 result = self.user_responses[msg_id]
                 del self.user_responses[msg_id]
                 return result
-            await asyncio.sleep(1)
+            await asyncio.sleep(sleep_duration)
 
         raise Exception("Query timed out. User took too long to respond.")
 
@@ -595,7 +624,7 @@ class BeakerKernel(KernelProxyManager):
             parent_header=parent_header,
         )
 
-    @message_handler
+    @message_handler(send_status_updates=False, send_reply=False)
     async def input_reply(self, message):
         content = message.content
         parent_id = message.parent_header["msg_id"]
@@ -678,7 +707,7 @@ def start(connection_file):
 
     try:
         loop.start()
-    except KeyboardInterrupt:
+    finally:
         # Perform shutdown cleanup here
         cleanup(kernel)
         sys.exit(0)

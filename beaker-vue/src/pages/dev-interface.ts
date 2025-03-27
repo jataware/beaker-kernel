@@ -7,6 +7,7 @@ import DialogService from 'primevue/dialogservice';
 import FocusTrap from 'primevue/focustrap';
 
 import DevInterface from './DevInterface.vue';
+import BeakerAppConfigPlugin from '../plugins/appconfig';
 import { vKeybindings } from '../directives/keybindings';
 import { vAutoScroll } from '../directives/autoscroll';
 import BeakerThemePlugin from '../plugins/theme';
@@ -32,6 +33,7 @@ const baseUrl = PageConfig.getBaseUrl();
   app.use(ConfirmationService);
   app.use(DialogService);
   app.use(BeakerThemePlugin);
+  app.use(BeakerAppConfigPlugin);
   app.directive('tooltip', Tooltip);
   app.directive('focustrap', FocusTrap);
   app.directive('keybindings', vKeybindings);

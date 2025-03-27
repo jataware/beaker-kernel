@@ -37,9 +37,9 @@ else:
         LIB_LOCATIONS.append(os.path.join(os.environ["XDG_DATA_HOME"], "beaker"))
 
 
-MappingType = typing.Literal["context", "subkernel"]
+MappingType = typing.Literal["contexts", "subkernels", "apps", "commands"]
 
-def find_mappings(mapping_type: MappingType) -> typing.Dict[str, any]:
+def find_mappings(mapping_type: MappingType) -> typing.Generator[typing.Dict[str, any], None, None]:
     """
     Finds, reads, and parses all mappings of the provided type.
     """
