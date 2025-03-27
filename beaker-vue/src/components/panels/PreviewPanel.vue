@@ -62,6 +62,7 @@
                         />
                         <CodeEditor 
                             v-if="isRaw"
+                            :readonly="true"
                             display-mode="dark"
                             :modelValue="contentsWrapper"
                             ref="codeEditorRef"

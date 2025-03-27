@@ -100,11 +100,11 @@
                 </SideMenuPanel>
 
                 <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
-                    <LoggingPane :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
+                    <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, rawMessages.length)" v-autoscroll />
                 </SideMenuPanel>
 
                 <SideMenuPanel label="Messages" icon="pi pi-comments">
-                    <LoggingPane :entries="rawMessages" @clear-logs="rawMessages.splice(0, rawMessages.length)" v-autoscroll />
+                    <MessagesPanel :entries="rawMessages" @clear-logs="rawMessages.splice(0, rawMessages.length)" v-autoscroll />
                 </SideMenuPanel>
             </SideMenu>
         </template>
@@ -146,6 +146,8 @@ import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
+import MessagesPanel from '../components/panels/MessagesPanel.vue';
+import DebugPanel from '../components/panels/DebugPanel.vue';
 
 
 const activeContext = ref();
