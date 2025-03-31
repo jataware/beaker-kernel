@@ -2,16 +2,27 @@
     <div class="sidemenu-container" :class="[position]">
         <div class="sidemenu" :class="[position, (minimizeIndicator ? 'minimize' : undefined)]" :style="containerStyle" ref="panelRef">
             <div class="sidemenu-menu-selection" :class="[position]" ref="menuRef">
-                <Button
-                    v-for="(panel, index) in panels" :key="`button-${index}`"
-                    :class="['menu-button', props.highlight, props.position, (selectedTabIndex === index ? 'selected' : undefined), (props.showLabel ? 'show-label' : undefined)]"
-                    :icon="panel.props.icon"
-                    :label="props.showLabel ? panel.props.label : undefined"
-                    icon-pos="top"
-                    @click="handleButtonClick(index)"
-                    v-tooltip:[toolTipArgs]="props.showTooltip ? panel.props.label : undefined"
-                    text
-                ></Button>
+                <div v-for="buttonPosition in ['top', 'middle', 'bottom']" :key="buttonPosition" :class="`${buttonPosition}-buttons`">
+                    <Button
+                        v-for="{panel, idx} in panelsByPosition[buttonPosition]" :key="`button-${buttonPosition}-${idx}`"
+                        :class="[
+                            'menu-button',
+                            props.highlight,
+                            props.position,
+                            // isPanelSelected(buttonPosition, index) ? 'selected' : undefined,
+                            (selectedTabIndex === idx ? 'selected' : undefined),
+                            (props.showLabel ? 'show-label' : undefined),
+                            `idx-${idx}`,
+                            `${isPanelSelected(idx)}-idx`
+                        ]"
+                        :icon="panel.props?.icon"
+                        :label="props.showLabel ? panel.props.label : undefined"
+                        icon-pos="top"
+                        @click="handleButtonClick(idx)"
+                        v-tooltip:[toolTipArgs]="props.showTooltip ? panel.props.label : undefined"
+                        text
+                    ></Button>
+                </div>
             </div>
             <div v-show="expanded" role="menu" class="sidemenu-panel-container">
                 <component v-for="(panel, index) in panels" :key="`panel-${index}`" :is="panel" v-show="selectedTabIndex === index" :selected="selectedTabIndex === index"></component>
@@ -29,9 +40,11 @@
 
 <script setup lang="tsx">
 import { ref, defineProps, defineExpose, watch, computed, defineEmits, getCurrentInstance, useSlots, isVNode, nextTick, withDefaults, onUnmounted, onMounted } from "vue";
+import { type VNode } from "vue";
 
 import Button from 'primevue/button';
 import SideMenuPanel from "./SideMenuPanel.vue";
+import { SidePanel } from "@jupyterlab/ui-components";
 
 export type MenuPosition = "right" | "left";
 export type HighlightType = "full" | "shadow" | "line";
@@ -73,7 +86,7 @@ const MINIMIZE_INDICATION_WIDTH = 8;
 
 const slots = useSlots();
 
-const selectedTabIndex = ref(props.expanded ? 0 : -1);
+const selectedTabIndex = ref<number|null>(props.expanded ? 0 : null);
 const panelWidth = ref<number|null>(null);
 const listeners = ref({
     move: null,
@@ -95,14 +108,27 @@ var menuWidth: number;
 var closedWidth: number;
 
 const expanded = computed(() => {
-    const optionSelected = selectedTabIndex.value > -1;
-    return optionSelected
+    return selectedTabIndex.value !== null;
 });
 
 const panels = computed(() => {
     return slots.default().filter((item) => {
         return (isVNode(item) && item.type === SideMenuPanel);
     });
+});
+
+const panelsByPosition = computed(() => {
+    const result: {[key: string]: {panel: VNode; idx: number}[]} = {
+        top: [],
+        middle: [],
+        bottom: [],
+    }
+    panels.value.forEach((panel, idx) => {
+        const panelPos = panel.props.position || "top";
+        result[panelPos].push({panel, idx});
+    });
+    console.log(result);
+    return result;
 });
 
 const isStatic = computed(() => (props.staticSize || (expanded.value && panelWidth.value === null)))
@@ -219,7 +245,7 @@ const endDrag = (evt: MouseEvent) => {
     panelWidth.value = Math.round(panelWidth.value);
     // If dragged closed, assume they want the panel to be hidden
     if (panelWidth.value <= minWidth) {
-        selectedTabIndex.value = -1;
+        selectedTabIndex.value = null;
         panelWidth.value = null;
     }
     dragStartPos.value = null;
@@ -234,9 +260,16 @@ const handleButtonClick = (index: number) => {
         emit("panel-show");
     }
     else {
-        selectedTabIndex.value = -1;
+        selectedTabIndex.value = null;
         emit("panel-hide");
     }
+}
+
+const isPanelSelected = (index: number) => {
+    return Boolean(
+        selectedTabIndex.value !== null &&
+        selectedTabIndex.value === index
+    );
 }
 
 const selectPanel = (label: string) => {
@@ -363,6 +396,25 @@ defineExpose({
     background-color: var(--surface-b);
     display: flex;
     flex-direction: column;
+    width: 5em;
+
+    > div {
+        display: flex;
+        flex-direction: column;
+
+        &.top-buttons {
+            flex: 1;
+        }
+        &.bottom-buttons {
+            flex: 1;
+            flex-direction: column;
+            justify-content: end;
+        }
+    }
+
+    .p-button-icon.p-button-icon {
+        font-size: 1.5em;
+    }
 }
 
 .sidemenu-gutter {

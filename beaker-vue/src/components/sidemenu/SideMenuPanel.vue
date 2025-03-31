@@ -8,17 +8,27 @@
 </template>
 
 <script setup lang="tsx">
-import { defineProps, defineEmits, ref, watch } from "vue";
+import { defineProps, defineEmits, ref, watch, withDefaults } from "vue";
 
 const extraClasses = ref<string[]>([]);
 
-const props = defineProps([
-    "icon",
-    "label",
-    "noOverflow",
-    "lazy",
-    "selected",
-]);
+export type ButtonPosition = "top" | "bottom" | "middle";
+export interface Props {
+    "icon": string;
+    "label": string;
+    "noOverflow"?: boolean;
+    "lazy"?: boolean;
+    "selected"?: boolean;
+    "position"?: ButtonPosition;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    "noOverflow": undefined,
+    "lazy": false,
+    "selected": false,
+    "position": "top",
+});
+
 const loaded = ref<boolean>(!props.lazy);
 
 if (props.noOverflow !== undefined) {
