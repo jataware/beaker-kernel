@@ -44,7 +44,7 @@ class BeakerContext:
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
     preview_function_name: str = "generate_preview"
-    kernel_state_function_name: str = "fetch_kernel_state"
+    kernel_state_function_name: str = "send_kernel_state"
 
     SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
@@ -308,6 +308,18 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
         state = await self.evaluate(fetch_state_code)
         return state["return"]
+
+    async def send_kernel_state(self):
+        """
+        Gets the subkernel state and also applies subkernel formatting as to
+        prepare it for display.
+        """
+        state = await self.get_subkernel_state()
+        return {
+            "x-application/beaker-subkernel-state": {
+                "application/json": self.subkernel.format_kernel_state(state or {})
+            },
+        }
 
     @action(action_name="get_subkernel_state")
     async def get_subkernel_state_action(self, message):

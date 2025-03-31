@@ -54,17 +54,3 @@ class DefaultContext(BeakerContext):
                 }
             },
         }
-
-
-    async def fetch_kernel_state(self):
-        """
-        Preview what exists in the subkernel.
-        """
-        fetch_state_code = self.subkernel.FETCH_STATE_CODE
-        result = await self.evaluate(fetch_state_code)
-        state = result.get("return", None)
-        return {
-            "x-application/beaker-subkernel-state": {
-                "application/json": self.subkernel.format_kernel_state(state or {})
-            },
-        }

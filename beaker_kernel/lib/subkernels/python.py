@@ -42,16 +42,22 @@ _result = {
     "modules": {},
     "variables": {},
     "functions": {},
+    "classes": {}
 }
 for _name, _value in dict(locals()).items():
     if _name.startswith('_') or _name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open'):
         continue
     if callable(_value):
-        _fndetails = {
-            'docstring': _inspect.getdoc(_value),
-            'signature': str(_inspect.signature(_value))
-        }
-        _result["functions"][_name] = _fndetails
+        if isinstance(_value, type):
+            _result["classes"][_name] = {
+                'docstring': _inspect.getdoc(_value)
+            }
+        else:
+            _fndetails = {
+                'docstring': _inspect.getdoc(_value),
+                'signature': str(_inspect.signature(_value))
+            }
+            _result["functions"][_name] = _fndetails
     elif _inspect.ismodule(_value):
 
         try:
@@ -186,7 +192,8 @@ del importlib, os, site, sys
         formatted_state = {
             "modules": {},
             "variables": {},
-            "functions": {}
+            "functions": {},
+            "classes": {}
         }
         for module, details in state["modules"].items():
             aliased_name = f": {details['full_name']}" if module != details["full_name"] else ""
@@ -224,5 +231,13 @@ del importlib, os, site, sys
             if details["docstring"] is not None:
                 payload["children"] = [{"label": details["docstring"]}]
             formatted_state["functions"][function] = payload
+
+        for state_class, details in state["classes"].items():
+            payload = {
+                "label": f"{state_class}"
+            }
+            if details["docstring"] is not None:
+                payload["children"] = [{"label": details["docstring"]}]
+            formatted_state["classes"][state_class] = payload
 
         return formatted_state
