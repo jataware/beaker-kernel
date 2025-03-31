@@ -53,8 +53,13 @@ for _name, _value in dict(locals()).items():
         }
         _result["functions"][_name] = _fndetails
     elif _inspect.ismodule(_value):
+
+        try:
+            _path = str(_value.__file__)
+        except AttributeError:
+            _path = "(built in)"
         _result["modules"][_name] = {
-            'path': str(_value.__file__),
+            'path': _path,
             'full_name': str(_value.__name__)
         }
     else:
