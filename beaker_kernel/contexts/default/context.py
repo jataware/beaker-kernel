@@ -47,11 +47,10 @@ class DefaultContext(BeakerContext):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
         result = await self.evaluate(fetch_state_code)
         state = result.get("return", None)
-        if state:
-            return {
-                "x-application/beaker-subkernel-state": {
-                    "state": {
-                        "application/json": state
-                    }
-                },
-            }
+        return {
+            "x-application/beaker-subkernel-state": {
+                "state": {
+                    "application/json": state or {}
+                }
+            },
+        }

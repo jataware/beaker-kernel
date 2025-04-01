@@ -44,6 +44,7 @@ class BeakerContext:
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
     preview_function_name: str = "generate_preview"
+    kernel_state_function_name: str = "send_kernel_state"
 
     SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
@@ -97,6 +98,14 @@ class BeakerContext:
             raise ValueError(f"Preview function '{self.preview_function_name}' must be a coroutine (awaitable) if defined.")
         if preview_func and inspect.iscoroutinefunction(preview_func):
             return preview_func
+
+    @property
+    def kernel_state(self) -> Callable[[], Awaitable[Any]] | None:
+        state_func = getattr(self, self.kernel_state_function_name, None)
+        if callable(state_func) and not inspect.iscoroutinefunction:
+            raise ValueError(f"Kernel state fetching function '{self.preview_function_name}' must be a coroutine (awaitable) if defined.")
+        if state_func and inspect.iscoroutinefunction(state_func):
+            return state_func
 
     def disable_tools(self):
         # TODO: Identical toolnames don't work
@@ -298,7 +307,21 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
     async def get_subkernel_state(self):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
         state = await self.evaluate(fetch_state_code)
+        for warning in state["stderr_list"]:
+            logger.warning(warning)
         return state["return"]
+
+    async def send_kernel_state(self):
+        """
+        Gets the subkernel state and also applies subkernel formatting as to
+        prepare it for display.
+        """
+        state = await self.get_subkernel_state()
+        return {
+            "x-application/beaker-subkernel-state": {
+                "application/json": self.subkernel.format_kernel_state(state or {})
+            },
+        }
 
     @action(action_name="get_subkernel_state")
     async def get_subkernel_state_action(self, message):
