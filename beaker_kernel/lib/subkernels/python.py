@@ -28,6 +28,9 @@ class PythonSubkernel(CheckpointableBeakerSubkernel):
 import inspect as _inspect
 import json as _json
 import dill as _dill
+import logging as _logging
+_logger = _logging.getLogger(__name__)
+
 class _SubkernelStateEncoder(_json.JSONEncoder):
     def default(self, o):
         # if callable(o):
@@ -45,72 +48,78 @@ _result = {
     "classes": {}
 }
 for _name, _value in dict(locals()).items():
-    if _name.startswith('_') or _name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open'):
-        continue
-    if callable(_value):
-        if isinstance(_value, type):
-            _result["classes"][_name] = {
-                'docstring': _inspect.getdoc(_value)
-            }
-        else:
-            _fndetails = {
-                'docstring': _inspect.getdoc(_value),
-                'signature': str(_inspect.signature(_value))
-            }
-            _result["functions"][_name] = _fndetails
-    elif _inspect.ismodule(_value):
+    try:
+        if _name.startswith('_') or _name in ('In', 'Out', 'get_ipython', 'exit', 'quit', 'open'):
+            continue
+        if callable(_value):
+            if isinstance(_value, type):
+                _result["classes"][_name] = {
+                    'docstring': _inspect.getdoc(_value)
+                }
+            else:
+                _fndetails = {
+                    'docstring': _inspect.getdoc(_value),
+                    'signature': str(_inspect.signature(_value))
+                }
+                _result["functions"][_name] = _fndetails
+        elif _inspect.ismodule(_value):
 
-        try:
-            _path = str(_value.__file__)
-        except AttributeError:
-            _path = "(built in)"
-        _result["modules"][_name] = {
-            'path': _path,
-            'full_name': str(_value.__name__)
-        }
-    else:
-        import pandas as _pandas
-        _size = ''
-        if id(_value) in (id(globals()), id(locals)):
-            _vardetails = {
-                'value': "{...skipped...}",
-                'type': str(type(_value)),
-                'size': '',
+            try:
+                _path = str(_value.__file__)
+            except AttributeError:
+                _path = "(built in)"
+            _result["modules"][_name] = {
+                'path': _path,
+                'full_name': str(_value.__name__)
             }
         else:
+            import pandas as _pandas
             _size = ''
-            if hasattr(_value, "shape"):
-                _size = _value.shape
-            elif hasattr(_value, "__len__"):
+            if id(_value) in (id(globals()), id(locals)):
+                _vardetails = {
+                    'value': "{...skipped...}",
+                    'type': str(type(_value)),
+                    'size': '',
+                }
+            else:
+                _size = ''
+                if hasattr(_value, "shape"):
+                    _size = _value.shape
+                elif hasattr(_value, "__len__"):
+                    try:
+                        _size = len(_value)
+                    except Exception:
+                        pass
+
+                # bounds check long sequences for size and things like Ellipsis not being serializable
+                _safe_value = _value
+                _truncated = False
                 try:
-                    _size = len(_value)
-                except Exception:
+                    _safe_value = _value.head()
+                    _truncated = True
+                except AttributeError:
+                    pass
+                try:
+                    _safe_value = _value[:99]
+                    if len(_value) > 99:
+                        _truncated = True
+                except TypeError:
                     pass
 
-            # bounds check long sequences for size and things like Ellipsis not being serializable
-            _safe_value = _value
-            _truncated = False
-            try:
-                _safe_value = _value.head()
-                _truncated = True
-            except AttributeError:
-                pass
-            try:
-                _safe_value = _value[:99]
-                if len(_value) > 99:
-                    _truncated = True
-            except TypeError:
-                pass
-
-            _vardetails = {
-                'value': _safe_value,
-                'type': type(_value).__name__,
-                'size': str(_size),
-                'truncated': _truncated
-            }
-        _result["variables"][_name] = _vardetails
-
-_result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
+                _vardetails = {
+                    'value': _safe_value,
+                    'type': type(_value).__name__,
+                    'size': str(_size),
+                    'truncated': _truncated
+                }
+            _result["variables"][_name] = _vardetails
+    except Exception as e:
+        _logger.warning(f"FETCH_STATE_CODE: failed to get variable details for variable `{_name}` of type `{type(_value)}`: {e}")
+try:
+    _result = _json.loads(_json.dumps(_result, cls=_SubkernelStateEncoder))
+except Exception as e:
+    _logger.warning(f"FETCH_STATE_CODE: failed to serialize state: {e}")
+    _result = {}
 _result
 """
 

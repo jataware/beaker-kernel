@@ -307,6 +307,8 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
     async def get_subkernel_state(self):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
         state = await self.evaluate(fetch_state_code)
+        for warning in state["stderr_list"]:
+            logger.warning(warning)
         return state["return"]
 
     async def send_kernel_state(self):
