@@ -20,12 +20,17 @@
                     />
                 </div>
                 <div class="code-output">
-                    <CodeCellOutput 
-                        :outputs="cell.outputs" 
-                        :busy="isBusy" 
-                        v-show="!hideOutput" 
-                        :dropdown-layout="isChat ?? false"
-                    />
+                    <template v-if="hasOutputData(cell)">
+                        <CodeCellOutput 
+                            :outputs="cell.outputs" 
+                            :busy="isBusy" 
+                            v-show="!hideOutput" 
+                            :dropdown-layout="isChat ?? false"
+                        />
+                    </template>
+                    <div v-else class="empty-output-message" v-show="!hideOutput">
+                        Empty output
+                    </div>
                 </div>
                 <div class="state-info">
                     <div>
@@ -165,6 +170,17 @@ const clear = () => {
     cell.value.outputs.splice(0, cell.value.outputs.length);
 }
 
+const hasOutputData = (cell) => {
+    if (!cell || !cell.outputs || cell.outputs.length === 0) {
+        return false;
+    }
+    
+    // Check if any output has data that's not empty
+    return cell.outputs.some(output => 
+        output.data && Object.keys(output.data).length > 0
+    );
+};
+
 defineExpose({
     execute,
     enter,
@@ -270,6 +286,13 @@ button.rollback-button {
     font-weight: bold;
     font-size: 1.3rem;
     margin-top: 1rem;
+}
+
+.empty-output-message {
+    padding: 0.5rem;
+    color: var(--text-color-secondary);
+    font-style: italic;
+    font-size: 0.9rem;
 }
 
 </style>

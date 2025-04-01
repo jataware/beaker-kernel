@@ -40,13 +40,17 @@
         >
             <div class="events">
                 <div
-                    class="query-steps"
+                    class="query-steps agent-actions-header"
                     v-if="events.length > 0 && !isChat"
+                    @click="toggleThoughtsVisibility"
                 >
-                    Agent actions:
+                    <div class="agent-actions-toggle">
+                        <i class="pi" :class="showThoughts ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+                        <span class="agent-actions-toggle-text">Agent Actions</span>
+                    </div>
                 </div>
                 <Accordion
-                    v-if="events.length > 0 && !isChat"
+                    v-if="events.length > 0 && !isChat && false"
                     :multiple="true"
                     :class="'query-accordion'"
                     v-model:active-index="selectedEvents"
@@ -77,65 +81,88 @@
                                 <span class="font-bold white-space-nowrap">{{ queryEventNameMap[event.type] }}</span>
                             </span>
                         </template>
-                        <BeakerQueryCellEvent
-                            :key="eventIndex"
-                            :event="event"
-                            :parentQueryCell="cell"
-                        />
-                    </AccordionTab>
-                </Accordion>
-                <Accordion
-                    :class="'query-accordion-chat'"
-                    v-if="isChat"
-                >
-                    <AccordionTab
-                    :pt="{
-                            header: {
-                                class: [`query-tab`, `query-tab-thought`, `query-tab-thought-chat`]
-                            },
-                            headerAction: {
-                                class: [`query-tab-headeraction`, `query-tab-headeraction-thought`]
-                            },
-                            content: {
-                                class: [`query-tab-content-thought`]
-                            },
-                            headerIcon: {
-                                class: [`query-tab-icon-thought`]
-                            },
-                        }"
-                    >
-                        <template #headericon>
-                            <i
-                                class="pi pi-sparkles"
-                                style="
-                                    color: var(--yellow-500);
-                                    margin-right: 0.5rem;
-                                "
+                        <div style="border: 0px solid transparent;"> <!-- red -->
+                            <BeakerQueryCellEvent
+                                :key="eventIndex"
+                                :event="event"
+                                :parentQueryCell="cell"
                             />
-                        </template>
-                        <template #header>
-                            <span class="flex align-items-center gap-2 w-full">
-                                <span
-                                    class="white-space-nowrap"
-                                    style="
-                                        font-weight: 400;
-                                        font-family: 'Courier New', Courier, monospace;
-                                        font-size: 0.8rem;
-                                        color: var(--text-color-secondary)
-                                    ">
-                                    {{ lastEventThought }}
-                                    <span class="thinking-animation" style="font-size: unset !important;" v-if="cell.status === 'busy'"/>
-                                </span>
-                            </span>
-                        </template>
-                        <BeakerQueryCellEvent
-                            v-for="(event, eventIndex) in events"
-                            :key="eventIndex"
-                            :event="event"
-                            :parentQueryCell="cell"
-                        />
+                        </div>
                     </AccordionTab>
-                </Accordion>
+                </Accordion> 
+                <div
+                    v-if="thoughts.length > 0 && !isChat && showThoughts" 
+                    class="thoughts-list"
+                >
+                    <div 
+                        v-for="(thought, thoughtIndex) in thoughts" 
+                        :key="thoughtIndex"
+                        class="thought-item"
+                        :class="{
+                            'thought-item-alt': thoughtIndex % 2 === 1,
+                            'thought-item-selected': expandedThoughts.has(thoughtIndex)
+                        }"
+                        @click="toggleCodeCellForThought(thoughtIndex)"
+                    >
+                        <div class="thought-content">
+                            <span class="thought-icon"><ThinkingIcon/></span>
+                            {{ thought.content.thought }}
+                        </div>
+                        <div v-if="expandedThoughts.has(thoughtIndex) && relatedCodeCells.get(thoughtIndex)" class="related-code-cell">
+                            <div class="code-cell-controls">
+                              <!-- <Button
+                                size="small"
+                                text
+                                label="Move Out"
+                                icon="pi pi-file-export"
+                                @click.stop="addCodeCellToNotebook(relatedCodeCells.get(thoughtIndex))"
+                              ></Button> -->
+                                <Button 
+                                    :icon="expandedCodeCells.get(thoughtIndex) ? 'pi pi-sort-up' : 'pi pi-expand'" 
+                                    size="small"
+                                    text
+                                    class="code-cell-toggle-button" 
+                                    @click.stop="toggleCodeCellExpansion($event, thoughtIndex)"
+                                    :title="expandedCodeCells.get(thoughtIndex) ? 'Shrink code cell' : 'Expand code cell'"
+                                />
+                            </div>
+                            <div :class="{'code-cell-collapsed': !expandedCodeCells.get(thoughtIndex)}">
+                                <BeakerQueryCellEvent
+                                    :event="relatedCodeCells.get(thoughtIndex)"
+                                    :parent-query-cell="cell"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                <!-- <Button
+                    size="small"
+                    text
+                    label="Move Out"
+                    icon="pi pi-file-export"
+                    @click.stop=""
+                  ></Button> -->
+                </div>
+                <div
+                    v-if="isChat"
+                    class="expand-thoughts-button"
+                    @click="expandThoughts"
+                >
+                    <div style="display: flex; align-items: center;">
+                        <i
+                            class="pi pi-sparkles"
+                            :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
+                            style="
+                                color: var(--yellow-500);
+                                font-size: 1.25rem;
+                                margin-right: 0.6rem;
+                            "
+                        />
+                        {{ lastEventThought }}
+                    </div>
+                    <Button>{{ session.notebook.selectedCell === cell ? 'Close' : 'Details' }}</Button>
+                </div>
                 <div v-for="[messageEvent, messageClass] of messageEvents" v-bind:key="messageEvent.id">
                     <div style="display: flex; flex-direction: column;">
                         <BeakerQueryCellEvent
@@ -201,15 +228,16 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
+import { IBeakerCell, BeakerSession } from 'beaker-kernel/src';
+import { defineProps, defineExpose, ref, shallowRef, provide, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, toRaw } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerQueryCellEvent from "./BeakerQueryCellEvent.vue";
 import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import { BeakerNotebookComponentType } from "../notebook/BeakerNotebook.vue";
 import ThinkingIcon from "../../assets/icon-components/BrainIcon.vue";
 import { StyleOverride } from "../../pages/BaseInterface.vue"
 
@@ -249,6 +277,15 @@ const response = ref("");
 const textarea = ref();
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+const notebook = inject<BeakerNotebookComponentType>("notebook");
+const showThoughts = ref(true);
+const selectedThoughtIndex = ref<number | null>(null);
+const relatedCodeCell = ref<BeakerQueryEvent | null>(null);
+const codeCellExpanded = ref(true);
+
+// Add this new state to track multiple expanded thoughts
+const expandedThoughts = ref<Set<number>>(new Set());
+const expandedCodeCells = ref<Map<number, boolean>>(new Map());
 
 const styleOverrides = inject<StyleOverride[]>("styleOverrides")
 const isChat = ref(styleOverrides.includes('chat'))
@@ -256,9 +293,33 @@ const isChat = ref(styleOverrides.includes('chat'))
 const instance = getCurrentInstance();
 
 
+// TODO can filter event types here, depending on what's selected
 const events = computed(() => {
     return [...props.cell.events];
-})
+    // return [...props.cell.events].filter((event) => {
+    //     if (event.type === 'code_cell') {
+    //         return false;
+    //     }
+    //     return true;
+    // });
+});
+
+const thoughts = computed(() => {
+    return events.value.filter((event) => {
+        if (event.type === 'thought') {
+            return event;
+        }
+    });
+});
+
+const codeCells = computed(() => {
+    return events.value.filter((event) => {
+        if (event.type === 'code_cell') {
+            return event;
+        }
+    });
+});
+
 
 const lastEventThought = computed(() => {
     const fallback = "Thinking";
@@ -291,7 +352,7 @@ const lastEventThought = computed(() => {
                 'user_answer': "(answer received, thinking)",
                 'code_cell': "(code is now running)",
             }
-            if (endTags[lastEvent.type]) {
+            if (endTags[lastEvent.type]) { // There may be some missing types (eg error?)
                 return `${eventCursor.content.thought} ${endTags[lastEvent.type]}`;
             }
             else {
@@ -304,6 +365,64 @@ const lastEventThought = computed(() => {
     }
 })
 
+const addCodeCellToNotebook = (codeCell: BeakerQueryEvent) => {
+    console.log("addCodeCellToNotebook; raw cell:", toRaw(codeCell));
+    
+    // Log methods and properties of the session object
+    console.log("Session methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(session)));
+    console.log("Session properties:", Object.keys(session));
+    
+    // For notebook object too
+    console.log("Notebook methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(notebook)));
+    console.log("Notebook properties:", Object.keys(notebook));
+
+    // session.addCodeCell();
+
+    let copiedCellValue = toRaw(codeCell);
+
+    console.log("copiedCellValue", copiedCellValue);
+
+    if (copiedCellValue !== null) {
+        var newCell: IBeakerCell;
+
+        // If a cell with the to-be-pasted cell's id already exists in the notebook, set the copied cell's id to
+        // undefined so that it is regenerated when added.
+        const notebookIds = session.notebook.cells.map((cell) => cell.id);
+        console.log("notebookIds", notebookIds);
+
+        if (notebookIds.includes(copiedCellValue.id)) {
+
+            const cls = copiedCellValue.constructor as (data: IBeakerCell) => void;
+            const data = {
+                ...copiedCellValue,
+                // Set non-transferable attributes to undefined.
+                id: undefined,
+                executionCount: undefined,
+                busy: undefined,
+                last_execution: undefined,
+            } as IBeakerCell;
+            copiedCellValue = new cls(data);
+        }
+        // TODO doesnt work- check diff between all session/notebook types
+        // newCell = notebook.insertCellAfter(notebook.selectedCell(), copiedCellValue);
+        // console.log("session keys", Object.keys(session));
+
+        // notebook.insertCodeCell(copiedCellValue);
+        // notebook.insertCell(copiedCellValue);
+        notebook.insertCellAfter(notebook.selectedCell(), copiedCellValue);
+        // session.addCodeCell(copiedCellValue);
+    }
+
+    // notebook.insertCellAfter(codeCell.content.code);
+    // session.
+    // const codeCellEvent = codeCell as BeakerQueryEvent;
+    // console.log("codeCellEvent", codeCellEvent);
+    // const codeCellIndex = codeCellEvent.content.metadata.subindex;
+    // const codeCell = notebook.getCell(codeCellIndex);
+    // console.log("codeCell", codeCell);
+}
+
+/* TODO What is a tagged cell event? */
 const taggedCellEvents = computed(() => {
     let index = 0;
     const events: BeakerQueryEvent[] = [...props.cell.events];
@@ -455,6 +574,63 @@ function clear() {
     response.value = "";
 }
 
+const expandThoughts = () => {
+    // session is already injected...
+    // const sessionId = session.sessionId;
+    // console.log("sessionID", sessionId);
+
+    console.log("session.notebook.selectedCell", session.notebook.selectedCell);
+    // Toggle selection: if already selected, deselect it by setting to undefined
+    if (session.notebook.selectedCell === cell.value) {
+        session.notebook.selectedCell = undefined;
+    } else {
+        session.notebook.selectedCell = cell.value;
+    }
+};
+
+const toggleThoughtsVisibility = () => {
+    showThoughts.value = !showThoughts.value;
+};
+
+const toggleCodeCellForThought = (thoughtIndex: number) => {
+    // Instead of deselecting, we'll toggle this thought in the expanded set
+    if (expandedThoughts.value.has(thoughtIndex)) {
+        expandedThoughts.value.delete(thoughtIndex);
+        expandedCodeCells.value.delete(thoughtIndex);
+    } else {
+        expandedThoughts.value.add(thoughtIndex);
+        expandedCodeCells.value.set(thoughtIndex, true); // Default to expanded
+        
+        // Find the next code_cell event after this thought
+        const thoughtEvent = thoughts.value[thoughtIndex];
+        const thoughtEventIndex = events.value.findIndex(event => event.id === thoughtEvent.id);
+        
+        // Look for the next code_cell after this thought
+        let nextCodeCell = null;
+        for (let i = thoughtEventIndex + 1; i < events.value.length; i++) {
+            if (events.value[i].type === 'code_cell') {
+                nextCodeCell = events.value[i];
+                break;
+            }
+        }
+        
+        // Store the related code cell in a map keyed by thought index
+        if (nextCodeCell) {
+            // We'll modify the template to use this map instead of the single relatedCodeCell ref
+            relatedCodeCells.value.set(thoughtIndex, nextCodeCell);
+        }
+    }
+};
+
+// Add this new ref to store related code cells for each thought
+const relatedCodeCells = ref<Map<number, BeakerQueryEvent>>(new Map());
+
+const toggleCodeCellExpansion = (event, thoughtIndex: number) => {
+    event.stopPropagation(); // Prevent triggering the thought item click
+    const currentState = expandedCodeCells.value.get(thoughtIndex) || false;
+    expandedCodeCells.value.set(thoughtIndex, !currentState);
+};
+
 defineExpose({
     execute,
     enter,
@@ -592,7 +768,7 @@ export default {
 }
 
 div.query-steps {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 h3.query-steps {
@@ -630,6 +806,38 @@ h3.query-steps {
     padding-bottom: 0rem;
 }
 
+.expand-thoughts-button {
+    cursor: pointer;
+    border-radius: var(--border-radius);
+    margin: 0rem;
+    // margin-bottom: 0rem;
+    // transition: background-color 0.2s;
+    display: block;
+    padding: 0.75rem;
+
+    &:hover {
+        background-color: var(--surface-b);
+    }
+
+    [data-theme="dark"] &:hover {
+        background-color: var(--surface-a);
+    }
+
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    &>div {
+        flex: 1;
+    }
+
+    &>button {
+        padding: 0.25rem 0.4rem 0.4rem 0.4rem;
+        align-self: center;
+        // todo make bg slightly transparent
+    }
+}
+
 .query-accordion-chat {
     margin-bottom: 0.5rem;
     width: 100%;
@@ -663,9 +871,14 @@ h3.query-steps {
             margin-bottom: 0rem;
             transition: background-color 0.2s;
 
-            &:hover {
+            [data-theme="light"] &:hover {
+                background-color: var(--surface-b);
+            }
+
+            [data-theme="dark"] &:hover {
                 background-color: var(--surface-a);
             }
+
         }
     }
 
@@ -743,7 +956,7 @@ a.query-tab-headeraction > span > span.pi {
     padding-left: 1rem;
     padding-bottom: 1rem;
     border-radius: var(--border-radius);
-    margin-top: 1rem;
+    margin-top: 0.5rem;
 }
 
 .query-answer-chat-override {
@@ -765,6 +978,7 @@ a.query-tab-headeraction > span > span.pi {
 
 .prompt-input {
     flex: 1;
+    min-width: 22rem;
 }
 
 .prompt-controls {
@@ -818,5 +1032,122 @@ a.query-tab-headeraction > span > span.pi {
   }
 }
 
+/* Add the sparkles animation */
+@keyframes sparkle-spin-bounce {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(360deg);
+  }
+  60% {
+    transform: rotate(360deg) translateY(-5px);
+  }
+  70% {
+    transform: rotate(360deg) translateY(0px);
+  }
+  80% {
+    transform: rotate(360deg) translateY(-3px);
+  }
+  90% {
+    transform: rotate(360deg) translateY(0px);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-sparkles {
+  display: inline-block;
+  animation: sparkle-spin-bounce 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* New styles for thoughts list */
+.thoughts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.thought-item {
+  padding: 0.75rem;
+  border-radius: var(--border-radius);
+  background-color: var(--surface-b);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.thought-item:hover {
+  background-color: var(--surface-c);
+}
+
+.thought-item-selected {
+  border-left: 3px solid var(--primary-color);
+  background-color: var(--surface-c);
+}
+
+.thought-item-alt {
+  background-color: #f6f9fc77;
+}
+
+.related-code-cell {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-top: 1px dashed var(--surface-border);
+  position: relative;
+}
+
+.code-cell-controls {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+//   margin-bottom: 0.5rem;
+  padding: 0;
+  position: absolute;
+  top: -2.65rem;
+  right: 3rem;
+  // inset-inline-end: 50%;
+}
+
+.code-cell-toggle-button {
+//   background-color: purple;
+  // color: purple;
+  margin: 0;
+}
+
+.code-cell-collapsed {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+}
+
+.agent-actions-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.agent-actions-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+.agent-actions-toggle i {
+  margin-left: 0.5rem;
+}
+
+.agent-actions-header:hover {
+  opacity: 0.8;
+}
+
+.agent-actions-toggle-text {
+  font-size: 1rem;
+}
 
 </style>

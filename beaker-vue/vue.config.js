@@ -23,6 +23,10 @@ module.exports = defineConfig({
       entry: 'src/pages/dev-interface.ts',
       title: "Beaker Development Interface",
     },
+    chatb: {
+      entry: 'src/pages/chat-interfaceB.ts',
+      title: "Beaker Chat Interface B",
+    }
   },
   css: { extract: false },
   assetsDir: "static/",

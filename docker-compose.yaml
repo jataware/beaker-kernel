@@ -24,6 +24,8 @@ services:
     volumes:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
+      - ./run:/var/run/beaker/
+      - ./.beaker.conf:/home/jupyter/.config/beaker.conf
     command: ["beaker", "dev", "watch", "--ip", "0.0.0.0"]
   ui:
     image: node:20

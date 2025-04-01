@@ -52,6 +52,7 @@ export const BeakerThemePlugin: Plugin = {
 
         const applyTheme = () => {
             const themeLink: HTMLLinkElement = document.querySelector('#primevue-theme');
+
             themeLink.addEventListener('error', (err) => {
                 // Error loading the theme. Fallback to default.
                 const failureCount = Number(localStorage.getItem('theme-failure-count')) || 0;
@@ -68,6 +69,12 @@ export const BeakerThemePlugin: Plugin = {
                 }
                 applyTheme()
             }, {once: true});
+            
+            const appElement = document.querySelector('[data-v-app]');
+            if (appElement) {
+                appElement.setAttribute('data-theme', theme.mode);
+            }
+            
             themeLink.href = `/themes/${theme.mode === 'light'? theme.lightTheme : theme.darkTheme}/theme.css`;
         };
 

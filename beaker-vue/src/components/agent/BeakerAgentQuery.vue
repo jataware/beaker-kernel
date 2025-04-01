@@ -79,9 +79,15 @@ const handleQuery = (e: any) => {
 
 
 <style lang="scss">
-.agent-input-card {
-    .p-card-body .p-card-content {
-        padding: 0.75rem 0;
+.agent-input-card.p-card {
+    &>.p-card-body {
+        padding: 0.5rem 1.25rem;
+        .p-card-title {
+            font-size: 1.25rem;
+        }
+        .p-card-content {
+            padding: 0 0 0 0;
+        }
     }
 }
 

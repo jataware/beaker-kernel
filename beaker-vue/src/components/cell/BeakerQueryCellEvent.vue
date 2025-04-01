@@ -9,7 +9,7 @@
             <!-- <h4 class="agent-outputs">Outputs:</h4> -->
             <Accordion :multiple="true" :active-index="meaningfulOutputs">
                 <AccordionTab
-                    v-for="[index, child] in parentEntries"
+                    v-for="[index, child] in filteredParentEntries"
                     :key="index"
                     :pt="{
                         header: {
@@ -27,13 +27,14 @@
                     }"
                 >
                     <template #header>
-                        <span class="flex align-items-center gap-2 w-full">
+                        <span class="flex align-items-center gap-2 w-full" >
                             <!-- <span :class="chooseOutputIcon(child?.outputs)"/>
                             <span class="font-bold white-space-nowrap">{{ formatOutputs(child?.outputs, ["execute_result"]) }}</span> -->
                             <span>Outputs</span>
                         </span>
                     </template>
-                    <BeakerCodecellOutput :outputs="child?.outputs" />
+                    <BeakerCodecellOutput 
+                        :outputs="child?.outputs" />
                 </AccordionTab>
             </Accordion>
         </div>
@@ -106,7 +107,7 @@
                     selected: isCodeCellSelected,
                     'query-event-code-cell': true
                 }"
-                :hide-output="false"
+                :hide-output="props.hideOutput"
                 ref="codeCellRef"
                 v-keybindings="{
                     'keydown.enter.ctrl.prevent.capture.in-editor': (evt) => {
@@ -185,6 +186,7 @@ const codeCellRef = ref();
 const props = defineProps([
     'event',
     'parentQueryCell',
+    'hideOutput',
 ]);
 
 onBeforeMount(() => {
@@ -237,7 +239,11 @@ const parentEntries = computed(() => {
         // to not greedily handle longer agent requests
         }))).every(x => x);
     // omit the list going to vue to hide it
-    return isAllTextPlain ? [] : props.parentQueryCell?.children?.entries();
+    const ret = props.parentQueryCell?.children?.entries();
+
+    console.log("parent entries ret", ret);
+
+    return isAllTextPlain ? [] : ret;
 });
 
 const meaningfulOutputs = computed(() => {
@@ -293,6 +299,27 @@ const markdownBody = computed(() =>
 function execute() {
     //const future = props.cell.execute(session);
 }
+
+const hasOutputData = (child) => {
+    if (!child || !child.outputs || child.outputs.length === 0) {
+        return false;
+    }
+    
+    // Check if any output has data that's not empty
+    return child.outputs.some(output => 
+        output.data && Object.keys(output.data).length > 0
+    );
+};
+
+// TODO this worked, but I'd rather show a "no outputs" message if there are no outputs than hide it
+// Create a filtered computed property
+const filteredParentEntries = computed(() => {
+    if (!parentEntries.value) return [];
+    
+    // Convert entries iterator to array and filter it
+    const entriesArray = Array.from(parentEntries.value);
+    return entriesArray.filter(([_, child]) => hasOutputData(child));
+});
 
 defineExpose({
     execute,
