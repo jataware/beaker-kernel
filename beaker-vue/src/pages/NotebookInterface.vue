@@ -15,6 +15,7 @@
         @any-msg="anyMessage"
         @session-status-changed="statusChanged"
         @open-file="loadNotebook"
+        wide
     >
         <div class="notebook-container">
             <BeakerNotebook
@@ -22,6 +23,14 @@
                 :cell-map="cellComponentMapping"
                 v-keybindings.top="notebookKeyBindings"
             >
+                <div class="notebook-chat-container">
+                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                <BeakerAgentQuery
+                    ref="agentQueryRef"
+                    class="agent-query-container"
+                />
+                    </div>
+                <div>
                 <BeakerNotebookToolbar
                     default-severity=""
                     :saveAvailable="true"
@@ -50,10 +59,8 @@
                         </div>
                     </template>
                 </BeakerNotebookPanel>
-                <BeakerAgentQuery
-                    ref="agentQueryRef"
-                    class="agent-query-container"
-                />
+                </div>
+                </div>
             </BeakerNotebook>
         </div>
 
@@ -61,7 +68,7 @@
             <SideMenu
                 ref="sideMenuRef"
                 position="left"
-                :show-label="true"
+                :show-label="false"
                 highlight="line"
                 :expanded="true"
                 initialWidth="25vi"
@@ -93,7 +100,7 @@
             <SideMenu
                 ref="rightSideMenuRef"
                 position="right"
-                :show-label="true"
+                :show-label="false"
                 highlight="line"
                 :expanded="true"
                 initialWidth="25vi"
@@ -574,6 +581,30 @@ const notebookKeyBindings = {
     display: inline-block;
     height: 100%;
     font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
+}
+
+.notebook-chat-container {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  overflow: hidden;
+  max-width: calc(100vw - 8rem);
+//   align-items: stretch;
+  
+  /* Agent query area takes 1 part, notebook panel takes 3 parts */
+  & > :first-child {
+    flex: 1;
+    min-width: 300px;
+    overflow-y: auto;
+    border-right: 1px solid var(--surface-border);
+    padding-right: 1rem;
+  }
+  
+  & > :last-child {
+    flex: 3;
+    min-width: 500px;
+    // overflow-y: auto;
+  }
 }
 
 </style>

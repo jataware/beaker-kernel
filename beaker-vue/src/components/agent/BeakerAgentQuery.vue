@@ -10,7 +10,7 @@
                     @submit="handleQuery"
                     v-model="query"
                     style="flex: 1; margin-right: 0.75rem"
-                    placeholder="Ask the AI or request an operation."
+                    placeholder="Ask the AI to perform an operation."
                 />
 
                 <Button
@@ -80,6 +80,7 @@ const handleQuery = (e: any) => {
 
 <style lang="scss">
 .agent-input-card.p-card {
+    // border: 1px solid green;
     &>.p-card-body {
         padding: 0.5rem 1.25rem;
         .p-card-title {

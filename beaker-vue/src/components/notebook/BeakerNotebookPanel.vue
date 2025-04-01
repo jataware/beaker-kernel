@@ -4,25 +4,25 @@
         ref="cellsContainerRef"
     >
         <BeakerCell
-            v-for="(cell, index) in session.notebook.cells"
+            v-for="(cell) in codeCells"
             :cell="cell"
             :selected="cell.id === notebook.selectedCellId"
-            :index="index"
+            :index="session.notebook.cells.indexOf(cell)"
             :key="`outercell-${cell.id}`"
             class="beaker-cell"
             :class="{
                 selected: (cell.id === notebook.selectedCellId),
-                'drag-source': (index == dragSourceIndex),
-                'drag-above': (index === dragOverIndex && index < dragSourceIndex),
-                'drag-below': (index === dragOverIndex && index > dragSourceIndex),
-                'drag-itself': (index === dragOverIndex && index === dragSourceIndex ),
+                'drag-source': (session.notebook.cells.indexOf(cell) == dragSourceIndex),
+                'drag-above': (session.notebook.cells.indexOf(cell) === dragOverIndex && session.notebook.cells.indexOf(cell) < dragSourceIndex),
+                'drag-below': (session.notebook.cells.indexOf(cell) === dragOverIndex && session.notebook.cells.indexOf(cell) > dragSourceIndex),
+                // 'drag-itself': (session.notebook.cells.indexOf(cell) === dragOverIndex && session.notebook.cells.indexOf(cell) === dragSourceIndex ),
                 'drag-active': isDragActive,
             }"
             :drag-enabled="isDragEnabled"
             @move-cell="handleMoveCell"
-            @dragstart="handleDragStart($event, cell, index)"
-            @drop="handleDrop($event, index)"
-            @dragover="handleDragOver($event, cell, index)"
+            @dragstart="handleDragStart($event, cell, session.notebook.cells.indexOf(cell))"
+            @drop="handleDrop($event, session.notebook.cells.indexOf(cell))"
+            @dragover="handleDragOver($event, cell, session.notebook.cells.indexOf(cell))"
             @dragend="handleDragEnd"
         >
             <component
@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, inject, computed, defineExpose, defineEmits } from 'vue';
+import { ref, inject, computed, defineExpose, defineEmits, toRaw } from 'vue';
 import { BeakerSession } from 'beaker-kernel/src';
 import BeakerCell from '../cell/BeakerCell.vue';
 import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
@@ -55,6 +55,22 @@ const isDragActive = ref(false);
 const dragSourceIndex = ref(-1);
 const dragOverIndex = ref(-1);
 const isDragEnabled = computed(() => session.notebook?.cells.length > 1);
+
+// New computed property that filters cells to only show code cells
+const codeCells = computed(() => {
+    console.log("session.notebook.cells", session.notebook.cells.map(cell => toRaw(cell)));
+    
+    // First get all top-level code cells
+    const topLevelCodeCells = session.notebook.cells.filter(cell => cell.cell_type === "code");
+    
+    // Then get all code cells that are children of query cells
+    const queryChildrenCodeCells = session.notebook.cells
+        .filter(cell => cell.cell_type === "query" && Array.isArray(cell.children))
+        .flatMap(queryCell => queryCell.children.filter(childCell => childCell.cell_type === "code"));
+    
+    // Combine both arrays
+    return [...topLevelCodeCells, ...queryChildrenCodeCells];
+});
 
 const emit = defineEmits([]);
 

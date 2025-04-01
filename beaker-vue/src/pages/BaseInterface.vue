@@ -17,14 +17,17 @@
                 </slot>
             </header>
 
-            <main ref="mainRef">
+            <main ref="mainRef"
+                    :class="{'wide': props.wide}"
+            >
                 <slot name="main">
                     <div id="left-panel">
                         <slot name="left-panel">
                         </slot>
                     </div>
 
-                    <div :id="`center-panel${isChat ? '-chat-override': '' }`">
+                    <div :id="`center-panel${isChat ? '-chat-override': '' }`"
+                    >
                         <slot>
                         </slot>
                     </div>
@@ -150,7 +153,10 @@ const props = defineProps<{
   headerNav?: any
   apiKeyPrompt?: boolean
   styleOverrides?: StyleOverride[]
+  wide?: boolean
 }>();
+
+console.log("props.wide", props.wide);
 
 const emit = defineEmits([
     "notebook-autosaved",
@@ -440,6 +446,9 @@ main {
     &.maximized {
         --columns: 1fr minmax(30%, 100%) 1fr;
     }
+    &.wide {
+        grid-template: "left-panel center-panel center-panel right-panel";
+    }
 }
 
 footer {
@@ -454,6 +463,7 @@ footer {
     grid-area: center-panel;
     border: 1px solid;
     border-color: var(--surface-border);
+    overflow-y: auto;
 }
 
 #center-panel-chat-override {
@@ -493,6 +503,11 @@ footer {
 #overlay-content .traceback {
     padding: 0.5rem;
     background-color: var(--surface-50);
+}
+
+.wide {
+    // --columns: 1fr minmax(30%, 100%) 1fr;
+    width: 100%;
 }
 
 </style>
