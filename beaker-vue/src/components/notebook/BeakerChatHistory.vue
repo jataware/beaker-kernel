@@ -6,7 +6,8 @@
              :class="{
                 'user-message': cell.cell_type === 'query',
                 'agent-message': cell.type === 'thought' || cell.type === 'response',
-                'agent-thinking': cell.status === 'busy'
+                'agent-thinking': cell.status === 'busy',
+                'has-code-cell-sibling': cell.code_cell_id
              }">
             <!-- User message -->
             <div v-if="cell.cell_type === 'query'" class="user-query"
@@ -17,7 +18,7 @@
             
             <!-- Agent thought message -->
             <div v-else-if="cell.type === 'thought'" class="agent-thought"
-            @click="scrollToCodeCell(cell)"
+            @click="scrollToCodeCell(cell.code_cell_id)"
             >
                 <div class="message-content">
                     <span class="thought-icon"><BrainIcon /></span>
@@ -73,7 +74,7 @@ const chatCells = computed(() => {
     
     // Add top-level query cells
     const queryCells = session.notebook.cells.filter(cell => cell.cell_type === 'query');
-    console.log("queryCells", queryCells);
+    // console.log("queryCells", queryCells.map(cell => toRaw(cell)));
     
     for (const queryCell of queryCells) {
         // Add the query cell itself
@@ -81,13 +82,28 @@ const chatCells = computed(() => {
         
         // Add events from the query cell
         if (queryCell.events) {
-            for (const event of queryCell.events) {
+            for (const [index, event] of queryCell.events.entries()) {
                 if (event.type === 'thought' || event.type === 'response') {
+                    // TODO if the next event of the index, for thought events, is of type code_cell, 
+                    // add the code cell id as a property to the event
+
+                    try {
+                        if(event.type === 'thought' && queryCell.events[index + 1]?.type === 'code_cell') {
+                            // console.log("found thought event with code cell following it at index:", index);
+                            // console.log("queryCell.events[index + 1]", toRaw(queryCell.events[index + 1]));
+                            event.code_cell_id = queryCell.events[index + 1]?.content?.cell_id;
+                        }
+                    } catch(e) { // in case we went over index; ignore
+
+                    }
+
                     result.push(event); // push the event, or the cell?
                 }
             }
         }
     }
+
+     console.log("result", result.map(event => toRaw(event)));
     
     return result;
 });
@@ -102,14 +118,15 @@ const executeCell = (cell) => {
     cell.execute(session);
 }
 
-const scrollToCodeCell = (cell) => {
-    console.log("scrollToCodeCell", toRaw(cell));
-    console.log("beakerNotebookRef raw", toRaw(props.beakerNotebookRef));
-    // console.log("codeCellsContainer", toRaw(props.codeCellsContainer));
-    // console.log("", toRaw(props.codeCellsContainerRef));
-    console.log("beakernotebookref", props?.beakerNotebookRef?.value);
-
-    // props.beakerNotebookRef.value?.scrollToCell(cell.id);
+const scrollToCodeCell = (cellId) => {
+    // use js to scroll to the cell id
+    // beaker-cell collapsed beaker-cell selected drag-source
+    // cell-id=cellId
+    console.log("scrollToCodeCell", cellId);
+    const cell = document.querySelector(`[cell-id="${cellId}"]`);
+    if(cell) {
+        cell.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 
@@ -157,6 +174,7 @@ defineExpose({
     flex-direction: column;
     gap: 1rem;
     padding: 1rem;
+    border-bottom: 1px solid var(--surface-d);
     
     .chat-message {
         margin-bottom: 0.5rem;
@@ -232,5 +250,12 @@ defineExpose({
     to {
         right: -4em;
     }
+}
+
+.has-code-cell-sibling {
+    border: 1px solid;
+    border-radius: var(--border-radius);
+    border-color: #7254f366;
+    cursor: pointer;
 }
 </style>

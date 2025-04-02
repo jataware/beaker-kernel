@@ -623,7 +623,7 @@ const notebookKeyBindings = {
 .notebook-chat-container {
   display: flex;
   flex-direction: row;
-  height: 100%;
+  height: 99%;
   overflow: hidden;
   max-width: calc(100vw - 8rem);
   
@@ -640,7 +640,8 @@ const notebookKeyBindings = {
   & > :last-child {
     flex: 3;
     min-width: 500px;
-    overflow-y: auto;
+    // overflow-y: auto;
+    max-height: calc(100vh - 8rem);
     scrollbar-color: var(--surface-d) var(--surface-a);
   }
 }

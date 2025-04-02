@@ -10,7 +10,7 @@
                     @submit="handleQuery"
                     v-model="query"
                     style="flex: 1; margin-right: 0.75rem"
-                    placeholder="Ask the AI to perform an operation."
+                    placeholder="Ask Beaker AI anything..."
                 />
 
                 <Button
@@ -81,6 +81,9 @@ const handleQuery = (e: any) => {
 
 <style lang="scss">
 .agent-input-card.p-card {
+    border-radius: 0;
+    box-shadow: none;
+    border-color: none;
     // border: 1px solid green;
     &>.p-card-body {
         padding: 0.5rem 1.25rem;
