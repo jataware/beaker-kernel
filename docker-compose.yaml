@@ -16,6 +16,9 @@ services:
       - ENABLE_CHECKPOINTS=true
       - TOOL_ENABLED_ASK_USER=true
       - TOOL_ENABLED_RUN_CODE=true
+      - LANGSMITH_TRACING=true
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - LANGSMITH_ENDPOINT=https://api.smith.langchain.com
       # These veriables are useful when running in server mode
       # - CONFIG_TYPE=server
       # - LLM_PROVIDER_IMPORT_PATH=archytas.models.openai.OpenAIModel

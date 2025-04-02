@@ -147,6 +147,7 @@
                 <div
                     v-if="isChat"
                     class="expand-thoughts-button"
+                    :class="{ 'expanded': session.notebook.selectedCell === cell }"
                     @click="expandThoughts"
                 >
                     <div style="display: flex; align-items: center;">
@@ -815,12 +816,17 @@ h3.query-steps {
     display: block;
     padding: 0.75rem;
 
+
     &:hover {
         background-color: var(--surface-b);
     }
 
     [data-theme="dark"] &:hover {
         background-color: var(--surface-a);
+    }
+
+    &.expanded {
+        background-color: var(--surface-b);
     }
 
     display: flex;

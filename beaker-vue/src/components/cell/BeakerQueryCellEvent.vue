@@ -98,14 +98,15 @@
 
             </div>
         </div>
-        <span v-else-if="props.event?.type === 'code_cell'">
+        <span v-else-if="props.event?.type === 'code_cell'" style="position: relative;">
             <BeakerCodeCell
                 @click="codeCellOnClick"
                 :cell="getCellModelById(props?.event.content.cell_id)"
                 :drag-enabled="false"
                 :class="{
                     selected: isCodeCellSelected,
-                    'query-event-code-cell': true
+                    'query-event-code-cell': true,
+                    'code-cell-collapsed': !expandedCodeCell
                 }"
                 :hide-output="props.hideOutput"
                 ref="codeCellRef"
@@ -117,6 +118,13 @@
                         codeCellRef.execute();
                     }
                 }"
+            />
+            <Button 
+                :icon="expandedCodeCell ? 'pi pi-sort-up' : 'pi pi-expand'" 
+                size="small"
+                class="code-cell-toggle-button" 
+                @click.stop="toggleCodeCellExpansion"
+                :title="expandedCodeCell ? 'Shrink code cell' : 'Expand code cell'"
             />
             <!-- <span class="output-hide-text">(Output hidden -- shown in full response below.)</span> -->
         </span>
@@ -176,12 +184,14 @@ import ansiHtml from "ansi-html-community";
 import { formatOutputs, chooseOutputIcon } from './BeakerCodeCellOutputUtilities'
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+import Button from "primevue/button";
 
 
 // use session where possible - notebook may or may not exist, but matters for selection!
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const beakerNotebook = inject<BeakerNotebookComponentType>("notebook");
 const codeCellRef = ref();
+const expandedCodeCell = ref(true);
 
 const props = defineProps([
     'event',
@@ -264,6 +274,14 @@ const meaningfulOutputs = computed(() => {
     return outputs;
 })
 
+const toggleCodeCellExpansion = () => {
+// event, thoughtIndex: number
+    event.stopPropagation(); // Prevent triggering the thought item click
+    expandedCodeCell.value = !expandedCodeCell.value;
+    // const currentState = expandedCodeCells.value.get(thoughtIndex) || false;
+    // expandedCodeCells.value.set(thoughtIndex, !currentState);
+};
+
 const getCellModelById = (id): IBeakerCell | undefined => {
     const notebook = beakerSession.session.notebook;
     for (const cell of notebook.cells) {
@@ -333,6 +351,8 @@ defineExpose({
     font-size: 0.75rem;
     padding-top: 1rem;
     padding-bottom: 0.25rem;
+    max-height: 35rem;
+    overflow-y: auto;
 }
 
 .output-hide-text {
@@ -423,6 +443,29 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     p:last-child {
         margin-bottom: 0.5rem;
     }
+}
+
+.code-cell-collapsed {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 0.25rem;
+}
+
+.code-cell-toggle-button {
+  position: absolute;
+  bottom: 2rem;
+  right: 3.5rem;
+  margin: 0;
+  padding: 0.5rem 0;
+
+  background: #666666AA;
+  border-color: #555555DD;
+
+  &>.p-button-icon {
+    font-weight: bold;
+  }
 }
 
 </style>

@@ -25,6 +25,10 @@
             >
                 <div class="notebook-chat-container">
                     <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                        <BeakerChatHistory ref="chatHistoryRef" 
+                            :beakerNotebookRef="beakerNotebookRef"
+                        />
+                            <!-- @scroll="syncScroll" -->
                 <BeakerAgentQuery
                     ref="agentQueryRef"
                     class="agent-query-container"
@@ -51,8 +55,9 @@
                 <BeakerNotebookPanel
                     :selected-cell="beakerNotebookRef?.selectedCellId"
                     v-autoscroll
-
+                    ref="codeCellsContainerRef"
                 >
+                    <!-- @scroll="syncScrollChat" -->
                     <template #notebook-background>
                         <div class="welcome-placeholder">
                             <SvgPlaceholder />
@@ -137,6 +142,7 @@ import { atStartOfInput, atEndOfInput } from '../util'
 // import { _ } from '../util/whitelabel';
 import { NavOption } from '../components/misc/BeakerHeader.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
+import BeakerChatHistory from '../components/notebook/BeakerChatHistory.vue';
 
 import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
@@ -166,6 +172,7 @@ const filePanelRef = ref();
 const configPanelRef = ref();
 const sideMenuRef = ref();
 const rightSideMenuRef = ref();
+const chatHistoryRef = ref();
 
 const agentQueryRef = ref();
 const previewVisible = ref<boolean>(false);
@@ -206,7 +213,7 @@ const rawMessages = ref<object[]>([])
 const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
 const saveAsFilename = ref<string>(null);
-
+const codeCellsContainerRef = ref();
 const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);
 const rightMenu = ref<typeof SideMenuPanel>();
@@ -328,6 +335,33 @@ const loadNotebook = (notebookJSON: any, filename: string) => {
     }
 }
 
+// Function to synchronize scrolling between chat history and code cells
+const syncScroll = (event) => {
+    if (!codeCellsContainerRef.value) return;
+    
+    const scrollPercentage = event.target.scrollTop / (event.target.scrollHeight - event.target.clientHeight);
+    const targetScrollPosition = scrollPercentage * (codeCellsContainerRef.value.scrollHeight - codeCellsContainerRef.value.clientHeight);
+    
+    // Only update if difference is significant to avoid scroll loops
+    if (Math.abs(codeCellsContainerRef.value.scrollTop - targetScrollPosition) > 10) {
+        codeCellsContainerRef.value.scrollTop = targetScrollPosition;
+    }
+};
+
+const syncScrollChat = (event) => {
+    if (!chatHistoryRef.value?.$el) return;
+    
+    const scrollPercentage = event.target.scrollTop / (event.target.scrollHeight - event.target.clientHeight);
+    const chatHistoryEl = chatHistoryRef.value.$el;
+    const targetScrollPosition = scrollPercentage * (chatHistoryEl.scrollHeight - chatHistoryEl.clientHeight);
+    
+    // Only update if difference is significant to avoid scroll loops
+    if (Math.abs(chatHistoryEl.scrollTop - targetScrollPosition) > 10) {
+        chatHistoryEl.scrollTop = targetScrollPosition;
+    }
+};
+
+
 const handleNotebookSaved = async (path: string) => {
     saveAsFilename.value = path;
     if (path) {
@@ -382,6 +416,9 @@ const notebookKeyBindings = {
     },
     "keydown.up.!in-editor.prevent": prevCellKey,
     "keydown.up.in-editor.capture": (event: KeyboardEvent) => {
+
+        console.log("keydown.up.in-editor.capture")
+
         // Note: This runs BEFORE the cursor is moved.
         const eventTarget = event.target as HTMLElement;
         const parentCellElement = eventTarget.closest('.beaker-cell');
@@ -553,7 +590,7 @@ const notebookKeyBindings = {
 
 .beaker-notebook {
     flex: 2 0 calc(50vw - 2px);
-    border: 2px solid var(--surface-border);
+    // border: 2px solid var(--surface-border);
     border-radius: 0;
     border-top: 0;
     max-width: 100%;
@@ -589,7 +626,6 @@ const notebookKeyBindings = {
   height: 100%;
   overflow: hidden;
   max-width: calc(100vw - 8rem);
-//   align-items: stretch;
   
   /* Agent query area takes 1 part, notebook panel takes 3 parts */
   & > :first-child {
@@ -598,12 +634,14 @@ const notebookKeyBindings = {
     overflow-y: auto;
     border-right: 1px solid var(--surface-border);
     padding-right: 1rem;
+    scrollbar-color: var(--surface-d) var(--surface-a);
   }
   
   & > :last-child {
     flex: 3;
     min-width: 500px;
-    // overflow-y: auto;
+    overflow-y: auto;
+    scrollbar-color: var(--surface-d) var(--surface-a);
   }
 }
 

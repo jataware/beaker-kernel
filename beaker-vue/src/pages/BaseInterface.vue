@@ -461,7 +461,7 @@ footer {
 
 #center-panel {
     grid-area: center-panel;
-    border: 1px solid;
+    // border: 1px solid;
     border-color: var(--surface-border);
     overflow-y: auto;
 }

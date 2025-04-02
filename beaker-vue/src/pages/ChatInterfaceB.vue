@@ -88,12 +88,14 @@
                     </div>
                 </div>
 
-                <BeakerQueryCellEvent
-                    v-for="(event, eventIndex) in filteredCellEvents"
-                    :key="eventIndex"
-                    :hide-output="!showOutputCells"
-                    :event="event"
-                />
+                <div class="events-scroll-container">
+                    <BeakerQueryCellEvent
+                        v-for="(event, eventIndex) in filteredCellEvents"
+                        :key="eventIndex"
+                        :hide-output="!showOutputCells"
+                        :event="event"
+                    />
+                </div>
 
             </div>
 
@@ -448,7 +450,7 @@ const filteredCellEvents = computed(() => {
 
 .chat-cell-details {
     flex: 4;
-    overflow-y: auto;
+    // overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--surface-d) transparent;
     
@@ -459,6 +461,11 @@ const filteredCellEvents = computed(() => {
     margin: 0.75rem 1rem 1rem 0;
     padding: 0.25rem 1rem 1rem 1.2rem;
     max-width: 1250px;
+
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
     
     // @media (max-width: 1000px) {
     //     flex: 1;
@@ -578,4 +585,7 @@ div.status-container {
     border-color: var(--primary-color) !important;
 }
 
+.events-scroll-container {
+    overflow-y: auto;
+}
 </style>
