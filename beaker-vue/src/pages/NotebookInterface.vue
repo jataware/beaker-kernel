@@ -276,10 +276,7 @@ const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
         contextPreviewData.value = msg.content;
     }
-    if (
-        (msg.header.msg_type === "debug_event" && beakerSession.value?.activeContext?.info?.debug)
-        || msg.header.msg_type === "log_event"
-    ) {
+    if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,
             body: msg.content.body,

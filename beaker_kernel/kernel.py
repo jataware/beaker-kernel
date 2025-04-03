@@ -420,7 +420,7 @@ class BeakerKernel(KernelProxyManager):
 
         raise Exception("Query timed out. User took too long to respond.")
 
-    def log(self, event_type: str, content, parent_header=None, debug=False):
+    def log(self, event_type: str, content, parent_header=None):
         # Re-encode data to fix issues with un-json-encodable elements in the debug output
         content = json.loads(json.dumps(content, cls=LogMessageEncoder))
         message_content = {
@@ -429,9 +429,8 @@ class BeakerKernel(KernelProxyManager):
             "event": event_type,
             "body": content,
         }
-        message_type = "debug_event" if debug else "log_event"
         message = self.server.make_multipart_message(
-            msg_type=message_type,
+            msg_type="debug_event",
             content=message_content,
             parent_header=parent_header,
         )
@@ -442,7 +441,7 @@ class BeakerKernel(KernelProxyManager):
     def debug(self, event_type: str, content, parent_header=None):
         if not self.debug_enabled:
             return
-        self.log(event_type=event_type, content=content, parent_header=parent_header, debug=True)
+        self.log(event_type=event_type, content=content, parent_header=parent_header)
 
     def send_stream_message(self, stream_type, text, parent_header=None):
         if isinstance(text, bytes):
