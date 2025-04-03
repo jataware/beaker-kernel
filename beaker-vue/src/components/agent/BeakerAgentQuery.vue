@@ -69,6 +69,12 @@ const handleQuery = (e: any) => {
     const cell = session.addQueryCell(query.value);
     query.value = "";
 
+    // this didnt work
+    // nextTick(() => {
+    //     notebook.selectCell(cell.id);
+    //     cell.execute(session);
+    // });
+
     // TODO debug this.. it fails to execute the cell since the query cell isnt a child of the notebook? or so...
     // nextTick(() => {
     //     notebook.selectCell(cell.id);

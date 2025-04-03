@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick, toRaw } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
@@ -122,8 +122,25 @@ const badgeSeverity = computed(() => {
 });
 
 const clicked = (evt) => {
+    console.log("select/clicked code cell?", toRaw(cell));
     if (notebook) {
         notebook.selectCell(cell.value);
+
+        console.log("cell.value?.metadata?", cell.value?.metadata);
+
+        if(cell.value?.metadata?.parent_cell) {
+            console.log("selecting parent cell..");
+            // notebook.selectCell(cell.value.metadata.parent_cell);
+            // TODO scroll to parent cell
+
+            setTimeout(() => {
+                const cellContainer = document.querySelector(`[parent-cell-id="${cell.value?.metadata?.parent_cell}"]`);
+                if(cellContainer) {
+                    cellContainer.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 400);
+
+        }
     }
     evt.stopPropagation();
 };

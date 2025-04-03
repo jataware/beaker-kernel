@@ -15,6 +15,8 @@
                 'drag-source': (session.notebook.cells.indexOf(cell) == dragSourceIndex),
                 'drag-above': (session.notebook.cells.indexOf(cell) === dragOverIndex && session.notebook.cells.indexOf(cell) < dragSourceIndex),
                 'drag-below': (session.notebook.cells.indexOf(cell) === dragOverIndex && session.notebook.cells.indexOf(cell) > dragSourceIndex),
+                // TODO below was auto activating because queries/thoughts are apart from their
+                // corresponding event code cells.
                 // 'drag-itself': (session.notebook.cells.indexOf(cell) === dragOverIndex && session.notebook.cells.indexOf(cell) === dragSourceIndex ),
                 'drag-active': isDragActive,
             }"
@@ -66,10 +68,15 @@ const codeCells = computed(() => {
     // Then get all code cells that are children of query cells
     const queryChildrenCodeCells = session.notebook.cells
         .filter(cell => cell.cell_type === "query" && Array.isArray(cell.children))
-        .flatMap(queryCell => queryCell.children.filter(childCell => childCell.cell_type === "code"));
+        .flatMap(queryCell => queryCell.children.filter(childCell => childCell.cell_type === "code")
+            // .map(childCell => { childCell.parent = ""; return childCell;})
+        );
+
+    let res = [...topLevelCodeCells, ...queryChildrenCodeCells];
+    console.log("code cells", res);
     
     // Combine both arrays
-    return [...topLevelCodeCells, ...queryChildrenCodeCells];
+    return res;
 });
 
 const emit = defineEmits([]);
@@ -129,6 +136,10 @@ function handleDrop(event: DragEvent, index) {
     const target = event.target as HTMLElement;
     const allowedDropArea = target.closest('.drag-sort-enable');
 
+    // console.log("handleDrop", event, index, allowedDropArea);
+
+    let useIndex = index < 0 ? 0 : index;
+
     if (!allowedDropArea) {
         return;
     }
@@ -136,10 +147,10 @@ function handleDrop(event: DragEvent, index) {
     const cellData = JSON.parse(event.dataTransfer?.getData('x-beaker/cell') || 'null');
     const sourceId = cellData.id;
     const sourceIndex = cellData.index;
-    const targetId = session.notebook.cells[index].id
+    const targetId = session.notebook.cells[useIndex].id
 
     if (sourceId !== targetId){
-        arrayMove(session.notebook.cells, sourceIndex, index);
+        arrayMove(session.notebook.cells, sourceIndex, useIndex);
     }
 }
 

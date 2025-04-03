@@ -27,6 +27,7 @@
                     <div style="display: flex; flex-direction: column; justify-content: flex-end;">
                         <BeakerChatHistory ref="chatHistoryRef" 
                             :beakerNotebookRef="beakerNotebookRef"
+                            :selectCell="selectCell"
                         />
                             <!-- @scroll="syncScroll" -->
                 <BeakerAgentQuery
@@ -335,6 +336,10 @@ const loadNotebook = (notebookJSON: any, filename: string) => {
     }
 }
 
+const selectCell = (cellId: string) => {
+    beakerNotebookRef.value?.selectCell(cellId);
+}
+
 // Function to synchronize scrolling between chat history and code cells
 const syncScroll = (event) => {
     if (!codeCellsContainerRef.value) return;
@@ -377,13 +382,13 @@ const prevCellKey = () => {
 };
 
 const nextCellKey = () => {
-    const lastCell = beakerNotebookRef.value.notebook.cells[beakerNotebookRef.value.notebook.cells.length-1];
-    if (beakerNotebookRef.value.selectedCell().cell.id === lastCell.id) {
-        agentQueryRef.value.$el.querySelector('textarea')?.focus()
-    }
-    else {
-        beakerNotebookRef.value?.selectNextCell();
-    }
+    // const lastCell = beakerNotebookRef.value.notebook.cells[beakerNotebookRef.value.notebook.cells.length-1];
+    // if (beakerNotebookRef.value.selectedCell().cell.id === lastCell.id) {
+    //     agentQueryRef.value.$el.querySelector('textarea')?.focus()
+    // }
+    // else {
+    beakerNotebookRef.value?.selectNextCell();
+    // }
 };
 
 const keyBindingState = {};
@@ -630,7 +635,7 @@ const notebookKeyBindings = {
   /* Agent query area takes 1 part, notebook panel takes 3 parts */
   & > :first-child {
     flex: 1;
-    min-width: 300px;
+    min-width: 10rem;
     overflow-y: auto;
     border-right: 1px solid var(--surface-border);
     padding-right: 1rem;

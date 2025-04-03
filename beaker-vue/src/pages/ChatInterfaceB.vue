@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        :title="$tmpl._('short_title', 'Analysis')"
+        :title="$tmpl._('short_title', 'Beaker B')"
         ref="beakerInterfaceRef"
         :header-nav="headerNav"
         :connectionSettings="props.config"

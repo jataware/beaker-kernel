@@ -3,6 +3,7 @@
         <div v-for="(cell, index) in chatCells" 
              :key="cell.id || `chat-cell-${index}`" 
              class="chat-message"
+            :cell-id="cell.id || `chat-cell-${index}`"
              :class="{
                 'user-message': cell.cell_type === 'query',
                 'agent-message': cell.type === 'thought' || cell.type === 'response',
@@ -17,7 +18,9 @@
             </div>
             
             <!-- Agent thought message -->
-            <div v-else-if="cell.type === 'thought'" class="agent-thought"
+            <div v-else-if="cell.type === 'thought'" 
+            class="agent-thought"
+            :parent-cell-id="cell.parent_cell_id"
             @click="scrollToCodeCell(cell.code_cell_id)"
             >
                 <div class="message-content">
@@ -57,6 +60,11 @@ const props = defineProps({
         type: Object,
         required: false,
         default: null
+    },
+    selectCell: {
+        type: Function,
+        required: true,
+        default: null
     }
 });
 
@@ -81,6 +89,7 @@ const chatCells = computed(() => {
         result.push(queryCell);
         
         // Add events from the query cell
+        // console.log("queryCell events", toRaw(queryCell.events));
         if (queryCell.events) {
             for (const [index, event] of queryCell.events.entries()) {
                 if (event.type === 'thought' || event.type === 'response') {
@@ -92,6 +101,7 @@ const chatCells = computed(() => {
                             // console.log("found thought event with code cell following it at index:", index);
                             // console.log("queryCell.events[index + 1]", toRaw(queryCell.events[index + 1]));
                             event.code_cell_id = queryCell.events[index + 1]?.content?.cell_id;
+                            event.parent_cell_id = queryCell.id;
                         }
                     } catch(e) { // in case we went over index; ignore
 
@@ -108,25 +118,22 @@ const chatCells = computed(() => {
     return result;
 });
 
+// this works, although hacky for now
 const executeCell = (cell) => {
-    // console.log("executeCell", toRaw(cell));
-    // console.log("beakerNotebookRef", props.beakerNotebookRef);
-    // props.beakerNotebookRef.value?.executeCell(cellId);
-    // console.log("notebook", notebook);
-    // console.log("cell.execute", cell.execute);
-    // console.log("session", session);
     cell.execute(session);
 }
 
 const scrollToCodeCell = (cellId) => {
-    // use js to scroll to the cell id
-    // beaker-cell collapsed beaker-cell selected drag-source
-    // cell-id=cellId
-    console.log("scrollToCodeCell", cellId);
-    const cell = document.querySelector(`[cell-id="${cellId}"]`);
-    if(cell) {
-        cell.scrollIntoView({ behavior: 'smooth' });
-    }
+    props.selectCell(cellId);
+
+    // In case the start of selectedcell isn't visible when selected->scrolled to it
+    // scroll to the start of the cell
+    setTimeout(() => {
+        const cell = document.querySelector(`[cell-id="${cellId}"]`);
+        if(cell) {
+            cell.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, 400);
 }
 
 

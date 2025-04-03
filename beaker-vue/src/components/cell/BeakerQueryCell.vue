@@ -230,7 +230,7 @@
 
 <script setup lang="ts">
 import { IBeakerCell, BeakerSession } from 'beaker-kernel/src';
-import { defineProps, defineExpose, ref, shallowRef, provide, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, toRaw } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, provide, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, toRaw, watch, defineEmits } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
@@ -278,11 +278,11 @@ const response = ref("");
 const textarea = ref();
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-const notebook = inject<BeakerNotebookComponentType>("notebook");
+// const notebook = inject<BeakerNotebookComponentType>("notebook");
 const showThoughts = ref(true);
-const selectedThoughtIndex = ref<number | null>(null);
+// const selectedThoughtIndex = ref<number | null>(null);
 const relatedCodeCell = ref<BeakerQueryEvent | null>(null);
-const codeCellExpanded = ref(true);
+// const codeCellExpanded = ref(true);
 
 // Add this new state to track multiple expanded thoughts
 const expandedThoughts = ref<Set<number>>(new Set());
@@ -293,8 +293,9 @@ const isChat = ref(styleOverrides.includes('chat'))
 
 const instance = getCurrentInstance();
 
+const emit = defineEmits(['updateTitle']);
 
-// TODO can filter event types here, depending on what's selected
+// can filter event types here, depending on what's selected
 const events = computed(() => {
     return [...props.cell.events];
     // return [...props.cell.events].filter((event) => {
@@ -366,62 +367,62 @@ const lastEventThought = computed(() => {
     }
 })
 
-const addCodeCellToNotebook = (codeCell: BeakerQueryEvent) => {
-    console.log("addCodeCellToNotebook; raw cell:", toRaw(codeCell));
+// const addCodeCellToNotebook = (codeCell: BeakerQueryEvent) => {
+//     console.log("addCodeCellToNotebook; raw cell:", toRaw(codeCell));
     
-    // Log methods and properties of the session object
-    console.log("Session methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(session)));
-    console.log("Session properties:", Object.keys(session));
+//     // Log methods and properties of the session object
+//     console.log("Session methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(session)));
+//     console.log("Session properties:", Object.keys(session));
     
-    // For notebook object too
-    console.log("Notebook methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(notebook)));
-    console.log("Notebook properties:", Object.keys(notebook));
+//     // For notebook object too
+//     console.log("Notebook methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(notebook)));
+//     console.log("Notebook properties:", Object.keys(notebook));
 
-    // session.addCodeCell();
+//     // session.addCodeCell();
 
-    let copiedCellValue = toRaw(codeCell);
+//     let copiedCellValue = toRaw(codeCell);
 
-    console.log("copiedCellValue", copiedCellValue);
+//     console.log("copiedCellValue", copiedCellValue);
 
-    if (copiedCellValue !== null) {
-        var newCell: IBeakerCell;
+//     if (copiedCellValue !== null) {
+//         var newCell: IBeakerCell;
 
-        // If a cell with the to-be-pasted cell's id already exists in the notebook, set the copied cell's id to
-        // undefined so that it is regenerated when added.
-        const notebookIds = session.notebook.cells.map((cell) => cell.id);
-        console.log("notebookIds", notebookIds);
+//         // If a cell with the to-be-pasted cell's id already exists in the notebook, set the copied cell's id to
+//         // undefined so that it is regenerated when added.
+//         const notebookIds = session.notebook.cells.map((cell) => cell.id);
+//         console.log("notebookIds", notebookIds);
 
-        if (notebookIds.includes(copiedCellValue.id)) {
+//         if (notebookIds.includes(copiedCellValue.id)) {
 
-            const cls = copiedCellValue.constructor as (data: IBeakerCell) => void;
-            const data = {
-                ...copiedCellValue,
-                // Set non-transferable attributes to undefined.
-                id: undefined,
-                executionCount: undefined,
-                busy: undefined,
-                last_execution: undefined,
-            } as IBeakerCell;
-            copiedCellValue = new cls(data);
-        }
-        // TODO doesnt work- check diff between all session/notebook types
-        // newCell = notebook.insertCellAfter(notebook.selectedCell(), copiedCellValue);
-        // console.log("session keys", Object.keys(session));
+//             const cls = copiedCellValue.constructor as (data: IBeakerCell) => void;
+//             const data = {
+//                 ...copiedCellValue,
+//                 // Set non-transferable attributes to undefined.
+//                 id: undefined,
+//                 executionCount: undefined,
+//                 busy: undefined,
+//                 last_execution: undefined,
+//             } as IBeakerCell;
+//             copiedCellValue = new cls(data);
+//         }
+//         // TODO doesnt work- check diff between all session/notebook types
+//         // newCell = notebook.insertCellAfter(notebook.selectedCell(), copiedCellValue);
+//         // console.log("session keys", Object.keys(session));
 
-        // notebook.insertCodeCell(copiedCellValue);
-        // notebook.insertCell(copiedCellValue);
-        notebook.insertCellAfter(notebook.selectedCell(), copiedCellValue);
-        // session.addCodeCell(copiedCellValue);
-    }
+//         // notebook.insertCodeCell(copiedCellValue);
+//         // notebook.insertCell(copiedCellValue);
+//         notebook.insertCellAfter(notebook.selectedCell(), copiedCellValue);
+//         // session.addCodeCell(copiedCellValue);
+//     }
 
-    // notebook.insertCellAfter(codeCell.content.code);
-    // session.
-    // const codeCellEvent = codeCell as BeakerQueryEvent;
-    // console.log("codeCellEvent", codeCellEvent);
-    // const codeCellIndex = codeCellEvent.content.metadata.subindex;
-    // const codeCell = notebook.getCell(codeCellIndex);
-    // console.log("codeCell", codeCell);
-}
+//     // notebook.insertCellAfter(codeCell.content.code);
+//     // session.
+//     // const codeCellEvent = codeCell as BeakerQueryEvent;
+//     // console.log("codeCellEvent", codeCellEvent);
+//     // const codeCellIndex = codeCellEvent.content.metadata.subindex;
+//     // const codeCell = notebook.getCell(codeCellIndex);
+//     // console.log("codeCell", codeCell);
+// }
 
 /* TODO What is a tagged cell event? */
 const taggedCellEvents = computed(() => {
@@ -437,6 +438,7 @@ const taggedCellEvents = computed(() => {
 });
 
 const queryStatus = computed<QueryStatuses>(() => {
+    console.log("queryStatus computed; cell status:", props.cell.status);
     const eventCount = events.value.length;
     if (props.cell.status === 'busy') {
         return QueryStatuses.Running;
@@ -450,6 +452,22 @@ const queryStatus = computed<QueryStatuses>(() => {
     else {
         return QueryStatuses.Running;
     }
+})
+
+function generateTitle(title: string) {
+    // Don't mutate props directly
+    // props.cell.valuesummaryTitle = title;
+    console.log("emitting title:", title);
+    console.log("cell id:", props.cell.id);
+    emit('updateTitle', { cellId: props.cell.id, title });
+    // console.log("generated title:", title);
+}
+
+watch(queryStatus, (newStatus, oldStatus) => {
+    console.log("queryStatus changed; new status:", newStatus, "prev status:", oldStatus);
+     if (newStatus === QueryStatuses.Done && !props.cell.summaryTitle) {
+        generateTitle(lastEventThought.value);
+     }
 })
 
 const messageEvents = computed(() => {
