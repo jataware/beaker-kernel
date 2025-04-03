@@ -96,6 +96,9 @@
                 <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow>
                     <MediaPanel></MediaPanel>
                 </SideMenuPanel>
+                <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
+                    <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, rawMessages.length)" v-autoscroll />
+                </SideMenuPanel>
             </SideMenu>
         </template>
                 <!-- <HelpSidebar></HelpSidebar> -->
@@ -151,6 +154,7 @@ import { vKeybindings } from '../directives/keybindings';
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
+import DebugPanel from '../components/panels/DebugPanel.vue';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
@@ -160,6 +164,7 @@ beakerApp.setPage("chat");
 
 const rightSideMenuRef = ref();
 const contextPreviewData = ref<any>();
+const debugLogs = ref<object[]>([]);
 
 type FilePreview = {
     url: string,
@@ -282,6 +287,16 @@ const iopubMessage = (msg) => {
     }
     if (msg.header.msg_type === "job_response") {
         beakerSessionRef.value.session.addMarkdownCell(msg.content.response);
+    }
+    if (
+        (msg.header.msg_type === "debug_event" && beakerSession.value?.activeContext?.info?.debug)
+        || msg.header.msg_type === "log_event"
+    ) {
+        debugLogs.value.push({
+            type: msg.content.event,
+            body: msg.content.body,
+            timestamp: msg.header.date,
+        });
     }
 };
 

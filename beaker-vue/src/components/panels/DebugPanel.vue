@@ -19,15 +19,6 @@
                     <Button @click="sortDirection = 'desc'" v-tooltip.bottom="'Sort Desc'" outlined size="small" icon="pi pi-sort-numeric-up-alt" aria-label="Sort Time Desc" />
                 </div>
             </div>
-            <div style="display: flex; align-items: center; flex: 0 1 25%;">
-                <Checkbox
-                    inputId='hideInternals'
-                    v-model="hideSubkernelInternals"
-                    :binary="true"
-                    style="margin-right: 0.25rem;"
-                />
-                <label for="hideInternals">Only Show Agent Messages</label>
-            </div>
             <DebugLogMessage
                 v-for="(logEntry) in filteredLogs"
                 :log-entry="logEntry"
@@ -44,7 +35,7 @@
                 />
                 <p v-else>
                     <!-- We could detect if context debug is disabled and add a button here-->
-                    No logs. Ensure debug is enabled on context configuration.
+                    No logs yet.
                 </p>
             </div>
         </div>
@@ -57,8 +48,6 @@ import { ref, computed, defineEmits, defineProps } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import DebugLogMessage from "../misc/DebugLogMessage.vue";
-import Checkbox from 'primevue/checkbox';
-
 
 const props = defineProps([
     "entries",
@@ -72,7 +61,7 @@ const emit = defineEmits([
 const filterValue = ref("");
 const sortDirection = ref("asc");
 
-const hideSubkernelInternals = ref(true);
+const hideSubkernelInternals = ref(false);
 
 // TODO debounce for quick typing
 const filteredLogs = computed(() => {
