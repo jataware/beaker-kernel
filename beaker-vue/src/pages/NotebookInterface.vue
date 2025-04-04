@@ -111,7 +111,7 @@
                     <MediaPanel></MediaPanel>
                 </SideMenuPanel>
                 <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
-                    <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, rawMessages.length)" v-autoscroll />
+                    <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
                 </SideMenuPanel>
             </SideMenu>
         </template>
