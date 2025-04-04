@@ -122,24 +122,15 @@ const badgeSeverity = computed(() => {
 });
 
 const clicked = (evt) => {
-    console.log("select/clicked code cell?", toRaw(cell));
     if (notebook) {
         notebook.selectCell(cell.value);
-
-        console.log("cell.value?.metadata?", cell.value?.metadata);
-
-        if(cell.value?.metadata?.parent_cell) {
-            console.log("selecting parent cell..");
-            // notebook.selectCell(cell.value.metadata.parent_cell);
-            // TODO scroll to parent cell
-
+        if (cell.value?.metadata?.parent_cell) {
             setTimeout(() => {
-                const cellContainer = document.querySelector(`[parent-cell-id="${cell.value?.metadata?.parent_cell}"]`);
+                const cellContainer = document.querySelector(`[cell-id="${cell.value?.metadata?.parent_cell}"]`);
                 if(cellContainer) {
                     cellContainer.scrollIntoView({ behavior: 'smooth' });
                 }
             }, 400);
-
         }
     }
     evt.stopPropagation();
@@ -191,11 +182,7 @@ const hasOutputData = (cell) => {
     if (!cell || !cell.outputs || cell.outputs.length === 0) {
         return false;
     }
-    
-    // Check if any output has data that's not empty
-    return cell.outputs.some(output => 
-        output.data && Object.keys(output.data).length > 0
-    );
+    return true;
 };
 
 defineExpose({

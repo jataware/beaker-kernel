@@ -230,7 +230,7 @@
 
 <script setup lang="ts">
 import { IBeakerCell, BeakerSession } from 'beaker-kernel/src';
-import { defineProps, defineExpose, ref, shallowRef, provide, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, toRaw, watch, defineEmits } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, toRaw, watch, defineEmits, onMounted } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
@@ -283,6 +283,9 @@ const showThoughts = ref(true);
 // const selectedThoughtIndex = ref<number | null>(null);
 const relatedCodeCell = ref<BeakerQueryEvent | null>(null);
 // const codeCellExpanded = ref(true);
+
+// Add flag to track if we've expanded thoughts already
+const hasExpandedThoughts = ref(false);
 
 // Add this new state to track multiple expanded thoughts
 const expandedThoughts = ref<Set<number>>(new Set());
@@ -438,7 +441,7 @@ const taggedCellEvents = computed(() => {
 });
 
 const queryStatus = computed<QueryStatuses>(() => {
-    console.log("queryStatus computed; cell status:", props.cell.status);
+    // console.log("queryStatus computed; cell status:", props.cell.status);
     const eventCount = events.value.length;
     if (props.cell.status === 'busy') {
         return QueryStatuses.Running;
@@ -464,9 +467,15 @@ function generateTitle(title: string) {
 }
 
 watch(queryStatus, (newStatus, oldStatus) => {
-    console.log("queryStatus changed; new status:", newStatus, "prev status:", oldStatus);
+    // console.log("queryStatus changed; new status:", newStatus, "prev status:", oldStatus);
      if (newStatus === QueryStatuses.Done && !props.cell.summaryTitle) {
         generateTitle(lastEventThought.value);
+     }
+     
+     // Auto-expand thoughts the first time a cell transitions to Running
+     if (newStatus === QueryStatuses.Running && oldStatus !== QueryStatuses.Running && !hasExpandedThoughts.value) {
+        expandThoughts();
+        hasExpandedThoughts.value = true;
      }
 })
 
@@ -598,7 +607,7 @@ const expandThoughts = () => {
     // const sessionId = session.sessionId;
     // console.log("sessionID", sessionId);
 
-    console.log("session.notebook.selectedCell", session.notebook.selectedCell);
+    // console.log("session.notebook.selectedCell", session.notebook.selectedCell);
     // Toggle selection: if already selected, deselect it by setting to undefined
     if (session.notebook.selectedCell === cell.value) {
         session.notebook.selectedCell = undefined;
@@ -606,6 +615,14 @@ const expandThoughts = () => {
         session.notebook.selectedCell = cell.value;
     }
 };
+
+onMounted(() => {
+    // Check if this is a new cell that's already running
+    if (queryStatus.value === QueryStatuses.Running && !hasExpandedThoughts.value) {
+        expandThoughts();
+        hasExpandedThoughts.value = true;
+    }
+});
 
 const toggleThoughtsVisibility = () => {
     showThoughts.value = !showThoughts.value;
@@ -1145,7 +1162,7 @@ a.query-tab-headeraction > span > span.pi {
 
 .code-cell-collapsed {
   max-height: 200px;
-  overflow-y: auto;
+  overflow-y: hidden;
   border: 1px solid var(--surface-border);
   border-radius: var(--border-radius);
 }

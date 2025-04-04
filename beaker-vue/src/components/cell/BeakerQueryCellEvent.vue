@@ -106,7 +106,7 @@
                 :class="{
                     selected: isCodeCellSelected,
                     'query-event-code-cell': true,
-                    'code-cell-collapsed': !expandedCodeCell
+                    'code-cell-collapsed': expandedCodeCell
                 }"
                 :hide-output="props.hideOutput"
                 ref="codeCellRef"
@@ -120,11 +120,11 @@
                 }"
             />
             <Button 
-                :icon="expandedCodeCell ? 'pi pi-sort-up' : 'pi pi-expand'" 
+                :icon="!expandedCodeCell ? 'pi pi-window-minimize' : 'pi pi-expand'" 
                 size="small"
                 class="code-cell-toggle-button" 
                 @click.stop="toggleCodeCellExpansion"
-                :title="expandedCodeCell ? 'Shrink code cell' : 'Expand code cell'"
+                :title="!expandedCodeCell ? 'Shrink code cell' : 'Expand code cell'"
             />
             <!-- <span class="output-hide-text">(Output hidden -- shown in full response below.)</span> -->
         </span>
@@ -251,7 +251,7 @@ const parentEntries = computed(() => {
     // omit the list going to vue to hide it
     const ret = props.parentQueryCell?.children?.entries();
 
-    console.log("parent entries ret", ret);
+    // console.log("parent entries ret", ret);
 
     return isAllTextPlain ? [] : ret;
 });
@@ -447,7 +447,7 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
 
 .code-cell-collapsed {
   max-height: 200px;
-  overflow-y: auto;
+  overflow-y: hidden;
   border: 1px solid var(--surface-border);
   border-radius: var(--border-radius);
   padding: 0.25rem;

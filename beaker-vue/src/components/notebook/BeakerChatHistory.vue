@@ -3,7 +3,8 @@
         <div v-for="(cell, index) in chatCells" 
              :key="cell.id || `chat-cell-${index}`" 
              class="chat-message"
-            :cell-id="cell.id || `chat-cell-${index}`"
+             :cell-id="cell.id || `chat-cell-${index}`"
+             :sibling="cell.code_cell_id"
              :class="{
                 'user-message': cell.cell_type === 'query',
                 'agent-message': cell.type === 'thought' || cell.type === 'response',
@@ -19,12 +20,13 @@
             
             <!-- Agent thought message -->
             <div v-else-if="cell.type === 'thought'" 
-            class="agent-thought"
-            :parent-cell-id="cell.parent_cell_id"
-            @click="scrollToCodeCell(cell.code_cell_id)"
+                class="agent-thought"
+                @click="scrollToCodeCell(cell.code_cell_id)"
+                v-tooltip="cell.code_cell_id ? { value: 'Click to Focus Code', showDelay: 1000, hideDelay: 200 } : ''"
             >
                 <div class="message-content">
-                    <span class="thought-icon"><BrainIcon /></span>
+                    <span v-if="!cell.code_cell_id" class="thought-icon"><BrainIcon /></span>
+                    <span v-if="cell.code_cell_id" style="color: var(--primary-color)" class="pi pi-code"></span>
                     {{ cell.content?.thought || cell.content }}
                 </div>
             </div>
@@ -49,6 +51,7 @@ import { ref, inject, computed, onMounted, watch, defineProps, defineEmits, defi
 import { BeakerSession } from 'beaker-kernel/src';
 import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
 import BrainIcon from '../../assets/icon-components/BrainIcon.vue';
+import Button from 'primevue/button';
 
 const props = defineProps({
     codeCellsContainer: {
@@ -89,19 +92,17 @@ const chatCells = computed(() => {
         result.push(queryCell);
         
         // Add events from the query cell
-        // console.log("queryCell events", toRaw(queryCell.events));
         if (queryCell.events) {
             for (const [index, event] of queryCell.events.entries()) {
-                if (event.type === 'thought' || event.type === 'response') {
+                if (event.type === 'thought' || event.type === 'response' || event.type === 'user_question') {
                     // TODO if the next event of the index, for thought events, is of type code_cell, 
                     // add the code cell id as a property to the event
 
                     try {
-                        if(event.type === 'thought' && queryCell.events[index + 1]?.type === 'code_cell') {
+                        if (event.type === 'thought' && queryCell.events[index + 1]?.type === 'code_cell') {
                             // console.log("found thought event with code cell following it at index:", index);
                             // console.log("queryCell.events[index + 1]", toRaw(queryCell.events[index + 1]));
                             event.code_cell_id = queryCell.events[index + 1]?.content?.cell_id;
-                            event.parent_cell_id = queryCell.id;
                         }
                     } catch(e) { // in case we went over index; ignore
 
@@ -113,8 +114,6 @@ const chatCells = computed(() => {
         }
     }
 
-     console.log("result", result.map(event => toRaw(event)));
-    
     return result;
 });
 
@@ -147,7 +146,7 @@ const isAgentThinking = computed(() => {
 watch(() => chatCells.value.length, () => {
     setTimeout(() => {
         scrollToBottom();
-    }, 100);
+    }, 150);
 });
 
 // Scroll to bottom on mount
@@ -193,7 +192,7 @@ defineExpose({
         
         &.agent-message {
             align-self: flex-start;
-            max-width: 80%;
+            max-width: 85%;
         }
     }
     

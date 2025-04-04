@@ -95,8 +95,13 @@
                         :hide-output="!showOutputCells"
                         :event="event"
                     />
-                </div>
 
+                    <ProgressBar 
+                        v-if="isSelectedCellInProgress" 
+                        mode="indeterminate" 
+                        style="height: 6px; width: 40%; margin: 1rem auto;">
+                    </ProgressBar>
+                </div>
             </div>
 
             <div v-if="!isMaximized" class="spacer right"></div>
@@ -165,7 +170,7 @@ import ChatPanel from '../components/chat-interface/ChatPanel.vue';
 import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 import ContextPanel from '../components/panels/ContextPanel.vue';
-
+import ProgressBar from 'primevue/progressbar';
 import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
@@ -292,17 +297,15 @@ const selectedCellId = computed(() => {
 // Find the selected cell and get its events
 const selectedCellEvents = computed(() => {
     if (!selectedCellId.value) {
-        console.log("No cell selected to show selectedCellEvents for");
+        // console.log("No cell selected to show selectedCellEvents for");
         return null;
     }
 
-    console.log("computing selectedCellEvents for", selectedCellId.value);
+    // console.log("computing selectedCellEvents for", selectedCellId.value);
     
     const cells = beakerSession.value?.session?.notebook?.cells ?? [];
     const selectedCell = cells.find(cell => cell.id === selectedCellId.value);
-    console.log("found selected cell match?", toRaw(selectedCell));
     const events = selectedCell?.events || [];
-    console.log("?events?", toRaw(events));
 
     return events;
 });
@@ -363,7 +366,6 @@ const restartSession = async () => {
 }
 
 const unselectCell = () => {
-    console.log("Unselecting cell");
     beakerSession.value.session.notebook.selectedCell = undefined;
 }
 
@@ -379,8 +381,8 @@ const filteredCellEvents = computed(() => {
     
     return selectedCellEvents.value.filter(event => {
 
-        console.log("filtered cell events; event:", event.type);
-        console.log("event.status:", event.status);
+        // console.log("filtered cell events; event:", event.type);
+        // console.log("event.status:", event.status);
 
         // Filter on failed cells; TODO this doesn't work this way- we'll check events renderer
         if (!showFailedCells.value && event.type === 'code_cell' && event.status === 'error') {
@@ -410,6 +412,16 @@ const filteredCellEvents = computed(() => {
         return true;
     });
 });
+
+const isSelectedCellInProgress = computed(() => {
+    if (selectedCellId.value === null) return false;
+
+    const cells = beakerSession.value?.session?.notebook?.cells ?? [];
+    const selectedCell = cells.find(cell => cell.id === selectedCellId.value);
+
+    const isBusy = selectedCell.status === 'busy';
+    return isBusy;
+})
 </script>
 
 <style lang="scss">
