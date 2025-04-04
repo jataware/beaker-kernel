@@ -29,7 +29,6 @@
                     @notebook-saved="handleNotebookSaved"
                     @open-file="loadNotebook"
                 >
-
                     <template #end-extra>
                         <Button
                             @click="isMaximized = !isMaximized; beakerInterfaceRef.setMaximized(isMaximized);"
@@ -42,7 +41,6 @@
                 <BeakerNotebookPanel
                     :selected-cell="beakerNotebookRef?.selectedCellId"
                     v-autoscroll
-
                 >
                     <template #notebook-background>
                         <div class="welcome-placeholder">
@@ -112,6 +110,9 @@
                 <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow no-title>
                     <MediaPanel></MediaPanel>
                 </SideMenuPanel>
+                <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
+                    <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
+                </SideMenuPanel>
             </SideMenu>
         </template>
     </BaseInterface>
@@ -151,7 +152,7 @@ import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
 import MediaPanel from '../components/panels/MediaPanel.vue';
-
+import DebugPanel from '../components/panels/DebugPanel.vue'
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -274,7 +275,8 @@ watch(
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
         contextPreviewData.value = msg.content;
-    } else if (msg.header.msg_type === "debug_event") {
+    }
+    if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,
             body: msg.content.body,
