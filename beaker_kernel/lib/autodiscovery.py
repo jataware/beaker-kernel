@@ -18,6 +18,7 @@ if sys.platform == "win32":
         r'%PROGRAMDATA\beaker',
         r'%APPDATA%\beaker',
         r'%LOCALAPPDATA%\beaker',
+        os.path.join(sys.prefix, "share", "beaker"),
     ]
 elif sys.platform == "darwin":
     LIB_LOCATIONS = [

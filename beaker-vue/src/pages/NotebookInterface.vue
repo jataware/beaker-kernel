@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        :title="$tmpl._('short_title', 'Beaker Noteboook')"
+        :title="$tmpl._('short_title', 'Beaker Notebook')"
         :title-extra="saveAsFilename"
         :header-nav="headerNav"
         ref="beakerInterfaceRef"
