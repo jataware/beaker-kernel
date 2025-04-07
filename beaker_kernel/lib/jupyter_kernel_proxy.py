@@ -190,6 +190,8 @@ class AbstractProxyKernel(object):
         if identities is None:
             identities = []
 
+        if parent_header is None:
+            parent_header = {}
 
         header = {
             "date": datetime.datetime.now().isoformat(),

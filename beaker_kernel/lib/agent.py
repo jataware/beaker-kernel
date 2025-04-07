@@ -68,6 +68,13 @@ class BeakerAgent(ReActAgent):
         }
         return info
 
+    def log(self, event_type: str, content: typing.Any = None) -> None:
+        self.context.beaker_kernel.log(
+            event_type=f"agent_{event_type}",
+            content=content
+        )
+        return super().log(event_type=event_type, content=content)
+
     def debug(self, event_type: str, content: typing.Any = None) -> None:
         self.context.beaker_kernel.debug(
             event_type=f"agent_{event_type}",
