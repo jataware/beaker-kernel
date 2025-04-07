@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        :title="$tmpl._('short_title', 'Beaker Noteboook')"
+        :title="$tmpl._('short_title', 'Beaker Notebook')"
         :title-extra="saveAsFilename"
         :header-nav="headerNav"
         ref="beakerInterfaceRef"
@@ -113,6 +113,9 @@
                 <SideMenuPanel id="kernel-state" label="State" icon="pi pi-code" no-overflow>
                     <KernelStatePanel :data="kernelStateInfo"/>
                 </SideMenuPanel>
+                <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
+                    <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
+                </SideMenuPanel>
             </SideMenu>
         </template>
     </BaseInterface>
@@ -154,6 +157,7 @@ import { IBeakerTheme } from '../plugins/theme';
 import MediaPanel from '../components/panels/MediaPanel.vue';
 import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
+import DebugPanel from '../components/panels/DebugPanel.vue'
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();

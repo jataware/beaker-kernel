@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 import typing
+from collections.abc import Mapping
 # from typing import Dict
 
 
@@ -17,6 +18,7 @@ if sys.platform == "win32":
         r'%PROGRAMDATA\beaker',
         r'%APPDATA%\beaker',
         r'%LOCALAPPDATA%\beaker',
+        os.path.join(sys.prefix, "share", "beaker"),
     ]
 elif sys.platform == "darwin":
     LIB_LOCATIONS = [
@@ -57,26 +59,59 @@ def find_mappings(mapping_type: MappingType) -> typing.Generator[typing.Dict[str
                     continue
 
 
+class AutodiscoveryItems(Mapping[str, type|dict[str, str]]):
+    raw: dict[str, type|dict[str, str]]
+    mapping: dict[str, type|dict]
+
+    def __init__(self, *args, **kwargs):
+        self.mapping = {}
+        self.raw = dict(*args, **kwargs)
+
+    def __getitem__(self, key):
+        item = self.mapping.get(key, self.raw.get(key))
+        if isinstance(item, (str, bytes, os.PathLike)) and os.path(path := os.fspath(item)) and path.endswith('.json'):
+            with open(path) as jsonfile:
+                item = json.load(jsonfile)
+                item["mapping_file"] = path
+        match item:
+            case type():
+                return item
+            case {"slug": slug, "package": package, "class_name": class_name, **kw}:
+                mapping_file = kw.get("mapping_file", None)
+                try:
+                    module = importlib.import_module(package)
+                except (ImportError, ModuleNotFoundError) as err:
+                    # logger.warning(f"Warning: Beaker module '{package}' in file {mapping_file} is unable to be imported. See below.")
+                    # logger.warning(f"  {err.__class__}: {err.msg}")
+                    raise
+                assert slug == key
+                discovered_class = getattr(module, class_name)
+                if mapping_file:
+                    setattr(discovered_class, '_autodiscovery', {
+                        "mapping_file": mapping_file,
+                        **item
+                    })
+                self.mapping[key] = discovered_class
+                return discovered_class
+            case _:
+                raise ValueError(f"Unable to handle autodiscovery item '{item}' (type '{item.__class__}')")
+
+    def __setitem__(self, key, value):
+        self.raw[key] = value
+
+    def __iter__(self):
+        yield from self.raw.__iter__()
+
+    def __len__(self):
+        return len(self.raw)
+
+
 def autodiscover(mapping_type: MappingType) -> typing.Dict[str, type]:
     """
-    Auto discovers installed
+    Auto discovers installed classes of specified types.
     """
-    items = {}
+    items: AutodiscoveryItems = AutodiscoveryItems()
     for mapping_file, data in find_mappings(mapping_type):
         slug = data["slug"]
-        package = data["package"]
-        class_name = data["class_name"]
-        try:
-            module = importlib.import_module(package)
-        except (ImportError, ModuleNotFoundError) as err:
-            logger.warning(f"Warning: Beaker module '{package}' in file {mapping_file} is unable to be imported. See below.")
-            logger.warning(f"  {err.__class__}: {err.msg}")
-            continue
-        discovered_class = getattr(module, class_name)
-        setattr(discovered_class, '_autodiscovery', {
-            "mapping_file": mapping_file,
-            **data
-        })
-
-        items[slug] = discovered_class
+        items[slug] = {"mapping_file": mapping_file, **data}
     return items
