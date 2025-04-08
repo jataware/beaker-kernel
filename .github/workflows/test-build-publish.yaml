@@ -23,7 +23,7 @@ jobs:
               id: tag_on_main
               run: |
                   TAG_COMMIT=$(git rev-list -n 1 ${{ github.ref }})
-                  BRANCH=$(git branch -r --contains $TAG_COMMIT | grep origin/main || true)
+                  BRANCH=$(git branch -r --contains $TAG_COMMIT | tr -d ' ' | grep -o '^origin/main$' || true)
                   echo "branch_match=$BRANCH"
                   echo "branch_match=$BRANCH" >> $GITHUB_OUTPUT
 
