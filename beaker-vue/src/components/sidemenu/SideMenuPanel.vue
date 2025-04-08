@@ -61,6 +61,10 @@ const emit = defineEmits([
     grid-area: content;
     height: 100%;
     margin-right: 4px;
+    > div {
+        height: 100%;
+        overflow: auto;
+    }
 }
 
 </style>

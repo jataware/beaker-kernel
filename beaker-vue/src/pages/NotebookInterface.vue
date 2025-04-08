@@ -107,8 +107,11 @@
                         v-model="previewVisible"
                     />
                 </SideMenuPanel>
-                <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow no-title>
-                    <MediaPanel></MediaPanel>
+                <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow>
+                    <MediaPanel />
+                </SideMenuPanel>
+                <SideMenuPanel id="kernel-state" label="State" icon="pi pi-code" no-overflow>
+                    <KernelStatePanel :data="kernelStateInfo"/>
                 </SideMenuPanel>
                 <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
                     <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
@@ -152,6 +155,8 @@ import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import { IBeakerTheme } from '../plugins/theme';
 import MediaPanel from '../components/panels/MediaPanel.vue';
+import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
+
 import DebugPanel from '../components/panels/DebugPanel.vue'
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
@@ -210,6 +215,7 @@ const beakerApp = inject<any>("beakerAppConfig");
 beakerApp.setPage("notebook");
 
 const contextPreviewData = ref<any>();
+const kernelStateInfo = ref();
 
 type FilePreview = {
     url: string,
@@ -275,8 +281,9 @@ watch(
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
         contextPreviewData.value = msg.content;
-    }
-    if (msg.header.msg_type === "debug_event") {
+    } else if (msg.header.msg_type === "kernel_state_info") {
+        kernelStateInfo.value = msg.content;
+    } else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,
             body: msg.content.body,
