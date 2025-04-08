@@ -73,14 +73,23 @@ class BeakerAgent(ReActAgent):
             event_type=f"agent_{event_type}",
             content=content
         )
-        return super().log(event_type=event_type, content=content)
+        # a case where an upstream overridden logger passes in a plain string
+        # will have a harmless formatting error in the default archytas logger
+        try:
+            return super().log(event_type=event_type, content=content)
+        except TypeError:
+            pass
 
     def debug(self, event_type: str, content: typing.Any = None) -> None:
         self.context.beaker_kernel.debug(
             event_type=f"agent_{event_type}",
             content=content
         )
-        return super().debug(event_type=event_type, content=content)
+        # see log notes above
+        try:
+            return super().debug(event_type=event_type, content=content)
+        except TypeError:
+            pass
 
     def display_observation(self, observation):
         content = {

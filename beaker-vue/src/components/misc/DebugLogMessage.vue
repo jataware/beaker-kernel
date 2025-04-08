@@ -24,7 +24,7 @@
                     <span v-else>{{ logEntry?.body?.split('tool_calls=')?.[0]?.split('text=')?.[1].slice(1, -3) }}</span>
                 </span>
                 <span v-if="logEntry?.type === 'agent_llm_request'" style="color: var(--surface-600);">Agent context setup and conversation history -- see details below</span>
-                <span v-if="rawStringMessageTypes.includes(logEntry?.type)">
+                <span v-if="rawStringMessageTypes.includes(logEntry?.type) || !Object.keys(userFacingNames).includes(logEntry?.type)">
                     {{ logEntry?.body }}
                 </span>
                 <span v-if="logEntry?.type === 'agent_react_tool_output'">
@@ -180,7 +180,9 @@ const rawStringMessageTypes = [
 
 const pureJsonMessageTypes = [
     'debug_update',
-    'init-agent'
+    'init-agent',
+    // catch-all for coerced/non-present fields, assume json
+    'undefined'
 ]
 
 const isHiddenByDefault = computed(() =>
@@ -195,7 +197,8 @@ const title = computed(() => {
         return `Subkernel Preview (${executionType})`
     }
 
-    return userFacingNames?.[props?.logEntry?.type] ?? props?.logEntry?.type;
+    const formattedRawName = props?.logEntry?.type?.startsWith('agent_') ? props?.logEntry?.type?.slice(6) : props?.logEntry?.type;
+    return userFacingNames?.[props?.logEntry?.type] ?? formattedRawName ?? 'Message';
 })
 
 const showDetails = ref(false);

@@ -88,7 +88,7 @@ const filteredLogs = computed(() => {
     }
 
     const filtered = props.entries
-        ?.filter(entry => entry.type.includes(filterValue.value))
+        ?.filter(entry => filterValue.value !== "" ? entry?.type?.includes(filterValue.value) : true)
         ?.filter(entry => hideSubkernelInternals.value ? !isSubkernelInternal(entry) : true);
 
 
