@@ -6,14 +6,39 @@ name: Build and Publish
 # yamllint disable-line rule:truthy
 on:
   push:
-    tags: ['v[0-9]*']
+    tags: ['v[0-9]+**']
 
 jobs:
+    sanity-check:
+        name: Sanity Check
+        runs-on: ubuntu-22.04
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                ref: ${{ github.event.workflow_run.head_branch }}
+                fetch-depth: 0
+
+            - name: Check Tag On main branch
+              id: tag_on_main
+              run: |
+                  TAG_COMMIT=$(git rev-list -n 1 ${{ github.ref }})
+                  BRANCH=$(git branch -r --contains $TAG_COMMIT | tr -d ' ' | grep -o '^origin/main$' || true)
+                  echo "branch_match=$BRANCH"
+                  echo "branch_match=$BRANCH" >> $GITHUB_OUTPUT
+
+            - name: Fail if tag is not on main
+              if: steps.tag_on_main.outputs.branch_match == ''
+              run: |
+                  echo "Tag is not pointing to a commit on main. Exiting."
+                  exit 1
+
     build-python:
         name: Build & Publish
         runs-on: ubuntu-22.04
         permissions:
             id-token: write
+        needs: sanity-check
         steps:
             - name: Apt update and build install
               shell: bash
@@ -37,6 +62,7 @@ jobs:
     build-deploy-npm:
         name: Build & Publish
         runs-on: ubuntu-22.04
+        needs: sanity-check
         permissions:
             id-token: write
         steps:
