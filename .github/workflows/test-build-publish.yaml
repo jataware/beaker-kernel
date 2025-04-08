@@ -6,7 +6,7 @@ name: Build and Publish
 # yamllint disable-line rule:truthy
 on:
   push:
-    tags: ['t[0-9.]*']
+    tags: ['t[0-9]*']
 
 jobs:
     sanity-check:
