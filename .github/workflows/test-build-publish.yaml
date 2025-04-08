@@ -28,7 +28,7 @@ jobs:
                   echo "branch_match=$BRANCH" >> $GITHUB_OUTPUT
 
             - name: Fail if tag is not on main
-              if: steps.get_branch.outputs.branch_match == ''
+              if: steps.tag_on_main.outputs.branch_match == ''
               run: |
                   echo "Tag is not pointing to a commit on main. Exiting."
                   exit 1
