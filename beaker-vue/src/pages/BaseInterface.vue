@@ -134,15 +134,6 @@ const showToast = (options: ShowToastOptions) => {
 
 export type StyleOverride = 'chat'
 
-// const props = defineProps([
-//     "title",
-//     "titleExtra",
-//     "savefile",
-//     "headerNav",
-//     "apiKeyPrompt",
-//     "styleOverrides"
-// ]);
-
 const props = defineProps<{
   title: string
   titleExtra?: string

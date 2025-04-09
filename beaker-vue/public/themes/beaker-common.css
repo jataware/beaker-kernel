@@ -152,3 +152,14 @@
 .pre {
     white-space: pre-wrap;
 }
+
+.p-button-icon.beaker-zoom {
+    &::after {
+        content: "\e908";
+        font-size: 50%;
+        position: absolute;
+        right: 38%;
+        top: 45%;
+    }
+}
+

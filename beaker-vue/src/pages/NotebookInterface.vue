@@ -59,27 +59,33 @@
             <SideMenu
                 ref="sideMenuRef"
                 position="left"
-                :show-label="true"
                 highlight="line"
                 :expanded="true"
                 initialWidth="25vi"
                 :maximized="isMaximized"
             >
-                <SideMenuPanel label="Info" icon="pi pi-home">
+                <SideMenuPanel label="Context Info" icon="pi pi-home">
                     <InfoPanel/>
                 </SideMenuPanel>
-                <SideMenuPanel id="files" label="Files" icon="pi pi-file-export" no-overflow :lazy="true">
+                <SideMenuPanel id="files" label="Files" icon="pi pi-folder" no-overflow :lazy="true">
                     <FilePanel
                         ref="filePanelRef"
                         @open-file="loadNotebook"
                         @preview-file="(file, mimetype) => {
                             previewedFile = {url: file, mimetype: mimetype};
                             previewVisible = true;
-                            rightSideMenuRef.selectPanel('Contents');
+                            rightSideMenuRef.selectPanel('file-contents');
                         }"
                     />
                 </SideMenuPanel>
-                <SideMenuPanel v-if="props.config.config_type !== 'server'" id="config" label="Config" icon="pi pi-cog" :lazy="true">
+                <SideMenuPanel
+                    v-if="props.config.config_type !== 'server'"
+                    id="config"
+                    :label="`${$tmpl._('short_title', 'Beaker')} Config`"
+                    icon="pi pi-cog"
+                    :lazy="true"
+                    position="bottom"
+                >
                     <ConfigPanel
                         ref="configPanelRef"
                         @restart-session="restartSession"
@@ -91,7 +97,6 @@
             <SideMenu
                 ref="rightSideMenuRef"
                 position="right"
-                :show-label="true"
                 highlight="line"
                 :expanded="true"
                 initialWidth="25vi"
@@ -100,20 +105,24 @@
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
-                <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow>
+                <SideMenuPanel
+                    id="file-contents"
+                    label="File Contents"
+                    icon="pi pi-file beaker-zoom"
+                    no-overflow
+                >
                     <FileContentsPanel
                         :url="previewedFile?.url"
                         :mimetype="previewedFile?.mimetype"
-                        v-model="previewVisible"
                     />
                 </SideMenuPanel>
-                <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow>
+                <SideMenuPanel id="media" label="Graphs and Images" icon="pi pi-chart-bar" no-overflow>
                     <MediaPanel />
                 </SideMenuPanel>
-                <SideMenuPanel id="kernel-state" label="State" icon="pi pi-code" no-overflow>
+                <SideMenuPanel id="kernel-state" label="Kernel State" icon="pi pi-server" no-overflow>
                     <KernelStatePanel :data="kernelStateInfo"/>
                 </SideMenuPanel>
-                <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
+                <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
                     <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
                 </SideMenuPanel>
             </SideMenu>
