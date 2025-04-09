@@ -204,7 +204,7 @@ del importlib, os, site, sys
             "functions": {},
             "classes": {}
         }
-        for module, details in state["modules"].items():
+        for module, details in state.get("modules", {}).items():
             aliased_name = f": {details['full_name']}" if module != details["full_name"] else ""
             label = f"{module}{aliased_name}"
             children = [{"label": f'import path: {details["path"]}'}]
@@ -213,7 +213,7 @@ del importlib, os, site, sys
                 "children": children
             }
 
-        for variable, details in state["variables"].items():
+        for variable, details in state.get("variables", {}).items():
             size_suffix = f"[{details['size']}]" if details["size"] != "" else ""
             label = f"{variable} ({details['type']}{size_suffix}): "
 
@@ -233,7 +233,7 @@ del importlib, os, site, sys
                 "children": [{"label": dropdown_contents}]
             }
 
-        for function, details in state["functions"].items():
+        for function, details in state.get("functions", {}).items():
             payload: dict[str, Any] = {
                 "label": f"{function} {details['signature']}"
             }
@@ -241,7 +241,7 @@ del importlib, os, site, sys
                 payload["children"] = [{"label": details["docstring"]}]
             formatted_state["functions"][function] = payload
 
-        for state_class, details in state["classes"].items():
+        for state_class, details in state.get("classes", {}).items():
             payload = {
                 "label": f"{state_class}"
             }
