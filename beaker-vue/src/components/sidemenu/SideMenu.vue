@@ -2,23 +2,42 @@
     <div class="sidemenu-container" :class="[position]">
         <div class="sidemenu" :class="[position, (minimizeIndicator ? 'minimize' : undefined)]" :style="containerStyle" ref="panelRef">
             <div class="sidemenu-menu-selection" :class="[position]" ref="menuRef">
-                <Button
-                    v-for="(panel, index) in panels" :key="`button-${index}`"
-                    :class="['menu-button', props.highlight, props.position, (selectedTabIndex === index ? 'selected' : undefined), (props.showLabel ? 'show-label' : undefined)]"
-                    :icon="panel.props.icon"
-                    :label="props.showLabel ? panel.props.label : undefined"
-                    icon-pos="top"
-                    @click="handleButtonClick(index)"
-                    v-tooltip:[toolTipArgs]="props.showTooltip ? panel.props.label : undefined"
-                    text
-                ></Button>
+                <div
+                    v-for="buttonPosition in ['top', 'middle', 'bottom']"
+                    :key="buttonPosition"
+                    :position="buttonPosition"
+                    :class="['button-panel', `${buttonPosition}-buttons`]"
+                >
+                    <Button
+                        v-for="{panel, idx} in panelsByPosition[buttonPosition]" :key="`button-${buttonPosition}-${idx}`"
+                        :class="[
+                            'menu-button',
+                            props.highlight,
+                            props.position,
+                            (selectedTabIndex === idx ? 'selected' : undefined),
+                            (props.showLabel ? 'show-label' : undefined),
+                        ]"
+                        :icon="panel.props?.icon"
+                        :label="props.showLabel ? panel.props.label : undefined"
+                        icon-pos="top"
+                        @click="handleButtonClick(idx)"
+                        v-tooltip:[toolTipArgs]="props.showTooltip ? panel.props.label : undefined"
+                        text
+                    ></Button>
+                </div>
             </div>
             <div v-show="expanded" role="menu" class="sidemenu-panel-container">
-                <component v-for="(panel, index) in panels" :key="`panel-${index}`" :is="panel" v-show="selectedTabIndex === index" :selected="selectedTabIndex === index"></component>
+                <component
+                    v-for="(panel, index) in panels"
+                    :key="`panel-${index}`"
+                    :is="panel"
+                    v-show="selectedTabIndex === index"
+                    :selected="selectedTabIndex === index"
+                />
             </div>
             <div v-if="expanded && !staticSize"
                 class="sidemenu-gutter"
-                @mousedown.prevent="startDrag"
+                @mousedown.prevent="startDragHandle"
                 ref="gutterRef"
             >
                 <div v-if="!staticSize" class="sidemenu-gutter-handle"></div>
@@ -28,7 +47,8 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, defineProps, defineExpose, watch, computed, defineEmits, getCurrentInstance, useSlots, isVNode, nextTick, withDefaults, onUnmounted, onMounted } from "vue";
+import { ref, defineProps, defineExpose, watch, computed, defineEmits, getCurrentInstance, useSlots, isVNode, nextTick, withDefaults, onUnmounted, onMounted, onBeforeMount } from "vue";
+import { type VNode } from "vue";
 
 import Button from 'primevue/button';
 import SideMenuPanel from "./SideMenuPanel.vue";
@@ -73,7 +93,7 @@ const MINIMIZE_INDICATION_WIDTH = 8;
 
 const slots = useSlots();
 
-const selectedTabIndex = ref(props.expanded ? 0 : -1);
+const selectedTabIndex = ref<number|null>(props.expanded ? 0 : null);
 const panelWidth = ref<number|null>(null);
 const listeners = ref({
     move: null,
@@ -89,20 +109,27 @@ const minimizeIndicator = ref<boolean>(false);
 const resizeObserver = ref<ResizeObserver>();
 const resizeHistory = ref<DOMRectReadOnly>();
 const instance = getCurrentInstance();
+const panels = ref<VNode[]>();
 
 var minWidth: number;
 var menuWidth: number;
 var closedWidth: number;
 
 const expanded = computed(() => {
-    const optionSelected = selectedTabIndex.value > -1;
-    return optionSelected
+    return selectedTabIndex.value !== null;
 });
 
-const panels = computed(() => {
-    return slots.default().filter((item) => {
-        return (isVNode(item) && item.type === SideMenuPanel);
+const panelsByPosition = computed(() => {
+    const result: {[key: string]: {panel: VNode; idx: number}[]} = {
+        top: [],
+        middle: [],
+        bottom: [],
+    }
+    panels.value.forEach((panel, idx) => {
+        const panelPos = panel.props.position || "top";
+        result[panelPos].push({panel, idx});
     });
+    return result;
 });
 
 const isStatic = computed(() => (props.staticSize || (expanded.value && panelWidth.value === null)))
@@ -151,7 +178,7 @@ const toolTipArgs = computed(() => {
     return {position: ({left: "right", right: "left"}[props.position])};
 });
 
-const startDrag = (evt: MouseEvent) => {
+const startDragHandle = (evt: MouseEvent) => {
     if (listeners.value.move !== null) {
         try {
             document.removeEventListener("mousemove", listeners.value.move);
@@ -166,8 +193,8 @@ const startDrag = (evt: MouseEvent) => {
         catch (e) {null}
         listeners.value.end = null;
     }
-    listeners.value.move = document.addEventListener("mousemove", moveDrag);
-    listeners.value.end = document.addEventListener("mouseup", endDrag);
+    listeners.value.move = document.addEventListener("mousemove", moveDragHandle);
+    listeners.value.end = document.addEventListener("mouseup", endDragHandle);
 
     dragStartPos.value = evt.x;
     dragStartWidth.value = panelWidth.value || panelRef.value.clientWidth;
@@ -176,7 +203,7 @@ const startDrag = (evt: MouseEvent) => {
     minWidth = menuWidth + AUTO_CLOSE_MARGIN;
 };
 
-const moveDrag = (evt: MouseEvent) => {
+const moveDragHandle = (evt: MouseEvent) => {
     let width: number;
     let resize = true;
     dragDistance.value = evt.x - dragStartPos.value;
@@ -212,14 +239,14 @@ const moveDrag = (evt: MouseEvent) => {
     });
 }
 
-const endDrag = (evt: MouseEvent) => {
-    document.removeEventListener("mousemove", moveDrag);
-    document.removeEventListener("mouseup", endDrag);
+const endDragHandle = (evt: MouseEvent) => {
+    document.removeEventListener("mousemove", moveDragHandle);
+    document.removeEventListener("mouseup", endDragHandle);
     // Normalize position to closes full pixel. Prevent display errors for partial pixel sizes.
     panelWidth.value = Math.round(panelWidth.value);
     // If dragged closed, assume they want the panel to be hidden
     if (panelWidth.value <= minWidth) {
-        selectedTabIndex.value = -1;
+        selectedTabIndex.value = null;
         panelWidth.value = null;
     }
     dragStartPos.value = null;
@@ -234,17 +261,33 @@ const handleButtonClick = (index: number) => {
         emit("panel-show");
     }
     else {
-        selectedTabIndex.value = -1;
+        selectedTabIndex.value = null;
         emit("panel-hide");
     }
 }
 
-const selectPanel = (label: string) => {
-    selectedTabIndex.value = panels.value.findIndex((panel) => (panel.props?.label === label));
+const isPanelSelected = (index: number) => {
+    return Boolean(
+        selectedTabIndex.value !== null &&
+        selectedTabIndex.value === index
+    );
+}
+
+const selectPanel = (id_or_label: string) => {
+    selectedTabIndex.value = panels.value.findIndex(
+        (panel) => (panel.props?.label === id_or_label || panel.props?.id === id_or_label)
+    );
     if (minimizeIndicator.value) {
         minimizeIndicator.value = false;
     }
 }
+
+onBeforeMount(() => {
+    const slotPanels = slots.default().filter((item) => {
+        return (isVNode(item) && item.type === SideMenuPanel);
+    });
+    panels.value = slotPanels;
+});
 
 onMounted(() => {
     const target: HTMLElement = document.body;
@@ -363,6 +406,20 @@ defineExpose({
     background-color: var(--surface-b);
     display: flex;
     flex-direction: column;
+    min-width: 4rem;
+
+    > div {
+        display: flex;
+        flex-direction: column;
+
+        &.button-panel {
+            flex: 1;
+        }
+        &.bottom-buttons {
+            flex-direction: column;
+            justify-content: end;
+        }
+    }
 }
 
 .sidemenu-gutter {
@@ -409,9 +466,12 @@ button.menu-button {
     color: var(--primary-800);
     border-color: transparent;
     aspect-ratio: 1;
+    width: 100%;
+    padding: .75rem .5rem;
 
-    &.show-label {
-        padding: .75rem .5rem;
+    // Increase size of icon if no text
+    &.p-button-icon-only .p-button-icon{
+        font-size: 1.75rem;
     }
 
     &:focus {
@@ -423,6 +483,17 @@ button.menu-button {
         background-color: var(--surface-c);
         border-color: var(--primary-700);
     }
+
+    &.disabled {
+        color: var(--surface-200);
+        cursor: default;
+        &:hover {
+            background-color: var(--surface-c);
+            border-color: var(--surface-200);
+
+        }
+    }
+
     &.line {
         border-radius: 0;
     }

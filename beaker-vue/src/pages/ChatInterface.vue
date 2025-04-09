@@ -48,26 +48,33 @@
         <template #left-panel>
             <SideMenu
                 position="left"
-                :show-label="true"
                 highlight="line"
                 :expanded="false"
                 initialWidth="25vi"
                 :maximized="isMaximized"
             >
-                <SideMenuPanel label="Info" icon="pi pi-home">
-                    <ContextPanel />
+                <SideMenuPanel label="Context Info" icon="pi pi-home">
+                    <InfoPanel/>
                 </SideMenuPanel>
-                <SideMenuPanel label="Files" icon="pi pi-file-export" no-overflow>
+                <SideMenuPanel id="files" label="Files" icon="pi pi-folder" no-overflow :lazy="true">
                     <FilePanel
+                        ref="filePanelRef"
                         @open-file="loadNotebook"
                         @preview-file="(file, mimetype) => {
                             previewedFile = {url: file, mimetype: mimetype};
                             previewVisible = true;
-                            rightSideMenuRef.selectPanel('Contents');
+                            rightSideMenuRef.selectPanel('file-contents');
                         }"
                     />
                 </SideMenuPanel>
-                <SideMenuPanel id="config" label="Config" icon="pi pi-cog" :lazy="true">
+                <SideMenuPanel
+                    v-if="props.config.config_type !== 'server'"
+                    id="config"
+                    :label="`${$tmpl._('short_title', 'Beaker')} Config`"
+                    icon="pi pi-cog"
+                    :lazy="true"
+                    position="bottom"
+                >
                     <ConfigPanel
                         ref="configPanelRef"
                         @restart-session="restartSession"
@@ -77,46 +84,33 @@
         </template>
         <template #right-panel>
             <SideMenu
+                ref="rightSideMenuRef"
                 position="right"
-                :show-label="true"
                 highlight="line"
                 :expanded="false"
-                ref="rightSideMenuRef"
             >
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
-                <SideMenuPanel id="file-contents" label="Contents" icon="pi pi-file" no-overflow>
+                <SideMenuPanel
+                    id="file-contents"
+                    label="File Contents"
+                    icon="pi pi-file beaker-zoom"
+                    no-overflow
+                >
                     <FileContentsPanel
                         :url="previewedFile?.url"
                         :mimetype="previewedFile?.mimetype"
-                        v-model="previewVisible"
                     />
                 </SideMenuPanel>
-                <SideMenuPanel id="media" label="Media" icon="pi pi-chart-bar" no-overflow>
-                    <MediaPanel></MediaPanel>
+                <SideMenuPanel id="media" label="Graphs and Images" icon="pi pi-chart-bar" no-overflow>
+                    <MediaPanel />
                 </SideMenuPanel>
-                <SideMenuPanel tabId="logging" label="Logging" icon="pi pi-list" >
+                <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
                     <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
                 </SideMenuPanel>
             </SideMenu>
         </template>
-                <!-- <HelpSidebar></HelpSidebar> -->
-                 <!-- <SideMenu
-                    position="right"
-                    :expanded="false"
-                    :style="{gridArea: 'r-sidebar'}"
-                    :show-label="false"
-                    :static-size="true"
-                 >
-                    <SideMenuPanel
-                        icon="pi pi-question"
-                    >
-                        <HelpSidebar/>
-                    </SideMenuPanel>
-                 </SideMenu> -->
-            <!-- </div> -->
-    <!-- </div> -->
     </BaseInterface>
 </template>
 
@@ -126,7 +120,7 @@ import AgentQuery from '../components/chat-interface/AgentQuery.vue';
 import ChatPanel from '../components/chat-interface/ChatPanel.vue';
 import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
-import ContextPanel from '../components/panels/ContextPanel.vue';
+import InfoPanel from '../components/panels/InfoPanel.vue';
 
 import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
