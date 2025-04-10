@@ -1,7 +1,7 @@
 import ast
 from typing import Any
 
-from .base import CheckpointableBeakerSubkernel, Checkpoint
+from ..lib.subkernel import CheckpointableBeakerSubkernel, Checkpoint
 
 import logging
 logger = logging.getLogger(__name__)

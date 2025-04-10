@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Any
 
-from .base import BeakerSubkernel
+from ..lib.subkernel import BeakerSubkernel
 
 logger = logging.getLogger(__name__)
 

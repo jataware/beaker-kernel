@@ -241,7 +241,7 @@ def list_subkernels(all):
     Information on which kernels/packages are required to run a kernel is usually found in the docsting for a subkernel,
     viewable when run with the -a flag.
     """
-    from beaker_kernel.lib.subkernels import autodiscover_subkernels
+    from beaker_kernel.lib.subkernel import autodiscover_subkernels
     # Fetch installed jupyter subkernels
     from jupyter_client.kernelspec import KernelSpecManager
     ksm = KernelSpecManager()

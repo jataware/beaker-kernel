@@ -10,7 +10,7 @@ from .agent import DefaultAgent
 if TYPE_CHECKING:
     from beaker_kernel.kernel import BeakerKernel
     from beaker_kernel.lib.agent import BeakerAgent
-    from beaker_kernel.lib.subkernels.base import BeakerSubkernel
+    from beaker_kernel.lib.subkernel import BeakerSubkernel
 
 class DefaultContext(BeakerContext):
     """

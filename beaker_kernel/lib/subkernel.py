@@ -11,10 +11,11 @@ import requests
 
 from archytas.tool_utils import AgentRef, tool, LoopControllerRef, ReactContextRef
 
-from ..utils import env_enabled, action, ExecutionTask
-from ..jupyter_kernel_proxy import ProxyKernelClient
-from ..config import config
-from ..context import BeakerContext
+from .autodiscovery import autodiscover
+from .utils import env_enabled, action, ExecutionTask
+from .jupyter_kernel_proxy import ProxyKernelClient
+from .config import config
+from .context import BeakerContext
 
 if TYPE_CHECKING:
     from langchain_core.messages import ToolMessage, AIMessage, BaseMessage, ToolCall
@@ -29,7 +30,6 @@ class JsonStateEncoder(json.JSONEncoder):
 
 import logging
 logger = logging.getLogger(__name__)
-
 
 def run_code_summarizer(message: "ToolMessage", all_messages: "list[BaseMessage]", agent: "Agent"):
     from langchain_core.messages import AIMessage
@@ -387,3 +387,7 @@ class CheckpointableBeakerSubkernel(BeakerSubkernel):
 
 # Provided for backwards compatibility
 BaseCheckpointableSubkernel = CheckpointableBeakerSubkernel
+
+
+def autodiscover_subkernels():
+    return autodiscover("subkernels")
