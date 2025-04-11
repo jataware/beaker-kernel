@@ -79,6 +79,17 @@
                     />
                 </SideMenuPanel>
                 <SideMenuPanel
+                    id="datasources" label="Datasources" icon="pi pi-database"
+                    v-if="datasources.length > 0"
+                >
+                    <div>
+                        <div v-for="datasource in datasources" :key="datasource.uid || datasource.name">
+                            <h3>{{ datasource.name }}</h3>
+                            <div style="text-indent: -2rem; padding-left: 4rem">{{ datasource.description }}</div>
+                        </div>
+                    </div>
+                </SideMenuPanel>
+                <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
                     id="config"
                     :label="`${$tmpl._('short_title', 'Beaker')} Config`"
@@ -131,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, defineEmits, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
+import { defineProps, ref, defineEmits, watch, provide, computed, nextTick, onMounted, inject, toRaw, isReactive, reactive } from 'vue';
 import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel/src';
 import { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
 import { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
@@ -206,8 +217,6 @@ const cellComponentMapping = {
     'raw': BeakerRawCell,
 }
 
-// const session = inject<BeakerSession>('session');
-
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
@@ -225,6 +234,7 @@ beakerApp.setPage("notebook");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
+const datasources = ref([]);
 
 type FilePreview = {
     url: string,
@@ -290,14 +300,30 @@ watch(
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
         contextPreviewData.value = msg.content;
-    } else if (msg.header.msg_type === "kernel_state_info") {
+    }
+    else if (msg.header.msg_type === "kernel_state_info") {
         kernelStateInfo.value = msg.content;
-    } else if (msg.header.msg_type === "debug_event") {
+    }
+    else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,
             body: msg.content.body,
             timestamp: msg.header.date,
         });
+    }
+    else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
+        var incomingDatasources;
+        if (msg.header.msg_type === "context_setup_response") {
+            incomingDatasources = msg.content.datasources;
+
+        }
+        else if (msg.header.msg_type === "context_info_response") {
+            incomingDatasources = msg.content.info.datasources;
+        }
+        if (incomingDatasources === undefined) {
+            incomingDatasources = [];
+        }
+        datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
     }
 };
 

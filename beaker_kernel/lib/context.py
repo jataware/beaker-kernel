@@ -6,6 +6,7 @@ import os.path
 import urllib.parse
 import requests
 import uuid
+from dataclasses import asdict
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable
 from typing_extensions import Self
@@ -15,6 +16,7 @@ from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError
 from beaker_kernel.lib.config import config as beaker_config
+from beaker_kernel.lib.types import Datasource
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -25,7 +27,7 @@ if TYPE_CHECKING:
     from beaker_kernel.kernel import BeakerKernel
 
     from .agent import BeakerAgent
-    from .subkernels.base import BeakerSubkernel
+    from .subkernel import BeakerSubkernel
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +58,14 @@ class BeakerContext:
         self.beaker_kernel = beaker_kernel
         self.config = config
         self.subkernel = self.get_subkernel()
+
         self.agent = agent_cls(
             context=self,
             tools=self.subkernel.tools,
         )
+        if TYPE_CHECKING and self.__annotations__:
+            self.__annotations__["agent"] = agent_cls
+
         self.current_llm_query = None
 
         self.disable_tools()
@@ -179,7 +185,6 @@ class BeakerContext:
         self.beaker_kernel.server.set_proxy_target(subkernel.connected_kernel)
         return subkernel
 
-
     @classmethod
     def available_subkernels(cls) -> List["BeakerSubkernel"]:
         subkernels: Dict[str, BeakerSubkernel] = autodiscover("subkernels")
@@ -211,7 +216,7 @@ class BeakerContext:
         else:
             return "{}"
 
-    def get_info(self) -> dict:
+    async def get_info(self) -> dict:
         """
 
         """
@@ -248,6 +253,16 @@ class BeakerContext:
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
         }
+        if get_datasource_method := getattr(self, "get_datasources", None):
+            datasources: list[Datasource] = []
+            if inspect.iscoroutinefunction(get_datasource_method):
+                datasources = await get_datasource_method()
+            elif callable(get_datasource_method):
+                datasources = get_datasource_method()
+            payload["datasources"] = [
+                asdict(datasource) if isinstance(datasource, Datasource) else datasource
+                for datasource in datasources
+            ]
         return payload
 
     def prepare_state(self, kernel_state=None, notebook_state=None):
