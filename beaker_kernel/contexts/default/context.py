@@ -10,7 +10,7 @@ from .agent import DefaultAgent
 if TYPE_CHECKING:
     from beaker_kernel.kernel import BeakerKernel
     from beaker_kernel.lib.agent import BeakerAgent
-    from beaker_kernel.lib.subkernels.base import BeakerSubkernel
+    from beaker_kernel.lib.subkernel import BeakerSubkernel
 
 class DefaultContext(BeakerContext):
     """
@@ -47,11 +47,10 @@ class DefaultContext(BeakerContext):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
         result = await self.evaluate(fetch_state_code)
         state = result.get("return", None)
-        if state:
-            return {
-                "x-application/beaker-subkernel-state": {
-                    "state": {
-                        "application/json": state
-                    }
-                },
-            }
+        return {
+            "x-application/beaker-subkernel-state": {
+                "state": {
+                    "application/json": state or {}
+                }
+            },
+        }

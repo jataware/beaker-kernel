@@ -11,10 +11,11 @@ import requests
 
 from archytas.tool_utils import AgentRef, tool, LoopControllerRef, ReactContextRef
 
-from ..utils import env_enabled, action, ExecutionTask
-from ..jupyter_kernel_proxy import ProxyKernelClient
-from ..config import config
-from ..context import BeakerContext
+from .autodiscovery import autodiscover
+from .utils import env_enabled, action, ExecutionTask
+from .jupyter_kernel_proxy import ProxyKernelClient
+from .config import config
+from .context import BeakerContext
 # from archytas.summarizers import llm_message_summarizer
 
 if TYPE_CHECKING:
@@ -218,6 +219,29 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
         )
 
         execution_context = await execution_task
+
+        try:
+            preview_payload = await agent.context.preview()
+            agent.context.send_response(
+                "iopub",
+                "preview",
+                preview_payload,
+                parent_header=message.header,
+            )
+        except Exception as e:
+            logger.error(f"Successfully ran code, but failed to fetch preview: {e}")
+
+        try:
+            kernel_state_payload = await agent.context.kernel_state()
+            agent.context.send_response(
+                "iopub",
+                "kernel_state_info",
+                kernel_state_payload,
+                parent_header=message.header,
+            )
+        except Exception as e:
+            logger.error(f"Successfully ran code, but failed to fetch kernel state: {e}")
+
     except asyncio.CancelledError as err:
         logger.error("Code execution was interrupted by the user.")
         raise
@@ -264,6 +288,9 @@ class BeakerSubkernel(abc.ABC):
                     self.jupyter_id = None
             except requests.exceptions.HTTPError as err:
                 print(err)
+
+    def format_kernel_state(self, state: dict) -> dict:
+        return state
 
 # Provided for backwards compatibility
 BaseSubkernel = BeakerSubkernel
@@ -357,3 +384,7 @@ class CheckpointableBeakerSubkernel(BeakerSubkernel):
 
 # Provided for backwards compatibility
 BaseCheckpointableSubkernel = CheckpointableBeakerSubkernel
+
+
+def autodiscover_subkernels():
+    return autodiscover("subkernels")

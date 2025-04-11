@@ -55,17 +55,17 @@ class CustomHook(BuildHookInterface):
         subkernel_classes = {}
         subkernel_src = os.path.join(here, "beaker_kernel", "lib", "subkernels")
         if os.path.exists(subkernel_src):
-            from beaker_kernel.lib.subkernels.base import BaseSubkernel
+            from beaker_kernel.lib.subkernel import BeakerSubkernel
             for fpath in os.listdir(subkernel_src):
                 if fpath.startswith("_") or fpath.startswith("base"):
                     continue
-                package_name = f"beaker_kernel.lib.subkernels.{os.path.splitext(fpath)[0]}"
+                package_name = f"beaker_kernel.subkernels.{os.path.splitext(fpath)[0]}"
                 module = importlib.import_module(package_name)
                 def subkernel_criteria(member):
                     return inspect.isclass(member) \
                         and not member.__name__.startswith("Base") \
                         and not isinstance(member, GenericAlias) \
-                        and issubclass(member, BaseSubkernel)
+                        and issubclass(member, BeakerSubkernel)
                 subkernel_list = inspect.getmembers(module, subkernel_criteria)
                 for class_name, class_instance in subkernel_list:
                     slug = getattr(class_instance, "SLUG")

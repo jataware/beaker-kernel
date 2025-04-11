@@ -16,7 +16,7 @@ RUN julia -e 'using Pkg; Pkg.add("IJulia");'
 # Install Julia requirements
 RUN julia -e ' \
     packages = [ \
-        "DataSets", "XLSX", "Plots", "Downloads", "DataFrames", "ImageShow", "FileIO", "JSON3", "CSV"  \
+        "DataSets", "XLSX", "Plots", "Downloads", "DataFrames", "ImageShow", "FileIO", "JSON3", "CSV", "DisplayAs"  \
     ]; \
     using Pkg; \
     Pkg.add(packages);'

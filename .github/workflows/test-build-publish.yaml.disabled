@@ -6,7 +6,7 @@ name: Build and Publish
 # yamllint disable-line rule:truthy
 on:
   push:
-    tags: ['v[0-9]+**']
+    tags: ['t[0-9]+**']
 
 jobs:
     sanity-check:
@@ -40,24 +40,25 @@ jobs:
             id-token: write
         needs: sanity-check
         steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                ref: ${{ github.event.workflow_run.head_branch }}
+
             - name: Apt update and build install
               shell: bash
               run: |
                   sudo apt update || true
                   sudo apt install -y nodejs npm python3-pip || true
                   pip install hatch
-            - name: Checkout
-              uses: actions/checkout@v4
-              with:
-                ref: ${{ github.event.workflow_run.head_branch }}
 
             - name: make build
               shell: bash
               run: |
                   make build
 
-            - name: Publish package distributions to PyPI
-              uses: pypa/gh-action-pypi-publish@release/v1
+            # - name: Publish package distributions to PyPI
+            #   uses: pypa/gh-action-pypi-publish@release/v1
 
     build-deploy-npm:
         name: Build & Publish
@@ -81,7 +82,6 @@ jobs:
               run: |
                 npm ci
                 npm run build
-                npm publish --provenance --access public
               env:
                 NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -91,6 +91,5 @@ jobs:
               run: |
                 npm ci
                 npm run build
-                npm publish --provenance --access public
               env:
                 NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

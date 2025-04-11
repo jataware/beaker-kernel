@@ -113,7 +113,7 @@ class BeakerBuildHook(BuildHookInterface):
 
         from beaker_kernel.lib.app import BeakerApp
         from beaker_kernel.lib.context import BeakerContext
-        from beaker_kernel.lib.subkernels.base import BeakerSubkernel
+        from beaker_kernel.lib.subkernel import BeakerSubkernel
 
         dest = os.path.join(self.root, "build", "data_share_beaker")
         search_paths = self.build_config.packages or []

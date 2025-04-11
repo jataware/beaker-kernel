@@ -1,6 +1,6 @@
 from .agent import BeakerAgent
 from .context import BeakerContext
-from .subkernels import BeakerSubkernel
+from .subkernel import BeakerSubkernel
 
 __all__ = [
     "BeakerAgent",
