@@ -25,8 +25,8 @@ const session: BeakerSession = inject('session');
 
 declare type DisplayMode = "light" | "dark";
 
-declare interface Props {
-    displayMode: DisplayMode,
+export interface CodeEditorProps {
+    displayMode?: DisplayMode,
     language?: string,
     languageOptions?: any,
     modelValue: string,
@@ -36,7 +36,7 @@ declare interface Props {
     readonly?: boolean,
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<CodeEditorProps>(), {
     displayMode: "light",
     autofocus: false,
     disabled: false,

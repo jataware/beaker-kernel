@@ -288,7 +288,7 @@ const isValidResponse = (event: BeakerQueryEvent) => {
 }
 
 const markdownBody = computed(() =>
-    isMarkdown(props.event) ? marked.parse(props.event.content).trim() : "");
+    isMarkdown(props.event) ? marked.parse(props.event.content, {async: false}).trim() : "");
 
 function execute() {
     //const future = props.cell.execute(session);

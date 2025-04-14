@@ -2,7 +2,7 @@
     <div v-if="config" class="config-panel">
         <div class="config-panel-container">
             <ConfigEntryComponent
-                :key="nonce"
+                :key="nonce.toString()"
                 :schema="schema"
                 v-model="inputModel"
                 key-value="config"

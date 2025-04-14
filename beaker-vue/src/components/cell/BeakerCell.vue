@@ -125,13 +125,13 @@ import Dropdown from 'primevue/dropdown';
 import OverlayPanel from 'primevue/overlaypanel';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
-export interface Props {
+interface BeakerCellProps {
     cell: IBeakerCell;
     index?: number;
     dragEnabled?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = defineProps<BeakerCellProps>();
 const emit = defineEmits([
     'move-cell',
 ]);
