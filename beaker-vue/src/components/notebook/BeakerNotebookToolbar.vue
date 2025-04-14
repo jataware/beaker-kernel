@@ -149,13 +149,13 @@ const emit = defineEmits([
     "open-file",
 ])
 
-export interface Props {
+interface BeakerNotebookToolbarProps {
     defaultSeverity?: ButtonProps["badgeSeverity"];
     saveAvailable?: boolean;
     saveAsFilename?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<BeakerNotebookToolbarProps>(), {
     defaultSeverity: "info",
     saveAvailable: false,
 });

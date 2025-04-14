@@ -13,7 +13,7 @@ import { defineProps, defineEmits, ref, watch, withDefaults, defineExpose } from
 const extraClasses = ref<string[]>([]);
 
 export type ButtonPosition = "top" | "bottom" | "middle";
-export interface Props {
+export interface SideMenuPanelProps {
     "id"?: string;
     "icon": string;
     "label": string;
@@ -23,7 +23,7 @@ export interface Props {
     "position"?: ButtonPosition;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<SideMenuPanelProps>(), {
     "noOverflow": undefined,
     "lazy": false,
     "selected": false,
