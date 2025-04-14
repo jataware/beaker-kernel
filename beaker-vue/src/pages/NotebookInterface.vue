@@ -138,7 +138,7 @@ import { BeakerSessionComponentType } from '../components/session/BeakerSession.
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
+import { JavascriptRenderer, DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
 import { atStartOfInput, atEndOfInput } from '../util'
 // import { _ } from '../util/whitelabel';
 import { NavOption } from '../components/misc/BeakerHeader.vue';
@@ -192,6 +192,7 @@ const props = defineProps([
 
 const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
+    JavascriptRenderer,
     JSONRenderer,
     LatexRenderer,
     MarkdownRenderer,

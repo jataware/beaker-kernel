@@ -110,7 +110,7 @@ const providerNames = computed((): string[] => {
     }
     return inputModel.value?.providers?.map(obj => obj.name);
 });
-const providerSchema = computed<IConfigDefinitions>(() => {
+const providerSchema = computed<ISchema>(() => {
     return schema.value?.fields.providers.type_args[0];
 });
 const selectedProviderValue = computed({
