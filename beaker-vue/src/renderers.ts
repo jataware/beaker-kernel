@@ -117,32 +117,6 @@ export const TableRenderer: IMimeRenderer<BeakerRenderOutput> = {
     }
 }
 
-export const JavascriptRenderer: IMimeRenderer<BeakerRenderOutput> = {
-    rank: 45,
-    mimetypes: [
-        "text/javascript",
-        "application/javascript",
-    ],
-    render: (mimeType: MimetypeString, data: PartialJSONObject, metadata: PartialJSONObject) => {
-        return {
-            component: defineComponent(
-                (props) => {
-                        return () => {
-                            return h(
-                                'script',
-                                {innerHTML: props.html}
-                            );
-                        }
-                }
-            ),
-            bindMapping: {
-                html: data,
-                mimeType: mimeType
-            }
-        }
-    }
-}
-
 export function wrapJupyterRenderer(jupyterRenderer: IMimeRenderer<HTMLElement>): IMimeRenderer<BeakerRenderOutput> {
     return {
         rank: jupyterRenderer.rank - 10,
