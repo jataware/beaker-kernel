@@ -94,6 +94,26 @@
                 </form>
                 <Toolbar v-for="file in selectedDatasource.attached_files" :key="file?.filepath">
                     <template #start>
+                        <Badge
+                            severity="warning"
+                            size="large"
+                            v-if="!RegExp(`\{${file?.name}\}`).test(selectedDatasource?.source)"
+                            style="margin-right: 0.5rem;"
+                            v-tooltip="{
+                                value: `${file?.name} is not used in the below agent instructions.
+                                    If you mean for this file to be included, please ensure it is referenced
+                                    with {${file?.name}} in the below agent instructions body.`,
+                                pt: {
+                                    root: {
+                                        style: {
+                                            maxWidth: undefined
+                                        }
+                                    }
+                                }
+                            }"
+                        >
+                            <span class="pi pi-exclamation-triangle"></span>
+                        </Badge>
                         <Button
                             icon="pi pi-download"
                             v-tooltip="'Download'"
@@ -131,7 +151,18 @@
                 </Button>
             </Fieldset>
 
-            <Fieldset legend="Details">
+            <Fieldset legend="Agent Instructions">
+                <span style="margin-bottom: 0.5rem">
+                    Files uploaded above can be referenced in the below agent instructions with
+                    <span style="font-family: monospace;">{filename}</span>,
+                    such as if you uploaded a file named
+                    <span style="font-family: monospace;">documentation.txt</span>
+                    and it shows above with the name
+                    <span style="font-family: monospace;">documentation</span>,
+                    adding
+                    <span style="font-family: monospace;">{documentation}</span> to the body below will ensure the agent
+                    can read your uploaded file.
+                </span>
                 <Textarea
                     v-if="selectedDatasource"
                     v-model="selectedDatasource.source"
@@ -141,13 +172,22 @@
                 <Textarea v-else disabled filled></Textarea>
             </Fieldset>
 
-            <Button @click="save">Save</Button>
+            <Divider v-if="unincludedFiles.length > 0"></Divider>
+
+            <Tag
+                icon="pi pi-exclamation-triangle"
+                severity="warning"
+                size="large"
+                v-if="unincludedFiles.length > 0"
+            >
+                Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
+            </Tag>
 
             <Divider></Divider>
 
-            <Fieldset legend="Examples">
+            <Button @click="save">Save</Button>
 
-            </Fieldset>
+            <!-- <Fieldset legend="Examples"></Fieldset>  -->
         </Fieldset>
     </div>
 </template>
@@ -167,10 +207,13 @@ import Divider from 'primevue/divider';
 import Toolbar from 'primevue/toolbar';
 import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
+import Tag from 'primevue/tag';
 
 import cookie from 'cookie';
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
+import Chip from 'primevue/chip';
+import Badge from 'primevue/badge';
 const showToast = inject<any>('show_toast');
 
 const props = defineProps(["datasources"]);
@@ -187,6 +230,12 @@ const fileInput = ref<HTMLInputElement|undefined>(undefined);
 const fileInputMultiple = ref<HTMLInputElement|undefined>(undefined);
 const uploadForm = ref<HTMLFormElement|undefined>(undefined);
 const uploadFormMultiple = ref<HTMLFormElement|undefined>(undefined);
+
+const unincludedFiles = computed(() =>
+    (selectedDatasource?.value?.attached_files ?? [])
+        ?.map((file) =>
+            RegExp(`{${file?.name}}`).test(selectedDatasource?.value?.source) ? false : file?.name)
+        ?.filter((x) => x))
 
 const unsavedChanges = ref(false);
 const setUnsavedChanges = () => {unsavedChanges.value = true;};
