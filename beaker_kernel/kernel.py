@@ -268,6 +268,40 @@ class BeakerKernel(KernelProxyManager):
                 if state_payload:
                     self.send_response("iopub", "kernel_state_info", state_payload, parent_header=parent_header)
 
+    async def send_chat_history(self, parent_header=None):
+        if self.context.agent.chat_history:
+            from archytas.chat_history import OutboundChatHistory, OutboundModel, SummaryRecord, MessageRecord
+            from dataclasses import asdict
+            chat_history = self.context.agent.chat_history
+            model = self.context.agent.model
+            records = await chat_history.records()
+            output = OutboundChatHistory(
+                records=[{
+                    "message": {
+                        "text": record.message.text(),
+                        "raw_content": record.message.content,
+                        **record.message.model_dump(),
+                    },
+                    "uuid": record.uuid,
+                    "token_count": record.token_count,
+                    "metadata": record.metadata,
+                    "react_loop_id": record.react_loop_id,
+                } for record in records],
+                system_message=chat_history.system_message.message.text(),
+                tool_token_usage_estimate=chat_history.tool_token_estimate,
+                model=OutboundModel(
+                    provider=model.__class__.__name__,
+                    model_name=model.model_name,
+                    context_window=model.contextsize()
+                ),
+                message_token_count=sum(record.token_count for record in records if isinstance(record, MessageRecord) and record.token_count),
+                summary_token_count=sum(record.token_count for record in records if isinstance(record, SummaryRecord) and record.token_count),
+                overhead_token_count=chat_history.base_tokens,
+                summarization_threshold=model.summarization_threshold,
+                token_estimate=chat_history._token_estimate or await chat_history.token_estimate(model),
+            )
+            output_dict = asdict(output)
+            self.send_response("iopub", "chat_history", output_dict, parent_header=parent_header)
 
     async def update_connection_file(self, **kwargs):
         try:
@@ -333,13 +367,17 @@ class BeakerKernel(KernelProxyManager):
             This allows the normal execution flow to respond quickly in case these tasks are slow
             or resource intensive.
             """
+            coroutines = []
             if post_execute and (callable(post_execute) or inspect.iscoroutinefunction(post_execute)):
                 # If we have a callback function, then add it as a task to the execution loop so it runs
-                await post_execute(message)
+                coroutines.append(post_execute(message))
             # Always only generate and send preview after post_execute completes in case state changes or setup is
             # performed in the post_execute function
-            await self.send_preview(parent_header=message.parent_header)
-            await self.send_kernel_state_info(parent_header=message.parent_header)
+            coroutines.append(self.send_preview(parent_header=message.parent_header))
+            coroutines.append(self.send_kernel_state_info(parent_header=message.parent_header))
+            coroutines.append(self.send_chat_history(parent_header=message.parent_header))
+            await asyncio.gather(*coroutines)
+
         if loop:
             loop.create_task(task())
         return data
@@ -565,6 +603,7 @@ class BeakerKernel(KernelProxyManager):
             finally:
                 if request_key in self.running_actions:
                     del self.running_actions[request_key]
+        await self.send_chat_history(message.header)
 
     @message_handler
     async def context_info_request(self, message):
@@ -592,6 +631,7 @@ class BeakerKernel(KernelProxyManager):
             },
             parent_header=message.header,
         )
+        await self.send_chat_history(message.header)
         return None
 
     @message_handler
@@ -642,6 +682,7 @@ class BeakerKernel(KernelProxyManager):
             model = config.get_model()
         if model:
             self.context.agent.model = model
+        await self.send_chat_history(message.header)
 
     @message_handler
     async def reset_kernel(self, message):
@@ -652,6 +693,7 @@ class BeakerKernel(KernelProxyManager):
             language=self.context.subkernel.SLUG,
             parent_header=message.header
         )
+        await self.send_chat_history(message.header)
         return True
 
     async def notebook_state_response(self, server, target_stream, data):

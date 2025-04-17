@@ -1,0 +1,327 @@
+<template>
+    <div class="chat-history-panel">
+        <div class="chat-history-model">
+            <div class="model-info">
+                <h4>Current model</h4>
+                <div class="model-specs" style="display: grid; grid-template-columns: max-content auto; column-gap: 1rem; row-gap: 0.5rem;">
+                    <div class="model-spec-label">Model Provider:</div>
+                    <div>{{ props.chatHistory?.model?.provider }}</div>
+                    <div class="model-spec-label">Model Name:</div>
+                    <div>{{ props.chatHistory?.model?.model_name }}</div>
+                    <div v-if="props.chatHistory?.model?.context_window" class="model-spec-label">Context window:</div>
+                    <div v-if="props.chatHistory?.model?.context_window">{{ props.chatHistory?.model?.context_window.toLocaleString() }} tokens</div>
+                </div>
+            </div>
+        </div>
+        <div class="context-window-usage">
+            <h4 >Context window usage</h4>
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <span class="progress-bar-usage overhead" :style="{width: `${overheadUsagePct}%`}"></span>
+                    <span class="progress-bar-usage summary" :style="{width: `${summaryUsagePct}%`}"></span>
+                    <span class="progress-bar-usage message" :style="{width: `${messageUsagePct}%`}"></span>
+                </div>
+                <div style="width: 2px; height: 100%; background-color: var(--orange-600); position: absolute; top: 0;" :style="{left:`${summarizationThresholdLowPct}%`}"></div>
+                <div style="width: 2px; height: 100%; background-color: var(--red-600); position: absolute; top: 0;" :style="{left: `85%`}"></div>
+                <div style="width: 100%; position: absolute; top: 1%; text-align: center;">
+                    {{ usageLabel }}
+                </div>
+            </div>
+            <div class="progress-bar-map">
+                <div
+                    class="progress-bar-map-row overhead"
+                    v-tooltip="'Tokens used in tool definitions, subkernel state, etc. (estimated)'"
+                >
+                    <span class="progress-bar-map-circle overhead"></span>
+                    Estimated token overhead:
+                    <span>{{ roundToFiveHundred(chatHistory.overhead_token_count) }}k</span>
+                </div>
+                <div
+                    class="progress-bar-map-row summary"
+                    v-tooltip="'Token used by summaries. (estimated)'"
+                >
+                    <span class="progress-bar-map-circle summary"></span>
+                    Estimated summarized token usage:
+                    <span>{{ roundToFiveHundred(chatHistory.summary_token_count) }}k</span>
+                </div>
+                <div
+                    class="progress-bar-map-row message"
+                    v-tooltip="'Tokens used by all unsummarized messages. (estimated)'"
+                >
+                    <span class="progress-bar-map-circle message"></span>
+                    Estimated message token usage:
+                    <span>{{ roundToFiveHundred(chatHistory.message_token_count) }}k</span>
+                </div>
+                <div
+                    class="progress-bar-map-row total"
+                    v-tooltip="'Total tokens of current conversational history, favoring summaries. (estimated)'"
+                >
+                    <span class="progress-bar-map-circle total"></span>
+                    Estimated total token usage:
+                    <span>{{ roundToFiveHundred(totalTokenCount) }}k</span>
+                </div>
+            </div>
+        </div>
+        <h4>Messages</h4>
+        <div class="chat-history-records">
+            <ChatHistoryMessage
+                v-for="record, index in props.chatHistory?.records"
+                :key="record.uuid"
+                :record="record"
+                :idx="index"
+                :tool-call-message="getToolCallForRecord(record)"
+            />
+        </div>
+    </div>
+</template>
+            <!-- {{ props.chatHistory?.system_message.kwargs.content }} -->
+
+<script lang="ts" setup>
+
+import { ref, computed, defineEmits, defineProps } from "vue";
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import ProgressBar from "primevue/progressbar";
+
+import DebugLogMessage from "../../misc/DebugLogMessage.vue";
+import ChatHistoryMessage from "./ChatHistoryMessage.vue";
+
+
+export interface IMessage {
+    content: string | (string | {[key: string]: any})[];
+    responseMetadata: {[key: string]: any};
+    type: string;
+    name?: string;
+    id?: string;
+    additionalKwargs?: {[key: string]: any};
+    tool_calls?: any[];
+    tool_call_id?: string;
+}
+
+interface IRecordBase {
+    message: IMessage;
+    uuid: string;
+    token_count?: number;
+    metadata?: {[key: string]: any};
+}
+
+export interface IMessageRecord extends IRecordBase{
+    reactLoopId?: number;
+
+}
+export interface ISummaryRecord extends IRecordBase {
+    summarizedMessages: string[];
+}
+
+export type RecordType = IMessageRecord | ISummaryRecord;
+
+export interface IChatHistory {
+    records: RecordType[];
+    systemMessage?: string;
+    toolTokenUsageEstimate?: number;
+    token_estimate?: number;
+    message_token_count?: number;
+    summary_token_count?: number;
+    model: {
+        provider: string;
+        model_name: string;
+        context_window?: number;
+
+    };
+    overhead_token_count?: number;
+    summarization_threshold?: number;
+}
+
+export interface ChatHistoryProps {
+    chatHistory: IChatHistory;
+}
+
+const props = defineProps<ChatHistoryProps>()
+
+const emit = defineEmits([
+    // 'clearLogs'
+]);
+
+const contextWindowUsage = computed(() => {
+    const contextWindow = props.chatHistory?.model?.context_window;
+    const usageEstimate = props.chatHistory?.token_estimate;
+    if(contextWindow && usageEstimate) {
+        const pct = usageEstimate/contextWindow;
+        // Round to 1 decimal spot
+        return Math.round(pct * 1000) / 10;
+    }
+    else {
+        return null;
+    }
+})
+
+const contextWindowSize = computed(() => props.chatHistory?.model?.context_window);
+const overheadUsagePct = computed(() => Math.round((props.chatHistory?.overhead_token_count / contextWindowSize.value) * 1000) / 10);
+const messageUsagePct = computed(() => Math.round((props.chatHistory?.message_token_count / contextWindowSize.value) * 1000) / 10);
+const summaryUsagePct = computed(() => Math.round((props.chatHistory?.summary_token_count / contextWindowSize.value) * 1000) / 10);
+const summarizationThresholdLowPct = computed(() => Math.round((props.chatHistory?.summarization_threshold / contextWindowSize.value) * 1000) / 10)
+const totalTokenCount = computed(() => (
+        props.chatHistory?.overhead_token_count
+        + props.chatHistory?.message_token_count
+        + props.chatHistory?.summary_token_count
+));
+
+const usageLabel = computed(() => {
+    const rawSum = totalTokenCount.value;
+    const roundedSum = roundToFiveHundred(rawSum)?.toLocaleString();
+    const contextWindowSizeK = roundToFiveHundred(props.chatHistory?.model?.context_window)?.toLocaleString();
+    return `${ contextWindowUsage.value?.toLocaleString() }% (~ ${roundedSum}k / ${contextWindowSizeK}k)`;
+})
+
+const getToolCallerMessage = (toolCallId: string) => {
+    return props.chatHistory.records.map(record => record.message).find(message => {
+        return message.type === "ai" && message.tool_calls?.map(tc => tc.id).includes(toolCallId);
+    })
+}
+
+const getToolCallForRecord = (record: RecordType) => {
+    if (record?.message?.tool_call_id) {
+        return getToolCallerMessage(record.message.tool_call_id)
+    }
+}
+
+const roundToFiveHundred = (rawValue: number) => {
+    return Math.round(rawValue / 500) * 0.5
+}
+
+</script>
+
+<style lang="scss">
+.chat-history-panel {
+    padding: 0 0.5rem;
+    position: relative;
+}
+
+.context-window-usage {
+    padding-left: 0.5rem;
+}
+
+.progress-bar-container {
+    position: relative;
+}
+
+.overhead {
+    --context-color: var(--gray-500);
+}
+
+.summary {
+    --context-color: var(--blue-900);
+}
+
+.message {
+    --context-color: var(--blue-600);
+}
+
+.total {
+    --context-color: var(--primary-color);
+}
+
+.progress-bar-map {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    .progress-bar-map-row {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        width: fit-content;
+        padding-right: 0.5rem;
+    }
+
+    .progress-bar-map-circle {
+        display: inline-block;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 1.5rem;
+        background-color: var(--context-color);
+    }
+}
+
+.progress-bar {
+    width: 100%;
+    height: 1.5rem;
+    border-radius: 0.5rem;
+    background-color: var(--surface-d);
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+
+    .progress-bar-usage {
+        display: inline-block;
+        height: 100%;
+        background-color: var(--context-color);
+    }
+}
+
+.debug-panel-wrapper {
+    // The internal class for the json viewer-
+    // Change the hover color for better contrast
+    .vjs-tree-node:hover {
+        background-color: var(--surface-b);
+    }
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+}
+
+.debug-flex-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.debug-log-container {
+    padding: 0.5rem;
+}
+
+.debug-bottom-actions {
+    width: 100%;
+    display: flex;
+    margin-top: 0.5rem;
+    justify-content: center;
+    color: var(--text-color-secondary);
+}
+
+.debug-sort-actions {
+    display: flex;
+    flex-direction: row;
+    .p-button {
+        border-color: var(--surface-d);
+    }
+}
+
+.model-info {
+    padding-left: 0.5rem;
+
+    & h4 {
+        margin-top: 0.2rem;
+    }
+}
+
+.model-specs {
+    padding-left: 1rem;
+}
+
+.model-spec-label {
+    text-decoration: underline;
+}
+
+
+.chat-history-panel h4 {
+    font-size: 110%;
+    margin-bottom: 0.5em;
+}
+
+.chat-history-records {
+    margin-left: 0.5em;
+}
+
+</style>

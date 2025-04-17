@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from beaker_kernel.kernel import BeakerKernel
 
     from .agent import BeakerAgent
-    from .subkernels.base import BeakerSubkernel
+    from .subkernel import BeakerSubkernel
 
 logger = logging.getLogger(__name__)
 
