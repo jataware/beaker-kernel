@@ -50,8 +50,6 @@
                         <div v-for="datasource in datasources" :key="datasource.uid || datasource.name">
                             <h3>{{ datasource.name }}</h3>
                             <div style="text-indent: -2rem; padding-left: 4rem">{{ datasource.description }}</div>
-
-                            {{ JSON.stringify(datasource) }}
                         </div>
                     </div>
                 </SideMenuPanel>
@@ -304,7 +302,18 @@ const restartSession = async () => {
     overflow: auto;
 
     .p-fieldset {
+        input {
+            max-width: 100%;
+            width: 100%;
+        }
+        textarea {
+            max-width: 100%;
+            width: 100%;
+        }
+
+        max-width: 100%;
         .p-fieldset-legend {
+            max-width: 100%;
             background: none;
             padding: 0.5rem;
             .p-dropdown {
@@ -314,8 +323,10 @@ const restartSession = async () => {
         margin-bottom: 1rem;
 
         .p-fieldset-content {
+            max-width: 100%;
             padding: 0.5rem;
             div.p-toolbar {
+                max-width: 100%;
                 padding: 0.5rem;
                 margin-bottom: 0.5rem;
                 // &:nth-child(1) {
@@ -326,6 +337,9 @@ const restartSession = async () => {
                         margin-right: 0.5rem
                     }
                 }
+            }
+            > .p-inputtextarea.p-inputtext {
+                height: 10rem;
             }
         }
     }

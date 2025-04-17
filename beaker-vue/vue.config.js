@@ -23,6 +23,10 @@ module.exports = defineConfig({
       entry: 'src/pages/dev-interface.ts',
       title: "Beaker Development Interface",
     },
+    datasource: {
+      entry: 'src/pages/datasource-interface.ts',
+      title: "Beaker Datasource Manager",
+    },
   },
   css: { extract: false },
   assetsDir: "static/",
