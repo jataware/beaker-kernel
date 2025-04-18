@@ -46,6 +46,9 @@ class BeakerContext:
     preview_function_name: str = "generate_preview"
     kernel_state_function_name: str = "send_kernel_state"
 
+    notebook_state: Optional[dict]
+    kernel_state: Optional[dict]
+
     SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
@@ -61,6 +64,8 @@ class BeakerContext:
             tools=self.subkernel.tools,
         )
         self.current_llm_query = None
+        self.notebook_state = None
+        # self.kernel_state = None
 
         self.disable_tools()
 
@@ -90,6 +95,11 @@ class BeakerContext:
                 except UnicodeDecodeError:
                     # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
                     logger.warning(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
+
+    def __init_subclass__(cls):
+        if hasattr(cls, "auto_context"):
+            cls._auto_context = cls.auto_context
+            cls.auto_context = BeakerContext.auto_context
 
     @property
     def preview(self) -> Callable[[], Awaitable[Any]] | None:
@@ -142,6 +152,40 @@ class BeakerContext:
             msg_type, stream = getattr(method, "_intercept")
             self.intercepts.append((msg_type, method, stream))
             self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
+
+    async def auto_context(self):
+        parts = []
+        if hasattr(self, "_auto_context"):
+            if inspect.iscoroutinefunction(self._auto_context):
+                result = await self._auto_context()
+            else:
+                result = self._auto_context()
+            parts.append(
+                result
+            )
+        if beaker_config.send_kernel_state:
+            kernel_state = await self.get_subkernel_state()
+            if kernel_state:
+                parts.append(f"""\
+## Kernel state
+```application/json
+{json.dumps(kernel_state)}
+```\
+""")
+        if beaker_config.send_notebook_state:
+            if self.notebook_state:
+                parts.append(f"""\
+## Current notebook
+```application/x-ipynb+json
+{json.dumps(self.notebook_state)}
+```
+Note: In the notebook representation above, communication with the agent is encoded as Markdown cells with metadata
+field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", then the agent generated this cell as
+part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
+loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
+""")
+        content = "\n\n".join(parts)
+        return content
 
     def get_subkernel(self):
         config = beaker_config
@@ -249,60 +293,6 @@ class BeakerContext:
             "verbose": self.beaker_kernel.verbose,
         }
         return payload
-
-    def prepare_state(self, kernel_state=None, notebook_state=None):
-        from contextlib import AbstractContextManager
-        from archytas.agent import AutoContextMessage
-        class StateContext(AbstractContextManager):
-            orig_auto_context_message: AutoContextMessage
-
-            def __init__(self, context, kernel_state, notebook_state):
-                self.context: BeakerContext = context
-                self.kernel_state = kernel_state
-                self.notebook_state = notebook_state
-                self.orig_auto_context_message = None
-                super().__init__()
-
-            async def update_context(self) -> str:
-                if self.orig_auto_context_message:
-                    await self.orig_auto_context_message.update_content()
-                    parts = [
-                        self.orig_auto_context_message.content
-                    ]
-                else:
-                    parts = []
-                if self.kernel_state:
-                    parts.append(f"""\
-## Kernel state
-```application/json
-{json.dumps(self.kernel_state)}
-```\
-""")
-                if self.notebook_state:
-                    parts.append(f"""\
-## Current notebook
-```application/x-ipynb+json
-{json.dumps(self.notebook_state)}
-```
-Note: In the notebook representation above, communication with the agent is encoded as Markdown cells with metadata
-field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", then the agent generated this cell as
-part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
-loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
-""")
-                content = "\n\n".join(parts)
-                return content
-
-            def __enter__(self):
-                if self.context.agent.chat_history.auto_context_message:
-                    self.orig_auto_context_message = self.context.agent.chat_history.auto_context_message
-                    self.context.agent.set_auto_context(self.orig_auto_context_message.content, self.update_context)
-                return super().__enter__()
-
-            def __exit__(self, exc_type, exc_value, traceback):
-                if self.orig_auto_context_message:
-                    self.context.agent.chat_history.auto_context_message = self.orig_auto_context_message
-                return super().__exit__(exc_type, exc_value, traceback)
-        return StateContext(self, kernel_state, notebook_state)
 
     async def get_subkernel_state(self):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
