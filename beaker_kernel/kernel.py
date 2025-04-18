@@ -485,7 +485,10 @@ class BeakerKernel(KernelProxyManager):
         setattr(self.context, "current_llm_query", request)
 
         notebook_state = message.metadata.get("notebook_state", None)
-        kernel_state = await self.context.get_subkernel_state()
+        if config.send_kernel_state:
+            kernel_state = await self.context.get_subkernel_state()
+        else:
+            kernel_state = None
 
         with self.context.prepare_state(kernel_state, notebook_state):
             request_key = f"llm_query:{message.header['msg_id']}"

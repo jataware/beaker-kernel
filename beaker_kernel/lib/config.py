@@ -237,6 +237,14 @@ class ConfigClass:
         normalize_function=normalize_bool,
         label="Send notebook state on query?"
     )
+    send_kernel_state: bool = configfield(
+        description="Flag as to whether to include the state of the subkernel on agent query execution.",
+        env_var="SEND_KERNEL_STATE",
+        default=True,
+        sensitive=False,
+        normalize_function=normalize_bool,
+        label="Send kernel state on query?"
+    )
 
     @property
     def checkpoint_storage_path(self):
