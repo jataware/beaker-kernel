@@ -274,7 +274,7 @@ class BeakerKernel(KernelProxyManager):
             from dataclasses import asdict
             chat_history = self.context.agent.chat_history
             model = self.context.agent.model
-            records = await chat_history.records()
+            records = await chat_history.records(auto_update_context=False)
             output = OutboundChatHistory(
                 records=[{
                     "message": {

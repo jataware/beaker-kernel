@@ -293,14 +293,14 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
                 return content
 
             def __enter__(self):
-                if self.context.agent.auto_context_message:
-                    self.orig_auto_context_message = self.context.agent.auto_context_message
+                if self.context.agent.chat_history.auto_context_message:
+                    self.orig_auto_context_message = self.context.agent.chat_history.auto_context_message
                     self.context.agent.set_auto_context(self.orig_auto_context_message.content, self.update_context)
                 return super().__enter__()
 
             def __exit__(self, exc_type, exc_value, traceback):
                 if self.orig_auto_context_message:
-                    self.context.agent.auto_context_message = self.orig_auto_context_message
+                    self.context.agent.chat_history.auto_context_message = self.orig_auto_context_message
                 return super().__exit__(exc_type, exc_value, traceback)
         return StateContext(self, kernel_state, notebook_state)
 
