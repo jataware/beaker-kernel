@@ -8,6 +8,7 @@
           v-tooltip.bottom="{value: 'Files to upload', showDelay: 300}"
           icon="pi pi-cloud-upload"
           size="small"
+          v-show="!viewOnly"
       />
       <form ref="uploadForm">
         <input
@@ -36,7 +37,7 @@
                @row-dblclick="doubleClick" resizableColumns columnResizeMode="fit" rowHover :loading="tableLoading"
                @dragover="fileDragOver" @drop="fileDrop"
                >
-        <Column header="" class="download-column">
+        <Column header="" class="download-column" v-if="!viewOnly">
           <template #header>
             <span
               class="pi pi-cloud-download"
@@ -147,6 +148,7 @@ const emit = defineEmits([
 const props = defineProps([
   "entries",
   "sortby",
+  "viewOnly"
 ]);
 
 const contentManager = new ContentsManager({});
@@ -398,6 +400,7 @@ onMounted(async () => {
 defineExpose({
   refresh: refreshFiles,
   flashFile,
+  directory: curDir
 });
 
 </script>

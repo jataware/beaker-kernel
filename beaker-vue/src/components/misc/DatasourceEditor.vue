@@ -15,7 +15,7 @@
                             value: datasource
                         }
                     })"
-                option-label="label"
+                :option-label="(option) => option?.label ?? 'Select datasource...'"
                 option-value="value"
                 @click="(event) => {
                     if (!confirmUnsavedChanges()) {
@@ -40,16 +40,21 @@
                 <span v-if="unsavedChanges">
                     Unsaved changes!
                 </span>
+
             </template>
 
             <Fieldset legend="Name">
                 <InputText
                     v-if="selectedDatasource"
                     v-model="selectedDatasource.name"
+                    :placeholder="selectedDatasource?.name ? 'Name' : 'No datasource selected.'"
                     @change="unsavedChanges = true;"
-                >
-                </InputText>
-                <InputText v-else disabled></InputText>
+                />
+                <InputText
+                    v-else
+                    disabled
+                    placeholder="No datasource selected."
+                />
             </Fieldset>
 
             <Fieldset legend="Description">
@@ -57,9 +62,13 @@
                     v-if="selectedDatasource"
                     v-model="selectedDatasource.description"
                     @change="setUnsavedChanges"
-                >
-                </Textarea>
-                <Textarea v-else disabled filled></Textarea>
+                />
+                <Textarea
+                    v-else
+                    disabled
+                    filled
+                    placeholder="No datasource selected."
+                />
             </Fieldset>
 
             <Fieldset legend="User Files" v-if="selectedDatasource?.attached_files">
@@ -140,13 +149,13 @@
 
                         </Button>
                     </template>
-                    <template #end>
+                    <!-- <template #end>
                         <Button>
                             Insert
                         </Button>
-                    </template>
+                    </template> -->
                 </Toolbar>
-                <Button @click="openFileSelectionMultiple">
+                <Button @click="openFileSelectionMultiple" style="width: fit-content;">
                     Add New Files
                 </Button>
             </Fieldset>
@@ -169,23 +178,84 @@
                     @change="setUnsavedChanges"
                 >
                 </Textarea>
-                <Textarea v-else disabled filled></Textarea>
+                <Textarea
+                    v-else
+                    disabled
+                    filled
+                    value="No datasource selected."
+                />
             </Fieldset>
 
             <Divider v-if="unincludedFiles.length > 0"></Divider>
 
-            <Tag
-                icon="pi pi-exclamation-triangle"
-                severity="warning"
-                size="large"
-                v-if="unincludedFiles.length > 0"
-            >
-                Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
-            </Tag>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem">
+                <Tag
+                    icon="pi pi-exclamation-triangle"
+                    severity="warning"
+                    size="large"
+                    v-if="unincludedFiles.length > 0"
+                >
+                    Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
+                </Tag>
+
+                <Tag
+                    icon="pi pi-exclamation-triangle"
+                    severity="warning"
+                    size="large"
+                    v-if="!properPathSelected"
+                >
+                    Did not find existing api.yaml in the given server path. Please check the folder root and fix it with the file browser below.
+                </Tag>
+
+                <Tag
+                    icon="pi pi-exclamation-triangle"
+                    severity="warning"
+                    size="large"
+                    v-else-if="folderRoot === '.' && selectedDatasource"
+                >
+                    Datasource path is set to '.', which is the default value.
+                    Please ensure this is correct and not unintended before saving a new datasource.
+                </Tag>
+
+            </div>
+
 
             <Divider></Divider>
 
-            <Button @click="save">Save</Button>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem">
+
+                <div>
+                    <h4 class="h-less-pad">Datasource Path:</h4>
+                    <InputGroup>
+                        <InputText
+                            placeholder="Path to datasources root folder"
+                            :value="folderRoot"
+                        />
+                        <Button label="Browse..." @click="datasourcePathSelectionOpen = !datasourcePathSelectionOpen"/>
+                    </InputGroup>
+                    <div
+                        style="
+                            height: 16rem;
+                            overflow-y: auto;
+                            width: 100%
+                        "
+                        v-show="datasourcePathSelectionOpen"
+                    >
+                        <FilePanel
+                            :view-only="true"
+                            ref="filePickerRef"
+                            @preview-file="(file, mimetype) => {}"
+                        />
+                    </div>
+
+                </div>
+
+                <Button
+                    style="width: fit-content"
+                    @click="save"
+                    :disabled="!selectedDatasource"
+                >Save</Button>
+            </div>
 
             <!-- <Fieldset legend="Examples"></Fieldset>  -->
         </Fieldset>
@@ -208,6 +278,9 @@ import Toolbar from 'primevue/toolbar';
 import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
 import Tag from 'primevue/tag';
+import FilePanel from "../panels/FilePanel.vue";
+import InputGroup from 'primevue/inputgroup';
+
 
 import cookie from 'cookie';
 
@@ -225,6 +298,15 @@ const allDatasources = computed(() =>
 
 const session = inject<BeakerSession>('session');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+
+const folderRoot = ref<string>();
+const datasourcePathSelectionOpen = ref<boolean>(false);
+const filePickerRef = ref();
+const filePickerDir = computed(() => filePickerRef?.value?.directory)
+watch(filePickerDir, (newValue) => {
+    if (newValue !== "")
+    folderRoot.value = newValue;
+})
 
 const fileInput = ref<HTMLInputElement|undefined>(undefined);
 const fileInputMultiple = ref<HTMLInputElement|undefined>(undefined);
@@ -277,8 +359,8 @@ const slugWrapper = computed(() => {
 const contentManager = new ContentsManager({});
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
-// TODO: find actual folder root
-const folderRoot = computed(() => "/src/biome/datasources")
+
+
 const folderSlug = computed(() => {
     let url = selectedDatasource?.value?.url;
     if (url === undefined || url === null || url === '') {
@@ -288,6 +370,28 @@ const folderSlug = computed(() => {
         return url.slice(0, -1 * ("/api.yaml".length))
     }
     return url
+})
+
+const properPathSelected = ref<boolean>(true);
+watch([selectedDatasource, folderRoot], async () => {
+    if (selectedDatasource?.value === undefined) {
+        properPathSelected.value = true;
+        return;
+    }
+    if (temporaryDatasource?.value) {
+        properPathSelected.value = true;
+        return;
+    }
+    try {
+        const targetDir = await contentManager.get(`${folderRoot.value}/${folderSlug.value}/api.yaml`);
+        if (targetDir.type !== 'file') {
+            throw "API file not found."
+        }
+        properPathSelected.value = true;
+    }
+    catch {
+        properPathSelected.value = false;
+    }
 })
 
 const newDatasource = () => {

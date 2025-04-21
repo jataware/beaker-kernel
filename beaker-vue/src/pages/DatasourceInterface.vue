@@ -325,6 +325,8 @@ const restartSession = async () => {
         .p-fieldset-content {
             max-width: 100%;
             padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
             div.p-toolbar {
                 max-width: 100%;
                 padding: 0.5rem;
