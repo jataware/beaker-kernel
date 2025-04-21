@@ -239,4 +239,8 @@ export interface NavOption {
     padding: 0.5em;
 }
 
+.beaker-toolbar .title h4 {
+    white-space: nowrap;
+}
+
 </style>

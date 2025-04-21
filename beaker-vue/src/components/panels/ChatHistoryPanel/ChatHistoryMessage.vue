@@ -149,7 +149,7 @@ const capitalized = (str: string) => (
 
     & .expand {
         text-align: center;
-        color: var(--primary-text);
+        color: var(--primary-color-text);
         display: block;
         position: absolute;
         background-color: inherit;
@@ -162,8 +162,8 @@ const capitalized = (str: string) => (
         cursor: pointer;
         background-color: transparent;
         box-shadow:
-                inset 0px -4rem 1.5rem -2.4rem var(--primary-900),
-                inset 0px -3.5rem 1rem -2.0rem var(--primary-900);
+                inset 0px -4rem 1.5rem -2.4rem var(--bluegray-500),
+                inset 0px -3.5rem 1rem -2.0rem var(--bluegray-500);
     }
 }
 
