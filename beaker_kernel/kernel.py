@@ -268,6 +268,40 @@ class BeakerKernel(KernelProxyManager):
                 if state_payload:
                     self.send_response("iopub", "kernel_state_info", state_payload, parent_header=parent_header)
 
+    async def send_chat_history(self, parent_header=None):
+        if self.context.agent.chat_history:
+            from archytas.chat_history import OutboundChatHistory, OutboundModel, SummaryRecord, MessageRecord
+            from dataclasses import asdict
+            chat_history = self.context.agent.chat_history
+            model = self.context.agent.model
+            records = await chat_history.records(auto_update_context=False)
+            output = OutboundChatHistory(
+                records=[{
+                    "message": {
+                        "text": record.message.text(),
+                        "raw_content": record.message.content,
+                        **record.message.model_dump(),
+                    },
+                    "uuid": record.uuid,
+                    "token_count": record.token_count,
+                    "metadata": record.metadata,
+                    "react_loop_id": record.react_loop_id,
+                } for record in records],
+                system_message=chat_history.system_message.message.text(),
+                tool_token_usage_estimate=chat_history.tool_token_estimate,
+                model=OutboundModel(
+                    provider=model.__class__.__name__,
+                    model_name=model.model_name,
+                    context_window=model.contextsize()
+                ),
+                message_token_count=sum(record.token_count for record in records if isinstance(record, MessageRecord) and record.token_count),
+                summary_token_count=sum(record.token_count for record in records if isinstance(record, SummaryRecord) and record.token_count),
+                overhead_token_count=chat_history.token_overhead,
+                summarization_threshold=model.summarization_threshold,
+                token_estimate=chat_history._token_estimate or await chat_history.token_estimate(model),
+            )
+            output_dict = asdict(output)
+            self.send_response("iopub", "chat_history", output_dict, parent_header=parent_header)
 
     async def update_connection_file(self, **kwargs):
         try:
@@ -333,13 +367,17 @@ class BeakerKernel(KernelProxyManager):
             This allows the normal execution flow to respond quickly in case these tasks are slow
             or resource intensive.
             """
+            coroutines = []
             if post_execute and (callable(post_execute) or inspect.iscoroutinefunction(post_execute)):
                 # If we have a callback function, then add it as a task to the execution loop so it runs
-                await post_execute(message)
+                coroutines.append(post_execute(message))
             # Always only generate and send preview after post_execute completes in case state changes or setup is
             # performed in the post_execute function
-            await self.send_preview(parent_header=message.parent_header)
-            await self.send_kernel_state_info(parent_header=message.parent_header)
+            coroutines.append(self.send_preview(parent_header=message.parent_header))
+            coroutines.append(self.send_kernel_state_info(parent_header=message.parent_header))
+            coroutines.append(self.send_chat_history(parent_header=message.parent_header))
+            await asyncio.gather(*coroutines)
+
         if loop:
             loop.create_task(task())
         return data
@@ -474,9 +512,9 @@ class BeakerKernel(KernelProxyManager):
         self.send_stream_message(stream_type="stderr", text=text, parent_header=parent_header)
 
     @message_handler
-    async def llm_request(self, message):
+    async def llm_request(self, message: JupyterMessage):
         from archytas.exceptions import AuthenticationError
-        content = message.content
+        content: dict = message.content
         request = content.get("request", None)
         if not request:
             return
@@ -485,100 +523,106 @@ class BeakerKernel(KernelProxyManager):
         setattr(self.context, "current_llm_query", request)
 
         notebook_state = message.metadata.get("notebook_state", None)
-        if config.send_kernel_state:
-            kernel_state = await self.context.get_subkernel_state()
-        else:
-            kernel_state = None
+        if notebook_state is not None:
+            self.context.notebook_state = notebook_state
 
-        with self.context.prepare_state(kernel_state, notebook_state):
-            request_key = f"llm_query:{message.header['msg_id']}"
+        request_key = f"llm_query:{message.header['msg_id']}"
+        try:
             try:
-                try:
-                    # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track
-                    # thoughts
-                    if self.context.agent:
-                        self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
-                    self.debug("llm_query", request, parent_header=message.header)
-                    task = asyncio.create_task(self.context.agent.react_async(request, react_context={"message": message}))
-                    self.running_actions[request_key] = task
-                    result = await task
-                except AuthenticationError as err:
-                    self.send_response(
-                        stream="iopub",
-                        msg_or_type="llm_auth_failure",
-                        content={
-                            "msg": str(err),
-                        },
-                        parent_header=message.header,
-                    )
-                    return
-                except asyncio.CancelledError as err:
-                    self.send_response(
-                        stream="iopub",
-                        msg_or_type="stream",
-                        content={
-                            "name": "stderr",
-                            "text": "Request interrupted.",
-                        },
-                        parent_header=message.header,
-                    )
-                    raise
-                except Exception as err:
-                    error_text = f"""LLM Error:
+                # Before starting ReAct loop, replace thought handler with partial func with parent_header so we can track
+                # thoughts
+                if self.context.agent:
+                    self.context.agent.thought_handler = partial(self.handle_thoughts, parent_header=message.header)
+                self.debug("llm_query", request, parent_header=message.header)
+                task = asyncio.create_task(self.context.agent.react_async(request, react_context={"message": message}))
+                self.running_actions[request_key] = task
+                result = await task
+            except AuthenticationError as err:
+                self.send_response(
+                    stream="iopub",
+                    msg_or_type="llm_auth_failure",
+                    content={
+                        "msg": str(err),
+                    },
+                    parent_header=message.header,
+                )
+                return
+            except asyncio.CancelledError as err:
+                self.send_response(
+                    stream="iopub",
+                    msg_or_type="stream",
+                    content={
+                        "name": "stderr",
+                        "text": "Request interrupted.",
+                    },
+                    parent_header=message.header,
+                )
+                raise
+            except Exception as err:
+                error_text = f"""LLM Error:
     {err}
 
     {traceback.format_exc()}
     """
-                    stream_content = {"name": "stderr", "text": error_text}
-                    self.send_response(
-                        "iopub", "stream", stream_content, parent_header=message.header
-                    )
-                    raise
-                try:
-                    # Normalize result
-                    if isinstance(result, (str, bytes, bytearray)):
-                        data = json.loads(result)
-                    else:
-                        data = result
+                stream_content = {"name": "stderr", "text": error_text}
+                self.send_response(
+                    "iopub", "stream", stream_content, parent_header=message.header
+                )
+                raise
+            try:
+                # Normalize result
+                if isinstance(result, (str, bytes, bytearray)):
+                    data = json.loads(result)
+                else:
+                    data = result
 
-                    if isinstance(data, dict) and data.get("action") == "code_cell":
-                        stream_content = {
-                            "language": data.get("language"),
-                            "code": data.get("content"),
-                        }
-                        self.send_response(
-                            "iopub", "code_cell", stream_content, parent_header=message.header
-                        )
-                    else:
-                        stream_content = {"name": "response_text", "text": f"{data}"}
-                        self.send_response(
-                            "iopub", "llm_response", stream_content, parent_header=message.header
-                        )
-                except (
-                    json.JSONDecodeError
-                ):  # If response is not a json, it's just text so treat it like text
-                    stream_content = {"name": "response_text", "text": f"{result}"}
+                if isinstance(data, dict) and data.get("action") == "code_cell":
+                    stream_content = {
+                        "language": data.get("language"),
+                        "code": data.get("content"),
+                    }
+                    self.send_response(
+                        "iopub", "code_cell", stream_content, parent_header=message.header
+                    )
+                else:
+                    stream_content = {"name": "response_text", "text": f"{data}"}
                     self.send_response(
                         "iopub", "llm_response", stream_content, parent_header=message.header
                     )
-                finally:
-                    # When done, put thought handler back to default to not potentially cause confused thoughts.
-                    self.context.agent.thought_handler = self.handle_thoughts
-                    setattr(self.context, "current_llm_query", None)
+            except (
+                json.JSONDecodeError
+            ):  # If response is not a json, it's just text so treat it like text
+                stream_content = {"name": "response_text", "text": f"{result}"}
+                self.send_response(
+                    "iopub", "llm_response", stream_content, parent_header=message.header
+                )
             finally:
-                if request_key in self.running_actions:
-                    del self.running_actions[request_key]
+                # When done, put thought handler back to default to not potentially cause confused thoughts.
+                self.context.agent.thought_handler = self.handle_thoughts
+                setattr(self.context, "current_llm_query", None)
+        finally:
+            if request_key in self.running_actions:
+                del self.running_actions[request_key]
+        await self.send_chat_history(message.header)
 
     @message_handler
     async def context_info_request(self, message):
-        context_slugs_by_class = dict((cls, slug) for slug, cls in AVAILABLE_CONTEXTS.items())
-        context_class = self.context.__class__
-        context_slug = context_slugs_by_class.get(context_class, "Not Found")
-        full_context_class = f"{context_class.__module__}.{context_class.__name__}"
-        context_config = getattr(self.context, "config", {}).get("context_info", None)
-        context_info = self.context.get_info()
-        language_slug = self.context.subkernel.SLUG
-        subkernel_name = self.context.subkernel.KERNEL_NAME
+        if self.context is not None:
+            context_slugs_by_class = dict((cls, slug) for slug, cls in AVAILABLE_CONTEXTS.items())
+            context_class = self.context.__class__
+            context_slug = context_slugs_by_class.get(context_class, "Not Found")
+            full_context_class = f"{context_class.__module__}.{context_class.__name__}"
+            context_config = getattr(self.context, "config", {}).get("context_info", None)
+            context_info = self.context.get_info()
+            language_slug = self.context.subkernel.SLUG
+            subkernel_name = self.context.subkernel.KERNEL_NAME
+        else:
+            context_slug = "NONE"
+            full_context_class = "None"
+            context_config = None
+            language_slug = "Not set"
+            subkernel_name = "Not set"
+            context_info = None
 
         self.send_response(
             stream="iopub",
@@ -595,6 +639,7 @@ class BeakerKernel(KernelProxyManager):
             },
             parent_header=message.header,
         )
+        await self.send_chat_history(message.header)
         return None
 
     @message_handler
@@ -645,6 +690,7 @@ class BeakerKernel(KernelProxyManager):
             model = config.get_model()
         if model:
             self.context.agent.model = model
+        await self.send_chat_history(message.header)
 
     @message_handler
     async def reset_kernel(self, message):
@@ -655,6 +701,7 @@ class BeakerKernel(KernelProxyManager):
             language=self.context.subkernel.SLUG,
             parent_header=message.header
         )
+        await self.send_chat_history(message.header)
         return True
 
     async def notebook_state_response(self, server, target_stream, data):

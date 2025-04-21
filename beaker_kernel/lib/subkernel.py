@@ -16,10 +16,13 @@ from .utils import env_enabled, action, ExecutionTask
 from .jupyter_kernel_proxy import ProxyKernelClient
 from .config import config
 from .context import BeakerContext
+# from archytas.summarizers import llm_message_summarizer
 
 if TYPE_CHECKING:
     from langchain_core.messages import ToolMessage, AIMessage, BaseMessage, ToolCall
+    from archytas.models.base import BaseArchytasModel
     from archytas.agent import Agent
+    from archytas.chat_history import ChatHistory
 
 Checkpoint = dict[str, str]
 
@@ -31,23 +34,16 @@ class JsonStateEncoder(json.JSONEncoder):
 import logging
 logger = logging.getLogger(__name__)
 
-def run_code_summarizer(message: "ToolMessage", all_messages: "list[BaseMessage]", agent: "Agent"):
+
+async def run_code_summarizer(message: "ToolMessage", chat_history: "ChatHistory", agent: "Agent", model: "BaseArchytasModel"):
     from langchain_core.messages import AIMessage
     size_threshold = 800
     excision_text_template = "...skipping {} characters..."
     split_percentage = 0.7
     text = message.text()
     message_len = len(text)
-    tool_call, calling_message = next(
-        (
-            (tc, msg)
-            for msg in all_messages
-            if isinstance(msg, AIMessage)
-            for tc in msg.tool_calls
-            if message.tool_call_id == tc.get("id")
-        ),
-        (None, None)
-    )
+    calling_record, tool_call = chat_history.get_tool_caller(message.tool_call_id)
+    calling_message: AIMessage = calling_record.message
     code = tool_call.get("args", {}).get("code", "")
     code_len = len(code)
 
@@ -89,6 +85,7 @@ def run_code_summarizer(message: "ToolMessage", all_messages: "list[BaseMessage]
                     code_input = content.get("input", None)
                     if isinstance(code_input, dict) and "code" in code_input:
                         content["input"]["code"] = shortened_code
+    message.artifact["summarized"] = True
 
 
 @tool(autosummarize=True, summarizer=run_code_summarizer)

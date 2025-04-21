@@ -463,7 +463,7 @@ defineExpose({
 
 button.menu-button {
     background-color: transparent;
-    color: var(--primary-800);
+    color: var(--primary-300);
     border-color: transparent;
     aspect-ratio: 1;
     width: 100%;

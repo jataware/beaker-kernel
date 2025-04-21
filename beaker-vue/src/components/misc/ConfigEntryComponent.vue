@@ -91,6 +91,22 @@
         />
         </div>
     </template>
+    <template v-else-if="schema?.type_str == 'int' && typeof(model) === 'number'">
+        <div class="horizontal-flex">
+        <span class="label" v-if="label">
+            {{ label }}
+        </span>
+        <InputNumber
+            :id="keyValue"
+            style="padding: 2px 8px;"
+            :class="{dirty}"
+            :name="keyValue"
+            v-model="model"
+            :min="schema?.metadata?.extra?.min"
+            :max="schema?.metadata?.extra?.max"
+        />
+        </div>
+    </template>
     <template v-else-if="schema?.type_str?.startsWith('Table') && Array.isArray(model)">
         <Panel v-for="(record, index) in model" :key="`${keyValue}-${record.name}`" toggleable
             :class="{dirty: !originalValue.map(obj => obj.name).includes(record.name)}"
@@ -122,6 +138,7 @@
 <script setup lang="tsx">
 import { ref, defineProps, defineModel, watch, inject, onBeforeMount, onMounted, toRaw, getCurrentInstance, computed, withDefaults} from "vue";
 import InlineInput from "./InlineInput.vue";
+import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Panel from "primevue/panel";
 import InputSwitch from "primevue/inputswitch";

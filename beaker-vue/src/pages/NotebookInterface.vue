@@ -78,6 +78,9 @@
                         }"
                     />
                 </SideMenuPanel>
+                <SideMenuPanel icon="pi pi-comments" label="Chat History">
+                    <ChatHistoryPanel :chat-history="chatHistory"/>
+                </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
                     id="config"
@@ -154,6 +157,7 @@ import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
+import {ChatHistoryPanel, ChatHistoryProps, IChatHistory} from '../components/panels/ChatHistoryPanel';
 
 // context preview
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
@@ -215,6 +219,7 @@ const rawMessages = ref<object[]>([])
 const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
 const saveAsFilename = ref<string>(null);
+const chatHistory = ref<IChatHistory>()
 
 const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);
@@ -299,6 +304,9 @@ const iopubMessage = (msg) => {
             body: msg.content.body,
             timestamp: msg.header.date,
         });
+    } else if (msg.header.msg_type === "chat_history") {
+        chatHistory.value = msg.content;
+        console.log(msg.content);
     }
 };
 
