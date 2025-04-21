@@ -20,8 +20,12 @@
                 >
                     <div class="chat-history-message-title">
                         <span style="font-weight: 500">
-                            {{ capitalized(record?.message?.type) }}Message
+                            {{ capitalized(message?.type) }}Message
                         </span>
+                        <span v-if="message?.type.toLowerCase() === 'ai' && message?.tool_calls"
+                            class="chat-history-message-tool-use pi pi-hammer"
+                            v-tooltip="`Tool${message.tool_calls.length > 1 ? 's' : ''} called: ` + message.tool_calls.map(tc => `'${tc.name}'`).join(', ')"
+                        ></span>
                     </div>
                     <span class="chat-history-message-title-token-count" >
                         {{ (record?.token_count/1000).toFixed(2) }}k tokens
@@ -70,6 +74,7 @@
 
 import { ref, computed, defineProps, getCurrentInstance, ComponentInstance } from "vue";
 import VueJsonPretty from 'vue-json-pretty';
+import { PrimeIcons } from 'primevue/api';
 import MinusIcon from 'primevue/icons/minus';
 import PlusIcon from 'primevue/icons/plus';
 import 'vue-json-pretty/lib/styles.css';
@@ -113,6 +118,7 @@ const capitalized = (str: string) => (
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    cursor: pointer;
 }
 
 .chat-history-message-title {
@@ -172,6 +178,11 @@ const capitalized = (str: string) => (
     margin-bottom: 0.5rem;
 }
 
+.chat-history-message-tool-use {
+    margin-left: 0.5em;
+    position: relative;
+    top: 0.125em;
+}
 
 .chat-history-datatable {
     font-size: 0.85rem;
