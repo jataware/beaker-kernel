@@ -219,7 +219,7 @@ const rawMessages = ref<object[]>([])
 const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
 const saveAsFilename = ref<string>(null);
-const chatHistory = ref<IChatHistory[]>([])
+const chatHistory = ref<IChatHistory>()
 
 const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);

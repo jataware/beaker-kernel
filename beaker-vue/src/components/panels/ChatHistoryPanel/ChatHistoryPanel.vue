@@ -34,7 +34,7 @@
                 >
                     <span class="progress-bar-map-circle overhead"></span>
                     Estimated token overhead:
-                    <span>{{ roundToFiveHundred(chatHistory.overhead_token_count) }}k</span>
+                    <span>{{ displayNumber(roundToFiveHundred(chatHistory.overhead_token_count)) }}</span>
                 </div>
                 <div
                     class="progress-bar-map-row summary"
@@ -42,7 +42,7 @@
                 >
                     <span class="progress-bar-map-circle summary"></span>
                     Estimated summarized token usage:
-                    <span>{{ roundToFiveHundred(chatHistory.summary_token_count) }}k</span>
+                    <span>{{ displayNumber(roundToFiveHundred(chatHistory.summary_token_count)) }}</span>
                 </div>
                 <div
                     class="progress-bar-map-row message"
@@ -50,7 +50,7 @@
                 >
                     <span class="progress-bar-map-circle message"></span>
                     Estimated message token usage:
-                    <span>{{ roundToFiveHundred(chatHistory.message_token_count) }}k</span>
+                    <span>{{ displayNumber(roundToFiveHundred(chatHistory.message_token_count)) }}</span>
                 </div>
                 <div
                     class="progress-bar-map-row total"
@@ -58,9 +58,19 @@
                 >
                     <span class="progress-bar-map-circle total"></span>
                     Estimated total token usage:
-                    <span>{{ roundToFiveHundred(totalTokenCount) }}k</span>
+                    <span>{{ displayNumber(roundToFiveHundred(totalTokenCount)) }}</span>
                 </div>
             </div>
+            <!-- <div class="context-window-usage-config" style="display: inline-flex; gap: 1em">
+                <span>
+                    Soft limit:
+                    <Knob v-model="summarizationThresholdLowPct" :size="60"/>
+                </span>
+                <span>
+                    Hard limit:
+                    <Knob :model-value="85" :size="60"/>
+                </span>
+            </div> -->
         </div>
         <h4>Messages</h4>
         <div class="chat-history-records">
@@ -74,7 +84,6 @@
         </div>
     </div>
 </template>
-            <!-- {{ props.chatHistory?.system_message.kwargs.content }} -->
 
 <script lang="ts" setup>
 
@@ -82,6 +91,7 @@ import { ref, computed, defineEmits, defineProps } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import ProgressBar from "primevue/progressbar";
+import Knob from "primevue/knob";
 
 import DebugLogMessage from "../../misc/DebugLogMessage.vue";
 import ChatHistoryMessage from "./ChatHistoryMessage.vue";
@@ -159,18 +169,21 @@ const contextWindowSize = computed(() => props.chatHistory?.model?.context_windo
 const overheadUsagePct = computed(() => Math.round((props.chatHistory?.overhead_token_count / contextWindowSize.value) * 1000) / 10);
 const messageUsagePct = computed(() => Math.round((props.chatHistory?.message_token_count / contextWindowSize.value) * 1000) / 10);
 const summaryUsagePct = computed(() => Math.round((props.chatHistory?.summary_token_count / contextWindowSize.value) * 1000) / 10);
-const summarizationThresholdLowPct = computed(() => Math.round((props.chatHistory?.summarization_threshold / contextWindowSize.value) * 1000) / 10)
-const totalTokenCount = computed(() => (
+const summarizationThresholdLowPct = computed({
+    get() { return Math.round((props.chatHistory?.summarization_threshold / contextWindowSize.value) * 1000) / 10},
+    set(value) {console.log(value)},
+});
+const totalTokenCount = computed<number>(() => (
         props.chatHistory?.overhead_token_count
         + props.chatHistory?.message_token_count
         + props.chatHistory?.summary_token_count
 ));
 
-const usageLabel = computed(() => {
+const usageLabel = computed<string>(() => {
     const rawSum = totalTokenCount.value;
-    const roundedSum = roundToFiveHundred(rawSum)?.toLocaleString();
-    const contextWindowSizeK = roundToFiveHundred(props.chatHistory?.model?.context_window)?.toLocaleString();
-    return `${ contextWindowUsage.value?.toLocaleString() }% (~ ${roundedSum}k / ${contextWindowSizeK}k)`;
+    const roundedSum = displayNumber(roundToFiveHundred(rawSum));
+    const contextWindowSizeK = displayNumber(roundToFiveHundred(contextWindowSize.value));
+    return `${ contextWindowUsage.value?.toLocaleString() }% (~ ${roundedSum} / ${contextWindowSizeK})`;
 })
 
 const getToolCallerMessage = (toolCallId: string) => {
@@ -185,8 +198,18 @@ const getToolCallForRecord = (record: RecordType) => {
     }
 }
 
-const roundToFiveHundred = (rawValue: number) => {
+const roundToFiveHundred = (rawValue: number): number => {
     return Math.round(rawValue / 500) * 0.5
+}
+
+const displayNumber = (rawValue: number): string => {
+    var label = 'k';
+    var value: string = rawValue.toLocaleString();
+    if (rawValue >= 1000) {
+        label = 'M';
+        value = (rawValue / 1000).toFixed(2);
+    }
+    return `${value.toLocaleString()}${label}`
 }
 
 </script>
