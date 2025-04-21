@@ -110,6 +110,7 @@ def configfield(
     placeholder_text: str = MISSING,
     label: str = MISSING,
     options: Callable[[], list[Any]] = MISSING,
+    **extra: dict[str, Any],
 ):
     def dynamic_factory():
         # Get value if defined
@@ -143,6 +144,7 @@ def configfield(
         "sensitive": sensitive,
         "aliases": aliases,
         "save_default_value": save_default_value,
+        "extra": extra,
     }
     if env_var and env_var is not MISSING:
         metadata["env_var"] = env_var
@@ -188,6 +190,13 @@ class LLM_Service_Provider:
         default="",
         sensitive=True,
         save_default_value=True,
+    )
+    summarization_threshold_pct: int = configfield(
+        description="Percentage of the total model's available context window to allow to be used prior to summarizing.",
+        default=20,
+        save_default_value=True,
+        min=0,
+        max=100,
     )
 
     @classmethod

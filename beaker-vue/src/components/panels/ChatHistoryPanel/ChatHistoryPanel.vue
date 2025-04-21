@@ -34,7 +34,7 @@
                 >
                     <span class="progress-bar-map-circle overhead"></span>
                     Estimated token overhead:
-                    <span>{{ displayNumber(roundToFiveHundred(chatHistory.overhead_token_count)) }}</span>
+                    <span>{{ displayNumber(roundToFiveHundred(chatHistory?.overhead_token_count)) }}</span>
                 </div>
                 <div
                     class="progress-bar-map-row summary"
@@ -42,7 +42,7 @@
                 >
                     <span class="progress-bar-map-circle summary"></span>
                     Estimated summarized token usage:
-                    <span>{{ displayNumber(roundToFiveHundred(chatHistory.summary_token_count)) }}</span>
+                    <span>{{ displayNumber(roundToFiveHundred(chatHistory?.summary_token_count)) }}</span>
                 </div>
                 <div
                     class="progress-bar-map-row message"
@@ -50,7 +50,7 @@
                 >
                     <span class="progress-bar-map-circle message"></span>
                     Estimated message token usage:
-                    <span>{{ displayNumber(roundToFiveHundred(chatHistory.message_token_count)) }}</span>
+                    <span>{{ displayNumber(roundToFiveHundred(chatHistory?.message_token_count)) }}</span>
                 </div>
                 <div
                     class="progress-bar-map-row total"
@@ -187,7 +187,7 @@ const usageLabel = computed<string>(() => {
 })
 
 const getToolCallerMessage = (toolCallId: string) => {
-    return props.chatHistory.records.map(record => record.message).find(message => {
+    return props.chatHistory?.records?.map(record => record.message).find(message => {
         return message.type === "ai" && message.tool_calls?.map(tc => tc.id).includes(toolCallId);
     })
 }

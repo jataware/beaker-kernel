@@ -24,7 +24,7 @@ class BeakerAgent(ReActAgent):
         **kwargs,
     ):
         self.context = context
-        model = config.get_model(summarization_ratio=0.2)  # Start summarizing at 20% of max
+        model = config.get_model()
         if model is None:
             model = DefaultModel({})
 
