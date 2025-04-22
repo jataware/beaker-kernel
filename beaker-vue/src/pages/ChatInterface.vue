@@ -67,6 +67,10 @@
                         }"
                     />
                 </SideMenuPanel>
+                <SideMenuPanel icon="pi pi-comments" label="Chat History">
+                    <ChatHistoryPanel :chat-history="chatHistory"/>
+                </SideMenuPanel>
+
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
                     id="config"
@@ -121,6 +125,7 @@ import ChatPanel from '../components/chat-interface/ChatPanel.vue';
 import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 import InfoPanel from '../components/panels/InfoPanel.vue';
+import {ChatHistoryPanel, ChatHistoryProps, IChatHistory} from '../components/panels/ChatHistoryPanel';
 
 import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
@@ -159,6 +164,7 @@ beakerApp.setPage("chat");
 const rightSideMenuRef = ref();
 const contextPreviewData = ref<any>();
 const debugLogs = ref<object[]>([]);
+const chatHistory = ref<IChatHistory>()
 
 type FilePreview = {
     url: string,
@@ -278,16 +284,17 @@ const beakerSessionRef = ref<typeof BeakerSession>();
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
         contextPreviewData.value = msg.content;
-    }
-    if (msg.header.msg_type === "job_response") {
+    } else if (msg.header.msg_type === "job_response") {
         beakerSessionRef.value.session.addMarkdownCell(msg.content.response);
-    }
-    if (msg.header.msg_type === "debug_event") {
+    } else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,
             body: msg.content.body,
             timestamp: msg.header.date,
         });
+    } else if (msg.header.msg_type === "chat_history") {
+        chatHistory.value = msg.content;
+        console.log(msg.content);
     }
 };
 
