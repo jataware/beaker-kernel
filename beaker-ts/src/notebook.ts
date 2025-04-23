@@ -562,10 +562,16 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         const renderedMarkdownLines = [`# ${this.source}\n`];
         this.events.forEach((event) => {
             if (event.type === "thought") {
-                renderedMarkdownLines.push(`> Thought: ${event.content}\n> `);
+                renderedMarkdownLines.push(`> Thought: ${event.content.thought}\n> `);
             }
             else if (event.type === "response") {
-                renderedMarkdownLines.push(`**${event.content}**`);
+                if (typeof event.content === "string") {
+                    const lines = event.content.split("\n").map((line) => (/^\s*$/.test(line) ? "" : `**${line}**`))
+                    console.log(lines);
+                    renderedMarkdownLines.push(lines.join("\n"));
+                }
+                else console.log("Wrong type!", event.type, typeof event.content, event.content);
+                // renderedMarkdownLines.push(`**${event.content}**`);
             }
             else if (event.type === "user_question") {
                 renderedMarkdownLines.push(`*Beaker asks:* ${event.content}\n`);
