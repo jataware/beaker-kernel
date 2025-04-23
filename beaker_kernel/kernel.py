@@ -252,7 +252,9 @@ class BeakerKernel(KernelProxyManager):
             )
             return
         socket = get_socket(stream)
-        self.server.filters.remove(InterceptionFilter(socket, msg_type, func))
+        filter = InterceptionFilter(socket, msg_type, func)
+        if filter in self.server.filters:
+            self.server.filters.remove(filter)
 
     async def send_preview(self, parent_header=None):
         if self.context.preview:
@@ -442,6 +444,7 @@ class BeakerKernel(KernelProxyManager):
         def stop_loop(loop: ioloop.IOLoop):
             loop.stop()
         self.context.cleanup()
+        self.context = None
         # Stop loop after short delay to allow cleanup to run.
         loop = ioloop.IOLoop.current()
         loop.call_later(0.2, stop_loop, loop)
@@ -738,11 +741,13 @@ LLMKernel = BeakerKernel
 
 def cleanup(kernel: BeakerKernel):
     try:
-        kernel.context.cleanup()
+        if kernel.context is not None:
+            kernel.context.cleanup()
     except requests.exceptions.ConnectionError:
         print("Unable to connect to server. Possible server shutdown.")
     except Exception as err:
-        print(f"Couldn't shutdown subkernel: {err}")
+        print(f"Error during cleanup: {err}")
+        traceback.print_exc()
 
 
 def start(connection_file):
