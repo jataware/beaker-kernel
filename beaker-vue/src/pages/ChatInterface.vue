@@ -71,12 +71,8 @@
                     id="datasources" label="Datasources" icon="pi pi-database"
                     v-if="datasources.length > 0"
                 >
-                    <div>
-                        <div v-for="datasource in datasources" :key="datasource.uid || datasource.name">
-                            <h3>{{ datasource.name }}</h3>
-                            <div style="text-indent: -2rem; padding-left: 4rem">{{ datasource.description }}</div>
-                        </div>
-                    </div>
+                    <DatasourcePanel :datasources="datasources">
+                    </DatasourcePanel>
                 </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
@@ -160,6 +156,7 @@ import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
+import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);

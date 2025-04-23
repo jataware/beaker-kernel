@@ -46,12 +46,8 @@
                     id="datasources" label="Datasources" icon="pi pi-database"
                     v-if="datasources.length > 0"
                 >
-                    <div>
-                        <div v-for="datasource in datasources" :key="datasource.uid || datasource.name">
-                            <h3>{{ datasource.name }}</h3>
-                            <div style="text-indent: -2rem; padding-left: 4rem">{{ datasource.description }}</div>
-                        </div>
-                    </div>
+                    <DatasourcePanel :datasources="datasources">
+                    </DatasourcePanel>
                 </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
@@ -118,6 +114,7 @@ import { IBeakerTheme } from '../plugins/theme';
 import DebugPanel from '../components/panels/DebugPanel.vue'
 
 import DatasourceEditor from '../components/misc/DatasourceEditor.vue';
+import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
