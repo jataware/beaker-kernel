@@ -283,11 +283,13 @@ class BeakerSubkernel(abc.ABC):
                 res = requests.delete(
                     f"{self.context.beaker_kernel.jupyter_server}/api/kernels/{self.jupyter_id}",
                     headers={"Authorization": f"token {config.jupyter_token}"},
+                    timeout=0.5,
                 )
                 if res.status_code == 204:
                     self.jupyter_id = None
-            except requests.exceptions.HTTPError as err:
-                print(err)
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError) as err:
+                message = f"Error while shutting down subkernel: {err}\n  Subkernel or server may have already been shut down."
+                logger.error(message, exc_info=err)
 
     def format_kernel_state(self, state: dict) -> dict:
         return state

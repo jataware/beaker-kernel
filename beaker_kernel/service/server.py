@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+import signal
 import urllib.parse
 
 from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
@@ -85,6 +86,15 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
         return cmd, kw
     pre_start_kernel = _async_pre_start_kernel
 
+    async def _async_interrupt_kernel(self):
+        if self.shutting_down and self.kernel_name == "beaker_kernel":
+            # During shutdown, interrupt Beaker kernel instances without interrupting the subkernel which is being
+            # interrupted/shutdown in parallel by the server.
+            # Sending an INTERRUPT signal notifies beaker to interrupt without affecting the subkernel.
+            # Normal interrupts are done via a interrupt message, which will also interrupt the subkernel.
+            return await self._async_signal_kernel(signal.SIGINT)
+        return await super()._async_interrupt_kernel()
+
 
 class BeakerKernelMappingManager(AsyncMappingKernelManager):
     kernel_manager_class = "beaker_kernel.service.server.BeakerKernelManager"
@@ -114,6 +124,10 @@ class BeakerServerApp(ServerApp):
     allow_root = True
     ip = "0.0.0.0"
     reraise_server_extension_failures = True
+
+    def stop(self, from_signal = False):
+        print("Shutting down Beaker server...")
+        return super().stop(from_signal)
 
     @property
     def beaker_config(self):

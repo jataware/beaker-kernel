@@ -5,6 +5,7 @@ import inspect
 import json
 import logging
 import os
+import signal
 import sys
 import traceback
 import uuid
@@ -420,16 +421,25 @@ class BeakerKernel(KernelProxyManager):
 
     @message_handler
     async def interrupt(self, _message):
-        try:
-            subkernel_id = self.context.subkernel.jupyter_id
-            print(f"Interrupting connected subkernel: {subkernel_id}")
-            requests.post(
-                f"{self.context.beaker_kernel.jupyter_server}/api/kernels/{subkernel_id}/interrupt",
-                headers={"Authorization": f"token {config.jupyter_token}"},
-            )
-        except requests.exceptions.HTTPError as err:
-            logger.error(f"Subkernel cannot be interrupted.\nDetails:\n  {err.request.body}", exc_info=err)
-            return None
+        self._interrupt(interrupt_subkernel=True)
+
+    def soft_interrupt(self, signal, frame):
+        self._interrupt(interrupt_subkernel=False)
+
+    def _interrupt(self, interrupt_subkernel=True):
+        if interrupt_subkernel:
+            try:
+                subkernel_id = self.context.subkernel.jupyter_id
+                print(f"Interrupting connected subkernel: {subkernel_id}")
+                requests.post(
+                    f"{self.context.beaker_kernel.jupyter_server}/api/kernels/{subkernel_id}/interrupt",
+                    headers={"Authorization": f"token {config.jupyter_token}"},
+                    timeout=0.5,
+                )
+            except requests.exceptions.HTTPError as err:
+                logger.error(f"Subkernel cannot be interrupted.\nDetails:\n  {err.request.body}", exc_info=err)
+            except requests.exceptions.ConnectionError:
+                logger.error(f"Subkernel cannot be interrupted.\nDetails:\n  {err}", exc_info=err)
 
         for key, value in list(self.running_actions.items()):
             if inspect.iscoroutine(value):
@@ -761,10 +771,13 @@ def start(connection_file):
     kernel = BeakerKernel(notebook_config, kernel_id=kernel_id, connection_file=connection_file)
 
     try:
+        # Catch INTERRUPT signals and treat them as soft interrupts.
+        signal.signal(signal.SIGINT, kernel.soft_interrupt)
         loop.start()
     finally:
         # Perform shutdown cleanup here
         cleanup(kernel)
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
         sys.exit(0)
 
 
