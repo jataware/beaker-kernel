@@ -17,6 +17,7 @@
                     })"
                 :option-label="(option) => option?.label ?? 'Select datasource...'"
                 option-value="value"
+                placeholder="Select a datasource..."
                 @click="(event) => {
                     if (!confirmUnsavedChanges()) {
                         event.preventDefault;
@@ -242,7 +243,8 @@
                         v-show="datasourcePathSelectionOpen"
                     >
                         <FilePanel
-                            :view-only="true"
+                            :hide-uploads="true"
+                            :disabled-columns="['downloads']"
                             ref="filePickerRef"
                             @preview-file="(file, mimetype) => {}"
                         />
@@ -281,20 +283,22 @@ import Tag from 'primevue/tag';
 import FilePanel from "../panels/FilePanel.vue";
 import InputGroup from 'primevue/inputgroup';
 
-
 import cookie from 'cookie';
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
-import Chip from 'primevue/chip';
 import Badge from 'primevue/badge';
 const showToast = inject<any>('show_toast');
 
 const props = defineProps(["datasources"]);
 const selectedDatasource = ref(undefined);
 const temporaryDatasource = ref(undefined);
+
+const sortedDatasources = computed(() =>
+    props?.datasources?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
+
 const allDatasources = computed(() =>
-    [...props?.datasources, ...(temporaryDatasource?.value ? [temporaryDatasource.value] : [])]
-)
+    [...sortedDatasources?.value, ...(temporaryDatasource?.value ? [temporaryDatasource.value] : [])])
+
 
 const session = inject<BeakerSession>('session');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
@@ -350,8 +354,8 @@ const openFileSelectionMultiple = () => {
 }
 
 const slugWrapper = computed(() => {
-    if (selectedDatasource?.value?.uid_or_slug) {
-        return selectedDatasource.value.uid_or_slug;
+    if (selectedDatasource?.value?.slug) {
+        return selectedDatasource.value.slug;
     }
     return selectedDatasource?.value?.name?.toLowerCase().replaceAll(' ', '_');
 })
@@ -359,7 +363,6 @@ const slugWrapper = computed(() => {
 const contentManager = new ContentsManager({});
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
-
 
 const folderSlug = computed(() => {
     let url = selectedDatasource?.value?.url;
@@ -399,7 +402,7 @@ const newDatasource = () => {
     selectedDatasource.value = {
         name: "New Datasource",
         url: "",
-        uid_or_slug: undefined,
+        slug: undefined,
         source: "This is the prompt information that the agent will consult when using the datasource. Include API details or how to find datasets here.",
         description: "This is the description that the agent will use to determine when this datasource should be used.",
         attached_files: [],
@@ -410,7 +413,7 @@ const newDatasource = () => {
 const save = () => {
     unsavedChanges.value = false;
     temporaryDatasource.value = undefined;
-    console.log(selectedDatasource.value.uid_or_slug, slugWrapper.value)
+    console.log(selectedDatasource.value.slug, slugWrapper.value)
 
     showToast({
         title: 'Saved!',
@@ -420,7 +423,7 @@ const save = () => {
     });
     session.executeAction('save_datasource', {
         ...selectedDatasource.value,
-        uid_or_slug: slugWrapper.value
+        slug: slugWrapper.value
     });
 }
 

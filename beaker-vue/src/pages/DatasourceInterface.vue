@@ -101,8 +101,6 @@ import { DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJu
 import { NavOption } from '../components/misc/BeakerHeader.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
-// {"uid_or_slug":"census_acs_(american_community_survey)_and_sf1","name":"Census ACS (American Community Survey) and SF1","description":"The Census ACS (American Community Survey) and SF1 (Decennial Census) API returns data that has been collected from \nthe Census Bureau, a database that contains information on the population of the United States.\nUse this to control for socioeconomic factors (or for other purposes).\n","datatype":"api","url":null,"img_url":null,"source":null,"last_updated":null}
-
 import BaseInterface from './BaseInterface.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
 import ConfigPanel from '../components/panels/ConfigPanel.vue';
@@ -161,11 +159,18 @@ const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
 const datasources = ref([]);
 
+const hasOpenedPanelOnce = ref(false);
+
 type FilePreview = {
     url: string,
     mimetype?: string
 }
 const previewedFile = ref<FilePreview>();
+
+onMounted(() => {
+    sideMenuRef.value.hidePanel()
+    rightSideMenuRef.value.hidePanel()
+})
 
 const headerNav = computed((): NavOption[] => {
     const nav = [];
@@ -249,6 +254,11 @@ const iopubMessage = (msg) => {
             incomingDatasources = [];
         }
         datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
+
+        if (!hasOpenedPanelOnce.value) {
+            nextTick(() => sideMenuRef.value.selectPanel('datasources'))
+            hasOpenedPanelOnce.value = true;
+        }
     }
 };
 
@@ -267,7 +277,6 @@ const unhandledMessage = (msg) => {
 const statusChanged = (newStatus) => {
     connectionStatus.value = newStatus == 'idle' ? 'connected' : newStatus;
 };
-
 
 const restartSession = async () => {
     const resetFuture = beakerSession.value.session.sendBeakerMessage(

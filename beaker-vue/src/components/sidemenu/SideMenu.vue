@@ -279,6 +279,10 @@ const isPanelSelected = (index: number) => {
     );
 }
 
+const hidePanel = () => {
+    selectedTabIndex.value = null;
+}
+
 const selectPanel = (id_or_label: string) => {
     selectedTabIndex.value = panels.value.findIndex(
         (panel) => (panel.props?.label === id_or_label || panel.props?.id === id_or_label)
@@ -317,6 +321,7 @@ onUnmounted(() => {
 
 defineExpose({
     selectPanel,
+    hidePanel
 });
 
 </script>

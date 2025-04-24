@@ -19,7 +19,7 @@ class DatasourceAttachment:
 
 @dataclass
 class Datasource:
-    uid_or_slug: str
+    slug: str
     name: str
     description: str
 

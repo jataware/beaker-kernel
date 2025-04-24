@@ -8,7 +8,7 @@
           v-tooltip.bottom="{value: 'Files to upload', showDelay: 300}"
           icon="pi pi-cloud-upload"
           size="small"
-          v-show="!viewOnly"
+          v-show="!hideUploads"
       />
       <form ref="uploadForm">
         <input
@@ -37,7 +37,7 @@
                @row-dblclick="doubleClick" resizableColumns columnResizeMode="fit" rowHover :loading="tableLoading"
                @dragover="fileDragOver" @drop="fileDrop"
                >
-        <Column header="" class="download-column" v-if="!viewOnly">
+        <Column header="" class="download-column" v-if="!disabledColumns?.includes('downloads')">
           <template #header>
             <span
               class="pi pi-cloud-download"
@@ -54,7 +54,7 @@
             ></Button>
           </template>
         </Column>
-        <Column field="name" header="Name" class="filename-column" sortable>
+        <Column field="name" header="Name" class="filename-column" v-if="!disabledColumns?.includes('filename')" sortable>
           <template #body="slotProps">
             <span :class="[...getFileIconClass(slotProps.data), 'file-icon', slotProps.data.type]"></span>
             <span
@@ -66,7 +66,7 @@
             </span>
           </template>
         </Column>
-        <Column field="last_modified" header="Last Modified" sortable style="max-width: 25%;">
+        <Column field="last_modified" header="Last Modified" v-if="!disabledColumns?.includes('timestamp')" sortable style="max-width: 25%;">
           <template #body="slotProps">
             <span v-if="slotProps.data.last_modified" v-tooltip="slotProps.data.last_modified">
               {{ formatDate(slotProps.data.last_modified) }}
@@ -74,7 +74,7 @@
             <span v-else style="display: flex; justify-content: center;"> - </span>
           </template>
         </Column>
-        <Column field="size" header="Size" sortable style="max-width: 25%;">
+        <Column field="size" header="Size" v-if="!disabledColumns?.includes('filesize')" sortable style="max-width: 25%;">
           <template #body="slotProps">
             <span v-if="slotProps.data.size" v-tooltip="`${slotProps.data.size} bytes`">
               {{ formatSize(slotProps.data.size) }}
@@ -145,11 +145,12 @@ const emit = defineEmits([
   "preview-file"
 ]);
 
-const props = defineProps([
-  "entries",
-  "sortby",
-  "viewOnly"
-]);
+type FilePanelColumn = "downloads" | "timestamp" | "filename" | "filesize"
+
+const props = defineProps<{
+  disabledColumns?: FilePanelColumn[],
+  hideUploads?: boolean
+}>()
 
 const contentManager = new ContentsManager({});
 
