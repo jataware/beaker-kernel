@@ -2,60 +2,36 @@
     <div class="code-cell-output" :class="{'code-cell-output-dropdown': props.dropdownLayout}">
         <div v-if="dropdownLayout">
             <div class="code-cell-output-box-dropdown">
-                <Accordion>
-                    <AccordionTab
-                        class="code-cell-output-dropdown-tab"
-                        :pt="{
-                            header: {
-                                class: [`code-cell-output-dropdown-header`]
-                            },
-                            headerAction: {
-                                class: [`code-cell-output-dropdown-headeraction`]
-                            },
-                            content: {
-                                class: [`code-cell-output-dropdown-content`]
-                            },
-                            headerIcon: {
-                                class: [`code-cell-output-dropdown-icon`]
-                            }
-                        }"
+                <Panel :collapsed="true" toggleable header="Outputs">
+                    <div
+                        class="code-cell-dropdown-content"
+                        v-for="output of props.outputs"
+                        :key="`${output}-dropdown`"
                     >
-                        <template #header>
-                            <span class="flex align-items-center gap-2 w-full" style="font-weight: normal">
-
-                                <span>Outputs</span>
-                            </span>
-                        </template>
-                        <div 
-                            class="code-cell-dropdown-content"
-                            v-for="output of props.outputs" 
-                            :key="`${output}-dropdown`"
-                        >
-                            <div
-                                v-if="output.output_type == 'stream'"
-                                :class="output.output_type"
-                                v-html="ansiHtml(escapeHtml(output.text))"
-                            />
-                            <BeakerMimeBundle
-                                v-else-if="['display_data', 'execute_result'].includes(output.output_type)"
-                                :mime-bundle="output.data"
-                                class="mime-bundle"
-                                collapse="true"
-                            />
-                            <div v-else-if="output.output_type == 'error'" :class="output.output_type">
-                                <BeakerMimeBundle :mime-bundle="rebundleError(output)" collapse="true" />
-                            </div>
-                            <div v-else>{{ output }}</div>
+                        <div
+                            v-if="output.output_type == 'stream'"
+                            :class="output.output_type"
+                            v-html="ansiHtml(escapeHtml(output.text))"
+                        />
+                        <BeakerMimeBundle
+                            v-else-if="['display_data', 'execute_result'].includes(output.output_type)"
+                            :mime-bundle="output.data"
+                            class="mime-bundle"
+                            collapse="true"
+                        />
+                        <div v-else-if="output.output_type == 'error'" :class="output.output_type">
+                            <BeakerMimeBundle :mime-bundle="rebundleError(output)" collapse="true" />
                         </div>
-                    </AccordionTab>
-                </Accordion>
+                        <div v-else>{{ output }}</div>
+                    </div>
+                </Panel>
             </div>
         </div>
         <div v-else>
-            <div 
-                class="code-cell-output-box" 
-                :class="{'collapsed-output': output.metadata?.collapsed}" 
-                v-for="output of props.outputs" 
+            <div
+                class="code-cell-output-box"
+                :class="{'collapsed-output': output.metadata?.collapsed}"
+                v-for="output of props.outputs"
                 :key="output"
             >
                 <div class="output-collapse-box" @click.capture.stop.prevent="collapseOutput(output)"></div>
@@ -80,12 +56,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineExpose } from "vue";
+import { ref } from "vue";
 import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 import ansiHtml from "ansi-html-community";
 import escapeHtml from "escape-html";
-import Accordion from "primevue/accordion";
-import AccordionTab from "primevue/accordiontab";
+import Panel from "primevue/panel";
 
 const props = defineProps([
     "outputs",

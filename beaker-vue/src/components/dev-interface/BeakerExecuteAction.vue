@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, computed, inject, watch } from "vue";
+import { ref, computed, inject, watch } from "vue";
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import Button from 'primevue/button';
 import AutoComplete from 'primevue/autocomplete';

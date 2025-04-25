@@ -59,10 +59,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, computed, inject } from "vue";
+import { ref, computed, inject } from "vue";
 import Tree from 'primevue/tree';
-import { TreeNode } from 'primevue/treenode';
-import { emitError } from "vue-json-pretty/types/utils";
+import { type TreeNode } from 'primevue/treenode';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 const contextPanelOpen = ref(true);

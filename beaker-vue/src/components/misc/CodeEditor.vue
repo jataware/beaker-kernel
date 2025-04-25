@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, defineEmits, defineExpose, shallowRef, computed, withDefaults, inject } from "vue";
+import { ref, shallowRef, computed, inject } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView, keymap } from "@codemirror/view";
 import { EditorState, Extension, Prec } from "@codemirror/state";

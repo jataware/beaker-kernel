@@ -85,7 +85,8 @@
 
 <script setup lang="tsx">
 import { ErrorObject, isErrorObject } from '../util';
-import { h, defineEmits, defineProps, useSlots, isVNode, ref, onMounted, provide, nextTick, onUnmounted, toRaw, defineExpose, Component, ComponentInstance } from 'vue';
+import { h, useSlots, isVNode, ref, onMounted, provide, nextTick, onUnmounted, toRaw} from 'vue';
+import { type Component, type ComponentInstance } from 'vue';
 import Dialog from 'primevue/dialog';
 import DynamicDialog from 'primevue/dynamicdialog';
 import { useDialog } from 'primevue/usedialog';
@@ -106,7 +107,7 @@ import {default as ConfigPanel, getConfigAndSchema, dropUnchangedValues, objecti
 import SideMenu, { type MenuPosition } from '../components/sidemenu/SideMenu.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import FooterDrawer from '../components/misc/FooterDrawer.vue';
-import { DynamicDialogInstance } from 'primevue/dynamicdialogoptions';
+import type { DynamicDialogInstance, DynamicDialogOptions } from 'primevue/dynamicdialogoptions';
 
 const dialog = useDialog();
 const toast = useToast();
@@ -132,15 +133,12 @@ const showToast = (options: ShowToastOptions) => {
     });
 };
 
-export type StyleOverride = 'chat'
-
 const props = defineProps<{
-  title: string
-  titleExtra?: string
-  savefile?: string
-  headerNav?: any
-  apiKeyPrompt?: boolean
-  styleOverrides?: StyleOverride[]
+  title: string;
+  titleExtra?: string;
+  savefile?: string;
+  headerNav?: any;
+  apiKeyPrompt?: boolean;
 }>();
 
 const emit = defineEmits([
@@ -221,9 +219,7 @@ const showOverlay = (contents: string | Component | HTMLElement | ErrorObject, t
 provide('show_toast', showToast);
 provide('show_overlay', showOverlay);
 
-const styleOverrides = props.styleOverrides ?? [];
-provide('styleOverrides', styleOverrides)
-const isChat = styleOverrides.includes('chat')
+const isChat = ref(true);
 
 const connectionFailure = (error: Error) => {
     let errorName = error.name;

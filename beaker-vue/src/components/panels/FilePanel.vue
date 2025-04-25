@@ -120,15 +120,15 @@
 
 <script lang="ts" setup>
 
-import { ref, inject, capitalize, defineProps, defineExpose, onMounted, computed, defineEmits } from "vue";
+import { ref, inject, capitalize, onMounted, computed } from "vue";
 import Button from 'primevue/button';
 import 'vue-json-pretty/lib/styles.css';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
-import cookie from 'cookie';
-import {filesize} from 'filesize';
-import {Time} from '@jupyterlab/coreutils/src/time';
+import * as cookie from 'cookie';
+import { filesize } from 'filesize';
+import { Time } from '@jupyterlab/coreutils';
 import scroll from 'scroll-into-view-if-needed'
 
 const previewFile = (path, mimetype) => {
@@ -269,7 +269,7 @@ const uploadFiles = async (files: FileList) => {
     const fullPath = `${curDir.value}/${file.name}`;
     const bytes = [];
     const reader = file.stream().getReader();
-    var chunk = (await reader.read()).value;
+    let chunk = (await reader.read()).value;
     while (chunk?.length > 0) {
       bytes.push(Array.from(chunk, (byte) => String.fromCharCode(byte)).join(""));
       chunk = (await reader.read()).value;

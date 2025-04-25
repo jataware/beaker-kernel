@@ -87,7 +87,7 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, defineEmits, defineProps } from "vue";
+import { ref, computed } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import ProgressBar from "primevue/progressbar";
@@ -203,8 +203,8 @@ const roundToFiveHundred = (rawValue: number): number => {
 }
 
 const displayNumber = (rawValue: number): string => {
-    var label = 'k';
-    var value: string = rawValue.toLocaleString();
+    let label = 'k';
+    let value: string = rawValue.toLocaleString();
     if (rawValue >= 1000) {
         label = 'M';
         value = (rawValue / 1000).toFixed(2);

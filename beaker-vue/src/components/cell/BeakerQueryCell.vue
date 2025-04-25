@@ -3,7 +3,7 @@
         <div
             class="query"
             :class="{
-                'query-chat': isChat
+                // 'query-chat': isChat
             }"
             @dblclick="promptDoubleClick"
         >
@@ -201,7 +201,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
+import { ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
@@ -211,7 +211,6 @@ import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import ThinkingIcon from "../../assets/icon-components/BrainIcon.vue";
-import { StyleOverride } from "../../pages/BaseInterface.vue"
 
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
@@ -250,10 +249,9 @@ const textarea = ref();
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
-const styleOverrides = inject<StyleOverride[]>("styleOverrides")
-const isChat = ref(styleOverrides.includes('chat'))
-
 const instance = getCurrentInstance();
+
+const isChat = ref(true);
 
 
 const events = computed(() => {
@@ -337,7 +335,7 @@ const messageEvents = computed(() => {
         (event) => ["user_question", "user_answer"].includes(event.type)
     ).map(
         (event) => {
-            var messageClass;
+            let messageClass;
             if (event.type === "user_question") {
                 messageClass = "query-answer-chat query-answer-chat-override";
             }
@@ -535,6 +533,7 @@ export default {
     .input-request-wrapper-chat {
         align-items: flex-end;
         flex-direction: column;
+        margin-bottom: 0.5rem;
         .p-inputgroup {
             width: 100%;
             border: 1px solid var(--yellow-500);
@@ -551,7 +550,6 @@ export default {
                 border-color: var(--yellow-500);
             }
         }
-        margin-bottom: 0.5rem;
     }
 }
 
@@ -634,14 +632,14 @@ h3.query-steps {
     margin-bottom: 0.5rem;
     width: 100%;
     > .p-accordion-tab {
-        > * {
-            max-width: 80%;
-            width: 100%;
-        }
         width: 100%;
         display: flex;
         align-items: center;
         flex-direction: column;
+        > * {
+            max-width: 80%;
+            width: 100%;
+        }
         > .p-toggleable-content > .p-accordion-content {
             border: 2px solid var(--surface-d);
             border-radius: var(--border-radius);

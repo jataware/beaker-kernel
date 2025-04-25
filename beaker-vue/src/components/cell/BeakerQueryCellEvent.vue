@@ -163,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, inject, onBeforeMount, computed, ref, capitalize } from "vue";
+import { inject, onBeforeMount, computed, ref, capitalize } from "vue";
 import { BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel/src/notebook";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";

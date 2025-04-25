@@ -1,22 +1,22 @@
 <template>
     <div class="table-renderer">
-        <DataTable 
+        <DataTable
             :value="processedData.values"
-            paginator 
-            :rows="20" 
+            paginator
+            :rows="20"
             :rowsPerPageOptions="[10, 20, 50]"
             v-if="mimeType.startsWith('text/')"
         >
-            <Column 
+            <Column
                 v-for="column in processedData.columns"
                 :field="column"
                 :header="column"
                 :key="column"
             >
-            
+
             </Column>
         </DataTable>
-        <TabView 
+        <TabView
             v-if="isExcelDocument(mimeType)"
             :pt="{
                 panelContainer: (options) => ({
@@ -24,10 +24,11 @@
                 }),
             }"
         >
-            <TabPanel 
+            <TabPanel
                 v-for="{name, html} in xlsxData"
                 :header="name"
                 :key="name"
+                :value="name"
             >
                 <div v-if="!isLoadingXSLX" class="xlsx-table" v-html="html"></div>
             </TabPanel>
@@ -36,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps, watch, ref, onMounted } from 'vue';
+import { computed, watch, ref, onMounted } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import TabView from 'primevue/tabview';
@@ -60,7 +61,7 @@ type DataTablePayload = {
 }
 
 const isExcelDocument = (mimetype) => (
-    mimetype === 'application/vnd.ms-excel' || 
+    mimetype === 'application/vnd.ms-excel' ||
     mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 );
 
@@ -73,10 +74,10 @@ const processSeparatedValues = (data, rowSeparator, valueSeparator): DataTablePa
             values: [],
         };
     }
-    const rows: string[] = data.split(rowSeparator); 
+    const rows: string[] = data.split(rowSeparator);
     const header: string[] = rows[0].split(valueSeparator);
-    const values = rows.slice(1).map((row) => 
-        row.split(',').reduce((combined, entry, index) => 
+    const values = rows.slice(1).map((row) =>
+        row.split(',').reduce((combined, entry, index) =>
             ({[header[index]]: entry.trim(), ...combined}), {}))
     return {
         columns: header,
@@ -87,7 +88,7 @@ const processSeparatedValues = (data, rowSeparator, valueSeparator): DataTablePa
 const loadXlsx = (data) => {
     const workbook = XLSX.read(data);
     const sheets = workbook.SheetNames.map((sheet) => ({
-        name: sheet, 
+        name: sheet,
         html: XLSX.utils.sheet_to_html(workbook.Sheets[sheet])
     }));
     return sheets;

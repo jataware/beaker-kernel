@@ -136,7 +136,7 @@
 </template>
 <script lang="ts" setup>
 
-import { ref, computed, defineEmits, defineProps } from "vue";
+import { ref, computed } from "vue";
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
@@ -270,14 +270,14 @@ const showRaw = ref(false);
     display: flex;
     flex-direction: row;
     gap: 0.2rem;
+    justify-content: flex-start;
+    color: var(--surface-600);
     span.pi {
         font-size: 0.85rem;
     }
     * {
         margin: auto 0.2rem auto 0;
     }
-    justify-content: flex-start;
-    color: var(--surface-600);
     &:hover {
         cursor: pointer;
         .debug-dropdown-label {

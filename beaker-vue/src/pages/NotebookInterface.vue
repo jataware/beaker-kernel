@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, defineEmits, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
+import { ref, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
 import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel/src';
 import { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
 import { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';

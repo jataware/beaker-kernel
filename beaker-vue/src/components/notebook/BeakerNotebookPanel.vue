@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, inject, computed, defineExpose, defineEmits } from 'vue';
+import { ref, inject, computed } from 'vue';
 import { BeakerSession } from 'beaker-kernel/src';
 import BeakerCell from '../cell/BeakerCell.vue';
 import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
@@ -76,7 +76,7 @@ function handleMoveCell(fromIndex, toIndex) {
  **/
 function handleDragStart(event: DragEvent, beakerCell, index)  {
     if (event.target instanceof HTMLElement && event.dataTransfer !== null && event.target.matches(".drag-handle *")) {
-        var paintTarget = event.target.closest('.beaker-cell');
+        const paintTarget = event.target.closest('.beaker-cell');
 
         event.dataTransfer.dropEffect = 'move';
         event.dataTransfer.effectAllowed = 'move';

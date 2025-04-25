@@ -20,7 +20,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, inject, computed, watch } from "vue";
+import { ref, inject, computed, watch } from "vue";
 import SelectButton from "primevue/selectbutton";
 import { BeakerSession } from "beaker-kernel/src";
 import { BeakerRenderOutput } from "../../renderers";

@@ -27,7 +27,7 @@
 
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, nextTick, inject } from "vue";
+import { ref, nextTick, inject } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';

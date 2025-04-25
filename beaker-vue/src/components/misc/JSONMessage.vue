@@ -142,7 +142,7 @@
 </template>
 <script lang="ts" setup>
 
-import { ref, computed, defineEmits, defineProps } from "vue";
+import { ref, computed } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import VueJsonPretty from 'vue-json-pretty';
@@ -220,14 +220,15 @@ const showParentHeader = ref(false);
     font-size: 0.9rem;
     display: flex;
     flex-direction: row;
+    justify-content: flex-start;
     gap: 0.2rem;
+
     span.pi {
         font-size: 0.85rem;
     }
     * {
         margin: auto 0.2rem auto 0;
     }
-    justify-content: flex-start;
     &:hover {
         cursor: pointer;
         .log-dropdown-label {

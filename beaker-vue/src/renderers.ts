@@ -1,4 +1,4 @@
-import { Component, VueElement, defineComponent, h } from 'vue';
+import { type Component, type VueElement, defineComponent, h } from 'vue';
 
 import { IBeakerRendererOptions, IMimeRenderer, MimetypeString } from 'beaker-kernel/src';
 import { PartialJSONObject } from '@lumino/coreutils';
@@ -6,10 +6,10 @@ import VueJsonPretty from 'vue-json-pretty';
 import { marked } from 'marked';
 import DecapodePreview from './components/render/DecapodePreview.vue';
 import TablePreview from './components/render/TablePreview.vue';
-import { MathJaxTypesetter } from '@jupyterlab/mathjax-extension'
+// import { MathJaxTypesetter } from '@jupyterlab/mathjax-extension'
 
-const mathJaxTypsetter = new MathJaxTypesetter();
-const mathJaxDocument = await mathJaxTypsetter.mathDocument();
+// const mathJaxTypsetter = new MathJaxTypesetter();
+// const mathJaxDocument = mathJaxTypsetter.mathDocument().then;
 
 export interface BeakerRenderOutput {
     component: Component;
@@ -78,8 +78,13 @@ export const LatexRenderer: IMimeRenderer<BeakerRenderOutput> = {
     rank: 40,
     mimetypes: ["text/latex", "application/latex"],
     render: (mimeType: MimetypeString, data: PartialJSONObject, metadata: PartialJSONObject) => {
+
+        // const mathJaxTypsetter = new MathJaxTypesetter();
+        // const mathJaxDocument = await mathJaxTypsetter.mathDocument();
+
         const input = data.toString();
-        const output = mathJaxDocument.convert(input, {display: false}).outerHTML;
+        // const output = mathJaxDocument.convert(input, {display: false}).outerHTML;
+        const output = "DEBUG TESTING DEADBEEF";
         return {
             component: defineComponent(
                 (props) => {

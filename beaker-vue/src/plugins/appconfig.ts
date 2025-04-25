@@ -1,4 +1,4 @@
-import { Plugin, App, reactive, ref, Ref, computed,  } from 'vue';
+import { Plugin, App, reactive, ref, Ref, computed } from 'vue';
 
 declare module 'vue' {
     interface ComponentCustomProperties {
@@ -31,7 +31,7 @@ export const BeakerAppConfigPlugin: Plugin = {
     install(app: App, beakerAppConfig?: any) {
         if (!beakerAppConfig) {
             // Fetch app config from globally defined instance or create fresh, empty version.
-            beakerAppConfig = global['beaker_app'] || {};
+            beakerAppConfig = globalThis['beaker_app'] || {};
         }
         const templateValues = beakerAppConfig.templateStrings || {};
         const assetValues = beakerAppConfig.assets || {};

@@ -67,7 +67,7 @@
                     >
                          <ChevronDownIcon/>
                     </Button>
-                    <OverlayPanel
+                    <Popover
                         class="saveas-overlay"
                         ref="saveAsHoverMenuRef"
                         :popup="true"
@@ -84,7 +84,7 @@
                             />
                             <Button label="Save" @click="saveAs()"/>
                         </InputGroup>
-                    </OverlayPanel>
+                    </Popover>
                 </div>
                 <SplitButton
                     @click="downloadNotebook"
@@ -104,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineEmits, defineProps, computed, inject, ref, withDefaults, capitalize, watch, onBeforeMount, toRaw } from "vue";
+import { computed, inject, ref, capitalize, watch, onBeforeMount, toRaw } from "vue";
 import { PageConfig } from '@jupyterlab/coreutils';
 import { URLExt } from '@jupyterlab/coreutils/src/url';
 import { BeakerSession, BeakerBaseCell } from 'beaker-kernel/src';
@@ -112,14 +112,14 @@ import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
 import contentDisposition from "content-disposition";
 
 import Button from "primevue/button";
-import ChevronDownIcon from 'primevue/icons/chevrondown'
+import ChevronDownIcon from '@primevue/icons/chevrondown'
 import { ButtonProps } from "primevue/button";
 import SplitButton from 'primevue/splitbutton';
 import InputGroup from "primevue/inputgroup";
 import InputText from "primevue/inputtext";
-import OverlayPanel from 'primevue/overlaypanel';
+import Popover from "primevue/popover";
 import Toolbar from "primevue/toolbar";
-import { MenuItem } from "primevue/menuitem";
+import { type MenuItem } from "primevue/menuitem";
 
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
 import { downloadFileDOM, getDateTimeString } from '../../util';

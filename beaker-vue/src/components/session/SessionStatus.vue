@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject, capitalize } from "vue";
+import { computed, inject, capitalize } from "vue";
 import Button from 'primevue/button';
 // import { capitalize } from '../../util';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';

@@ -80,11 +80,11 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject, withDefaults, getCurrentInstance, getCurrentScope } from "vue";
+import { computed, inject, getCurrentInstance, getCurrentScope } from "vue";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { IBeakerTheme } from '../../plugins/theme';
+import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { type IBeakerTheme } from '../../plugins/theme';
 import SessionStatus from "../session/SessionStatus.vue";
 
 interface BeakerHeaderProps {
@@ -158,7 +158,7 @@ const showContextSelection = computed(() => {
 </script>
 
 <script lang="ts">
-import { Component } from 'vue';
+import { type Component } from 'vue';
 export interface NavOption {
     type: "button"|"link";
     href?: string

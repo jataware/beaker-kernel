@@ -75,7 +75,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, watch, computed, defineModel, reactive } from "vue";
+import { ref, watch, computed, reactive } from "vue";
 
 import PDFPreview from "../render/pdf/PDFPreview.vue";
 import Toolbar from "primevue/toolbar";
@@ -194,7 +194,7 @@ const mime = computed(() => props.mimetype ?? fallbackMime.value ?? '')
 const previewAborter = ref<AbortController>();
 
 // contents as what is most useful by guessing at typing
-let contentsWrapper = computed(() => {
+const contentsWrapper = computed(() => {
     const data = contents.value?.contents;
     const category = mimeCategory(mime.value)
     if (category === 'image' || category === 'pdf') {
@@ -242,7 +242,8 @@ const getInfoFromURL = async (url: string): Promise<string[]> => {
 const getContents = async (url: string) => {
     previewAborter.value = new AbortController();
     const response = await fetch(url, {signal: previewAborter.value.signal});
-    let fullContents = [];
+    // const reader = response.body.getReader();
+    const fullContents = [];
     for await (const chunk of response.body) {
         fullContents.push(chunk);
     }

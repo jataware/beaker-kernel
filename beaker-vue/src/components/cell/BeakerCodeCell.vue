@@ -5,7 +5,7 @@
                     class="code-data"
                     :class="{
                         'dark-mode': theme.mode === 'dark',
-                        'code-data-chat': isChat
+                        // 'code-data-chat': true
                     }"
                 >
                     <CodeEditor
@@ -20,11 +20,11 @@
                     />
                 </div>
                 <div class="code-output">
-                    <CodeCellOutput 
-                        :outputs="cell.outputs" 
-                        :busy="isBusy" 
-                        v-show="!hideOutput" 
-                        :dropdown-layout="isChat ?? false"
+                    <CodeCellOutput
+                        :outputs="cell.outputs"
+                        :busy="isBusy"
+                        v-show="!hideOutput"
+                        :dropdown-layout="true"
                     />
                 </div>
                 <div class="state-info">
@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
+import { ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
@@ -64,7 +64,6 @@ import CodeEditor from "../misc/CodeEditor.vue";
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 import { IBeakerTheme } from '../../plugins/theme';
-import { StyleOverride } from "../../pages/BaseInterface.vue"
 
 const props = defineProps([
     "cell",
@@ -78,9 +77,6 @@ const codeEditorRef = ref<InstanceType<typeof CodeEditor>>();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const instance = getCurrentInstance();
-
-const styleOverrides = inject<StyleOverride[]>("styleOverrides") ?? [];
-const isChat = ref(styleOverrides.includes('chat'))
 
 const emit = defineEmits([
     'blur',
@@ -155,7 +151,7 @@ const enter = (position?: "start" | "end" | number) => {
 const exit = () => {
     // Be sure to blur editor even if we don't also refocus below.
     codeEditorRef.value?.blur();
-    let target: HTMLElement = (instance.vnode.el as HTMLElement);
+    const target: HTMLElement = (instance.vnode.el as HTMLElement);
     const selectableParent = findSelectableParent(target);
     selectableParent?.focus();
 }

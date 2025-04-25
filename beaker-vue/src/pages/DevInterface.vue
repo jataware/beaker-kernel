@@ -112,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, watch, computed, inject, toRaw, provide, nextTick, onUnmounted } from 'vue';
+import { ref, watch, computed, inject, toRaw, provide, nextTick, onUnmounted } from 'vue';
 import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer } from 'beaker-kernel/src';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BaseInterface from './BaseInterface.vue';

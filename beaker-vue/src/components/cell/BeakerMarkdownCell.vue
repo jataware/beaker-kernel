@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, onBeforeUnmount} from "vue";
+import { ref, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount} from "vue";
 import { marked } from 'marked';
 import { findSelectableParent } from '../../util';
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
@@ -92,7 +92,7 @@ const exit = () => {
     }
     else {
         codeEditorRef.value?.blur();
-        let target: HTMLElement = (instance.vnode.el as HTMLElement);
+        const target: HTMLElement = (instance.vnode.el as HTMLElement);
         const selectableParent = findSelectableParent(target);
         selectableParent?.focus();
     }

@@ -45,7 +45,7 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, defineEmits, defineProps } from "vue";
+import { ref, computed } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import JSONMessage from "../misc/JSONMessage.vue";

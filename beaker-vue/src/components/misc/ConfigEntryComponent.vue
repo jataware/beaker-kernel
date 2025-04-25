@@ -136,7 +136,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, defineProps, defineModel, watch, inject, onBeforeMount, onMounted, toRaw, getCurrentInstance, computed, withDefaults} from "vue";
+import { ref, watch, inject, onBeforeMount, onMounted, toRaw, getCurrentInstance, computed} from "vue";
 import InlineInput from "./InlineInput.vue";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
@@ -218,7 +218,7 @@ onBeforeMount(() => {
 
 onMounted(() => {
     if (props.schema?.type_str?.startsWith('Choice')) {
-        var sourceObject = props.configObject[props.schema?.choice_source];
+        const sourceObject = props.configObject[props.schema?.choice_source];
         if (sourceObject) {
             watch(sourceObject, () => {
                 if (!sourceObject.map((obj) => obj.name).includes(model.value)) {
@@ -231,7 +231,7 @@ Please make sure to update that value before saving.`,
                         life: 15000,
                     })
                     setTimeout(() => {
-                        var div: HTMLDivElement = instance.vnode.el.parentElement;
+                        const div: HTMLDivElement = instance.vnode.el.parentElement;
                         scrollIntoView(
                             div,
                             {

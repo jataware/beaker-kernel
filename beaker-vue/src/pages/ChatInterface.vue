@@ -145,7 +145,7 @@ import { JupyterMimeRenderer } from 'beaker-kernel/src';
 import { NavOption } from '../components/misc/BeakerHeader.vue';
 
 
-import { defineProps, inject, ref, computed, ComponentInstance, Component, StyleHTMLAttributes, ComputedRef, } from 'vue';
+import { inject, ref, computed, type ComponentInstance, type Component, type StyleHTMLAttributes, type ComputedRef } from 'vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
 import { IBeakerTheme } from '../plugins/theme';

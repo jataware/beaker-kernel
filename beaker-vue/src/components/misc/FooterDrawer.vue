@@ -37,7 +37,7 @@ Execute selected cell                       - Ctrl-Enter
 
 <script setup lang="ts">
 
-import { ref, computed, defineProps, inject } from "vue";
+import { ref, computed, inject } from "vue";
 
 import Menubar from 'primevue/menubar';
 

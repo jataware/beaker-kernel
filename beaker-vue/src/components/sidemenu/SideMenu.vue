@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, defineProps, defineExpose, watch, computed, defineEmits, getCurrentInstance, useSlots, isVNode, nextTick, withDefaults, onUnmounted, onMounted, onBeforeMount } from "vue";
+import { ref, watch, computed, getCurrentInstance, useSlots, isVNode, nextTick, onUnmounted, onMounted, onBeforeMount } from "vue";
 import { type VNode } from "vue";
 
 import Button from 'primevue/button';
@@ -111,9 +111,9 @@ const resizeHistory = ref<DOMRectReadOnly>();
 const instance = getCurrentInstance();
 const panels = ref<VNode[]>();
 
-var minWidth: number;
-var menuWidth: number;
-var closedWidth: number;
+let minWidth: number;
+let menuWidth: number;
+let closedWidth: number;
 
 const expanded = computed(() => {
     return selectedTabIndex.value !== null;
@@ -136,7 +136,7 @@ const isStatic = computed(() => (props.staticSize || (expanded.value && panelWid
 
 const containerStyle = computed(() => {
     if (expanded.value) {
-        var width: string;
+        let width: string;
         if (panelWidth.value !== null) {
             width = `${panelWidth.value}px`;
         }

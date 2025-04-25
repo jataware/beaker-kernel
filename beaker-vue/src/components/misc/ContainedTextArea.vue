@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref, nextTick, inject } from "vue";
+import { ref, nextTick, inject } from "vue";
 import Textarea from 'primevue/textarea';
 
 const props = defineProps({

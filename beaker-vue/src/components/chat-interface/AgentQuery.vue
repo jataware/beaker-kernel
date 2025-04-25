@@ -21,7 +21,7 @@
 
 
 <script setup lang="ts">
-import { defineEmits, ref, nextTick, inject, defineProps } from "vue";
+import { ref, nextTick, inject } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import { BeakerSession } from 'beaker-kernel/src';

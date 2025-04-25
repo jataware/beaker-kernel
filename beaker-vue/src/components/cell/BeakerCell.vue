@@ -37,7 +37,7 @@
                     icon="pi pi-ellipsis-v"
                     @click.prevent="hoverMenuRef.show($event);"
                 />
-                <OverlayPanel
+                <Popover
                     class="menu-overlay"
                     ref="hoverMenuRef"
                     :cell-id="cell.id"
@@ -45,7 +45,7 @@
                     @pointerleave="overlayMenuHoverHandler"
                 >
                     <div v-tooltip.left="'Change Cell Type'">
-                        <Dropdown
+                        <Select
                             :name="`${cell.id}-celltype`"
                             class="cell-type-selector overlay-menu-button"
                             :model-value="cell.cell_type"
@@ -64,7 +64,7 @@
                                     <span>{{ slotProps.option }}</span>
                                 </div>
                             </template>
-                        </Dropdown>
+                        </Select>
                     </div>
                     <Button
                         v-tooltip.left="'Execute cell'"
@@ -101,7 +101,7 @@
                         text
                         label="✂"
                     /> -->
-                </OverlayPanel>
+                </Popover>
             </div>
         </slot>
         </div>
@@ -115,14 +115,14 @@
 
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, inject, computed } from "vue";
+import { ref, inject, computed } from "vue";
 import Button from 'primevue/button';
 import DraggableMarker from './DraggableMarker.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 import { type IBeakerCell } from "beaker-kernel/src";
-import Dropdown from 'primevue/dropdown';
-import OverlayPanel from 'primevue/overlaypanel';
+import Select from "primevue/select";
+import Popover from "primevue/popover";
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 interface BeakerCellProps {
@@ -399,7 +399,7 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
 }
 
 .menu-overlay {
-    .p-overlaypanel-content{
+    .p-popover-content{
         display: flex;
         flex-direction: column;
         padding: 0.8rem;

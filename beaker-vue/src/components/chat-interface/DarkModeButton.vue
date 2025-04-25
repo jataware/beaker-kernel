@@ -10,7 +10,7 @@
 
 <script setup>
 
-import { defineProps, computed, inject } from "vue";
+import { computed, inject } from "vue";
 import Button from 'primevue/button';
 const props = defineProps([
     "toggleDarkMode",

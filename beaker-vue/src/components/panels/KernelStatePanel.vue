@@ -11,7 +11,7 @@
 </template>
 
 <script lang="ts" setup>
-import { defineProps, computed } from "vue";
+import { computed } from "vue";
 
 import Tree from "primevue/tree"
 import { TreeNode } from "primevue/treenode";
@@ -19,14 +19,14 @@ import { TreeNode } from "primevue/treenode";
 
 type BeakerKernelStateNode = {
     label: string,
-    children?: BeakerKernelStateNode[]
-    key?: string
+    children?: BeakerKernelStateNode[],
+    key: string,
 }
-type BeakerKernelStateVariable = {[key in string]: BeakerKernelStateNode}
+type BeakerKernelStateVariable = {[key: string]: BeakerKernelStateNode}
 type BeakerKernelState = {
     'x-application/beaker-subkernel-state': {
         'application/json': {
-            [key in string]: BeakerKernelStateVariable
+            [key: string]: BeakerKernelStateVariable
         }
     }
 }
@@ -37,15 +37,15 @@ const props = defineProps<{
 
 const data = computed(() => props?.data?.["x-application/beaker-subkernel-state"]?.["application/json"])
 
-const treeData = computed<{[header in string]: TreeNode[]}>(() => {
-    const source: {[key in string]: BeakerKernelStateVariable} = {...data.value};
+const treeData = computed<{[header: string]: TreeNode[]}>(() => {
+    const source: {[key: string]: BeakerKernelStateVariable} = {...data.value};
     // primevue reactivity requires a unique key on each dropdown - we can use the label text.
     const attachKeysToNodes = (node: BeakerKernelStateNode): BeakerKernelStateNode => {
         node.children = node?.children?.map((child) => attachKeysToNodes(child))
         node.key = node.label;
         return node;
     }
-    let keyedNodes: {[header in string]: TreeNode[]} = {}
+    const keyedNodes: {[header: string]: TreeNode[]} = {}
     for (const [header, symbols] of Object.entries(source)) {
         keyedNodes[header] = []
 
@@ -81,21 +81,21 @@ const treeData = computed<{[header in string]: TreeNode[]}>(() => {
     }
     /* only if child and also leaf */
     ul.p-treenode-children li.p-treenode-leaf {
+        margin-left: 1rem;
+        margin-bottom: 0;
         button.p-tree-toggler {
             display: none;
         }
-        margin-left: 1rem;
-        margin-bottom: 0;
     }
     li.p-treenode {
         margin-bottom: 1rem;
         .p-treenode-content {
+            padding: 0;
             .p-tree-toggler {
                 margin-right: 0;
                 width: 1rem;
                 height: 1rem;
             }
-            padding: 0;
         }
     }
 }
