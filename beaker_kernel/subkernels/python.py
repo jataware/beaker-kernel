@@ -103,7 +103,7 @@ for _name, _value in dict(locals()).items():
                     _safe_value = _value[:99]
                     if len(_value) > 99:
                         _truncated = True
-                except TypeError:
+                except Exception:
                     pass
 
                 _vardetails = {

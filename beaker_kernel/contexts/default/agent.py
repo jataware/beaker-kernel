@@ -23,11 +23,10 @@ class DefaultAgent(BeakerAgent):
         """
         Generates a joke for the user.
 
-
         Args:
-            topic (str): A topic that the joke should be about
+            topic (str): A topic that the joke should be about. If no topic is provided, use the default value of "any".
         Returns:
-            str: The joke
+            str: The text of the joke, possibly with or without formatting.
         """
         code = """
 import requests

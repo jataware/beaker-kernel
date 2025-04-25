@@ -67,6 +67,10 @@
                         }"
                     />
                 </SideMenuPanel>
+                <SideMenuPanel icon="pi pi-comments" label="Chat History">
+                    <ChatHistoryPanel :chat-history="chatHistory"/>
+                </SideMenuPanel>
+
                 <SideMenuPanel
                     id="datasources" label="Datasources" icon="pi pi-database"
                     v-if="datasources.length > 0"
@@ -128,6 +132,7 @@ import ChatPanel from '../components/chat-interface/ChatPanel.vue';
 import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 import InfoPanel from '../components/panels/InfoPanel.vue';
+import {ChatHistoryPanel, ChatHistoryProps, IChatHistory} from '../components/panels/ChatHistoryPanel';
 
 import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
@@ -169,6 +174,7 @@ const contextPreviewData = ref<any>();
 const debugLogs = ref<object[]>([]);
 const datasources = ref([]);
 
+const chatHistory = ref<IChatHistory>()
 
 type FilePreview = {
     url: string,
@@ -295,6 +301,9 @@ const iopubMessage = (msg) => {
             body: msg.content.body,
             timestamp: msg.header.date,
         });
+    } else if (msg.header.msg_type === "chat_history") {
+        chatHistory.value = msg.content;
+        console.log(msg.content);
     }
     else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
         var incomingDatasources;

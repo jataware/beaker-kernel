@@ -78,6 +78,9 @@
                         }"
                     />
                 </SideMenuPanel>
+                <SideMenuPanel icon="pi pi-comments" label="Chat History">
+                    <ChatHistoryPanel :chat-history="chatHistory"/>
+                </SideMenuPanel>
                 <SideMenuPanel
                     id="datasources" label="Datasources" icon="pi pi-database"
                     v-if="datasources.length > 0"
@@ -145,7 +148,7 @@ import { BeakerSessionComponentType } from '../components/session/BeakerSession.
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
+import { JavascriptRenderer, DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
 import { atStartOfInput, atEndOfInput } from '../util'
 // import { _ } from '../util/whitelabel';
 import { NavOption } from '../components/misc/BeakerHeader.vue';
@@ -162,6 +165,7 @@ import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
+import {ChatHistoryPanel, ChatHistoryProps, IChatHistory} from '../components/panels/ChatHistoryPanel';
 
 // context preview
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
@@ -200,6 +204,7 @@ const props = defineProps([
 
 const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
+    JavascriptRenderer,
     JSONRenderer,
     LatexRenderer,
     MarkdownRenderer,
@@ -220,6 +225,7 @@ const rawMessages = ref<object[]>([])
 const saveInterval = ref();
 const copiedCell = ref<IBeakerCell | null>(null);
 const saveAsFilename = ref<string>(null);
+const chatHistory = ref<IChatHistory>()
 
 const contextSelectionOpen = ref(false);
 const isMaximized = ref(false);
@@ -307,6 +313,9 @@ const iopubMessage = (msg) => {
             body: msg.content.body,
             timestamp: msg.header.date,
         });
+    } else if (msg.header.msg_type === "chat_history") {
+        chatHistory.value = msg.content;
+        console.log(msg.content);
     }
     else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
         var incomingDatasources;

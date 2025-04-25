@@ -104,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineEmits, defineProps, computed, inject, ref, withDefaults, capitalize, watch, onBeforeMount } from "vue";
+import { defineEmits, defineProps, computed, inject, ref, withDefaults, capitalize, watch, onBeforeMount, toRaw } from "vue";
 import { PageConfig } from '@jupyterlab/coreutils';
 import { URLExt } from '@jupyterlab/coreutils/src/url';
 import { BeakerSession, BeakerBaseCell } from 'beaker-kernel/src';
@@ -149,13 +149,13 @@ const emit = defineEmits([
     "open-file",
 ])
 
-export interface Props {
+interface BeakerNotebookToolbarProps {
     defaultSeverity?: ButtonProps["badgeSeverity"];
     saveAvailable?: boolean;
     saveAsFilename?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<BeakerNotebookToolbarProps>(), {
     defaultSeverity: "info",
     saveAvailable: false,
 });
@@ -237,7 +237,7 @@ const resetSaveAsFilename = () => {
 
 const resetNotebook = async () => {
     if (window.confirm(`This will reset your entire session, clearing the notebook and removing any updates to the environment. Proceed?`)) {
-        session.reset();
+        toRaw(session).reset();
         saveAsFilename.value = undefined;
         emit("notebook-saved", undefined);
         if (notebook.cellCount <= 0) {

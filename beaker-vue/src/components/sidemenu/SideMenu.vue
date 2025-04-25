@@ -56,7 +56,7 @@ import SideMenuPanel from "./SideMenuPanel.vue";
 export type MenuPosition = "right" | "left";
 export type HighlightType = "full" | "shadow" | "line";
 
-export interface Props {
+interface SideMenuProps {
     style?: {[key: string]: string};
     expanded?: boolean,
     position?: MenuPosition;
@@ -69,7 +69,7 @@ export interface Props {
     maximized?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<SideMenuProps>(), {
     style: () => {return {}},
     expanded: true,
     highlight: "full",
@@ -467,7 +467,7 @@ defineExpose({
 
 button.menu-button {
     background-color: transparent;
-    color: var(--primary-800);
+    color: var(--primary-300);
     border-color: transparent;
     aspect-ratio: 1;
     width: 100%;

@@ -3,15 +3,15 @@
         <div
             class="config-option dataclass"
             :type-str="dataclassItemSchema?.type_str"
-            v-for="(dataclassItemSchema, dataclassItemKey) in (schema.fields as any)"
+            v-for="(dataclassItemSchema, dataclassItemKey) in (schema.fields)"
             :key="`${keyValue}-${dataclassItemKey}`"
         >
             <label :for="(dataclassItemKey as unknown as string)">{{ dataclassItemKey }}</label>
             <small>{{ dataclassItemSchema.description }}</small>
             <ConfigEntryComponent
                 :schema="dataclassItemSchema"
-                :name="dataclassItemKey"
-                :key-value="keyValue?.split('.').concat(dataclassItemKey).join('.')"
+                :name="(dataclassItemKey as unknown as string)"
+                :key-value="keyValue?.split('.').concat((dataclassItemKey as unknown as string)).join('.')"
                 :config-object="configObject"
                 v-model="model[dataclassItemKey]"
             />
@@ -91,6 +91,22 @@
         />
         </div>
     </template>
+    <template v-else-if="schema?.type_str == 'int' && typeof(model) === 'number'">
+        <div class="horizontal-flex">
+        <span class="label" v-if="label">
+            {{ label }}
+        </span>
+        <InputNumber
+            :id="keyValue"
+            style="padding: 2px 8px;"
+            :class="{dirty}"
+            :name="keyValue"
+            v-model="model"
+            :min="schema?.metadata?.extra?.min"
+            :max="schema?.metadata?.extra?.max"
+        />
+        </div>
+    </template>
     <template v-else-if="schema?.type_str?.startsWith('Table') && Array.isArray(model)">
         <Panel v-for="(record, index) in model" :key="`${keyValue}-${record.name}`" toggleable
             :class="{dirty: !originalValue.map(obj => obj.name).includes(record.name)}"
@@ -120,23 +136,39 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, defineProps, defineModel, watch, inject, onBeforeMount, onMounted, toRaw, getCurrentInstance, computed, } from "vue";
+import { ref, defineProps, defineModel, watch, inject, onBeforeMount, onMounted, toRaw, getCurrentInstance, computed, withDefaults} from "vue";
 import InlineInput from "./InlineInput.vue";
+import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Panel from "primevue/panel";
 import InputSwitch from "primevue/inputswitch";
 import Button from "primevue/button";
 import scrollIntoView from "scroll-into-view-if-needed";
 import ToggleButton from "primevue/togglebutton";
+import { IConfigDefinitions, ISchema } from "../panels/ConfigPanel.vue";
 
-const props = defineProps([
-    "name",
-    "schema",
-    "configObject",
-    "keyValue",
-    "label",
-    "sensitive",
-]);
+export interface ConfigEntryComponentProps {
+    name?: string;
+    schema: ISchema;
+    configObject: IConfigDefinitions;
+    keyValue: string;
+    label?: string;
+    sensitive?: boolean;
+}
+
+const props = withDefaults(defineProps<ConfigEntryComponentProps>(),
+    {
+        sensitive: false,
+    }
+);
+// [
+//     "name",
+//     "schema",
+//     "configObject",
+//     "keyValue",
+//     "label",
+//     "sensitive",
+// ]);
 
 const instance = getCurrentInstance();
 const model = defineModel();

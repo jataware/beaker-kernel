@@ -24,11 +24,11 @@ import { ref, defineEmits, inject, defineProps, withDefaults } from "vue";
 import Button from 'primevue/button';
 import { ButtonProps } from "primevue/button";
 
-export interface Props {
+interface OpenNotebookButtonProps {
     severity?: ButtonProps["badgeSeverity"];
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<OpenNotebookButtonProps>(), {
     severity: "info",
 });
 
