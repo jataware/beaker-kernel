@@ -1,13 +1,4 @@
 <template>
-  <!-- <h1>Hello App!</h1>
-  <p>
-    <strong>Current route path:</strong> {{ $route.fullPath }}
-  </p>
-  <nav>
-    <RouterLink to="/">Go to Home</RouterLink>
-    <RouterLink to="/notebook">Go to Notebook</RouterLink>
-    <RouterLink to="/chat">Go to Chat</RouterLink>
-  </nav> -->
   <main>
     <RouterView :config="config"/>
   </main>
