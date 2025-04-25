@@ -626,7 +626,7 @@ class BeakerKernel(KernelProxyManager):
             context_slug = context_slugs_by_class.get(context_class, "Not Found")
             full_context_class = f"{context_class.__module__}.{context_class.__name__}"
             context_config = getattr(self.context, "config", {}).get("context_info", None)
-            context_info = self.context.get_info()
+            context_info = await self.context.get_info()
             language_slug = self.context.subkernel.SLUG
             subkernel_name = self.context.subkernel.KERNEL_NAME
         else:
