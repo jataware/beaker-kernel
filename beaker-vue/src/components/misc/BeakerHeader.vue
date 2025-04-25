@@ -87,7 +87,7 @@ import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type IBeakerTheme } from '../../plugins/theme';
 import SessionStatus from "../session/SessionStatus.vue";
 
-interface BeakerHeaderProps {
+export interface BeakerHeaderProps {
     title: string;
     titleExtra?: string;
     nav?: any[];

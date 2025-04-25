@@ -1,10 +1,13 @@
-import { fileURLToPath, URL } from 'node:url'
+import { fileURLToPath, URL } from 'node:url';
+import { dirname, resolve } from 'node:path';
 
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import vueJsx from '@vitejs/plugin-vue-jsx'
-import vueDevTools from 'vite-plugin-vue-devtools'
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import vueJsx from '@vitejs/plugin-vue-jsx';
+import vueDevTools from 'vite-plugin-vue-devtools';
 import topLevelAwait from 'vite-plugin-top-level-await';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -30,14 +33,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      'node-fetch': fileURLToPath(new URL('./node_modules/isomorphic-fetch', import.meta.url)),
       // 'path': fileURLToPath(new URL('./node_modules/path-browserify', import.meta.url)),
     },
   },
-  define: {
-    // global: 'window',
-  },
   build: {
     target: 'esnext',
+    assetsDir: 'static/',
+    outDir: 'dist/html/',
   },
   optimizeDeps: {
     esbuildOptions: {

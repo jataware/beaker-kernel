@@ -5,6 +5,11 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/',
+      name: 'notebook',
+      component: () => import('../pages/NotebookInterface.vue')
+    },
+    {
       path: '/notebook',
       name: 'notebook',
       component: () => import('../pages/NotebookInterface.vue')

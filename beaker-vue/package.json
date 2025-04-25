@@ -13,6 +13,15 @@
     "lint": "eslint . --fix",
     "format": "prettier --write src/"
   },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "./dist",
+    "./src"
+  ],
+  "repository": {
+    "url": "https://github.com/jataware/beaker-kernel"
+  },
   "bundleDependencies": [
     "xlsx"
   ],
