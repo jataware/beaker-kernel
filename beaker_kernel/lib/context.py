@@ -97,8 +97,9 @@ class BeakerContext:
                     logger.warning(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
 
     def __init_subclass__(cls):
-        if hasattr(cls, "auto_context"):
-            cls._auto_context = cls.auto_context
+        subclass_autocontext = getattr(cls, "auto_context", None)
+        if not (subclass_autocontext is None or subclass_autocontext is BeakerContext.auto_context):
+            cls._auto_context = subclass_autocontext
             cls.auto_context = BeakerContext.auto_context
 
     @property
