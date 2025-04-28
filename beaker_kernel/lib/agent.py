@@ -118,3 +118,6 @@ class BeakerAgent(ReActAgent):
             str: The user's response to the query.
         """
         return await self.context.beaker_kernel.prompt_user(query, parent_message=react_context.get("message", None))
+
+# Provided for backwards compatibility
+BaseAgent = BeakerAgent
