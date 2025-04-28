@@ -41,6 +41,7 @@
     "@jupyterlab/rendermime": "^4.4.1",
     "@plutojl/lang-julia": "^0.12.1",
     "@primevue/icons": "^4.3.3",
+    "@primevue/themes": "^4.3.3",
     "ansi-html-community": "^0.0.8",
     "beaker-kernel": "^1.10.1",
     "buffer": "^6.0.3",

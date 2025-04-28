@@ -1,5 +1,3 @@
-// import './assets/main.css'
-
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
@@ -14,13 +12,17 @@ import { vAutoScroll } from '@/directives/autoscroll';
 import BeakerThemePlugin from '@/plugins/theme';
 import BeakerAppConfigPlugin from '@/plugins/appconfig';
 
+import Aura from '@primevue/themes/aura';
+
 import App from './App.vue'
 import router from './router'
+
 
 import 'primeicons/primeicons.css';
 import './index.scss';
 
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';
+import { options } from 'marked';
 
 const baseUrl = PageConfig.getBaseUrl();
 
@@ -32,7 +34,20 @@ const app = createApp(App, {config})
 
 app.use(createPinia())
 app.use(router)
-app.use(PrimeVue);
+app.use(PrimeVue, {
+    theme: {
+        preset: Aura,
+        options: {
+            prefix: '',
+            darkModeSelector: 'none',
+            cssLayer: {
+                name: 'primevue',
+                order: 'primevue, beaker'
+            }
+        }
+
+    }
+});
 app.use(ToastService);
 app.use(ConfirmationService);
 app.use(DialogService);
