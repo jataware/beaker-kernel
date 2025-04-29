@@ -21,9 +21,8 @@
 
     "paths": {
       "@/*": ["./src/*"],
-      "path": ["./node_modules/path-browserify",]
-    },
-
+      "path": ["./node_modules/path-browserify"]
+    }
   },
 
   "include": [
@@ -37,7 +36,7 @@
     "src/plugins/**/*.ts",
     "src/plugins/**/*.tsx",
     "src/plugins/**/*.vue",
-    "src/util/**/*.ts",
+    "src/util/**/*.ts"
   ],
   "exclude": [
     "node_modules/**"

@@ -6,7 +6,6 @@ import * as Kernel from '@jupyterlab/services/lib/kernel/kernel';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 
 import { IBeakerShellMessage, BeakerCodeCell, IBeakerIOPubMessage, IBeakerCell, BeakerNotebook, BeakerNotebookContent, BeakerBaseCell } from './notebook';
-import { INotebookModel } from '@jupyterlab/notebook';
 
 
 // Lower case states to match the naming in the messages.

@@ -10,12 +10,14 @@ from dataclasses import is_dataclass
 from typing import get_origin, get_args
 from dataclasses import is_dataclass, asdict
 from collections.abc import Mapping, Collection
+from pathlib import Path
 from typing import get_origin, get_args, GenericAlias, Union, Generic, Generator, Optional
 from types import UnionType
 
 from jupyter_server.auth.decorator import authorized
 from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
+from jupyterlab_server import LabServerApp
 from tornado import web, httputil
 from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTPError
 
@@ -88,8 +90,8 @@ class PageHandler(StaticFileHandler):
     """
     async def get(self, path: str, include_body: bool = True) -> None:
 
-        url_path = self.parse_url_path(path)
-        absolute_path = self.get_absolute_path(self.root, url_path)
+        # Always serve index.html as routing is performed in app.
+        absolute_path = self.get_absolute_path(self.root, "index.html")
         try:
             validated_path = self.validate_absolute_path(self.root, absolute_path)
         except HTTPError as e:
@@ -101,17 +103,16 @@ class PageHandler(StaticFileHandler):
                 raise
 
         # If no session is provided on a root request, generate a session uuid and redirect to it
-        if validated_path.endswith('.html'):
-            session_id = self.get_query_argument("session", None)
-            if not session_id:
-                session_id = str(uuid.uuid4())
-                to_url = httputil.url_concat(
-                    f"{'/' if path.startswith('/') else '' }{path}",
-                    {"session": session_id},
-                )
-                return self.redirect(to_url, permanent=False)
-            path = os.path.relpath(validated_path, self.root)
-            self.absolute_path = validated_path
+        session_id = self.get_query_argument("session", None)
+        if not session_id:
+            session_id = str(uuid.uuid4())
+            to_url = httputil.url_concat(
+                f"{'/' if path.startswith('/') else '' }{path}",
+                {"session": session_id},
+            )
+            return self.redirect(to_url, permanent=False)
+        path = os.path.relpath(validated_path, self.root)
+        self.absolute_path = validated_path
 
         # Ensure a proper xsrf cookie value is set.
         cookie_name = self.settings.get("xsrf_cookie_name", "_xsrf")
@@ -508,3 +509,44 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
             "token": config.jupyter_token,
         }
         return self.write(json.dumps(output))
+
+
+def register_handlers(app: LabServerApp):
+    pages = []
+    default_page_filename = "index.html"
+
+    beaker_app: BeakerApp = app.extension_config.get("app", None)
+    if beaker_app and beaker_app.asset_dir:
+        if os.path.isdir(beaker_app.asset_dir):
+            app.handlers.append((f"/assets/{beaker_app.slug}/(.*)", StaticFileHandler, {"path": beaker_app.asset_dir}))
+
+    route_file = Path(app.ui_path) / "routes.json"
+    if route_file.exists():
+        routes: dict[str, dict] = json.loads(route_file.read_text())
+    else:
+        routes = []
+
+    for path, route in routes.items():
+        name = route["name"]
+        path = path.strip('/')
+        if path.startswith(('_', '.')):
+            continue
+        if beaker_app:
+            if name in beaker_app.pages:
+                pages.append(path)
+                if getattr(beaker_app._pages[path], "default", False):
+                    default_page_filename = path
+        else:
+            pages.append(path)
+    page_regex = rf"/({'|'.join(pages)})"
+
+    app.handlers.append(("/contexts", ContextHandler))
+    app.handlers.append(("/config/control", ConfigController))
+    app.handlers.append(("/config", ConfigHandler))
+    app.handlers.append(("/stats", StatsHandler))
+    app.handlers.append(("/appconfig.js", AppConfigHandler))
+    app.handlers.append((r"/(favicon.ico|beaker.svg)$", StaticFileHandler, {"path": Path(app.ui_path)}))
+    app.handlers.append((r"/summary", SummaryHandler))
+    app.handlers.append((r"/export/(?P<format>\w+)", ExportAsHandler)),
+    app.handlers.append((r"/((?:static|themes)/.*)", StaticFileHandler, {"path": Path(app.ui_path)})),
+    app.handlers.append((page_regex, PageHandler, {"path": app.ui_path, "default_filename": default_page_filename}))

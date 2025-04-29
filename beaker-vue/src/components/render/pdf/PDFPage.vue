@@ -6,15 +6,20 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { getDocument } from 'pdfjs-dist';
+// import { getDocument } from 'pdfjs-dist';
+const pdfjs = await import("pdfjs-dist/build/pdf");
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.mjs",
+    import.meta.url
+).toString();
 
-const loadPdfjs = async function () {
-    const pdfjs = await import("pdfjs-dist/build/pdf");
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.mjs",
-        import.meta.url
-    ).toString();
-};
+// const loadPdfjs = async function () {
+//     const pdfjs = await import("pdfjs-dist/build/pdf");
+//     pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+//         "pdfjs-dist/build/pdf.worker.mjs",
+//         import.meta.url
+//     ).toString();
+// };
 
 const props = defineProps([
     "sidebarCallback",
@@ -63,12 +68,12 @@ const loadPdf = async () => {
         const fileReader = new FileReader();
         fileReader.readAsArrayBuffer(props.url);
         fileReader.onload = async (event) => {
-            pdfDoc = await getDocument({ data: event.target.result }).promise;
+            pdfDoc = await pdfjs.getDocument({ data: event.target.result }).promise;
             pagesRef.value = pdfDoc?._pdfInfo?.numPages;
             renderPage(props.page);
         };
     } else if (typeof props.url === 'string') {
-        pdfDoc = await getDocument(props.url).promise;
+        pdfDoc = await pdfjs.getDocument(props.url).promise;
         pagesRef.value = pdfDoc?._pdfInfo?.numPages;
         renderPage(props.page);
     }

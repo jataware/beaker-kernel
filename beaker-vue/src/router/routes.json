@@ -1,0 +1,27 @@
+{
+    "/": {
+      "path": "/",
+      "name": "home",
+      "component": "../pages/NotebookInterface.vue"
+    },
+    "/notebook": {
+      "path": "/notebook",
+      "name": "notebook",
+      "component": "../pages/NotebookInterface.vue"
+    },
+    "/chat": {
+      "path": "/chat",
+      "name": "chat",
+      "component": "../pages/ChatInterface.vue"
+    },
+    "/dev": {
+      "path": "/dev",
+      "name": "dev",
+      "component": "../pages/DevInterface.vue"
+    },
+    "/admin": {
+      "path": "/admin",
+      "name": "admin",
+      "component": "../pages/BeakerAdmin.vue"
+    }
+}
