@@ -9,7 +9,7 @@
             <!-- <h4 class="agent-outputs">Outputs:</h4> -->
             <Accordion :multiple="true" :active-index="meaningfulOutputs">
                 <AccordionTab
-                    v-for="[index, child] in filteredParentEntries"
+                    v-for="[index, child] in availableOutputs"
                     :key="index"
                     :pt="{
                         header: {
@@ -283,13 +283,11 @@ const hasOutputData = (child) => {
     );
 };
 
-// TODO this worked, but I'd rather show a "no outputs" message if there are no outputs than hide it
-// Create a filtered computed property
-const filteredParentEntries = computed(() => {
+const availableOutputs = computed(() => {
     if (!parentEntries.value) return [];
     
-    // Convert entries iterator to array and filter it
     const entriesArray = Array.from(parentEntries.value);
+    // Only display > output if there are outputs
     return entriesArray.filter(([_, child]) => hasOutputData(child));
 });
 

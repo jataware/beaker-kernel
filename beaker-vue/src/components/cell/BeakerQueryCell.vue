@@ -312,7 +312,7 @@ const queryStatus = computed<QueryStatuses>(() => {
 
 watch(queryStatus, (newStatus, oldStatus) => {
      // Auto-expand thoughts the first time a cell transitions to Running
-     if (newStatus === QueryStatuses.Running && oldStatus !== QueryStatuses.Running && !hasExpandedThoughts.value) {
+     if (isChat.value && newStatus === QueryStatuses.Running && oldStatus !== QueryStatuses.Running && !hasExpandedThoughts.value) {
         expandThoughts();
         hasExpandedThoughts.value = true;
      }
