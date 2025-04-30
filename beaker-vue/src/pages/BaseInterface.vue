@@ -422,7 +422,7 @@ main {
     position: relative;
     display: grid;
     grid-template: "left-panel center-panel right-panel";
-    // grid-template-columns: var(--columns);
+    grid-template-columns: var(--columns);
     grid-template-rows: 100%;
     background-color: var(--surface-0);
     overflow: visible hidden;
@@ -446,7 +446,6 @@ footer {
     grid-area: center-panel;
     border: 1px solid;
     border-color: var(--surface-border);
-    // overflow-y: auto;
 }
 
 #center-panel-chat-override {

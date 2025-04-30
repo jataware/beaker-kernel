@@ -287,11 +287,6 @@ const taggedCellEvents = computed(() => {
 });
 
 const expandThoughts = () => {
-    // session is already injected...
-    // const sessionId = session.sessionId;
-    // console.log("sessionID", sessionId);
-    // console.log("session.notebook.selectedCell", session.notebook.selectedCell);
-    // Toggle selection: if already selected, deselect it by setting to undefined
     if (session.notebook.selectedCell === cell.value) {
         session.notebook.selectedCell = undefined;
     } else {
