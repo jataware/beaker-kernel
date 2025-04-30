@@ -7,18 +7,26 @@
       <div class="filter-controls">
         <div class="filter-button-group">
 
-          <Button label="Scroll to Message" outlined @click="scrollToMessage" class="p-button-sm" />
+          <Button label="Scroll To Query" outlined @click="scrollToMessage" class="p-button-sm" />
           <!-- <Button label="Unselect Cell" outlined @click="unselectCell" class="p-button-sm" /> -->
 
           <ToggleButton v-model="showCodeCells" outlined on-label="Hide Code" off-label="Show Code"
-            on-icon="pi pi-eye-slash" off-icon="pi pi-eye" class="p-button-sm filter-button" />
+            on-icon="pi pi-eye-slash" off-icon="pi pi-eye" class="p-button-sm filter-button" 
+            :disabled="shouldShowNoThoughtsPlaceholder"
+            @click="handleCodeToggle" />
 
           <ToggleButton v-model="showThoughtCells" outlined on-label="Hide Thoughts" off-label="Show Thoughts"
-            on-icon="pi pi-eye-slash" off-icon="pi pi-eye" class="p-button-sm filter-button" />
+            on-icon="pi pi-eye-slash" off-icon="pi pi-eye" class="p-button-sm filter-button" 
+            :disabled="shouldShowNoThoughtsPlaceholder"
+            @click="handleThoughtToggle" />
         </div>
       </div>
       <div class="events-scroll-container">
+        <div v-if="shouldShowNoThoughtsPlaceholder" class="no-thoughts-message">
+          <em>No Thought details available for this agent query.</em>
+        </div>
         <BeakerQueryCellEvent 
+          v-else
           v-for="(event, eventIndex) in filteredCellEvents"
           :key="eventIndex" 
           :event="event" 
@@ -32,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, computed, ref, defineEmits } from 'vue';
+import { defineProps, computed, ref, defineEmits, toRaw } from 'vue';
 import ProgressBar from 'primevue/progressbar';
 import ToggleButton from 'primevue/togglebutton';
 import Button from 'primevue/button';
@@ -50,6 +58,17 @@ const emit = defineEmits<{
 const showCodeCells = ref(true);
 const showThoughtCells = ref(true);
 
+const handleCodeToggle = () => {
+  if (!showCodeCells.value) {
+    showThoughtCells.value = true;
+  }
+};
+const handleThoughtToggle = () => {
+  if (!showThoughtCells.value) {
+    showCodeCells.value = true;
+  }
+};
+
 const isSelectedCellInProgress = computed(() => {
   return props.selectedCell.status === 'busy';
 });
@@ -63,7 +82,6 @@ const selectedCellEvents = computed(() => {
 });
 
 const scrollToMessage = () => {
-  console.log("scrollToMessage");
   emit('scrollToMessage');
 }
 
@@ -95,6 +113,18 @@ const filteredCellEvents = computed(() => {
   });
 });
 
+const shouldShowNoThoughtsPlaceholder = computed(() => {
+  if (!selectedCellEvents.value || isSelectedCellInProgress.value) {
+    return false;
+  }
+
+  // Check if query is complete (idle) and has only a response event
+  const hasOnlyResponse = selectedCellEvents.value.length === 1 && 
+    selectedCellEvents.value[0].type === 'response';
+
+  return props.selectedCell.status === 'idle' && hasOnlyResponse;
+});
+
 </script>
 
 <style scoped lang="scss">
@@ -115,6 +145,11 @@ const filteredCellEvents = computed(() => {
   color: #043d75;
 }
 
+.no-thoughts-message {
+  text-align: center;
+  padding: 1rem;
+  color: var(--text-color-secondary);
+}
 
 .filter-controls {
     display: flex;
