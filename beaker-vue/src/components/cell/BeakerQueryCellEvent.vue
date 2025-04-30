@@ -105,7 +105,8 @@
                 :class="{
                     selected: isCodeCellSelected,
                     'query-event-code-cell': true,
-                    'code-cell-collapsed': expandedCodeCell
+                    'code-cell-collapsed': expandedCodeCell && props.isChat,
+                    'chat': props.isChat
                 }"
                 :hide-output="false"
                 ref="codeCellRef"
@@ -119,6 +120,7 @@
                 }"
             />
             <Button 
+                v-if="props.isChat"
                 :icon="!expandedCodeCell ? 'pi pi-window-minimize' : 'pi pi-expand'" 
                 size="small"
                 class="code-cell-toggle-button" 
@@ -194,6 +196,7 @@ const expandedCodeCell = ref(true);
 const props = defineProps([
     'event',
     'parentQueryCell',
+    'isChat',
 ]);
 
 onBeforeMount(() => {
@@ -346,8 +349,12 @@ defineExpose({
     font-size: 0.75rem;
     padding-top: 1rem;
     padding-bottom: 0.25rem;
-    max-height: 35rem;
-    overflow-y: auto;
+}
+
+
+.chat {
+    max-height: 38rem;
+    overflow-y: hidden;
 }
 
 .output-hide-text {

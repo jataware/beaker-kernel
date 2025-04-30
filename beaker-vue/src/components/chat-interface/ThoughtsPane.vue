@@ -30,6 +30,7 @@
           v-for="(event, eventIndex) in filteredCellEvents"
           :key="eventIndex" 
           :event="event" 
+          :is-chat="true"
         />
 
         <ProgressBar v-if="isSelectedCellInProgress" mode="indeterminate"
