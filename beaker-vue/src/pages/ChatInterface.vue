@@ -92,6 +92,7 @@
                 position="right"
                 highlight="line"
                 :expanded="false"
+                @panel-hide="unselectCell"
             >
                 <SideMenuPanel
                     label="Thoughts"
@@ -215,7 +216,6 @@ const beakerSession = computed(() => {
 
 const unselectCell = () => {
     beakerSession.value.session.notebook.selectedCell = undefined;
-    rightSideMenuRef.value.selectPanel('Preview');
 }
 
 const scrollToMessage = () => {
@@ -229,8 +229,6 @@ watch(selectedCellId, (newValue) => {
     if(!rightSideMenuRef.value) return;
     if (newValue) {
         rightSideMenuRef.value.selectPanel('Thoughts');
-    } else {
-        rightSideMenuRef.value.selectPanel('Preview');
     }
 });
 
