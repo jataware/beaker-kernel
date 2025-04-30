@@ -337,6 +337,13 @@ defineExpose({
 
 <style lang="scss">
 
+.llm-query-event {
+    & p {
+        margin-bottom: 0rem;
+        margin-top: 0rem;
+    }
+}
+
 .query-event-code-cell {
     font-size: 0.75rem;
     padding-top: 1rem;

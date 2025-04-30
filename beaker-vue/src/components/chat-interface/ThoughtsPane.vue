@@ -3,7 +3,7 @@
     <div v-if="!selectedCell">
       <em>No cell selected.</em>
     </div>
-    <div v-else>
+    <div v-else class="thoughts-pane-content">
       <div class="filter-controls">
         <div class="filter-button-group">
 
@@ -130,19 +130,34 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
 <style scoped lang="scss">
 .thoughts-pane {
   padding: 1rem;
-  margin-right: 1rem;
-  overflow-y: auto;
-  max-height: 100%;
-  scrollbar-width: thin;
-  scrollbar-color: var(--surface-d) var(--surface-a);
+  // margin-right: 1rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.thoughts-pane-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
 }
 
 .events-scroll-container {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  overflow-y: auto;
   color: #043d75;
+
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-d) var(--surface-a);
+  padding-right: 0.5rem;
+  margin-right: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 .no-thoughts-message {
@@ -152,8 +167,6 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
 }
 
 .filter-controls {
-    display: flex;
-    flex-direction: column;
     padding: 0.5rem;
     margin-bottom: 0.5rem;
     background-color: var(--surface-ground);
