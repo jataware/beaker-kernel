@@ -21,7 +21,7 @@
                     >
                         <template #help-text>
                             <div v-html="$tmpl._('chat_welcome_html', `
-                                <p>Hiya! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
+                                <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
                                 <p>Feel free to ask me about whatever the context specializes in..</p>
                                 <p>
                                     On top of answering questions, I can actually run code in a python environment, and evaluate the results.
@@ -99,7 +99,11 @@
                     position="top"
                     :selected="!!selectedCellId"
                 >
-                    <ThoughtsPane :selectedCell="selectedCell" />
+                    <ThoughtsPane 
+                        :selectedCell="selectedCell" 
+                        @scrollToMessage="scrollToMessage" 
+                        @unselectCell="unselectCell" 
+                    />
                 </SideMenuPanel>
                 
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
@@ -163,7 +167,7 @@ import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
-import ThoughtsPane from '../components/ThoughtsPane.vue';
+import ThoughtsPane from '../components/chat-interface/ThoughtsPane.vue';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
@@ -208,6 +212,18 @@ const selectedCell = computed(() => {
 const beakerSession = computed(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
+
+const unselectCell = () => {
+    beakerSession.value.session.notebook.selectedCell = undefined;
+    rightSideMenuRef.value.selectPanel('Preview');
+}
+
+const scrollToMessage = () => {
+    const chatCell = document.querySelector(`[data-cell-id="${selectedCellId.value}"]`);
+    if (chatCell) {
+        chatCell.scrollIntoView({ behavior: 'smooth' });
+    }
+}
 
 watch(selectedCellId, (newValue) => {
     if(!rightSideMenuRef.value) return;
@@ -341,120 +357,6 @@ const restartSession = async () => {
 </script>
 
 <style lang="scss">
-// #app {
-//     margin: 0;
-//     padding: 0.5em;
-//     overflow: hidden;
-//     background-color: var(--surface-b);
-//     height: 100vh;
-//     width: 100vw;
-// }
-// header {
-//     display: flex;
-//     justify-content: space-between;
-//     align-items: start;
-//     flex: 25;
-// }
-// main {
-//     flex: 50;
-// }
-// footer {
-//     // grid-area: r-sidebar;
-//     flex: 25;
-// }
-// .main-panel {
-//     display: flex;
-//     flex-direction: column;
-//     &:focus {
-//         outline: none;
-//     }
-// }
-// div.beaker-notebook {
-//     padding-top: 1rem;
-// }
-
-// .central-panel {
-//     flex: 50;
-//     display: flex;
-//     flex-direction: column;
-//     max-width: 820px;
-//     margin: auto;
-// }
-
-// .beaker-session-container {
-//     height: 100%;
-// }
-
-// div.cell-container {
-//     position: relative;
-//     display: flex;
-//     flex: 1;
-//     background-color: var(--surface-b);
-//     flex-direction: column;
-//     z-index: 3;
-//     overflow: auto;
-// }
-
-// div.llm-query-cell.beaker-chat-cell {
-//     padding: 0;
-// }
-
-// div.llm-prompt-container {
-//     margin-right: 0;
-// }
-
-// div.llm-prompt-container h2.llm-prompt-text {
-//     font-size: 1.25rem;
-//     max-width: 70%;
-//     margin-left: auto;
-//     background-color: var(--surface-a);
-//     padding: 1rem;
-//     border-radius: 16px;
-// }
-
-// div.llm-prompt-container {
-//     text-align: right;
-//     max-width: 60%;
-//     align-self: end;
-// }
-
-// div.query {
-//     display: flex;
-//     flex-direction: column;
-// }
-
-// div.query-steps {
-//     display: none;
-// }
-
-// div.events div.query-answer {
-//     background-color: var(--surface-b);
-// }
-
-// div.beaker-toolbar {
-//     flex-direction: column;
-// }
-
-// div.beaker-toolbar div {
-//     flex-direction: column;
-// }
-
-// div.central-panel, div.beaker-notebook {
-//     height: 100%;
-// }
-
-// button.connection-button {
-//     border: none;
-// }
-
-// div.code-cell {
-//     margin-bottom: 2rem;
-// }
-
-// div.code-cell.query-event-code-cell {
-//     margin-bottom: 0.25rem;
-// }
-
 .spacer {
     &.left {
         //flex: 0 1000 25vw;

@@ -6,6 +6,10 @@
     <div v-else>
       <div class="filter-controls">
         <div class="filter-button-group">
+
+          <Button label="Scroll to Message" outlined @click="scrollToMessage" class="p-button-sm" />
+          <!-- <Button label="Unselect Cell" outlined @click="unselectCell" class="p-button-sm" /> -->
+
           <ToggleButton v-model="showCodeCells" outlined on-label="Hide Code" off-label="Show Code"
             on-icon="pi pi-eye-slash" off-icon="pi pi-eye" class="p-button-sm filter-button" />
 
@@ -14,7 +18,11 @@
         </div>
       </div>
       <div class="events-scroll-container">
-        <BeakerQueryCellEvent v-for="(event, eventIndex) in filteredCellEvents" :key="eventIndex" :event="event" />
+        <BeakerQueryCellEvent 
+          v-for="(event, eventIndex) in filteredCellEvents"
+          :key="eventIndex" 
+          :event="event" 
+        />
 
         <ProgressBar v-if="isSelectedCellInProgress" mode="indeterminate"
           style="height: 6px; width: 40%; margin: 1rem auto;" />
@@ -24,16 +32,21 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, computed, ref } from 'vue';
-import BeakerQueryCellEvent from './cell/BeakerQueryCellEvent.vue';
+import { defineProps, computed, ref, defineEmits } from 'vue';
 import ProgressBar from 'primevue/progressbar';
 import ToggleButton from 'primevue/togglebutton';
+import Button from 'primevue/button';
+import BeakerQueryCellEvent from '../cell/BeakerQueryCellEvent.vue';
 
 const props = defineProps<{
   selectedCell: any | null
 }>();
 
-// state for toggle buttons
+const emit = defineEmits<{
+  (e: 'scrollToMessage'): void
+  (e: 'unselectCell'): void
+}>();
+
 const showCodeCells = ref(true);
 const showThoughtCells = ref(true);
 
@@ -49,26 +62,31 @@ const selectedCellEvents = computed(() => {
   return props.selectedCell?.events || [];
 });
 
-// const unselectCell = () => {
-//     beakerSession.value.session.notebook.selectedCell = undefined;
-// }
+const scrollToMessage = () => {
+  console.log("scrollToMessage");
+  emit('scrollToMessage');
+}
+
+const unselectCell = () => {
+  emit('unselectCell');
+}
 
 // Filter events based on toggle states
 const filteredCellEvents = computed(() => {
   if (!selectedCellEvents.value) return [];
 
   return selectedCellEvents.value.filter(event => {
-    // Filter based on code cells
+
     if (!showCodeCells.value && event.type === 'code_cell') {
       return false;
     }
 
-    // Filter based on thought cells
     if (!showThoughtCells.value && event.type === 'thought') {
       return false;
     }
 
-    // Hardcode remove response so it isn't displayed twice (once in main chat; once in the thoughts pane)
+    // Hardcode remove response so it isn't displayed twice
+    // (once in main chat; once in the thoughts pane)
     if (event.type === 'response') {
       return false;
     }

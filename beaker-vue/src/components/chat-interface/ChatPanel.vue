@@ -38,7 +38,6 @@ const props = defineProps([
     flex-direction: column;
     z-index: 3;
     overflow: auto;
-    //margin-top: 1rem;
 
     // styling the scrollbar
     scrollbar-width: thin;
