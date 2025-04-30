@@ -97,7 +97,7 @@
 
             </div>
         </div>
-        <span v-else-if="props.event?.type === 'code_cell'" style="position: relative;">
+        <div v-else-if="props.event?.type === 'code_cell'" style="position: relative;">
             <BeakerCodeCell
                 @click="codeCellOnClick"
                 :cell="getCellModelById(props?.event.content.cell_id)"
@@ -128,7 +128,7 @@
                 :title="!expandedCodeCell ? 'Shrink code cell' : 'Expand code cell'"
             />
             <!-- <span class="output-hide-text">(Output hidden -- shown in full response below.)</span> -->
-        </span>
+        </div>
         <span v-else-if="props.event?.type === 'error' && props.event.content.ename === 'CancelledError'">
             <h4 class="p-error">Request cancelled.</h4>
         </span>
@@ -358,7 +358,7 @@ defineExpose({
 
 .chat {
     max-height: 38rem;
-    overflow-y: hidden;
+    overflow-y: auto;
 }
 
 .output-hide-text {
