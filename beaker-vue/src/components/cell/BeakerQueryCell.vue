@@ -84,7 +84,7 @@
                         />
                     </AccordionTab>
                 </Accordion>
-                <Accordion
+                <!-- <Accordion
                     :class="'query-accordion-chat'"
                     v-if="isChat"
                 >
@@ -135,7 +135,27 @@
                             :parentQueryCell="cell"
                         />
                     </AccordionTab>
-                </Accordion>
+                </Accordion> -->
+                <div
+                    v-if="isChat"
+                    class="expand-thoughts-button"
+                    :class="{ 'expanded': session.notebook.selectedCell === cell }"
+                    @click="expandThoughts"
+                >
+                    <div style="display: flex; align-items: center;">
+                        <i
+                            class="pi pi-sparkles"
+                            :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
+                            style="
+                                color: var(--yellow-500);
+                                font-size: 1.25rem;
+                                margin-right: 0.6rem;
+                            "
+                        />
+                        {{ lastEventThought }}
+                    </div>
+                    <Button>{{ session.notebook.selectedCell === cell ? 'Close' : 'Details' }}</Button>
+                </div>
                 <div v-for="[messageEvent, messageClass] of messageEvents" v-bind:key="messageEvent.id">
                     <div style="display: flex; flex-direction: column;">
                         <BeakerQueryCellEvent
@@ -201,7 +221,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
@@ -247,6 +267,7 @@ const promptEditorMinHeight = ref<number>(100);
 const promptText = ref<string>(cell.value.source);
 const response = ref("");
 const textarea = ref();
+const hasExpandedThoughts = ref(false);
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
@@ -316,6 +337,19 @@ const taggedCellEvents = computed(() => {
     return events.filter((e) => !terminalEvents.includes(e.type));
 });
 
+const expandThoughts = () => {
+    // session is already injected...
+    // const sessionId = session.sessionId;
+    // console.log("sessionID", sessionId);
+    // console.log("session.notebook.selectedCell", session.notebook.selectedCell);
+    // Toggle selection: if already selected, deselect it by setting to undefined
+    if (session.notebook.selectedCell === cell.value) {
+        session.notebook.selectedCell = undefined;
+    } else {
+        session.notebook.selectedCell = cell.value;
+    }
+};
+
 const queryStatus = computed<QueryStatuses>(() => {
     const eventCount = events.value.length;
     if (props.cell.status === 'busy') {
@@ -331,6 +365,15 @@ const queryStatus = computed<QueryStatuses>(() => {
         return QueryStatuses.Running;
     }
 })
+
+watch(queryStatus, (newStatus, oldStatus) => {
+     // Auto-expand thoughts the first time a cell transitions to Running
+     if (newStatus === QueryStatuses.Running && oldStatus !== QueryStatuses.Running && !hasExpandedThoughts.value) {
+        expandThoughts();
+        hasExpandedThoughts.value = true;
+     }
+})
+
 
 const messageEvents = computed(() => {
     return props.cell?.events?.filter(
@@ -818,5 +861,69 @@ a.query-tab-headeraction > span > span.pi {
   }
 }
 
+.expand-thoughts-button {
+    cursor: pointer;
+    border-radius: var(--border-radius);
+    margin: 0rem;
+    display: block;
+    padding: 0.75rem;
+
+    &:hover {
+        background-color: var(--surface-b);
+    }
+
+    [data-theme="dark"] &:hover {
+        background-color: var(--surface-a);
+    }
+
+    &.expanded {
+        background-color: var(--surface-b);
+    }
+
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    &>div {
+        flex: 1;
+    }
+
+    &>button {
+        padding: 0.25rem 0.4rem 0.4rem 0.4rem;
+        align-self: center;
+        // todo make bg slightly transparent
+    }
+}
+
+@keyframes sparkle-spin-bounce {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(360deg);
+  }
+  60% {
+    transform: rotate(360deg) translateY(-5px);
+  }
+  70% {
+    transform: rotate(360deg) translateY(0px);
+  }
+  80% {
+    transform: rotate(360deg) translateY(-3px);
+  }
+  90% {
+    transform: rotate(360deg) translateY(0px);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-sparkles {
+  display: inline-block;
+  animation: sparkle-spin-bounce 2s ease-in-out infinite;
+  transform-origin: center;
+}
 
 </style>
+

@@ -39,6 +39,10 @@ const props = defineProps([
     z-index: 3;
     overflow: auto;
     //margin-top: 1rem;
+
+    // styling the scrollbar
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-d) var(--surface-a);
 }
 
 .flex-background {

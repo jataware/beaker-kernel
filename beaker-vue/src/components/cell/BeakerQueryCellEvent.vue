@@ -9,7 +9,7 @@
             <!-- <h4 class="agent-outputs">Outputs:</h4> -->
             <Accordion :multiple="true" :active-index="meaningfulOutputs">
                 <AccordionTab
-                    v-for="[index, child] in parentEntries"
+                    v-for="[index, child] in filteredParentEntries"
                     :key="index"
                     :pt="{
                         header: {
@@ -97,14 +97,15 @@
 
             </div>
         </div>
-        <span v-else-if="props.event?.type === 'code_cell'">
+        <span v-else-if="props.event?.type === 'code_cell'" style="position: relative;">
             <BeakerCodeCell
                 @click="codeCellOnClick"
                 :cell="getCellModelById(props?.event.content.cell_id)"
                 :drag-enabled="false"
                 :class="{
                     selected: isCodeCellSelected,
-                    'query-event-code-cell': true
+                    'query-event-code-cell': true,
+                    'code-cell-collapsed': expandedCodeCell
                 }"
                 :hide-output="false"
                 ref="codeCellRef"
@@ -116,6 +117,13 @@
                         codeCellRef.execute();
                     }
                 }"
+            />
+            <Button 
+                :icon="!expandedCodeCell ? 'pi pi-window-minimize' : 'pi pi-expand'" 
+                size="small"
+                class="code-cell-toggle-button" 
+                @click.stop="toggleCodeCellExpansion"
+                :title="!expandedCodeCell ? 'Shrink code cell' : 'Expand code cell'"
             />
             <!-- <span class="output-hide-text">(Output hidden -- shown in full response below.)</span> -->
         </span>
@@ -164,13 +172,13 @@
 
 <script setup lang="ts">
 import { defineProps, defineExpose, inject, onBeforeMount, computed, ref, capitalize } from "vue";
+import Button from "primevue/button";
 import { BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel/src/notebook";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";
 import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
-import stripAnsi from "strip-ansi";
 import ansiHtml from "ansi-html-community";
 import { formatOutputs, chooseOutputIcon } from './BeakerCodeCellOutputUtilities'
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
@@ -181,6 +189,7 @@ import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const beakerNotebook = inject<BeakerNotebookComponentType>("notebook");
 const codeCellRef = ref();
+const expandedCodeCell = ref(true);
 
 const props = defineProps([
     'event',
@@ -258,6 +267,32 @@ const meaningfulOutputs = computed(() => {
     return outputs;
 })
 
+const toggleCodeCellExpansion = (event) => {
+    event.stopPropagation(); // Prevent triggering the thought item click
+    expandedCodeCell.value = !expandedCodeCell.value;
+};
+
+const hasOutputData = (child) => {
+    if (!child || !child.outputs || child.outputs.length === 0) {
+        return false;
+    }
+    
+    // Check if any output has data that's not empty
+    return child.outputs.some(output => 
+        output.data && Object.keys(output.data).length > 0
+    );
+};
+
+// TODO this worked, but I'd rather show a "no outputs" message if there are no outputs than hide it
+// Create a filtered computed property
+const filteredParentEntries = computed(() => {
+    if (!parentEntries.value) return [];
+    
+    // Convert entries iterator to array and filter it
+    const entriesArray = Array.from(parentEntries.value);
+    return entriesArray.filter(([_, child]) => hasOutputData(child));
+});
+
 const getCellModelById = (id): IBeakerCell | undefined => {
     const notebook = beakerSession.session.notebook;
     for (const cell of notebook.cells) {
@@ -306,6 +341,8 @@ defineExpose({
     font-size: 0.75rem;
     padding-top: 1rem;
     padding-bottom: 0.25rem;
+    max-height: 35rem;
+    overflow-y: auto;
 }
 
 .output-hide-text {
@@ -396,6 +433,26 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     p:last-child {
         margin-bottom: 0.5rem;
     }
+}
+
+.code-cell-collapsed {
+  max-height: 200px;
+  overflow-y: hidden;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 0.25rem;
+}
+.code-cell-toggle-button {
+  position: absolute;
+  bottom: 2rem;
+  right: 3.5rem;
+  margin: 0;
+  padding: 0.5rem 0;
+  background: #666666AA;
+  border-color: #555555DD;
+  &>.p-button-icon {
+    font-weight: bold;
+  }
 }
 
 </style>

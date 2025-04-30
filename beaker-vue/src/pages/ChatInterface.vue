@@ -21,7 +21,7 @@
                     >
                         <template #help-text>
                             <div v-html="$tmpl._('chat_welcome_html', `
-                                <p>Hi! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
+                                <p>Hiya! I'm your Beaker Agent and I can help you do programming and software engineering tasks.</p>
                                 <p>Feel free to ask me about whatever the context specializes in..</p>
                                 <p>
                                     On top of answering questions, I can actually run code in a python environment, and evaluate the results.
@@ -93,6 +93,15 @@
                 highlight="line"
                 :expanded="false"
             >
+                <SideMenuPanel
+                    label="Thoughts"
+                    icon="pi pi-lightbulb"
+                    position="top"
+                    :selected="!!selectedCellId"
+                >
+                    <ThoughtsPane :selectedCell="selectedCell" />
+                </SideMenuPanel>
+                
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
@@ -145,7 +154,7 @@ import { JupyterMimeRenderer } from 'beaker-kernel/src';
 import { NavOption } from '../components/misc/BeakerHeader.vue';
 
 
-import { defineProps, inject, ref, computed, ComponentInstance, Component, StyleHTMLAttributes, ComputedRef, } from 'vue';
+import { defineProps, inject, ref, computed, watch } from 'vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
 import { IBeakerTheme } from '../plugins/theme';
@@ -154,6 +163,7 @@ import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
+import ThoughtsPane from '../components/ThoughtsPane.vue';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
@@ -185,6 +195,28 @@ const isLastCellAwaitingInput = computed(() => {
     return false;
 })
 
+const selectedCellId = computed(() => {
+    return beakerSession.value?.session?.notebook?.selectedCell?.id ?? null;
+});
+
+const selectedCell = computed(() => {
+    if (!selectedCellId.value) return null;
+    const cells = beakerSession.value?.session?.notebook?.cells ?? [];
+    return cells.find(cell => cell.id === selectedCellId.value) || null;
+});
+
+const beakerSession = computed(() => {
+    return beakerInterfaceRef?.value?.beakerSession;
+});
+
+watch(selectedCellId, (newValue) => {
+    if(!rightSideMenuRef.value) return;
+    if (newValue) {
+        rightSideMenuRef.value.selectPanel('Thoughts');
+    } else {
+        rightSideMenuRef.value.selectPanel('Preview');
+    }
+});
 
 const headerNav = computed((): NavOption[] => {
     const nav: NavOption[] = [
@@ -243,9 +275,6 @@ const headerNav = computed((): NavOption[] => {
     return nav;
 });
 
-const beakerSession = computed(() => {
-    return beakerInterfaceRef?.value?.beakerSession;
-});
 
 const loadNotebook = (notebookJSON: any) => {
     beakerSession.value?.session.loadNotebook(notebookJSON);
