@@ -151,7 +151,7 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  color: #043d75;
+  color: var(--text-color);
 
   overflow-y: auto;
   scrollbar-width: thin;

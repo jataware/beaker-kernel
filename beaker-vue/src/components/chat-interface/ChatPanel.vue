@@ -40,7 +40,6 @@ const props = defineProps([
     overflow: auto;
 
     // styling the scrollbar
-    scrollbar-width: thin;
     scrollbar-color: var(--surface-d) var(--surface-a);
 }
 

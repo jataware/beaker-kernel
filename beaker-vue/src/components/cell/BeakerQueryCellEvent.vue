@@ -287,6 +287,10 @@ const hasOutputData = (child) => {
 };
 
 const availableOutputs = computed(() => {
+    if(!props.isChat) {
+        return parentEntries.value;
+    }
+
     if (!parentEntries.value) return [];
     
     const entriesArray = Array.from(parentEntries.value);
@@ -433,8 +437,6 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
         overflow-x: auto;
         code {
             display: inline-block;
-            // min-width: 100%;
-            // width: 0px;
             font-size: 0.75rem;
         }
     }
@@ -459,6 +461,7 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
   bottom: 2rem;
   right: 3.5rem;
   margin: 0;
+  width: 2.25rem;
   padding: 0.5rem 0;
   background: #666666AA;
   border-color: #555555DD;
