@@ -74,7 +74,7 @@ import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
 import Select from 'primevue/select';
 import Checkbox from 'primevue/checkbox';
-import { BeakerSessionComponentType } from './BeakerSession.vue';
+import type { BeakerSessionComponentType } from './BeakerSession.vue';
 import CodeEditor from '../misc/CodeEditor.vue';
 
 const props = defineProps([

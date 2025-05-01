@@ -145,7 +145,7 @@ import InputSwitch from "primevue/inputswitch";
 import Button from "primevue/button";
 import scrollIntoView from "scroll-into-view-if-needed";
 import ToggleButton from "primevue/togglebutton";
-import { IConfigDefinitions, ISchema } from "../panels/ConfigPanel.vue";
+import type { IConfigDefinitions, ISchema } from "../panels/ConfigPanel.vue";
 
 export interface ConfigEntryComponentProps {
     name?: string;

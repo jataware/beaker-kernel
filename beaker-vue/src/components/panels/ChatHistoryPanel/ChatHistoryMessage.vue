@@ -72,15 +72,13 @@
 </template>
 <script lang="ts" setup>
 
-import { ref, computed, getCurrentInstance, ComponentInstance } from "vue";
-import VueJsonPretty from 'vue-json-pretty';
-import { PrimeIcons } from '@primevue/core/api';
+import { ref, computed } from "vue";
 import MinusIcon from '@primevue/icons/minus';
 import PlusIcon from '@primevue/icons/plus';
-import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
+import 'vue-json-pretty/lib/styles.css';
 
 const props = defineProps([
     "record",

@@ -7,10 +7,10 @@ import ConfirmationService from 'primevue/confirmationservice';
 import DialogService from 'primevue/dialogservice';
 import ToastService from 'primevue/toastservice';
 import FocusTrap from 'primevue/focustrap';
-import { vKeybindings } from '@/directives/keybindings';
-import { vAutoScroll } from '@/directives/autoscroll';
-import BeakerThemePlugin from '@/plugins/theme';
-import BeakerAppConfigPlugin from '@/plugins/appconfig';
+import { vKeybindings } from './directives/keybindings';
+import { vAutoScroll } from './directives/autoscroll';
+import BeakerThemePlugin from './plugins/theme';
+import BeakerAppConfigPlugin from './plugins/appconfig';
 
 import Aura from '@primevue/themes/aura';
 

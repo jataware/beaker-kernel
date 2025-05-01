@@ -13,13 +13,13 @@
 import { ref, shallowRef, computed, inject } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView, keymap } from "@codemirror/view";
-import { EditorState, Extension, Prec } from "@codemirror/state";
+import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { LanguageSupport } from "@codemirror/language";
+import type { LanguageSupport } from "@codemirror/language";
 import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion } from "@codemirror/autocomplete";
-import { IBeakerTheme } from '../../plugins/theme';
-import { BeakerLanguage, LanguageRegistry, getCompletions } from "../../util/autocomplete";
-import { BeakerSession } from 'beaker-kernel/src';
+import type { IBeakerTheme } from '../../plugins/theme';
+import { type BeakerLanguage, LanguageRegistry, getCompletions } from "../../util/autocomplete";
+import { BeakerSession } from 'beaker-kernel';
 
 const session: BeakerSession = inject('session');
 

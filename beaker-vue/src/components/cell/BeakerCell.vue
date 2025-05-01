@@ -118,12 +118,12 @@
 import { ref, inject, computed } from "vue";
 import Button from 'primevue/button';
 import DraggableMarker from './DraggableMarker.vue';
-import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
-import { type IBeakerCell } from "beaker-kernel/src";
+import type { IBeakerCell } from "beaker-kernel";
 import Select from "primevue/select";
 import Popover from "primevue/popover";
-import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 interface BeakerCellProps {
     cell: IBeakerCell;

@@ -88,12 +88,6 @@
 <script lang="ts" setup>
 
 import { ref, computed } from "vue";
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import ProgressBar from "primevue/progressbar";
-import Knob from "primevue/knob";
-
-import DebugLogMessage from "../../misc/DebugLogMessage.vue";
 import ChatHistoryMessage from "./ChatHistoryMessage.vue";
 
 

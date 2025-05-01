@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { ref, onBeforeMount, inject, nextTick } from "vue";
 import Button from "primevue/button";
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ConfigEntryComponent from '../misc/ConfigEntryComponent.vue'
 import { useConfirm } from "primevue/useconfirm";
 import ProgressSpinner from "primevue/progressspinner";

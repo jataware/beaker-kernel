@@ -42,9 +42,9 @@
 
 <script setup lang="tsx">
 import { ref, inject, computed } from 'vue';
-import { BeakerSession } from 'beaker-kernel/src';
+import type { BeakerSession } from 'beaker-kernel';
 import BeakerCell from '../cell/BeakerCell.vue';
-import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
+import type { BeakerNotebookComponentType } from './BeakerNotebook.vue';
 
 const session = inject<BeakerSession>('session');
 const cellMap = inject("cell-component-mapping");

@@ -25,7 +25,7 @@
     "esModuleInterop": true,
 
     "strict": false,
-    "verbatimModuleSyntax": false, // Disables requirement that all types are imported using type identifier
+    "verbatimModuleSyntax": true, // Disables requirement that all types are imported using type identifier
 
     "paths": {
       "@/*": ["./src/*"],

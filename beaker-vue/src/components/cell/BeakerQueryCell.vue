@@ -206,10 +206,10 @@ import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerQueryCellEvent from "./BeakerQueryCellEvent.vue";
-import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
+import type { BeakerQueryEvent, BeakerQueryEventType } from "beaker-kernel";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-import { BeakerSession } from 'beaker-kernel/src';
-import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import type { BeakerSession } from 'beaker-kernel';
+import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import ThinkingIcon from "../../assets/icon-components/BrainIcon.vue";
 
 import InputGroup from 'primevue/inputgroup';
@@ -473,7 +473,7 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerQueryCell } from "beaker-kernel/src";
+import { BeakerQueryCell } from "beaker-kernel";
 export default {
     modelClass: BeakerQueryCell,
     icon: "pi pi-sparkles",

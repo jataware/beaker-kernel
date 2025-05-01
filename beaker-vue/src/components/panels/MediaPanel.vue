@@ -44,7 +44,7 @@
 
 <script lang="ts" setup>
 import { ref, inject, computed } from "vue";
-import { BeakerQueryCell, BeakerCodeCell, BeakerSession, IBeakerCell } from 'beaker-kernel/src';
+import type { BeakerQueryCell, BeakerCodeCell, BeakerSession, IBeakerCell } from 'beaker-kernel';
 import Toolbar from "primevue/toolbar";
 import Button from "primevue/button";
 import InputGroup from "primevue/inputgroup";

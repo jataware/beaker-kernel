@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ErrorObject, isErrorObject } from '../util';
+import { type ErrorObject, isErrorObject } from '../util';
 import { h, useSlots, isVNode, ref, onMounted, provide, nextTick, onUnmounted, toRaw} from 'vue';
 import { type Component, type ComponentInstance } from 'vue';
 import Dialog from 'primevue/dialog';
@@ -96,7 +96,7 @@ import BeakerHeader from '../components/misc/BeakerHeader.vue';
 import Card from 'primevue/card';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
-import {BeakerSession as Session} from 'beaker-kernel/src'
+import {BeakerSession as Session} from 'beaker-kernel'
 import InputText from 'primevue/inputtext';
 import InputGroup from 'primevue/inputgroup';
 import Button from 'primevue/button';

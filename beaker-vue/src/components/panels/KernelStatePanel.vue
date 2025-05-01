@@ -14,7 +14,7 @@
 import { computed } from "vue";
 
 import Tree from "primevue/tree"
-import { TreeNode } from "primevue/treenode";
+import type { TreeNode } from "primevue/treenode";
 
 
 type BeakerKernelStateNode = {

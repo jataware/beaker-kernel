@@ -60,7 +60,7 @@
 <script setup lang="ts">
 import { ref, onBeforeMount, inject, computed, nextTick } from "vue";
 import Button from "primevue/button";
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ConfigEntryComponent from '../misc/ConfigEntryComponent.vue'
 import Listbox from "primevue/listbox";
 import { useConfirm } from "primevue/useconfirm";

@@ -1,4 +1,6 @@
-import { Plugin, App, reactive, ref, Ref, computed } from 'vue';
+import { capitalize } from '@/util';
+import { ref } from 'vue';
+import type { Plugin, App, Ref } from 'vue';
 
 declare module 'vue' {
     interface ComponentCustomProperties {
@@ -110,6 +112,9 @@ export const BeakerAppConfigPlugin: Plugin = {
             const pageConfig = beakerAppConfig?.pages?.[page];
             if (pageConfig?.title) {
                 document.title = pageConfig.title;
+            }
+            else if (document.title === ""){
+                document.title = `Beaker ${capitalize(page)}`
             }
 
         }

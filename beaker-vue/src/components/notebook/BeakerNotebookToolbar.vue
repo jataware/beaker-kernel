@@ -106,20 +106,20 @@
 <script setup lang="ts">
 import { computed, inject, ref, capitalize, watch, onBeforeMount, toRaw } from "vue";
 import { PageConfig } from '@jupyterlab/coreutils';
-import { URLExt } from '@jupyterlab/coreutils/src/url';
-import { BeakerSession, BeakerBaseCell } from 'beaker-kernel/src';
-import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
+import { URLExt } from '@jupyterlab/coreutils';
+import type { BeakerSession, BeakerBaseCell } from 'beaker-kernel';
+import type { BeakerNotebookComponentType } from './BeakerNotebook.vue';
 import contentDisposition from "content-disposition";
 
 import Button from "primevue/button";
 import ChevronDownIcon from '@primevue/icons/chevrondown'
-import { ButtonProps } from "primevue/button";
+import type { ButtonProps } from "primevue/button";
 import SplitButton from 'primevue/splitbutton';
 import InputGroup from "primevue/inputgroup";
 import InputText from "primevue/inputtext";
 import Popover from "primevue/popover";
 import Toolbar from "primevue/toolbar";
-import { type MenuItem } from "primevue/menuitem";
+import type { MenuItem } from "primevue/menuitem";
 
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
 import { downloadFileDOM, getDateTimeString } from '../../util';

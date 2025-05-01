@@ -80,14 +80,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeMount, computed, inject } from "vue";
+import { ref, computed, inject } from "vue";
 import Tree from 'primevue/tree';
 import { type TreeNode } from 'primevue/treenode';
-import Accordion from "primevue/accordion";
-import AccordionTab from "primevue/accordiontab";
-import DataView from "primevue/dataview";
-// import { emitError } from "vue-json-pretty/types/utils";
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 const contextPanelOpen = ref(true);
 const toggleContextPanel = () => {

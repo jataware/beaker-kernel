@@ -29,10 +29,10 @@
 import { ref, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount} from "vue";
 import { marked } from 'marked';
 import { findSelectableParent } from '../../util';
-import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 import CodeEditor from '../misc/CodeEditor.vue';
-import { IBeakerTheme } from '../../plugins/theme';
+import type { IBeakerTheme } from '../../plugins/theme';
 
 const props = defineProps([
     "cell"
@@ -127,7 +127,7 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerMarkdownCell } from "beaker-kernel/src";
+import { BeakerMarkdownCell } from "beaker-kernel";
 export default {
     modelClass: BeakerMarkdownCell,
     icon: "pi pi-pencil",

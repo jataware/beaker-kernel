@@ -5,12 +5,13 @@
 </template>
 
 <script lang="ts">
-import { reactive, ref, inject, provide, VNode, defineComponent, PropType, ComponentInternalInstance, DefineComponent } from 'vue';
+import { reactive, ref, inject, provide, defineComponent } from 'vue';
+import type { VNode, PropType, ComponentInternalInstance, DefineComponent } from 'vue';
 import CodeEditor from '../misc/CodeEditor.vue';
-import { BeakerSession, IMimeRenderer, IBeakerCell } from 'beaker-kernel/src';
-import { BeakerKernelStatus } from 'beaker-kernel/src/session';
+import { BeakerSession } from 'beaker-kernel';
+import type { IMimeRenderer, IBeakerCell, BeakerKernelStatus } from 'beaker-kernel';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import { ConnectionStatus as JupyterConnectionStatus } from '@jupyterlab/services/lib/kernel/kernel';
+import type { ConnectionStatus as JupyterConnectionStatus } from '@jupyterlab/services/lib/kernel/kernel';
 
 
 export interface IBeakerCellComponent {

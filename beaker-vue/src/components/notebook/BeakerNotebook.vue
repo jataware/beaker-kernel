@@ -5,9 +5,10 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, computed, nextTick, provide, inject, DefineComponent, watch } from "vue";
-import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell, BeakerBaseCell } from 'beaker-kernel/src';
-import { IBeakerCellComponent, type BeakerSessionComponentType, toBeakerCellComponent } from "../session/BeakerSession.vue";
+import { defineComponent, ref, computed, nextTick, provide, inject, type DefineComponent } from "vue";
+import { BeakerSession, BeakerNotebook, BeakerCodeCell, BeakerBaseCell } from 'beaker-kernel';
+import type { IBeakerCell } from 'beaker-kernel';
+import type { IBeakerCellComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import scrollIntoView from 'scroll-into-view-if-needed';
 
 export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineComponent({

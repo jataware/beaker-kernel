@@ -1,32 +1,14 @@
-import { type Component, type VueElement, defineComponent, h } from 'vue';
+import { type Component, defineComponent, h } from 'vue';
 
-import { IBeakerRendererOptions, IMimeRenderer, MimetypeString } from 'beaker-kernel/src';
-import { PartialJSONObject } from '@lumino/coreutils';
+import type { IMimeRenderer, MimetypeString } from 'beaker-kernel';
+import type { PartialJSONObject } from '@lumino/coreutils';
 import VueJsonPretty from 'vue-json-pretty';
 import { marked } from 'marked';
-import DecapodePreview from './components/render/DecapodePreview.vue';
 import TablePreview from './components/render/TablePreview.vue';
-// import { MathJaxTypesetter } from '@jupyterlab/mathjax-extension'
-
-// const mathJaxTypsetter = new MathJaxTypesetter();
-// const mathJaxDocument = mathJaxTypsetter.mathDocument().then;
 
 export interface BeakerRenderOutput {
     component: Component;
     bindMapping: {[key: string]: any};
-}
-
-export const DecapodeRenderer: IMimeRenderer<BeakerRenderOutput> = {
-    rank: 20,
-    mimetypes: ["application/x-askem-decapode-json-graph"],
-    render: (mimeType: MimetypeString, data: PartialJSONObject, metadata: PartialJSONObject) => {
-        return {
-            component: DecapodePreview,
-            bindMapping: {
-                data: data,
-            },
-        }
-    }
 }
 
 export const JSONRenderer: IMimeRenderer<BeakerRenderOutput> = {

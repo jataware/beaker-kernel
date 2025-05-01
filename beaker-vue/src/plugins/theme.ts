@@ -1,4 +1,5 @@
-import { Plugin, App, reactive } from 'vue';
+import { reactive } from 'vue';
+import type { Plugin, App } from 'vue';
 
 export declare type ThemeMode = "light" | "dark" | "default";
 

@@ -18,9 +18,7 @@
 <script setup lang="ts">
 import { computed, inject, capitalize } from "vue";
 import Button from 'primevue/button';
-// import { capitalize } from '../../util';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { IBeakerTheme } from '../../plugins/theme';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 // TODO too many granular props- use a slot instead?
 const props = defineProps([

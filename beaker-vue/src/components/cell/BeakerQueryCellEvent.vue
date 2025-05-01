@@ -164,7 +164,7 @@
 
 <script setup lang="ts">
 import { inject, onBeforeMount, computed, ref, capitalize } from "vue";
-import { BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel/src/notebook";
+import { type BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";
 import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
@@ -173,8 +173,8 @@ import AccordionTab from "primevue/accordiontab";
 import stripAnsi from "strip-ansi";
 import ansiHtml from "ansi-html-community";
 import { formatOutputs, chooseOutputIcon } from './BeakerCodeCellOutputUtilities'
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 
 // use session where possible - notebook may or may not exist, but matters for selection!

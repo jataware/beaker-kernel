@@ -24,8 +24,8 @@
 import { ref, nextTick, inject } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
-import { BeakerSession } from 'beaker-kernel/src';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { BeakerSession } from 'beaker-kernel';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
