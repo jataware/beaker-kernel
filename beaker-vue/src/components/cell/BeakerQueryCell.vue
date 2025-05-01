@@ -91,7 +91,18 @@
                     :class="{ 'expanded': session.notebook.selectedCell === cell }"
                     @click="expandThoughts"
                 >
-                    <div style="display: flex; align-items: center;">
+                    <div 
+                        class="white-space-nowrap"
+                        style="
+                            display: flex; 
+                            align-items: center;
+                            font-weight: 400;
+                            font-family: 'Courier New', Courier, monospace;
+                            font-size: 0.8rem;
+                            color: var(--text-color-secondary)
+                        "
+                    >
+                    
                         <i
                             class="pi pi-sparkles"
                             :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
@@ -808,9 +819,12 @@ a.query-tab-headeraction > span > span.pi {
 .expand-thoughts-button {
     cursor: pointer;
     border-radius: var(--border-radius);
-    margin: 0rem;
+    margin: auto;
     display: block;
     padding: 0.75rem;
+
+    max-width: 80%;
+    width: 100%;
 
     &:hover {
         background-color: var(--surface-b);

@@ -105,8 +105,7 @@
                 :class="{
                     selected: isCodeCellSelected,
                     'query-event-code-cell': true,
-                    'code-cell-collapsed': expandedCodeCell && props.isChat,
-                    'chat': props.isChat
+                    'code-cell-collapsed': expandedCodeCell && props.isChat
                 }"
                 :hide-output="false"
                 ref="codeCellRef"
@@ -121,7 +120,7 @@
             />
             <Button 
                 v-if="props.isChat"
-                :icon="!expandedCodeCell ? 'pi pi-window-minimize' : 'pi pi-expand'" 
+                :icon="!expandedCodeCell ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" 
                 size="small"
                 class="code-cell-toggle-button" 
                 @click.stop="toggleCodeCellExpansion"
@@ -355,12 +354,6 @@ defineExpose({
     padding-bottom: 0.25rem;
 }
 
-
-.chat {
-    max-height: 38rem;
-    overflow-y: auto;
-}
-
 .output-hide-text {
     font-size: 0.9rem;
     font-style: italic;
@@ -452,19 +445,17 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
 .code-cell-collapsed {
   max-height: 200px;
   overflow-y: hidden;
-  border: 1px solid var(--surface-border);
-  border-radius: var(--border-radius);
-  padding: 0.25rem;
 }
 .code-cell-toggle-button {
   position: absolute;
-  bottom: 2rem;
-  right: 3.5rem;
+  top: 4rem;
+  right: 0;
   margin: 0;
-  width: 2.25rem;
-  padding: 0.5rem 0;
-  background: #666666AA;
-  border-color: #555555DD;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: var(--surface-500);
+  border-color: var(--surface-border);
   &>.p-button-icon {
     font-weight: bold;
   }
