@@ -12,7 +12,7 @@ from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from functools import wraps, update_wrapper
 from importlib import import_module
 from pathlib import Path
-from typing import Any, TYPE_CHECKING, Callable, List
+from typing import Any, TYPE_CHECKING, Callable, List, Coroutine
 
 from archytas.models.base import BaseArchytasModel
 from archytas.exceptions import AuthenticationError
@@ -226,10 +226,7 @@ def action(action_name: str|None=None, docs: str|None=None, default_payload=None
         @wraps(fn)
         async def with_context(self, message):
             with execution_context("action", action_nm):
-                if inspect.iscoroutinefunction(fn):
-                    return await fn(self, message)
-                else:
-                    return fn(self, message)
+                return await ensure_async(fn(self, message))
 
         intercept_fn = intercept(msg_type=msg_request_type, stream="shell", docs=docs, default_payload=default_payload)(with_context)
         update_wrapper(register_method, intercept_fn)
@@ -330,9 +327,13 @@ def set_tool_execution_context(fn):
         @wraps(run_fn)
         async def with_context(*args, **kwargs):
             with execution_context(type="tool", name=tool_name):
-                if inspect.iscoroutinefunction(run_fn):
-                    return await run_fn(*args, **kwargs)
-                else:
-                    return run_fn(*args, **kwargs)
+                return await ensure_async(run_fn(*args, **kwargs))
 
         fn.__dict__['run'] = with_context
+
+
+async def ensure_async(fn: Coroutine|Callable):
+    if inspect.iscoroutine(fn) or inspect.iscoroutinefunction(fn):
+        return await fn
+    else:
+        return fn
