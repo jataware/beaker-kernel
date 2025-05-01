@@ -143,7 +143,7 @@ import {ChatHistoryPanel, ChatHistoryProps, IChatHistory} from '../components/pa
 
 import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
-import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
+import ChatQueryCell from '../components/chat-interface/ChatQueryCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
@@ -316,7 +316,7 @@ const renderers = [
 const cellComponentMapping = {
     'code': BeakerCodeCell,
     'markdown': BeakerMarkdownCell,
-    'query': BeakerQueryCell,
+    'query': ChatQueryCell,
     'raw': BeakerRawCell,
 }
 
