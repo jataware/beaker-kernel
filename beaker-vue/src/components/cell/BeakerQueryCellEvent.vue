@@ -105,7 +105,7 @@
                 :class="{
                     selected: isCodeCellSelected,
                     'query-event-code-cell': true,
-                    'code-cell-collapsed': expandedCodeCell && props.isChat
+                    [props.customClass]: props.customClass
                 }"
                 :hide-output="false"
                 ref="codeCellRef"
@@ -118,14 +118,7 @@
                     }
                 }"
             />
-            <Button 
-                v-if="props.isChat"
-                :icon="!expandedCodeCell ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" 
-                size="small"
-                class="code-cell-toggle-button" 
-                @click.stop="toggleCodeCellExpansion"
-                :title="!expandedCodeCell ? 'Shrink code cell' : 'Expand code cell'"
-            />
+            <slot name="code-cell-controls" />
             <!-- <span class="output-hide-text">(Output hidden -- shown in full response below.)</span> -->
         </div>
         <span v-else-if="props.event?.type === 'error' && props.event.content.ename === 'CancelledError'">
@@ -190,12 +183,11 @@ import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const beakerNotebook = inject<BeakerNotebookComponentType>("notebook");
 const codeCellRef = ref();
-const expandedCodeCell = ref(true);
 
 const props = defineProps([
     'event',
     'parentQueryCell',
-    'isChat',
+    'customClass'
 ]);
 
 onBeforeMount(() => {
@@ -269,11 +261,6 @@ const meaningfulOutputs = computed(() => {
     return outputs;
 })
 
-const toggleCodeCellExpansion = (event) => {
-    event.stopPropagation(); // Prevent triggering the thought item click
-    expandedCodeCell.value = !expandedCodeCell.value;
-};
-
 const hasOutputData = (child) => {
     if (!child || !child.outputs || child.outputs.length === 0) {
         return false;
@@ -286,10 +273,6 @@ const hasOutputData = (child) => {
 };
 
 const availableOutputs = computed(() => {
-    if(!props.isChat) {
-        return parentEntries.value;
-    }
-
     if (!parentEntries.value) return [];
     
     const entriesArray = Array.from(parentEntries.value);
@@ -440,25 +423,6 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     p:last-child {
         margin-bottom: 0.5rem;
     }
-}
-
-.code-cell-collapsed {
-  max-height: 200px;
-  overflow-y: hidden;
-}
-.code-cell-toggle-button {
-  position: absolute;
-  top: 4rem;
-  right: 0;
-  margin: 0;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  background: var(--surface-500);
-  border-color: var(--surface-border);
-  &>.p-button-icon {
-    font-weight: bold;
-  }
 }
 
 </style>

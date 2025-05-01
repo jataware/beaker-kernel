@@ -25,7 +25,7 @@
         <div v-if="shouldShowNoThoughtsPlaceholder" class="no-thoughts-message">
           <em>No Thought details available for this agent query.</em>
         </div>
-        <BeakerQueryCellEvent 
+        <ChatQueryCellEvent 
           v-else
           v-for="(event, eventIndex) in filteredCellEvents"
           :key="eventIndex" 
@@ -45,7 +45,7 @@ import { defineProps, computed, ref, defineEmits, toRaw } from 'vue';
 import ProgressBar from 'primevue/progressbar';
 import ToggleButton from 'primevue/togglebutton';
 import Button from 'primevue/button';
-import BeakerQueryCellEvent from '../cell/BeakerQueryCellEvent.vue';
+import ChatQueryCellEvent from './ChatQueryCellEvent.vue';
 
 const props = defineProps<{
   selectedCell: any | null
