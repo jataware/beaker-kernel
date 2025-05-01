@@ -55,7 +55,12 @@
                         />
                         {{ lastEventThought }}
                     </div>
-                    <Button>{{ session.notebook.selectedCell === cell ? 'Close' : 'Details' }}</Button>
+                    <Button 
+                      :icon="session.notebook.selectedCell === cell ? 'pi pi-times' : 'pi pi-search'"
+                      text 
+                      rounded 
+                      style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                    />
                 </div>
                 <div v-for="[messageEvent, messageClass] of messageEvents" v-bind:key="messageEvent.id">
                     <div style="display: flex; flex-direction: column;">
@@ -719,16 +724,13 @@ a.query-tab-headeraction > span > span.pi {
 
     display: flex;
     justify-content: space-between;
-    gap: 0.5rem;
 
-    &>div {
+    & > div {
         flex: 1;
     }
 
     &>button {
-        padding: 0.25rem 0.4rem 0.4rem 0.4rem;
         align-self: center;
-        // todo make bg slightly transparent
     }
 }
 

@@ -166,7 +166,6 @@
 
 <script setup lang="ts">
 import { defineProps, defineExpose, inject, onBeforeMount, computed, ref, capitalize } from "vue";
-import Button from "primevue/button";
 import { BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel/src/notebook";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";
@@ -174,7 +173,6 @@ import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import ansiHtml from "ansi-html-community";
-import { formatOutputs, chooseOutputIcon } from './BeakerCodeCellOutputUtilities'
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
