@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, inject, onBeforeMount, computed, ref, capitalize } from "vue";
+import { defineProps, ref } from "vue";
 import Button from "primevue/button";
 import BeakerQueryCellEvent from "../cell/BeakerQueryCellEvent.vue";
 
@@ -37,15 +37,8 @@ const toggleExpansion = (event) => {
 
 </script>
 
+
 <style lang="scss">
-
-.llm-query-event {
-    & p {
-        margin-bottom: 0rem;
-        margin-top: 0rem;
-    }
-}
-
 .code-cell-collapsed {
   max-height: 200px;
   overflow-y: hidden;
@@ -64,5 +57,4 @@ const toggleExpansion = (event) => {
     font-weight: bold;
   }
 }
-
 </style>
