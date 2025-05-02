@@ -225,10 +225,20 @@ const scrollToMessage = () => {
     }
 }
 
+/**
+ * `selectedCell` indicates that the Thoughts pane should be open,
+ * but clicking the x should always close the right pane.
+ */
 watch(selectedCellId, (newValue) => {
     if(!rightSideMenuRef.value) return;
+
+    const anyPaneOpen = rightSideMenuRef.value.getSelectedPanelInfo()?.label;
+
     if (newValue) {
         rightSideMenuRef.value.selectPanel('Thoughts');
+    } 
+    else if (anyPaneOpen) {
+        rightSideMenuRef.value.hide();
     }
 });
 

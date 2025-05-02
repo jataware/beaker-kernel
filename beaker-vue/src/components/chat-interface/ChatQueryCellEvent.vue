@@ -45,14 +45,14 @@ const toggleExpansion = (event) => {
 }
 .code-cell-toggle-button {
   position: absolute;
-  top: 4rem;
+  top: 5.5rem;
   right: 0;
   margin: 0;
   width: 2rem;
   height: 2rem;
   padding: 0;
   background: var(--surface-500);
-  border-color: var(--surface-border);
+  border-color: var(--surface-500);
   &>.p-button-icon {
     font-weight: bold;
   }

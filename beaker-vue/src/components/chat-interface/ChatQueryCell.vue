@@ -149,7 +149,6 @@ const promptEditorMinHeight = ref<number>(100);
 const promptText = ref<string>(cell.value.source);
 const response = ref("");
 const textarea = ref();
-const hasExpandedThoughts = ref(false);
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
@@ -228,13 +227,20 @@ const queryStatus = computed<QueryStatuses>(() => {
     }
 })
 
-watch(queryStatus, (newStatus, oldStatus) => {
-     // Auto-expand thoughts the first time a cell transitions to Running
-     if (newStatus === QueryStatuses.Running && oldStatus !== QueryStatuses.Running && !hasExpandedThoughts.value) {
+// Auto-select cell thoughts when we first start getting events
+// and auto-close when the agent is done, in which case the user can see the final response
+// on the chat history. User can always manually expand the thoughts to examine what occured before if they want to.
+watch(events, (newEvents) => {
+    const startedRunning = queryStatus.value === QueryStatuses.Running && newEvents.length === 1;
+    if (startedRunning) {
         expandThoughts();
-        hasExpandedThoughts.value = true;
-     }
-})
+    }
+});
+watch(queryStatus, (newStatus) => {
+    if (newStatus === QueryStatuses.Done) {
+        session.notebook.selectedCell = undefined;
+    }
+});
 
 
 const messageEvents = computed(() => {
