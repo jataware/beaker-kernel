@@ -329,8 +329,7 @@ defineExpose({
         const panel = panels.value[selectedTabIndex.value];
         return {
             index: selectedTabIndex.value,
-            label: panel?.props?.label,
-            id: panel?.props?.id
+            label: panel?.props?.label
         };
     }
 });

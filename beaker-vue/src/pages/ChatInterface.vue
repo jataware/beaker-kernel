@@ -367,11 +367,9 @@ const restartSession = async () => {
 <style lang="scss">
 .spacer {
     &.left {
-        //flex: 0 1000 25vw;
         display: none;
     }
     &.right {
-        //flex: 0 1000 25vw;
         display: none;
     }
 }
