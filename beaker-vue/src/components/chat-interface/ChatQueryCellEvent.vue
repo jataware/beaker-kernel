@@ -2,7 +2,8 @@
     <BeakerQueryCellEvent
         :event="props.event"
         :parent-query-cell="props.parentQueryCell"
-        :custom-class="isExpanded ? '' : 'code-cell-collapsed'"
+        :code-styles="isExpanded ? '' : 'code-cell-collapsed'"
+        :hide-code-cell-output="true"
     >
         <template #code-cell-controls>
             <Button 

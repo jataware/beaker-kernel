@@ -6,10 +6,9 @@
             class="md-inline"
         />
         <div v-if="props.event?.type === 'response' && parentEntries !== 0">
-            <!-- <h4 class="agent-outputs">Outputs:</h4> -->
             <Accordion :multiple="true" :active-index="meaningfulOutputs">
                 <AccordionTab
-                    v-for="[index, child] in availableOutputs"
+                    v-for="[index, child] in parentEntries"
                     :key="index"
                     :pt="{
                         header: {
@@ -102,10 +101,10 @@
                 @click="codeCellOnClick"
                 :cell="getCellModelById(props?.event.content.cell_id)"
                 :drag-enabled="false"
+                :code-styles="props.codeStyles"
                 :class="{
                     selected: isCodeCellSelected,
-                    'query-event-code-cell': true,
-                    [props.customClass]: props.customClass
+                    'query-event-code-cell': true
                 }"
                 :hide-output="false"
                 ref="codeCellRef"
@@ -185,7 +184,7 @@ const codeCellRef = ref();
 const props = defineProps([
     'event',
     'parentQueryCell',
-    'customClass'
+    'codeStyles'
 ]);
 
 onBeforeMount(() => {
@@ -258,25 +257,6 @@ const meaningfulOutputs = computed(() => {
     });
     return outputs;
 })
-
-const hasOutputData = (child) => {
-    if (!child || !child.outputs || child.outputs.length === 0) {
-        return false;
-    }
-    
-    // Check if any output has data that's not empty
-    return child.outputs.some(output => 
-        output.data && Object.keys(output.data).length > 0
-    );
-};
-
-const availableOutputs = computed(() => {
-    if (!parentEntries.value) return [];
-    
-    const entriesArray = Array.from(parentEntries.value);
-    // Only display > output if there are outputs
-    return entriesArray.filter(([_, child]) => hasOutputData(child));
-});
 
 const getCellModelById = (id): IBeakerCell | undefined => {
     const notebook = beakerSession.session.notebook;
