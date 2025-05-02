@@ -22,7 +22,7 @@
       </div>
       <div class="events-scroll-container">
         <div v-if="shouldShowNoThoughtsPlaceholder" class="no-thoughts-message">
-          <em>No Thought details available for this agent query.</em>
+          <em>No details available for this agent query.</em>
         </div>
         <ChatQueryCellEvent 
           v-else
