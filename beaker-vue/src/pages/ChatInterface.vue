@@ -95,7 +95,7 @@
                 @panel-hide="unselectCell"
             >
                 <SideMenuPanel
-                    label="Thoughts"
+                    label="Agent Actions"
                     icon="pi pi-lightbulb"
                     position="top"
                     :selected="!!selectedCellId"
@@ -235,7 +235,7 @@ watch(selectedCellId, (newValue) => {
     const anyPaneOpen = rightSideMenuRef.value.getSelectedPanelInfo()?.label;
 
     if (newValue) {
-        rightSideMenuRef.value.selectPanel('Thoughts');
+        rightSideMenuRef.value.selectPanel('Agent Actions');
     } 
     else if (anyPaneOpen) {
         rightSideMenuRef.value.hide();

@@ -1,14 +1,13 @@
 <template>
   <div class="thoughts-pane">
     <div v-if="!selectedCell">
-      <em>No cell selected.</em>
+      <em>Select <i class="pi pi-search" style="margin: 0 0.25rem; color: var(--text-color-secondary);"></i> agent actions from the conversation to view details.</em>
     </div>
     <div v-else class="thoughts-pane-content">
       <div class="filter-controls">
         <div class="filter-button-group">
 
           <Button label="Scroll To Query" outlined @click="scrollToMessage" class="p-button-sm" />
-          <!-- <Button label="Unselect Cell" outlined @click="unselectCell" class="p-button-sm" /> -->
 
           <ToggleButton v-model="showCodeCells" outlined on-label="Hide Code" off-label="Show Code"
             on-icon="pi pi-eye-slash" off-icon="pi pi-eye" class="p-button-sm filter-button" 
@@ -41,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, computed, ref, defineEmits, toRaw } from 'vue';
+import { defineProps, computed, ref, defineEmits } from 'vue';
 import ProgressBar from 'primevue/progressbar';
 import ToggleButton from 'primevue/togglebutton';
 import Button from 'primevue/button';
@@ -53,7 +52,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'scrollToMessage'): void
-  (e: 'unselectCell'): void
 }>();
 
 const showCodeCells = ref(true);
@@ -84,10 +82,6 @@ const selectedCellEvents = computed(() => {
 
 const scrollToMessage = () => {
   emit('scrollToMessage');
-}
-
-const unselectCell = () => {
-  emit('unselectCell');
 }
 
 // Filter events based on toggle states
