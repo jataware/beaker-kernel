@@ -14,7 +14,7 @@ from typing_extensions import Self
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError
+from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError, ensure_async
 from beaker_kernel.lib.config import config as beaker_config
 from beaker_kernel.lib.types import Datasource
 
@@ -163,10 +163,7 @@ class BeakerContext:
     async def auto_context(self):
         parts = []
         if hasattr(self, "_auto_context"):
-            if inspect.iscoroutinefunction(self._auto_context):
-                result = await self._auto_context()
-            else:
-                result = self._auto_context()
+            result = await ensure_async(self._auto_context())
             parts.append(
                 result
             )

@@ -20,7 +20,7 @@ from beaker_kernel.lib.context import BeakerContext, autodiscover_contexts
 from beaker_kernel.lib.jupyter_kernel_proxy import InterceptionFilter, JupyterMessage, KernelProxyManager
 from beaker_kernel.lib.utils import (message_handler, LogMessageEncoder, magic,
                         handle_message, get_socket, execution_context, parent_message_context,
-                        ForwardMessage)
+                        ForwardMessage, ensure_async)
 
 USER_RESPONSE_WAIT_TIME_SECONDS = 100
 
@@ -342,10 +342,7 @@ class BeakerKernel(KernelProxyManager):
         subkernel = self.context.subkernel
         kernel_setup_func = getattr(subkernel, "setup", None)
         with execution_context(type="setup", name=context_name, parent_header=parent_header):
-            if inspect.iscoroutinefunction(kernel_setup_func):
-                await kernel_setup_func()
-            elif inspect.isfunction(kernel_setup_func) or inspect.ismethod(kernel_setup_func):
-                kernel_setup_func()
+            await ensure_async(kernel_setup_func())
         await self.update_connection_file(context={"name": context_name, "config": context_info})
         await self.send_preview(parent_header=parent_header)
         await self.send_kernel_state_info(parent_header=parent_header)
