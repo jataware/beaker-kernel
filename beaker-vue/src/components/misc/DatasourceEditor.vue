@@ -329,8 +329,6 @@ const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const emptyText = ref<string|undefined>(undefined);
 
-const folderRoot = props.folderRoot;
-
 const fileInput = ref<HTMLInputElement|undefined>(undefined);
 const fileInputMultiple = ref<HTMLInputElement|undefined>(undefined);
 const uploadForm = ref<HTMLFormElement|undefined>(undefined);
@@ -425,12 +423,14 @@ const save = () => {
 }
 
 const download = async (name) => {
+    const folderRoot = props.folderRoot;
     const path = `${folderRoot.value}/${folderSlug.value}/documentation/${name}`;
     console.log(`downloading ${name} (${path})`);
     await downloadFile(path);
 }
 
 const createFoldersForDatasource = async () => {
+    const folderRoot = props.folderRoot;
     const basepath = `${folderRoot.value}/${folderSlug.value}`
 
     // is the datasource slug folder present?
@@ -486,6 +486,7 @@ const onSelectFilesForUpload = async () => {
 }
 
 const uploadFile = async (files: FileList) => {
+    const folderRoot = props.folderRoot;
     unsavedChanges.value = true;
     const promises = Array.from(files).map(async (file) => {
         let path = `${folderRoot.value}/${folderSlug.value}/documentation/${file.name}`;
