@@ -1,10 +1,18 @@
 <template>
     <div class="llm-query-event">
+        <div v-if="waitForUserAnswer(event)">
+            <span class="waiting-text">
+                <i class="pi pi-spin pi-spinner" style="font-size: 1rem"></i> Waiting for user input in conversation.
+            </span>
+        </div>
+        <div v-else-if="event.type === 'user_question' && props.shouldHideAnsweredQuestions">
+        </div>
         <div
-            v-if="isMarkdown(event) && isValidResponse(event)"
+            v-else-if="isMarkdown(event) && isValidResponse(event)"
             v-html="markdownBody"
             class="md-inline"
         />
+
         <div v-if="props.event?.type === 'response' && parentEntries !== 0">
             <Accordion :multiple="true" :active-index="meaningfulOutputs">
                 <AccordionTab
@@ -184,7 +192,8 @@ const codeCellRef = ref();
 const props = defineProps([
     'event',
     'parentQueryCell',
-    'codeStyles'
+    'codeStyles',
+    'shouldHideAnsweredQuestions'
 ]);
 
 onBeforeMount(() => {
@@ -192,7 +201,7 @@ onBeforeMount(() => {
     //    gfm: true,
     //    sanitize: false,
     //    langPrefix: `language-`,
-     });
+    });
 })
 
 // these need to be no-ops if notebook doesn't exist in the parent UI.
@@ -285,6 +294,10 @@ const isValidResponse = (event: BeakerQueryEvent) => {
         return false;
     }
     return true;
+}
+
+const waitForUserAnswer = (event: BeakerQueryEvent) => {
+    return event.type === 'user_question' && event.waitForUserInput;
 }
 
 const markdownBody = computed(() =>
@@ -401,6 +414,12 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     p:last-child {
         margin-bottom: 0.5rem;
     }
+}
+
+.waiting-text {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 </style>

@@ -3,6 +3,7 @@
         :event="props.event"
         :parent-query-cell="props.parentQueryCell"
         :code-styles="isExpanded ? '' : 'code-cell-collapsed'"
+        :should-hide-answered-questions="true"
     >
         <template #code-cell-controls>
             <Button 

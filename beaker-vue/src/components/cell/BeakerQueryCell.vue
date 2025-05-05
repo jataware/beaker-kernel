@@ -71,7 +71,7 @@
                         <BeakerQueryCellEvent
                             :key="eventIndex"
                             :event="event"
-                            :parentQueryCell="cell"
+                            :parent-query-cell="cell"
                         />
                     </AccordionTab>
                 </Accordion>

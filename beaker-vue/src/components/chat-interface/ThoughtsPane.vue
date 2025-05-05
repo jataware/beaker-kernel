@@ -29,7 +29,7 @@
           v-for="(event, eventIndex) in filteredCellEvents"
           :key="eventIndex" 
           :event="event" 
-          :is-chat="true"
+          :parent-query-cell="props.selectedCell"
         />
 
         <ProgressBar v-if="isSelectedCellInProgress" mode="indeterminate"
@@ -90,6 +90,10 @@ const filteredCellEvents = computed(() => {
 
   return selectedCellEvents.value.filter(event => {
 
+    if (event.type === 'user_answer') {
+      return false;
+    }
+
     if (!showCodeCells.value && event.type === 'code_cell') {
       return false;
     }
@@ -105,7 +109,19 @@ const filteredCellEvents = computed(() => {
     }
 
     return true;
-  });
+  })
+  .map((event, index, all_events) => {
+    const isLastEvent = index === all_events.length - 1;
+    // The last event is an unanswered question, add marker to show indicator down the line
+    const unansweredQuestion = event.type === 'user_question' && isLastEvent;
+    if (unansweredQuestion) {
+      return {
+        ...event,
+        waitForUserInput: true
+      }
+    }
+    return event;
+  })
 });
 
 const shouldShowNoThoughtsPlaceholder = computed(() => {
