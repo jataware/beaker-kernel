@@ -17,9 +17,11 @@
     >
         <div class="datasource-container">
             <div class="beaker-notebook">
-                <DatasourceEditor :datasources="datasources">
-
-                </DatasourceEditor>
+                <DatasourceEditor
+                    :datasources="datasources"
+                    :selected-on-load="selectedOnLoad"
+                    :folderRoot="datasourcesFolderRoot"
+                />
             </div>
         </div>
 
@@ -43,7 +45,7 @@
                     />
                 </SideMenuPanel>
                 <SideMenuPanel
-                    id="datasources" label="Datasources" icon="pi pi-database"
+                    id="integrations" label="Integrations" icon="pi pi-database"
                     v-if="datasources.length > 0"
                 >
                     <DatasourcePanel :datasources="datasources">
@@ -107,6 +109,7 @@ import ConfigPanel from '../components/panels/ConfigPanel.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
+import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 
 import { IBeakerTheme } from '../plugins/theme';
 import DebugPanel from '../components/panels/DebugPanel.vue'
@@ -125,6 +128,7 @@ const previewVisible = ref<boolean>(false);
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "notebook_dev_session";
+const selectedOnLoad = urlParams.has("selected") ? urlParams.get("selected") : undefined;
 
 const props = defineProps([
     "config",
@@ -153,11 +157,12 @@ const isMaximized = ref(false);
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerApp = inject<any>("beakerAppConfig");
 
-beakerApp.setPage("notebook");
+beakerApp.setPage("integrations");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
 const datasources = ref([]);
+const datasourcesFolderRoot = ref("");
 
 const hasOpenedPanelOnce = ref(false);
 
@@ -174,6 +179,23 @@ onMounted(() => {
 
 const headerNav = computed((): NavOption[] => {
     const nav = [];
+    if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "notebook"))) {
+        const href = "/" + (beakerApp?.config?.pages?.notebook?.default ? '' : 'notebook') + window.location.search;
+        nav.push(
+            {
+                type: 'link',
+                href: href,
+                label: 'Navigate to notebook view',
+                component: NotebookSvg,
+                componentStyle: {
+                    fill: 'currentColor',
+                    stroke: 'currentColor',
+                    height: '1rem',
+                    width: '1rem',
+                },
+            }
+        );
+    }
     if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "chat"))) {
         const href = "/" + (beakerApp?.config?.pages?.chat?.default ? '' : 'chat') + window.location.search;
         nav.push(
@@ -254,9 +276,10 @@ const iopubMessage = (msg) => {
             incomingDatasources = [];
         }
         datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
+        datasourcesFolderRoot.value = msg.content.datasource_root;
 
         if (!hasOpenedPanelOnce.value) {
-            nextTick(() => sideMenuRef.value.selectPanel('datasources'))
+            nextTick(() => sideMenuRef.value.selectPanel('integrations'))
             hasOpenedPanelOnce.value = true;
         }
     }
@@ -348,6 +371,9 @@ const restartSession = async () => {
             }
             > .p-inputtextarea.p-inputtext {
                 height: 10rem;
+            }
+            > p {
+                margin-top: 0rem;
             }
         }
     }

@@ -72,7 +72,7 @@
                 </SideMenuPanel>
 
                 <SideMenuPanel
-                    id="datasources" label="Datasources" icon="pi pi-database"
+                    id="integrations" label="Integrations" icon="pi pi-database"
                     v-if="datasources.length > 0"
                 >
                     <DatasourcePanel :datasources="datasources">

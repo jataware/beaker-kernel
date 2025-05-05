@@ -5,7 +5,7 @@
                 <InputGroupAddon>
                     <i class="pi pi-search"></i>
                 </InputGroupAddon>
-                <InputText placeholder="Search Datasources..." v-model="searchText">
+                <InputText placeholder="Search Integrations..." v-model="searchText">
                 </InputText>
                 <Button
                     v-if="searchText !== undefined && searchText !== ''"
@@ -24,6 +24,24 @@
                     gap: 0.5rem;
                     width: 100%;
             ">
+                <a :href="`/integrations?selected=new${sessionIdParam}`">
+                    <Button
+                        style="height: 32px"
+                        outlined
+                    >
+                        Add New Integration
+                    </Button>
+                </a>
+            </div>
+            <div
+                style="
+                    display: flex;
+                    flex-direction: column;
+                    padding-top: 0.25rem;
+                    padding-bottom: 0.25rem;
+                    gap: 0.5rem;
+                    width: 100%;
+            ">
                 <div
                     class="clickable-table-of-contents"
                     @click="showTableOfContents = !showTableOfContents"
@@ -33,7 +51,7 @@
                         style="margin-right: 0.2rem;"
                     >
                     </i>
-                    <i>{{ datasources.length }} datasources loaded:</i>
+                    <i>{{ datasources.length }} integrations loaded:</i>
                     <span>{{ showTableOfContents ? 'Hide Names' : 'Show Names' }}</span>
                 </div>
                 <div
@@ -64,15 +82,32 @@
                             <span class="datasource-card-title-text">
                                 {{ datasource?.name }}
                             </span>
-                            <Button
-                                class="datasource-show-more"
-                                outlined
-                                :icon="`pi ${cardState[index] ? 'pi-minus' : 'pi-plus'}`"
-                                @click="cardState[index] = !cardState[index]"
-                                v-tooltip="cardState[index] ? 'Show Less' : 'Show More'"
-
-                            >
-                            </Button>
+                            <span>
+                                <a
+                                    :href="`/integrations?selected=${datasource?.slug}${sessionIdParam}`"
+                                    v-tooltip="'Edit Integration'"
+                                >
+                                    <Button
+                                        style="
+                                            width: 32px;
+                                            height: 32px;
+                                            margin-right: 0.5rem;
+                                        "
+                                        outlined
+                                        icon="pi pi-pencil"
+                                    />
+                                </a>
+                                <Button
+                                    style="
+                                        width: 32px;
+                                        height: 32px;
+                                    "
+                                    outlined
+                                    :icon="`pi ${cardState[index] ? 'pi-chevron-down' : 'pi-chevron-right'}`"
+                                    @click="cardState[index] = !cardState[index]"
+                                    v-tooltip="cardState[index] ? 'Show Less' : 'Show More'"
+                                />
+                            </span>
                         </div>
                     </template>
                     <template #content>
@@ -103,6 +138,9 @@ import { marked } from "marked";
 
 const searchText = ref(undefined);
 const props = defineProps(["datasources"])
+
+const urlParams = new URLSearchParams(window.location.search);
+const sessionIdParam = urlParams.has("session") ? `&session=${urlParams.get("session")}` : "";
 
 const sortedDatasources = computed(() =>
     props?.datasources?.toSorted((a, b) => a?.name.localeCompare(b?.name)))

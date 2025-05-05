@@ -2,7 +2,7 @@
     <div class="datasource-editor">
         <div class="datasource-loading" v-if="beakerSession.status === 'connecting'">
             <ProgressSpinner></ProgressSpinner>
-            Loading datasources...
+            Loading integrations...
             {{beakerSession?.status}}
         </div>
 
@@ -15,9 +15,9 @@
                             value: datasource
                         }
                     })"
-                :option-label="(option) => option?.label ?? 'Select datasource...'"
+                :option-label="(option) => option?.label ?? 'Select integration...'"
                 option-value="value"
-                placeholder="Select a datasource..."
+                placeholder="Select a integration..."
                 @click="(event) => {
                     if (!confirmUnsavedChanges()) {
                         event.preventDefault;
@@ -30,13 +30,26 @@
 
                 </Dropdown>
 
-                <Button @click="() => {
-                    if (confirmUnsavedChanges()) {
-                        newDatasource();
-                    }
-                }">
-                    Create New Datasource
-                </Button>
+                <SplitButton
+                    @click="() => {
+                        if (confirmUnsavedChanges()) {
+                            newDatasource();
+                        }
+                    }"
+                    label="New API Integration"
+                    :model="[
+                        {
+                            label: 'New API Integration',
+                            command: () => {}
+                        },
+                        {
+                            label: 'New Dataset Integration',
+                            command: () => {}
+                        }
+                    ]"
+                >
+
+                </SplitButton>
 
                 <span v-if="unsavedChanges">
                     Unsaved changes!
@@ -48,31 +61,44 @@
                 <InputText
                     v-if="selectedDatasource"
                     v-model="selectedDatasource.name"
-                    :placeholder="selectedDatasource?.name ? 'Name' : 'No datasource selected.'"
+                    :placeholder="selectedDatasource?.name ? 'Name' : 'No integration selected.'"
                     @change="unsavedChanges = true;"
                 />
                 <InputText
                     v-else
                     disabled
-                    placeholder="No datasource selected."
+                    placeholder="No integration selected."
                 />
             </Fieldset>
 
             <Fieldset legend="Description">
-                <Textarea
-                    v-if="selectedDatasource"
-                    v-model="selectedDatasource.description"
-                    @change="setUnsavedChanges"
-                />
-                <Textarea
-                    v-else
-                    disabled
-                    filled
-                    placeholder="No datasource selected."
-                />
+                <p>
+                    The description, used by both users and the agent, provides a brief summary of the purpose of this
+                    integration. The agent will use this to select which integration best matches a user's request.
+                </p>
+                <div class="constrained-editor-height">
+                    <CodeEditor
+                        v-if="selectedDatasource"
+                        v-model="selectedDatasource.description"
+                        @change="setUnsavedChanges"
+                        ref="descriptionEditor"
+                    />
+                    <CodeEditor
+                        v-else
+                        disabled
+                        v-model="emptyText"
+                        placeholder="No integration selected."
+                    />
+                </div>
             </Fieldset>
 
-            <Fieldset legend="User Files" v-if="selectedDatasource?.attached_files">
+            <Fieldset legend="User Files">
+                <p>
+                    Uploaded files will be used by the agent in one of two ways: either included in the instruction body,
+                    or when running code based on a user's request. For included documentation, these files should
+                    be included in the body and will be used in determining what steps to take for the user's request.
+                    For large datasets, these are used once the agent is executing a request.
+                </p>
                 <form ref="uploadForm">
                     <input
                         @change="onSelectFileForUpload"
@@ -102,7 +128,7 @@
                         :value="xsrfCookie"
                     />
                 </form>
-                <Toolbar v-for="file in selectedDatasource.attached_files" :key="file?.filepath">
+                <Toolbar v-for="file in selectedDatasource?.attached_files" :key="file?.filepath">
                     <template #start>
                         <Badge
                             severity="warning"
@@ -131,11 +157,6 @@
                             @click="download(file?.filepath)"
                         />
                         <Button
-                            icon="pi pi-pencil"
-                            v-tooltip="'Edit'"
-                            style="width: 32px; height: 32px"
-                        />
-                        <Button
                             icon="pi pi-upload"
                             v-tooltip="'Upload and replace'"
                             style="width: 32px; height: 32px"
@@ -150,11 +171,19 @@
 
                         </Button>
                     </template>
-                    <!-- <template #end>
-                        <Button>
-                            Insert
-                        </Button>
-                    </template> -->
+                    <template #end>
+                        <Button
+                            icon="pi pi-times"
+                            severity="danger"
+                            style="width: 32px; height: 32px"
+                            @click="() => {
+                                selectedDatasource.attached_files = selectedDatasource.attached_files.splice(
+                                    selectedDatasource.attached_files.indexOf(file), 1
+                                )
+                            }"
+                            v-tooltip="'Remove File'"
+                        />
+                    </template>
                 </Toolbar>
                 <Button @click="openFileSelectionMultiple" style="width: fit-content;">
                     Add New Files
@@ -162,7 +191,10 @@
             </Fieldset>
 
             <Fieldset legend="Agent Instructions">
-                <span style="margin-bottom: 0.5rem">
+                <p>
+                    Agent instructions will be given to the agent when it creates a plan to execute a user's request.
+                </p>
+                <span style="margin-bottom: 1rem">
                     Files uploaded above can be referenced in the below agent instructions with
                     <span style="font-family: monospace;">{filename}</span>,
                     such as if you uploaded a file named
@@ -173,18 +205,21 @@
                     <span style="font-family: monospace;">{documentation}</span> to the body below will ensure the agent
                     can read your uploaded file.
                 </span>
-                <Textarea
-                    v-if="selectedDatasource"
-                    v-model="selectedDatasource.source"
-                    @change="setUnsavedChanges"
-                >
-                </Textarea>
-                <Textarea
-                    v-else
-                    disabled
-                    filled
-                    value="No datasource selected."
-                />
+                <div class="constrained-editor-height">
+                    <CodeEditor
+                        v-if="selectedDatasource"
+                        v-model="selectedDatasource.source"
+                        @change="setUnsavedChanges"
+                        ref="instructionEditor"
+                    />
+                    <CodeEditor
+                        v-else
+                        disabled
+                        v-model="emptyText"
+                        placeholder="No integration selected."
+                    />
+                </div>
+
             </Fieldset>
 
             <Divider v-if="unincludedFiles.length > 0"></Divider>
@@ -198,60 +233,12 @@
                 >
                     Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
                 </Tag>
-
-                <Tag
-                    icon="pi pi-exclamation-triangle"
-                    severity="warning"
-                    size="large"
-                    v-if="!properPathSelected"
-                >
-                    Did not find existing api.yaml in the given server path. Please check the folder root and fix it with the file browser below.
-                </Tag>
-
-                <Tag
-                    icon="pi pi-exclamation-triangle"
-                    severity="warning"
-                    size="large"
-                    v-else-if="folderRoot === '.' && selectedDatasource"
-                >
-                    Datasource path is set to '.', which is the default value.
-                    Please ensure this is correct and not unintended before saving a new datasource.
-                </Tag>
-
             </div>
 
 
             <Divider></Divider>
 
             <div style="display: flex; flex-direction: column; gap: 0.5rem">
-
-                <div>
-                    <h4 class="h-less-pad">Datasource Path:</h4>
-                    <InputGroup>
-                        <InputText
-                            placeholder="Path to datasources root folder"
-                            :value="folderRoot"
-                        />
-                        <Button label="Browse..." @click="datasourcePathSelectionOpen = !datasourcePathSelectionOpen"/>
-                    </InputGroup>
-                    <div
-                        style="
-                            height: 16rem;
-                            overflow-y: auto;
-                            width: 100%
-                        "
-                        v-show="datasourcePathSelectionOpen"
-                    >
-                        <FilePanel
-                            :hide-uploads="true"
-                            :disabled-columns="['downloads']"
-                            ref="filePickerRef"
-                            @preview-file="(file, mimetype) => {}"
-                        />
-                    </div>
-
-                </div>
-
                 <Button
                     style="width: fit-content"
                     @click="save"
@@ -259,7 +246,6 @@
                 >Save</Button>
             </div>
 
-            <!-- <Fieldset legend="Examples"></Fieldset>  -->
         </Fieldset>
     </div>
 </template>
@@ -273,25 +259,26 @@ import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 import Dropdown from 'primevue/dropdown';
 import Fieldset from 'primevue/fieldset';
-import Textarea from "primevue/textarea";
 import Button from "primevue/button";
 import Divider from 'primevue/divider';
 import Toolbar from 'primevue/toolbar';
 import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
 import Tag from 'primevue/tag';
-import FilePanel from "../panels/FilePanel.vue";
-import InputGroup from 'primevue/inputgroup';
 
 import cookie from 'cookie';
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
 import Badge from 'primevue/badge';
+import CodeEditor from './CodeEditor.vue';
+import SplitButton from 'primevue/splitbutton';
 const showToast = inject<any>('show_toast');
 
-const props = defineProps(["datasources"]);
+const props = defineProps(["datasources", "selectedOnLoad", "folderRoot"]);
 const selectedDatasource = ref(undefined);
 const temporaryDatasource = ref(undefined);
+
+const hasLoadedInitialSelection = ref(false);
 
 const sortedDatasources = computed(() =>
     props?.datasources?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
@@ -299,18 +286,50 @@ const sortedDatasources = computed(() =>
 const allDatasources = computed(() =>
     [...sortedDatasources?.value, ...(temporaryDatasource?.value ? [temporaryDatasource.value] : [])])
 
+watch(props.datasources, (updatedDatasources) => {
+    if (updatedDatasources.length === 0) {
+        return;
+    }
+    if (hasLoadedInitialSelection.value) {
+        return;
+    }
+    if (props?.selectedOnLoad) {
+        nextTick(() => {
+            if (props?.selectedOnLoad === 'new') {
+                newDatasource();
+                return;
+            }
+            for (const datasource of updatedDatasources) {
+                if (datasource?.slug === props?.selectedOnLoad) {
+                    selectedDatasource.value = datasource;
+                    return;
+                }
+            }
+        })
+    }
+    hasLoadedInitialSelection.value = true;
+})
+
+const descriptionEditor = ref();
+watch(() => [selectedDatasource.value?.description], (current) => {
+    if (descriptionEditor.value) {
+        descriptionEditor.value.model = current[0];
+    }
+})
+
+const instructionEditor = ref();
+watch(() => [selectedDatasource.value?.source], (current) => {
+    if (instructionEditor.value) {
+        instructionEditor.value.model = current[0];
+    }
+})
 
 const session = inject<BeakerSession>('session');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
-const folderRoot = ref<string>();
-const datasourcePathSelectionOpen = ref<boolean>(false);
-const filePickerRef = ref();
-const filePickerDir = computed(() => filePickerRef?.value?.directory)
-watch(filePickerDir, (newValue) => {
-    if (newValue !== "")
-    folderRoot.value = newValue;
-})
+const emptyText = ref<string|undefined>(undefined);
+
+const folderRoot = props.folderRoot;
 
 const fileInput = ref<HTMLInputElement|undefined>(undefined);
 const fileInputMultiple = ref<HTMLInputElement|undefined>(undefined);
@@ -375,36 +394,14 @@ const folderSlug = computed(() => {
     return url
 })
 
-const properPathSelected = ref<boolean>(true);
-watch([selectedDatasource, folderRoot], async () => {
-    if (selectedDatasource?.value === undefined) {
-        properPathSelected.value = true;
-        return;
-    }
-    if (temporaryDatasource?.value) {
-        properPathSelected.value = true;
-        return;
-    }
-    try {
-        const targetDir = await contentManager.get(`${folderRoot.value}/${folderSlug.value}/api.yaml`);
-        if (targetDir.type !== 'file') {
-            throw "API file not found."
-        }
-        properPathSelected.value = true;
-    }
-    catch {
-        properPathSelected.value = false;
-    }
-})
-
 const newDatasource = () => {
     unsavedChanges.value = true;
     selectedDatasource.value = {
-        name: "New Datasource",
+        name: "New Integration",
         url: "",
         slug: undefined,
-        source: "This is the prompt information that the agent will consult when using the datasource. Include API details or how to find datasets here.",
-        description: "This is the description that the agent will use to determine when this datasource should be used.",
+        source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
+        description: "This is the description that the agent will use to determine when this integration should be used.",
         attached_files: [],
     }
     temporaryDatasource.value = selectedDatasource.value
@@ -563,3 +560,14 @@ const downloadFile = async (path) => {
 };
 
 </script>
+
+<style lang="scss">
+.constrained-editor-height {
+    max-height: 16rem;
+    overflow-y: auto;
+}
+
+.datasource-editor > fieldset.p-fieldset legend.p-fieldset-legend {
+    display: flex;
+}
+</style>

@@ -23,9 +23,9 @@ module.exports = defineConfig({
       entry: 'src/pages/dev-interface.ts',
       title: "Beaker Development Interface",
     },
-    datasource: {
-      entry: 'src/pages/datasource-interface.ts',
-      title: "Beaker Datasource Manager",
+    integrations: {
+      entry: 'src/pages/integrations-interface.ts',
+      title: "Beaker Integration Manager",
     },
   },
   css: { extract: false },

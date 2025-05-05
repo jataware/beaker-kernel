@@ -298,6 +298,15 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
         }
+
+        if get_datasource_root_method := getattr(self, "get_datasource_root", None):
+            if inspect.iscoroutinefunction(get_datasource_root_method):
+                root_path = await get_datasource_root_method()
+            elif callable(get_datasource_root_method):
+                root_path = get_datasource_method()
+            else:
+                raise ValueError("get_datasource_root defined but not callable")
+            payload["datasource_root"] = root_path
         if get_datasource_method := getattr(self, "get_datasources", None):
             datasources: list[Datasource] = []
             if inspect.iscoroutinefunction(get_datasource_method):

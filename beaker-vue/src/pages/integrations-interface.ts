@@ -9,7 +9,7 @@ import { vKeybindings } from '../directives/keybindings';
 import { vAutoScroll } from '../directives/autoscroll';
 import BeakerThemePlugin from '../plugins/theme';
 import BeakerAppConfigPlugin from '../plugins/appconfig';
-import DatasourceInterface from './DatasourceInterface.vue';
+import IntegrationsInterface from './IntegrationsInterface.vue';
 
 
 import 'primeicons/primeicons.css';
@@ -25,7 +25,7 @@ const baseUrl = PageConfig.getBaseUrl();
   const configResponse = await fetch(confUrl);
   const config = await configResponse.json();
 
-  const app = createApp(DatasourceInterface, {config});
+  const app = createApp(IntegrationsInterface, {config});
 
   app.use(PrimeVue);
   app.use(ToastService);
