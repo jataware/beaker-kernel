@@ -7,6 +7,7 @@ import vueDevTools from 'vite-plugin-vue-devtools';
 import topLevelAwait from 'vite-plugin-top-level-await';
 
 let chunkNum: number = 0;
+const ProxyHost = `${process.env.PROXY || 'http://localhost:8888'}`;
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -15,10 +16,15 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 8080,
     proxy: {
-      '/api': 'http://localhost:8888',
-      '/appconfig.js': 'http://localhost:8888/',
-      '/files': 'http://localhost:8888/',
-      '/config': 'http://localhost:8888/',
+      '/api': {
+        target: `${ProxyHost}/`,
+        ws: true,
+        rewriteWsOrigin: true,
+      },
+      '/appconfig.js': `${ProxyHost}/`,
+      '/files': `${ProxyHost}/`,
+      '/config': `${ProxyHost}/`,
+      '/contexts': `${ProxyHost}/`,
     },
     fs: {
       allow: [".."]

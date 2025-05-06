@@ -24,6 +24,7 @@ services:
     volumes:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
+      # - ./run:/var/run/beaker/
     command: ["beaker", "dev", "watch", "--ip", "0.0.0.0"]
   ui:
     image: node:20
@@ -36,4 +37,4 @@ services:
       - PROXY=http://jupyter:8888
     ports:
       - "8080:8080"
-    command: ["npm", "run", "serve"]
+    command: "sh -c 'npm i && npm run serve'"

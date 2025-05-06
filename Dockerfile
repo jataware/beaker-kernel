@@ -24,6 +24,7 @@ RUN chown -R 1000:1000 /jupyter
 RUN pip install --no-build-isolation --no-cache-dir /jupyter
 
 RUN mkdir -m 755 /var/run/beaker
+RUN mkdir -m 777 /var/run/beaker/checkpoints
 
 # Set default server env variables
 ENV BEAKER_AGENT_USER=jupyter
