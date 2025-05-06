@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, defineProps, defineExpose, watch, computed, defineEmits, getCurrentInstance, useSlots, isVNode, nextTick, withDefaults, onUnmounted, onMounted, onBeforeMount } from "vue";
+import { ref, defineProps, defineExpose, watch, computed, defineEmits, getCurrentInstance, useSlots, isVNode, nextTick, withDefaults, onUnmounted, onMounted } from "vue";
 import { type VNode } from "vue";
 
 import Button from 'primevue/button';
@@ -109,7 +109,6 @@ const minimizeIndicator = ref<boolean>(false);
 const resizeObserver = ref<ResizeObserver>();
 const resizeHistory = ref<DOMRectReadOnly>();
 const instance = getCurrentInstance();
-const panels = ref<VNode[]>();
 
 var minWidth: number;
 var menuWidth: number;
@@ -119,13 +118,20 @@ const expanded = computed(() => {
     return selectedTabIndex.value !== null;
 });
 
+const panels = computed(() => {
+    const slotPanels = slots.default().filter((item) => {
+        return (isVNode(item) && item.type === SideMenuPanel);
+    });
+    return slotPanels;
+})
+
 const panelsByPosition = computed(() => {
     const result: {[key: string]: {panel: VNode; idx: number}[]} = {
         top: [],
         middle: [],
         bottom: [],
     }
-    panels.value.forEach((panel, idx) => {
+    panels.value?.forEach((panel, idx) => {
         const panelPos = panel.props.position || "top";
         result[panelPos].push({panel, idx});
     });
@@ -273,6 +279,10 @@ const isPanelSelected = (index: number) => {
     );
 }
 
+const hidePanel = () => {
+    selectedTabIndex.value = null;
+}
+
 const selectPanel = (id_or_label: string) => {
     selectedTabIndex.value = panels.value.findIndex(
         (panel) => (panel.props?.label === id_or_label || panel.props?.id === id_or_label)
@@ -281,13 +291,6 @@ const selectPanel = (id_or_label: string) => {
         minimizeIndicator.value = false;
     }
 }
-
-onBeforeMount(() => {
-    const slotPanels = slots.default().filter((item) => {
-        return (isVNode(item) && item.type === SideMenuPanel);
-    });
-    panels.value = slotPanels;
-});
 
 onMounted(() => {
     const target: HTMLElement = document.body;
@@ -318,6 +321,7 @@ onUnmounted(() => {
 
 defineExpose({
     selectPanel,
+    hidePanel
 });
 
 </script>
