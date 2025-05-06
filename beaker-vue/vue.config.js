@@ -23,6 +23,10 @@ module.exports = defineConfig({
       entry: 'src/pages/dev-interface.ts',
       title: "Beaker Development Interface",
     },
+    playground: {
+      entry: 'src/pages/playground-interface.ts',
+      title: "Beaker Playground",
+    },
   },
   css: { extract: false },
   assetsDir: "static/",
