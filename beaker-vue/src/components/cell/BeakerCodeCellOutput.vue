@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps } from "vue";
+import { ref } from "vue";
 import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 import ansiHtml from "ansi-html-community";
 import escapeHtml from "escape-html";

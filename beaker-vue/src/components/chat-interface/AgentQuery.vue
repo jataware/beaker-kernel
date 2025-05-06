@@ -2,11 +2,11 @@
     <Card class="agent-input-card">
         <template #content>
             <InputGroup>
-                <InputText
-                    :placeholder="props.placeholder ?? 'How can the agent help?'"
+                <ContainedTextArea
                     @keydown.enter.exact.prevent="handleQuery"
                     @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
                     v-model="query"
+                    :placeholder="props.placeholder ?? 'How can the agent help?'"
                 />
                 <Button
                     icon="pi pi-send"
@@ -26,10 +26,9 @@ import Card from 'primevue/card';
 import Button from 'primevue/button';
 import { BeakerSession } from 'beaker-kernel';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import ContainedTextArea from '../misc/ContainedTextArea.vue';
 
 import InputGroup from 'primevue/inputgroup';
-import InputText from 'primevue/inputtext';
-
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
@@ -85,14 +84,6 @@ const handleQuery = (e: any) => {
 .agent-query-container-chat {
     width: 100%;
     align-self: flex-end;
-    // div div div {
-    //     button {
-    //         background-color: var(--surface-b);
-    //         border-color: var(--surface-border);
-    //         color: var(--text-color);
-    //         border-left: 0px;
-    //     }
-    // }
     margin-top: 0.175rem;
     margin-bottom: 0.25rem;
 }
