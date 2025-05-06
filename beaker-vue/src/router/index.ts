@@ -1,45 +1,51 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router';
 
-export interface Route {
-    name: string;
-    path: string;
-    component: any;
-}
+const leftPanel = () => import('../pages/notebook/Left.vue');
+const rightPanel = () => import('../pages/notebook/Right.vue');
 
-export type Routes = { [key: string]: Route }
-
-const routeMap: Routes = {
-    "/": {
-      "path": "/",
-      "name": "home",
-      "component": () => import('../pages/NotebookInterface.vue')
-    },
-    "/notebook": {
-      "path": "/notebook",
-      "name": "notebook",
-      "component": () => import('../pages/NotebookInterface.vue')
-    },
-    "/chat": {
-      "path": "/chat",
-      "name": "chat",
-      "component": () => import('../pages/ChatInterface.vue')
-    },
-    "/dev": {
-      "path": "/dev",
-      "name": "dev",
-      "component": () => import('../pages/DevInterface.vue')
-    },
-    "/admin": {
-      "path": "/admin",
-      "name": "admin",
-      "component": () => import('../pages/BeakerAdmin.vue')
-    },
-    "/integrations": {
-      "path": "/integrations",
-      "name": "integrations",
-      "component": () => import('../pages/IntegrationsInterface.vue')
-    }
-}
+const routeMap: RouteRecordRaw[] = [
+  {
+    path: '',
+    name: 'home',
+    component: () => import('../pages/BaseRouteInterface.vue'),
+    children: [
+      {
+        path: '/notebook',
+        name: 'notebook',
+        components: {
+          centerPanel: () => import('../pages/notebook/Main.vue'),
+          leftPanel,
+          rightPanel,
+        }
+      },
+      {
+        path: '/chat',
+        name: 'chat',
+        components: {
+          centerPanel: () => import('../pages/ChatInterface.vue'),
+          leftPanel,
+          rightPanel,
+        }
+      },
+      {
+        path: '/dev',
+        name: 'dev',
+        component: () => import('../pages/DevInterface.vue')
+      },
+      {
+        path: '/integrations',
+        name: 'integrations',
+        component: () => import('../pages/IntegrationsInterface.vue')
+      }
+    ]
+  },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: () => import('../pages/BeakerAdmin.vue')
+  },
+];
 
 const routes = Object.values(routeMap);
 

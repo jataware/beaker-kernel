@@ -17,37 +17,26 @@ import Aura from '@primevue/themes/aura';
 import App from './App.vue'
 import router from './router'
 
-
 import 'primeicons/primeicons.css';
 import './index.scss';
 
-import { PageConfig, URLExt } from '@jupyterlab/coreutils';
-import { options } from 'marked';
-
-const baseUrl = PageConfig.getBaseUrl();
-
-const confUrl = URLExt.join(baseUrl, '/config')
-const configResponse = await fetch(confUrl);
-const config = await configResponse.json();
-
-const app = createApp(App, {config})
-
-app.use(createPinia())
-app.use(router)
-app.use(PrimeVue, {
-    theme: {
-        preset: Aura,
-        options: {
-            prefix: '',
-            darkModeSelector: 'none',
-            cssLayer: {
-                name: 'primevue',
-                order: 'primevue, beaker'
-            }
+const theme = {
+    preset: Aura,
+    options: {
+        prefix: '',
+        darkModeSelector: 'none',
+        cssLayer: {
+            name: 'primevue',
+            order: 'primevue, beaker'
         }
-
     }
-});
+};
+
+const app = createApp(App);
+const pinia = createPinia();
+app.use(pinia);
+app.use(router);
+app.use(PrimeVue, {theme});
 app.use(ToastService);
 app.use(ConfirmationService);
 app.use(DialogService);
@@ -57,5 +46,6 @@ app.directive('tooltip', Tooltip);
 app.directive('focustrap', FocusTrap);
 app.directive('keybindings', vKeybindings);
 app.directive('autoscroll', vAutoScroll);
+
 
 app.mount('#app')

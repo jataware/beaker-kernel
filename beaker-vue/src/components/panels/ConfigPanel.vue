@@ -35,9 +35,11 @@ import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ConfigEntryComponent from '../misc/ConfigEntryComponent.vue'
 import { useConfirm } from "primevue/useconfirm";
 import ProgressSpinner from "primevue/progressspinner";
+import { useConfigStore } from "../../stores/config";
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
+const configStore = useConfigStore();
 
 const config = ref<IConfig>();
 const schema = ref<ISchema>();
