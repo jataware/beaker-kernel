@@ -297,19 +297,9 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         }
 
         if get_datasource_root_method := getattr(self, "get_datasource_root", None):
-            if inspect.iscoroutinefunction(get_datasource_root_method):
-                root_path = await get_datasource_root_method()
-            elif callable(get_datasource_root_method):
-                root_path = get_datasource_method()
-            else:
-                raise ValueError("get_datasource_root defined but not callable")
-            payload["datasource_root"] = root_path
+            payload["datasource_root"] = await ensure_async(get_datasource_root_method())
         if get_datasource_method := getattr(self, "get_datasources", None):
-            datasources: list[Datasource] = []
-            if inspect.iscoroutinefunction(get_datasource_method):
-                datasources = await get_datasource_method()
-            elif callable(get_datasource_method):
-                datasources = get_datasource_method()
+            datasources: list[Datasource] = await ensure_async(get_datasource_method())
             payload["datasources"] = [
                 asdict(datasource) if isinstance(datasource, Datasource) else datasource
                 for datasource in datasources
