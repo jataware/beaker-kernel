@@ -1,5 +1,6 @@
 <template>
-    <div class="llm-query-cell">
+    <BaseQueryCell>
+      <template #query>
         <div
             class="query"
             @dblclick="promptDoubleClick"
@@ -26,8 +27,10 @@
                 >{{ cell.source }}</div>
             </div>
         </div>
+      </template>
+      <template #events>
         <div class="event-container"
-            v-if="events.length > 0 || isLastEventTerminal()"
+            v-if="events.length > 0 || isLastEventTerminal(events)"
         >
             <div class="events">
                 <div
@@ -86,7 +89,7 @@
                 </div>
                 <div 
                     class="query-answer"
-                    v-if="isLastEventTerminal()"
+                    v-if="isLastEventTerminal(events)"
                 >
                     <h3 class="query-steps">Result</h3>
                     <BeakerQueryCellEvent
@@ -96,60 +99,80 @@
                 </div>
             </div>
         </div>
+      </template>
+      <template #thinking-indicator>
         <div class="thinking-indicator" v-if="cell.status === 'busy'">
             <span class="thought-icon"><ThinkingIcon/></span> Thinking <span class="thinking-animation"></span>
         </div>
-        <div
-            class="input-request"
-            v-focustrap
-            v-if="cell.status === 'awaiting_input'"
-         >
+      </template>
+        <template #input-request>
             <div
-                class="input-request-wrapper"
+                class="input-request"
+                v-focustrap
+                v-if="cell.status === 'awaiting_input'"
             >
-                <InputGroup>
-                    <InputText
-                        placeholder="Reply to the agent"
-                        @keydown.enter.exact.prevent="respond"
-                        @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
-                        @keydown.ctrl.enter.stop
-                        @keydown.shift.enter.stop
-                        autoFocus
-                        v-model="response"
-                    />
-                    <Button
-                        icon="pi pi-send"
-                        @click="respond"
-                    />
-                </InputGroup>
+                <div
+                    class="input-request-wrapper"
+                >
+                    <InputGroup>
+                        <InputText
+                            placeholder="Reply to the agent"
+                            @keydown.enter.exact.prevent="respond"
+                            @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
+                            @keydown.ctrl.enter.stop
+                            @keydown.shift.enter.stop
+                            autoFocus
+                            v-model="response"
+                        />
+                        <Button
+                            icon="pi pi-send"
+                            @click="respond"
+                        />
+                    </InputGroup>
+                </div>
             </div>
-        </div>
-    </div>
-
+        </template>
+    </BaseQueryCell>
 </template>
 
+
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
+import { defineProps, defineExpose, inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerQueryCellEvent from "./BeakerQueryCellEvent.vue";
-import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
+import { type BeakerQueryEventType } from "beaker-kernel/src/notebook";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import ThinkingIcon from "../../assets/icon-components/BrainIcon.vue";
-import { StyleOverride } from "../../pages/BaseInterface.vue"
-
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
-import InputGroupAddon from 'primevue/inputgroupaddon';
+import { isLastEventTerminal } from "./cellOperations";
+import { useBaseQueryCell } from './BaseQueryCell';
+import BaseQueryCell from './BaseQueryCell.vue';
 
 
 const props = defineProps([
     'index',
     'cell',
 ]);
+
+const {
+  cell,
+  isEditing,
+  promptEditorMinHeight,
+  promptText,
+  response,
+  textarea,
+  events,
+  execute,
+  enter,
+  exit,
+  clear,
+  respond
+} = useBaseQueryCell(props);
+
 
 const eventIconMap = {
     "code_cell": "pi pi-code",
@@ -158,31 +181,8 @@ const eventIconMap = {
     "user_question": "pi pi-question-circle"
 }
 
-const terminalEvents = [
-    "error",
-    "response"
-]
-
-const enum QueryStatuses {
-    NotExecuted,
-    Running,
-    Done,
-}
-
-const cell = shallowRef(props.cell);
-const isEditing = ref<boolean>(cell.value.source === "");
-const promptEditorMinHeight = ref<number>(100);
-const promptText = ref<string>(cell.value.source);
-const response = ref("");
-const textarea = ref();
-const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
-
-
-const events = computed(() => {
-    return [...props.cell.events];
-})
 
 
 const messageEvents = computed(() => {
@@ -198,14 +198,6 @@ const messageEvents = computed(() => {
         }
     );
 })
-
-const isLastEventTerminal = () => {
-    const events: BeakerQueryEvent[] = props.cell.events;
-    if (events?.length > 0) {
-        return terminalEvents.includes(events[events.length - 1].type);
-    }
-    return false;
-};
 
 // behavior: temporarily show last event and all code cells, until terminal, in which case,
 // only show code cells
@@ -244,63 +236,6 @@ const promptDoubleClick = (event) => {
         promptEditorMinHeight.value = (event.target as HTMLElement).clientHeight;
         isEditing.value = true;
     }
-}
-
-const respond = () => {
-    if (!response.value.trim()) {
-        return; // Do nothing unless the reply has contents
-    }
-    props.cell.respond(response.value, session);
-    response.value = "";
-};
-
-function execute() {
-    const config: any = instance?.root?.props?.config;
-    const sendNotebookState = config ? config.extra?.send_notebook_state : undefined;
-    cell.value.source = promptText.value;
-    isEditing.value = false;
-    nextTick(() => {
-        const future = props.cell.execute(session, sendNotebookState);
-        // Add reference to cell for downstream processing.
-        future.registerMessageHook(
-            (msg) => {
-                msg.cell = cell.value;
-            }
-        )
-    });
-}
-
-function enter(position?: "start" | "end" | number) {
-    if (!isEditing.value) {
-        isEditing.value = true;
-    }
-    if (position === "start") {
-        position = 0;
-    }
-    else if (position === "end") {
-        position = textarea.value?.$el?.value.length || -1;
-    }
-    nextTick(() => {
-        textarea.value?.$el?.focus();
-        textarea.value.$el.setSelectionRange(position, position);
-    });
-}
-
-function exit() {
-    if (promptText.value === cell.value.source) { // Query has not changed
-        isEditing.value = false;
-    }
-    else {
-        textarea.value?.$el?.blur();
-    }
-}
-
-function clear() {
-    cell.value.source = "";
-    isEditing.value = true;
-    promptEditorMinHeight.value = 100;
-    promptText.value = "";
-    response.value = "";
 }
 
 defineExpose({

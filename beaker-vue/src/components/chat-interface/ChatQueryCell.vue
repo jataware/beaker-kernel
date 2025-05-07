@@ -1,5 +1,6 @@
 <template>
-    <div class="llm-query-cell">
+    <BaseQueryCell>
+    <template #query>
         <div
             class="query query-chat"
             @dblclick="promptDoubleClick"
@@ -24,8 +25,10 @@
                 >{{ cell.source }}</div>
             </div>
         </div>
+    </template>
+    <template #events>
         <div class="event-container"
-            v-if="events.length > 0 || isLastEventTerminal() || showChatEventsEarly(cell)"
+            v-if="events.length > 0 || isLastEventTerminal(events) || showChatEventsEarly(cell)"
         >
             <div class="events">
                 <div
@@ -73,7 +76,7 @@
                 </div>
                 <div 
                     class="query-answer-chat-override"
-                    v-if="isLastEventTerminal()"
+                    v-if="isLastEventTerminal(events)"
                 >
                     <BeakerQueryCellEvent
                         :event="cell?.events[cell?.events.length - 1]"
@@ -82,6 +85,8 @@
                 </div>
             </div>
         </div>
+    </template>
+    <template #input-request>
         <div
             class="input-request-chat-override"
             v-focustrap
@@ -110,7 +115,8 @@
                 </InputGroup>
             </div>
         </div>
-    </div>
+    </template>
+  </BaseQueryCell>
 
 </template>
 
@@ -120,22 +126,33 @@ import Button from "primevue/button";
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
 import InputGroupAddon from 'primevue/inputgroupaddon';
-import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
 import { BeakerSession } from 'beaker-kernel/src';
 import BeakerQueryCellEvent from "../cell/BeakerQueryCellEvent.vue";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
-
+import { isLastEventTerminal } from "../cell/cellOperations";
+import { useBaseQueryCell } from '../cell/BaseQueryCell';
+import BaseQueryCell from '../cell/BaseQueryCell.vue';
 
 const props = defineProps([
     'index',
     'cell',
 ]);
 
-const terminalEvents = [
-    "error",
-    "response"
-]
+const {
+  cell,
+  isEditing,
+  promptEditorMinHeight,
+  promptText,
+  response,
+  textarea,
+  events,
+  execute,
+  enter,
+  exit,
+  clear,
+  respond
+} = useBaseQueryCell(props);
 
 const enum QueryStatuses {
     NotExecuted,
@@ -143,21 +160,9 @@ const enum QueryStatuses {
     Done,
 }
 
-const cell = shallowRef(props.cell);
-const isEditing = ref<boolean>(cell.value.source === "");
-const promptEditorMinHeight = ref<number>(100);
-const promptText = ref<string>(cell.value.source);
-const response = ref("");
-const textarea = ref();
 const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-
 const instance = getCurrentInstance();
-
-
-const events = computed(() => {
-    return [...props.cell.events];
-})
 
 const lastEventThought = computed(() => {
     const fallback = "Thinking";
@@ -219,7 +224,7 @@ const queryStatus = computed<QueryStatuses>(() => {
     if (eventCount === 0) {
         return QueryStatuses.NotExecuted;
     }
-    else if (terminalEvents.includes(events.value[eventCount - 1].type)) {
+    else if (isLastEventTerminal(events.value)) {
         return QueryStatuses.Done;
     }
     else {
@@ -262,88 +267,12 @@ const messageEvents = computed(() => {
 
 const showChatEventsEarly = (cell) => cell.status === 'busy';
 
-const isLastEventTerminal = () => {
-    const events: BeakerQueryEvent[] = props.cell.events;
-    if (events?.length > 0) {
-        return terminalEvents.includes(events[events.length - 1].type);
-    }
-    return false;
-};
-
-
-// const queryEventNameMap: {[eventType in BeakerQueryEventType]: string} = {
-//     "thought": "Thought",
-//     "response": "Final Response",
-//     "code_cell": "Code",
-//     "user_answer": "Answer",
-//     "user_question": "Question",
-//     // "background_code": "Background Code",
-//     "error": "Error",
-//     "abort": "Abort"
-// }
 
 const promptDoubleClick = (event) => {
     if (!isEditing.value) {
         promptEditorMinHeight.value = (event.target as HTMLElement).clientHeight;
         isEditing.value = true;
     }
-}
-
-const respond = () => {
-    if (!response.value.trim()) {
-        return; // Do nothing unless the reply has contents
-    }
-    props.cell.respond(response.value, session);
-    response.value = "";
-};
-
-function execute() {
-    const config: any = instance?.root?.props?.config;
-    const sendNotebookState = config ? config.extra?.send_notebook_state : undefined;
-    cell.value.source = promptText.value;
-    isEditing.value = false;
-    nextTick(() => {
-        const future = props.cell.execute(session, sendNotebookState);
-        // Add reference to cell for downstream processing.
-        future.registerMessageHook(
-            (msg) => {
-                msg.cell = cell.value;
-            }
-        )
-    });
-}
-
-function enter(position?: "start" | "end" | number) {
-    if (!isEditing.value) {
-        isEditing.value = true;
-    }
-    if (position === "start") {
-        position = 0;
-    }
-    else if (position === "end") {
-        position = textarea.value?.$el?.value.length || -1;
-    }
-    nextTick(() => {
-        textarea.value?.$el?.focus();
-        textarea.value.$el.setSelectionRange(position, position);
-    });
-}
-
-function exit() {
-    if (promptText.value === cell.value.source) { // Query has not changed
-        isEditing.value = false;
-    }
-    else {
-        textarea.value?.$el?.blur();
-    }
-}
-
-function clear() {
-    cell.value.source = "";
-    isEditing.value = true;
-    promptEditorMinHeight.value = 100;
-    promptText.value = "";
-    response.value = "";
 }
 
 defineExpose({
@@ -482,13 +411,13 @@ export default {
     background-color: var(--surface-d);
 }
 
-div.query-steps {
-    margin-bottom: 1rem;
-}
+// div.query-steps {
+//     margin-bottom: 1rem;
+// }
 
-h3.query-steps {
-    margin-bottom: 0rem;
-}
+// h3.query-steps {
+//     margin-bottom: 0rem;
+// }
 
 .llm-prompt-text {
     margin-left: 1rem;
@@ -572,9 +501,9 @@ h3.query-steps {
     }
 }
 
-.query-steps {
-    font-size: large;
-}
+// .query-steps {
+//     font-size: large;
+// }
 
 .query-tab-background_code {
     font-size: 6pt;
@@ -619,21 +548,6 @@ div.code-cell.query-event-code-cell {
     padding-left: 0;
 }
 
-
-a.query-tab-headeraction > span > span.pi {
-    align-items: center;
-    margin: auto;
-    padding-right: 0.5rem;
-}
-
-.query-answer {
-    background-color: var(--surface-c);
-    padding-left: 1rem;
-    padding-bottom: 1rem;
-    border-radius: var(--border-radius);
-    margin-top: 1rem;
-}
-
 .query-answer-chat-override {
     padding-left: 1rem;
     padding-right: 1rem;
@@ -663,48 +577,19 @@ a.query-tab-headeraction > span > span.pi {
     margin: 0.5em;
 }
 
-.thought-icon {
-    display: inline-block;
-    height: 1rem;
-    margin: auto;
-    margin-right: 0.5rem;
-    svg {
-        fill: currentColor;
-        stroke: currentColor;
-        width: 1rem;
-        margin: 0;
-    }
-}
+// .thought-icon {
+//     display: inline-block;
+//     height: 1rem;
+//     margin: auto;
+//     margin-right: 0.5rem;
+//     svg {
+//         fill: currentColor;
+//         stroke: currentColor;
+//         width: 1rem;
+//         margin: 0;
+//     }
+// }
 
-.thinking-indicator {
-    opacity: 0.7;
-    vertical-align: middle;
-}
-
-.thinking-animation {
-    font-size: x-large;
-    clip-path: view-box;
-}
-
-.thinking-animation:after {
-    overflow: hidden;
-    display: inline-block;
-    vertical-align: bottom;
-    position: relative;
-    animation: thinking-ellipsis 2000ms steps(48, end) infinite;
-    content: "\2026\2026\2026\2026"; /* ascii code for the ellipsis character */
-    width: 4em;
-}
-
-
-@keyframes thinking-ellipsis {
-  from {
-    right: 4em;
-  }
-  to {
-    right: -4em;
-  }
-}
 
 .expand-thoughts-button {
     cursor: pointer;
