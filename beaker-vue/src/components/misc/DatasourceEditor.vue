@@ -424,14 +424,14 @@ const save = () => {
 
 const download = async (name) => {
     const folderRoot = props.folderRoot;
-    const path = `${folderRoot.value}/${folderSlug.value}/documentation/${name}`;
+    const path = `${folderRoot}/${folderSlug.value}/documentation/${name}`;
     console.log(`downloading ${name} (${path})`);
     await downloadFile(path);
 }
 
 const createFoldersForDatasource = async () => {
     const folderRoot = props.folderRoot;
-    const basepath = `${folderRoot.value}/${folderSlug.value}`
+    const basepath = `${folderRoot}/${folderSlug.value}`
 
     // is the datasource slug folder present?
     try {
@@ -442,7 +442,7 @@ const createFoldersForDatasource = async () => {
     }
     catch (e) {
         const directory = await contentManager.newUntitled({
-            path: `${folderRoot.value}`,
+            path: folderRoot,
             type: 'directory'
         })
         await contentManager.rename(directory.path, basepath);
@@ -489,9 +489,9 @@ const uploadFile = async (files: FileList) => {
     const folderRoot = props.folderRoot;
     unsavedChanges.value = true;
     const promises = Array.from(files).map(async (file) => {
-        let path = `${folderRoot.value}/${folderSlug.value}/documentation/${file.name}`;
+        let path = `${folderRoot}/${folderSlug.value}/documentation/${file.name}`;
         if (fileTarget?.value !== undefined) {
-            path = `${folderRoot.value}/${folderSlug.value}/documentation/${fileTarget.value}`;
+            path = `${folderRoot}/${folderSlug.value}/documentation/${fileTarget.value}`;
         }
 
         const bytes = [];
