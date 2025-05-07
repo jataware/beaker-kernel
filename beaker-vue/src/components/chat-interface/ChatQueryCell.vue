@@ -411,14 +411,6 @@ export default {
     background-color: var(--surface-d);
 }
 
-// div.query-steps {
-//     margin-bottom: 1rem;
-// }
-
-// h3.query-steps {
-//     margin-bottom: 0rem;
-// }
-
 .llm-prompt-text {
     margin-left: 1rem;
     padding: 0.5rem;
@@ -445,108 +437,9 @@ export default {
     font-weight: 600;
 }
 
-.query-accordion .p-accordion-content {
-    padding-top: 0.25rem;
-    padding-bottom: 0rem;
-}
-
-.query-accordion-chat {
-    margin-bottom: 0.5rem;
-    width: 100%;
-    > .p-accordion-tab {
-        > * {
-            max-width: 80%;
-            width: 100%;
-        }
-        width: 100%;
-        display: flex;
-        align-items: center;
-        flex-direction: column;
-        > .p-toggleable-content > .p-accordion-content {
-            border: 2px solid var(--surface-d);
-            border-radius: var(--border-radius);
-            padding: 0.25rem;
-            padding-left: 1.5rem;
-            margin: 1rem;
-            margin-bottom: 0rem;
-            > * {
-                border-bottom: 2px solid var(--surface-d);
-                margin-right: 1rem;
-            }
-            > *:last-child {
-                border-bottom: none;
-            }
-        }
-        .p-accordion-header {
-            border-radius: var(--border-radius);
-            margin: 1rem;
-            margin-bottom: 0rem;
-            transition: background-color 0.2s;
-
-            &:hover {
-                background-color: var(--surface-a);
-            }
-        }
-    }
-
-}
-
-.query-tab-title-chat {
-    font-weight: 400;
-}
-
-.query-tab-thought-chat {
-    .p-accordion-header-link svg {
-        flex-shrink: 0;
-    }
-}
-
-// .query-steps {
-//     font-size: large;
+// div.code-cell.query-event-code-cell {
+//     padding-left: 0;
 // }
-
-.query-tab-background_code {
-    font-size: 6pt;
-    color: #777;
-
-    + a {
-        margin: 0;
-        padding: 0;
-    }
-}
-
-
-div.query-tab a.p-accordion-header-link.p-accordion-header-action{
-    padding: 0.5rem;
-    background: none;
-    border: none;
-}
-
-div.query-tab-thought a.p-accordion-header-link.p-accordion-header-action,
-div.query-tab-user_question a.p-accordion-header-link.p-accordion-header-action,
-div.query-tab-user_answer a.p-accordion-header-link.p-accordion-header-action {
-    background: none;
-    border: none;
-}
-
-div.p-accordion-content.query-tab-content-thought,
-div.p-accordion-content.query-tab-content-user_question,
-div.p-accordion-content.query-tab-content-user_answer {
-    background: none;
-    border: none;
-    font-size: 0.9rem;
-    padding-left: 2.5rem;
-}
-
-div.p-accordion-content.query-tab-content-code_cell {
-    background: none;
-    border: none;
-    padding-left: 2.5rem;
-}
-
-div.code-cell.query-event-code-cell {
-    padding-left: 0;
-}
 
 .query-answer-chat-override {
     padding-left: 1rem;
