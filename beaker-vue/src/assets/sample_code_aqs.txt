@@ -1,0 +1,86 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime
+import random
+
+# Function to simulate EPA AQS API response
+def simulate_epa_aqs_api(grid_size=5):
+    """
+    Simulate EPA AQS API response for a grid of locations
+    Returns data for a grid_size x grid_size area
+    """
+    # Create a grid of latitude and longitude coordinates
+    lat_base = 40.0  # Starting latitude (e.g., somewhere in the US)
+    lon_base = -75.0  # Starting longitude
+    
+    # Parameters for our simulation
+    pollutants = ['PM2.5', 'Ozone', 'NO2', 'SO2', 'CO']
+    
+    # AQI categories and their ranges
+    aqi_categories = {
+        'Good': (0, 50),
+        'Moderate': (51, 100),
+        'Unhealthy for Sensitive Groups': (101, 150),
+        'Unhealthy': (151, 200),
+        'Very Unhealthy': (201, 300),
+        'Hazardous': (301, 500)
+    }
+    
+    # Create empty list to store data
+    data = []
+    
+    # Generate data for each point in the grid
+    for i in range(grid_size):
+        for j in range(grid_size):
+            lat = lat_base + (i * 0.1)  # Small increment in latitude
+            lon = lon_base + (j * 0.1)  # Small increment in longitude
+            
+            # For each location, generate data for each pollutant
+            for pollutant in pollutants:
+                # Create a realistic pattern - higher pollution in the center
+                distance_from_center = np.sqrt((i - grid_size/2)**2 + (j - grid_size/2)**2)
+                base_value = 100 - (distance_from_center * 15)  # Higher in center, lower at edges
+                
+                # Add some randomness
+                aqi_value = max(0, min(500, int(base_value + random.normalvariate(0, 20))))
+                
+                # Determine AQI category
+                aqi_category = None
+                for category, (min_val, max_val) in aqi_categories.items():
+                    if min_val <= aqi_value <= max_val:
+                        aqi_category = category
+                        break
+                
+                # Create a record
+                record = {
+                    'latitude': lat,
+                    'longitude': lon,
+                    'grid_i': i,
+                    'grid_j': j,
+                    'pollutant': pollutant,
+                    'aqi_value': aqi_value,
+                    'aqi_category': aqi_category,
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }
+                data.append(record)
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(data)
+    return df
+
+# Generate the simulated data
+aqs_data = simulate_epa_aqs_api(grid_size=5)
+
+# Display the first few rows of the data
+print("Simulated EPA AQS API Data:")
+print(aqs_data.head())
+
+# Summary statistics
+print("\nSummary Statistics:")
+print(aqs_data.groupby('pollutant')['aqi_value'].describe())
+
+# Count of AQI categories
+print("\nAQI Category Distribution:")
+print(aqs_data['aqi_category'].value_counts())

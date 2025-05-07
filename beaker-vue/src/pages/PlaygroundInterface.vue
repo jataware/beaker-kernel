@@ -32,13 +32,15 @@ import { defineProps, inject, ref, computed, ComponentInstance, Component, Style
 import { IBeakerTheme } from '../plugins/theme';
 
 import { Codemirror } from "vue-codemirror";
-import { EditorView, keymap, Decoration, DecorationSet } from "@codemirror/view";
-import { EditorState, Extension, Prec, StateField, StateEffect } from "@codemirror/state";
+import { EditorView, keymap } from "@codemirror/view";
+import { EditorState, Extension, Prec } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { LanguageSupport } from "@codemirror/language";
 import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion } from "@codemirror/autocomplete";
 import { BeakerLanguage, LanguageRegistry, getCompletions } from "../util/autocomplete";
 import { BeakerSession } from 'beaker-kernel/src';
+import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
+import sampleCodeText from "../assets/sample_code_aqs.txt?raw";
 
 const beakerInterfaceRef = ref();
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
@@ -74,10 +76,12 @@ const ANNOTATION_TYPES = {
             "assumption_in_algorithm": {
                 "title": "Assumption in algorithm",
                 "description": "The following assumption was made in this algorithm:\n",
+                "link": "https://lmgtfy.com/"
             },
             "assumption_in_value": {
                 "title": "Assumption in value",
                 "description": "The following assumption was made with regards to the value of this variable:\n",
+                "link": "https://lmgtfy.com/"
             }
         }
     }
@@ -85,33 +89,43 @@ const ANNOTATION_TYPES = {
 
 const MOCK_ANNOTATIONS = [
     {
-        "start": 10,  // Character, not line
-        "end": 22,
+        "start": 0,  // Character, not line
+        "end": 19,
         "error_type": "logic_error",
         "error_id": "fallacy_1",
-        "title_override": "",
-        "message_override": "",
+        // "title_override": "",
+        // "message_override": "",
         "message_extra": "", 
     },
     {
-        "start": 109,  // Character, not line
-        "end": 167,
+        "start": 138,  // Character, not line
+        "end": 181,
         "error_type": "assumptions",
+        "error_id": "assumption_in_value",
         "message_extra": "Value is assumed to always be positive.", 
     }
 ]
 
+// const createDiagnosticFromAnnotation = (annotation: typeof MOCK_ANNOTATIONS[0]): Diagnostic => {
+//   const annotationType = ANNOTATION_TYPES[annotation.error_type];
+//   const messageInfo = annotation.error_id ? 
+//     annotationType.message_table[annotation.error_id] : 
+//     null;
+
+//   return {
+//     from: annotation.start,
+//     to: annotation.end,
+//     severity: messageInfo?.severity || "info",
+//     message: annotation.message_override || messageInfo?.title || annotationType.display,
+//     actions: messageInfo?.link ? [{
+//       name: "Learn More",
+//       apply: () => window.open(messageInfo.link, '_blank')
+//     }] : undefined
+//   }
+// }
 
 
-const sampleCode = ref(`def calculate_sum(a, b):
-    # This is a problematic line that we'll highlight
-    result = a + b + "invalid"  # Type error!
-    return result
-
-# This is another line we'll mark
-print(undefined_variable)
-`);
-
+const sampleCode = ref(sampleCodeText);
 const model = ref<string>(sampleCode.value);
 
 const codeMirrorView = shallowRef<EditorView>();
@@ -123,85 +137,83 @@ interface CodeHighlight {
     message: string;
 }
 
-const currentHighlights = ref<CodeHighlight[]>([]);
-const addHighlightEffect = StateEffect.define<CodeHighlight[]>();
+// const currentHighlights = ref<CodeHighlight[]>([]);
+// const addHighlightEffect = StateEffect.define<CodeHighlight[]>();
 
-const createErrorDecoration = (message: string) => Decoration.mark({
-    class: "cm-error-highlight",
-    attributes: { title: message }
-});
-
-
-const highlightField = StateField.define<DecorationSet>({
-    create() {
-        return Decoration.none;
-    },
-    update(highlights, tr) {
-        // map decorations through document changes
-        highlights = highlights.map(tr.changes);
+// const createErrorDecoration = (message: string) => Decoration.mark({
+//     class: "cm-error-highlight",
+//     attributes: { title: message }
+// });
+// const highlightField = StateField.define<DecorationSet>({
+//     create() {
+//         return Decoration.none;
+//     },
+//     update(highlights, tr) {
+//         // map decorations through document changes
+//         highlights = highlights.map(tr.changes);
         
-        // apply any highlight effects from the transaction
-        for (let e of tr.effects) {
-            if (e.is(addHighlightEffect)) {
-                const decorations = e.value.map(highlight => 
-                    createErrorDecoration(highlight.message).range(highlight.from, highlight.to)
-                );
-                highlights = Decoration.set(decorations, true);
-            }
-        }
+//         // apply any highlight effects from the transaction
+//         for (let e of tr.effects) {
+//             if (e.is(addHighlightEffect)) {
+//                 const decorations = e.value.map(highlight => 
+//                     createErrorDecoration(highlight.message).range(highlight.from, highlight.to)
+//                 );
+//                 highlights = Decoration.set(decorations, true);
+//             }
+//         }
         
-        return highlights;
-    }
-});
+//         return highlights;
+//     }
+// });
 
-const addHighlight = (view: EditorView, from: number, to: number, message: string) => {
-    currentHighlights.value.push({ from, to, message });
+// const addHighlight = (view: EditorView, from: number, to: number, message: string) => {
+//     currentHighlights.value.push({ from, to, message });
     
-    view.dispatch({
-        effects: addHighlightEffect.of(currentHighlights.value)
-    });
-};
+//     view.dispatch({
+//         effects: addHighlightEffect.of(currentHighlights.value)
+//     });
+// };
 
 const handleReady = ({view, state}) => {
     codeMirrorView.value = view;
     codeMirrorState.value = state;
-    currentHighlights.value = [];
+    // currentHighlights.value = [];
     
     // NOTE helper for mocks to find position of text, although our engine
     // will just provide the from/to without specifying the text
-    const findPositionInDoc = (searchText: string): { from: number, to: number } | null => {
-        const doc = view.state.doc.toString();
-        const from = doc.indexOf(searchText);
-        if (from === -1) return null;
-        return {
-            from,
-            to: from + searchText.length
-        };
-    };
+    // const findPositionInDoc = (searchText: string): { from: number, to: number } | null => {
+    //     const doc = view.state.doc.toString();
+    //     const from = doc.indexOf(searchText);
+    //     if (from === -1) return null;
+    //     return {
+    //         from,
+    //         to: from + searchText.length
+    //     };
+    // };
     
     // add mock highlights
-    setTimeout(() => {
+    // setTimeout(() => {
 
-        const pos1 = findPositionInDoc("a + b + \"invalid\""); // or just hardcode from/to
-        if (pos1) {
-            addHighlight(
-                view,
-                pos1.from,
-                pos1.to,
-                "Type error: Cannot concatenate string with numbers"
-            );
-        }
+    //     const pos1 = {from: 10, to: 22};
+    //     if (pos1) {
+    //         addHighlight(
+    //             view,
+    //             pos1.from,
+    //             pos1.to,
+    //             "Type error: Cannot concatenate string with numbers"
+    //         );
+    //     }
         
-        const pos2 = findPositionInDoc("undefined_variable");
-        if (pos2) {
-            addHighlight(
-                view,
-                pos2.from,
-                pos2.to,
-                "Reference error: undefined_variable is not defined"
-            );
-        }
-    }, 100);
+    //     const pos2 = {from: 59, to: 85};
+    //     if (pos2) {
+    //         addHighlight(
+    //             view,
+    //             pos2.from,
+    //             pos2.to,
+    //             "Reference error: undefined_variable is not defined"
+    //         );
+    //     }
+    // }, 200);
 };
 
 const session: BeakerSession = inject('session');
@@ -325,14 +337,14 @@ const extensions = computed(() => {
                 fontFamily: "'Ubuntu Mono', 'Courier New', Courier, monospace",
             }
         })],
-        highlightField,
-        EditorView.decorations.from(highlightField),
-        EditorView.theme({
-            ".cm-error-highlight": {
-                textDecoration: "wavy underline orange",
-                position: "relative"
-            }
-        })
+        // highlightField,
+        // EditorView.decorations.from(highlightField),
+        // EditorView.theme({
+        //     ".cm-error-highlight": {
+        //         textDecoration: "wavy underline orange",
+        //         position: "relative"
+        //     }
+        // })
     ];
 
     const language = LanguageRegistry.get("python");
@@ -350,6 +362,60 @@ const extensions = computed(() => {
             languageSupport,
         )
     }
+
+    const myLinter = linter(view => {
+        return MOCK_ANNOTATIONS.map(annotation => {
+            const annotationType = ANNOTATION_TYPES[annotation.error_type];
+            const messageInfo = annotationType.message_table[annotation.error_id];
+            
+            return {
+                from: annotation.start,
+                to: annotation.end,
+                severity: "error", // messageInfo.severity,
+                message: messageInfo.title,
+                // Rich HTML description with clickable link
+                renderMessage() {
+                    const el = document.createElement('div');
+                    el.innerHTML = `
+                        <div style="">
+                            <h4 style="margin: 0px;">${messageInfo.title}</h4>
+                            <p style="margin: 0px;">${messageInfo.description} <a href="${messageInfo.link}" target="_blank">Learn more</a>
+                            </p>
+                            <span style="display: none;"></span>
+                        </div>
+                    `;
+                    return el;
+                },
+                // optional add actions that appear as buttons
+                // actions: [{
+                //     name: "Learn More",
+                //     apply: () => window.open(messageInfo.link, '_blank')
+                // }]
+            }
+        });
+    });
+
+    enabledExtensions.push(myLinter);
+    enabledExtensions.push(lintGutter({
+        // Customize hover delay (default is 300ms)
+        hoverTime: 200,
+        
+        // Optional: Filter which diagnostics show markers
+        markerFilter: (diagnostics) => {
+            // Example: only show markers for errors and warnings
+            return diagnostics.filter(d => 
+                d.severity === "error" || d.severity === "warning"
+            );
+        },
+
+        // Optional: Filter which diagnostics show in tooltips
+        tooltipFilter: (diagnostics) => {
+            // You could show different information in the tooltip
+            // than what shows in the gutter
+            return diagnostics;
+        }
+    }));
+
     return enabledExtensions;
 });
 
@@ -398,25 +464,67 @@ div.status-container {
     min-width: 0px;
 }
 
-.cm-error-highlight {
-    background-color: rgba(255, 0, 0, 0.1);
-    // border-bottom: 2px wavy #f44336;
-    // border-bottom: 2px wavy #AA8888;
-    position: relative;
+// .cm-error-highlight {
+//     background-color: rgba(255, 0, 0, 0.1);
+//     position: relative;
     
-    &:hover::after {
-        content: attr(title);
-        position: absolute;
-        left: 0;
-        top: -24px;
-        background: #AA8888; //#f44336;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        white-space: nowrap;
-        z-index: 1000;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+//     &:hover::after {
+//         content: attr(title);
+//         position: absolute;
+//         left: 0;
+//         bottom: -24px;
+//         background: #AA8888; //#f44336;
+//         color: white;
+//         padding: 4px 8px;
+//         border-radius: 4px;
+//         font-size: 12px;
+//         white-space: nowrap;
+//         z-index: 1000;
+//         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+//     }
+// }
+
+.cm-diagnostic {
+    white-space: normal;
+}
+
+// gutter markers
+.cm-gutter-lint {
+    width: 1.6em;
+    
+    // Style the marker container
+    .cm-lint-marker {
+        padding: 0.2em 0;
+    }
+
+    // Style markers by severity
+    .cm-lint-marker-error {
+        // color: blue;
+        // content: "🔴"; // needs to be an svg
+        // content: url("https://icons.terrastruct.com/essentials%2F073-add.svg");
+        // content: url("https://icons.terrastruct.com/essentials%2F218-edit.svg");
+    }
+    
+    .cm-lint-marker-warning {
+        color: #ff9800;
+    }
+    
+    .cm-lint-marker-info {
+        color: #2196f3;
+    }
+}
+
+// Make tooltips look better
+.cm-tooltip.cm-tooltip-lint {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    
+    ul {
+        margin: 0;
+        padding: 0;
     }
 }
 

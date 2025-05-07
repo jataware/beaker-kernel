@@ -52,6 +52,14 @@ module.exports = defineConfig({
       });
       return definitions;
     });
+
+    // Add rule for txt files
+    config.module
+      .rule('txt')
+      .test(/\.txt$/)
+      .use('raw-loader')
+      .loader('raw-loader')
+      .end();
   },
   devServer: {
     proxy: process.env.PROXY || 'http://localhost:8888',

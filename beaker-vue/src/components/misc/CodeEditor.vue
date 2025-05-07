@@ -20,6 +20,66 @@ import { autocompletion, completionKeymap, completionStatus, selectedCompletion,
 import { IBeakerTheme } from '../../plugins/theme';
 import { BeakerLanguage, LanguageRegistry, getCompletions } from "../../util/autocomplete";
 import { BeakerSession } from 'beaker-kernel/src';
+import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
+
+const ANNOTATION_TYPES = {
+    logic_error: {
+        "id": "logic_error",
+        "display": "Potential Logical Error",
+        "color": "#FF0012",
+        "message_table": {
+            "fallacy_1": {
+                "title": "You made a boo-boo!",
+                "description": "Here's why you're so dumb!",
+                "severity": "major",
+                "link": "https://lmgtfy.com/"
+            },
+            "average_of_averages": {
+                "title": "Potential averaging of averages",
+                "description": "Potential averaging of a list of averages",
+                "severity": "warning",
+                "link": "https://wikipedia.org/wiki/Common_errors_in_statistical_analysis"
+                }
+            }
+    },
+    assumptions: {
+        "id": "assumptions",
+        "display": "Assumptions in code",
+        "color": "#AA8888",
+        "severity": "info",
+        "message_table": {
+            "assumption_in_algorithm": {
+                "title": "Assumption in algorithm",
+                "description": "The following assumption was made in this algorithm:\n",
+                "link": "https://lmgtfy.com/"
+            },
+            "assumption_in_value": {
+                "title": "Assumption in value",
+                "description": "The following assumption was made with regards to the value of this variable:\n",
+                "link": "https://lmgtfy.com/"
+            }
+        }
+    }
+}
+
+const MOCK_ANNOTATIONS = [
+    {
+        "start": 0,  // Character, not line
+        "end": 19,
+        "error_type": "logic_error",
+        "error_id": "fallacy_1",
+        // "title_override": "",
+        // "message_override": "",
+        "message_extra": "", 
+    },
+    {
+        "start": 138,  // Character, not line
+        "end": 181,
+        "error_type": "assumptions",
+        "error_id": "assumption_in_value",
+        "message_extra": "Value is assumed to always be positive.", 
+    }
+]
 
 const session: BeakerSession = inject('session');
 
@@ -157,6 +217,61 @@ const extensions = computed(() => {
             languageSupport,
         )
     }
+
+
+    const myLinter = linter(view => {
+        return MOCK_ANNOTATIONS.map(annotation => {
+            const annotationType = ANNOTATION_TYPES[annotation.error_type];
+            const messageInfo = annotationType.message_table[annotation.error_id];
+            
+            return {
+                from: annotation.start,
+                to: annotation.end,
+                severity: "error", // messageInfo.severity,
+                message: messageInfo.title,
+                // Rich HTML description with clickable link
+                renderMessage() {
+                    const el = document.createElement('div');
+                    el.innerHTML = `
+                    <div>
+                        <h4 style="margin: 0px;">${messageInfo.title}</h4>
+                        <p style="margin: 0px;">${messageInfo.description} <a href="${messageInfo.link}" target="_blank">Learn more</a>
+                        </p>
+                    </div>
+                    `;
+                    return el;
+                },
+                // optional add actions that appear as buttons
+                // actions: [{
+                //     name: "Learn More",
+                //     apply: () => window.open(messageInfo.link, '_blank')
+                // }]
+            }
+        });
+    });
+
+    enabledExtensions.push(myLinter);
+    enabledExtensions.push(lintGutter({
+        // Customize hover delay (default is 300ms)
+        hoverTime: 200,
+        
+        // Optional: Filter which diagnostics show markers
+        markerFilter: (diagnostics) => {
+            // Example: only show markers for errors and warnings
+            return diagnostics.filter(d => 
+                d.severity === "error" || d.severity === "warning"
+            );
+        },
+
+        // Optional: Filter which diagnostics show in tooltips
+        // tooltipFilter: (diagnostics) => {
+        //     // You could show different information in the tooltip
+        //     // than what shows in the gutter
+        //     return diagnostics;
+        // }
+    }));
+
+
     return enabledExtensions;
 });
 
