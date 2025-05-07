@@ -405,7 +405,7 @@ const newDatasource = () => {
     temporaryDatasource.value = selectedDatasource.value
 }
 
-const save = () => {
+const save = async () => {
     unsavedChanges.value = false;
     temporaryDatasource.value = undefined;
     console.log(selectedDatasource.value.slug, slugWrapper.value)
@@ -416,6 +416,9 @@ const save = () => {
         severity: 'success',
         life: 4000
     });
+    await createFoldersForDatasource();
+    await writeDatasource(selectedDatasource.value);
+
     session.executeAction('save_datasource', {
         ...selectedDatasource.value,
         slug: slugWrapper.value
@@ -485,6 +488,72 @@ const onSelectFilesForUpload = async () => {
 
 }
 
+const formatDatasource = (datasource: {
+    name: string,
+    description: string,
+    source: string,
+    attached_files: any[]
+}): string => {
+    const slug = slugWrapper.value;
+    const indentLines = (text: string) => text
+        .split('\n')
+        .map(line => `\n    ${line}`)
+        .join('')
+        .trim()
+    const indentedDescription = indentLines(datasource?.description ?? "")
+    const indentedContents = indentLines(datasource?.source ?? "")
+    const filePayload = (datasource?.attached_files ?? [])
+        .map(attachment =>
+            `${attachment.name}: !load_txt documentation/${attachment.filepath}\n`)
+        .join('\n')
+
+    const template = `
+name: ${datasource.name}
+slug: ${slug}
+cache_key: api_assistant_${slug}
+examples: !load_yaml documentation/examples.yaml
+
+description: |
+    ${indentedDescription}
+
+${filePayload}
+
+documentation: !fill |
+    ${indentedContents}
+`
+    return template;
+}
+
+const writeDatasource = async (datasource) => {
+    const formattedDatasource = formatDatasource(datasource)
+    const folderRoot = props.folderRoot;
+    const basepath = `${folderRoot}/${folderSlug.value}`
+
+    const type = 'text/plain'
+    const content = btoa(formattedDatasource);
+    const format = 'base64';
+    const fileObj: Partial<Contents.IModel> = {
+        type,
+        format,
+        content,
+    };
+    let result;
+    try {
+        result = await contentManager.save(`${basepath}/api.yaml`, fileObj);
+        result = await contentManager.save(`${basepath}/documentation/examples.yaml`, {type, format, content: btoa("")});
+    }
+    catch(e) {
+        showToast({
+            title: 'Upload failed',
+            detail: `Unable to upload file "${basepath}/api.yaml": ${e}`,
+            severity: 'error',
+            life: 8000
+        });
+        return;
+    }
+
+}
+
 const uploadFile = async (files: FileList) => {
     const folderRoot = props.folderRoot;
     unsavedChanges.value = true;
@@ -547,17 +616,17 @@ const uploadFile = async (files: FileList) => {
 }
 
 const downloadFile = async (path) => {
-  let url = await contentManager.getDownloadUrl(path);
-  // Ensure we are downloading. Add the download query param
-  if (!/download=/.test(url)) {
-    if (/\?/.test(url)) {
-      url = url + "&download=1"
+    let url = await contentManager.getDownloadUrl(path);
+    // Ensure we are downloading. Add the download query param
+    if (!/download=/.test(url)) {
+        if (/\?/.test(url)) {
+            url = url + "&download=1"
+        }
+        else {
+            url = url + "?download=1"
+        }
     }
-    else {
-      url = url + "?download=1"
-    }
-  }
-  window.location.href = url;
+    window.location.href = url;
 };
 
 </script>
