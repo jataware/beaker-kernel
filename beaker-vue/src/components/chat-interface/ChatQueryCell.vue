@@ -267,7 +267,6 @@ const messageEvents = computed(() => {
 
 const showChatEventsEarly = (cell) => cell.status === 'busy';
 
-
 const promptDoubleClick = (event) => {
     if (!isEditing.value) {
         promptEditorMinHeight.value = (event.target as HTMLElement).clientHeight;
@@ -304,13 +303,6 @@ export default {
 
 
 <style lang="scss">
-
-.query-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
 .events {
     padding: 0.25rem 0;
     display: flex;
@@ -326,15 +318,6 @@ export default {
 
 .query-chat {
     align-items: flex-end;
-}
-
-.thought {
-    color: var(--blue-500);
-}
-
-.response {
-    margin-top: 0.75em;
-    white-space: pre-line;
 }
 
 .input-request {
@@ -375,28 +358,6 @@ export default {
     }
 }
 
-.actions {
-    display: flex;
-    .p-button-icon {
-        font-weight: bold;
-        font-size: 1rem;
-    }
-}
-
-.edit-actions {
-    display: flex;
-    align-items: flex-start;
-    .p-button {
-        margin-right: 0.5rem;
-    }
-}
-
-.cancel-button {
-    border-color: var(--surface-100);
-    color: var(--primary-text-color);
-}
-
-
 .llm-prompt-container {
     display: flex;
     flex-direction: column;
@@ -428,19 +389,6 @@ export default {
     border-radius: 6px;
 }
 
-.query-events-header {
-    background-color: var(--surface-b);
-    border-radius: 6px 6px 0 0;
-}
-
-.query-events-header {
-    font-weight: 600;
-}
-
-// div.code-cell.query-event-code-cell {
-//     padding-left: 0;
-// }
-
 .query-answer-chat-override {
     padding-left: 1rem;
     padding-right: 1rem;
@@ -469,20 +417,6 @@ export default {
     gap: 0.5em;
     margin: 0.5em;
 }
-
-// .thought-icon {
-//     display: inline-block;
-//     height: 1rem;
-//     margin: auto;
-//     margin-right: 0.5rem;
-//     svg {
-//         fill: currentColor;
-//         stroke: currentColor;
-//         width: 1rem;
-//         margin: 0;
-//     }
-// }
-
 
 .expand-thoughts-button {
     cursor: pointer;

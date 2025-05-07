@@ -287,15 +287,6 @@ export default {
     margin-bottom: 0.25rem;
 }
 
-.thought {
-    color: var(--blue-500);
-}
-
-.response {
-    margin-top: 0.75em;
-    white-space: pre-line;
-}
-
 .input-request {
     padding: 0.5rem 0;
     display: flex;
