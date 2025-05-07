@@ -90,21 +90,19 @@ const filteredCellEvents = computed(() => {
 
   return selectedCellEvents.value.filter(event => {
 
+    // User answer is displayed in the main conversation
     if (event.type === 'user_answer') {
+      return false;
+    }
+    // Agent Response is displayed in the main conversation
+    if (event.type === 'response') {
       return false;
     }
 
     if (!showCodeCells.value && event.type === 'code_cell') {
       return false;
     }
-
     if (!showThoughtCells.value && event.type === 'thought') {
-      return false;
-    }
-
-    // Hardcode remove response so it isn't displayed twice
-    // (once in main chat; once in the thoughts pane)
-    if (event.type === 'response') {
       return false;
     }
 
@@ -112,7 +110,7 @@ const filteredCellEvents = computed(() => {
   })
   .map((event, index, all_events) => {
     const isLastEvent = index === all_events.length - 1;
-    // The last event is an unanswered question, add marker to show indicator down the line
+    // if user_question event is last, add marker for unanswered question
     const unansweredQuestion = event.type === 'user_question' && isLastEvent;
     if (unansweredQuestion) {
       return {
@@ -183,12 +181,6 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
     background-color: var(--surface-ground);
     border-radius: 6px;
 }
-.filter-label {
-    font-size: 0.85rem;
-    color: var(--text-color-secondary);
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
 .filter-button-group {
     display: flex;
     flex-wrap: wrap;
@@ -202,17 +194,9 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
 
 .filter-button.p-togglebutton.p-button.p-highlight :deep(.p-button-icon.p-button-icon-left),
 .filter-button.p-togglebutton.p-button.p-highlight :deep(.p-button-icon.p-button-icon-right) {
-    color: var(--text-color-secondary) !important;
+    color: var(--text-color-secondary);
 }
 
-.filter-button.p-highlight {
-    background-color: var(--surface-hover) !important;
-    border-color: var(--surface-border) !important;
-    color: var(--text-color) !important;
-}
-.filter-button.p-highlight .p-button-icon {
-    color: var(--text-color) !important;
-}
 .filter-button:hover {
     background-color: var(--surface-hover) !important;
     border-color: var(--primary-color) !important;
