@@ -10,7 +10,6 @@ import typing
 from dataclasses import MISSING
 from functools import partial
 
-# from pydantic import BaseModel, Field
 from dataclasses import dataclass, field, Field
 from hatch.project.core import Project
 from hatchling.builders.plugin.interface import BuilderInterface

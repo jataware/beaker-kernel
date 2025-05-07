@@ -6,6 +6,7 @@ import os.path
 import urllib.parse
 import requests
 import uuid
+from dataclasses import asdict
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable
 from typing_extensions import Self
@@ -13,8 +14,9 @@ from typing_extensions import Self
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
 from beaker_kernel.lib.autodiscovery import autodiscover
-from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError
+from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError, ensure_async
 from beaker_kernel.lib.config import config as beaker_config
+from beaker_kernel.lib.types import Datasource
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -59,10 +61,14 @@ class BeakerContext:
         self.beaker_kernel = beaker_kernel
         self.config = config
         self.subkernel = self.get_subkernel()
+
         self.agent = agent_cls(
             context=self,
             tools=self.subkernel.tools,
         )
+        if TYPE_CHECKING and self.__annotations__:
+            self.__annotations__["agent"] = agent_cls
+
         self.current_llm_query = None
         self.notebook_state = None
         # self.kernel_state = None
@@ -157,10 +163,7 @@ class BeakerContext:
     async def auto_context(self):
         parts = []
         if hasattr(self, "_auto_context"):
-            if inspect.iscoroutinefunction(self._auto_context):
-                result = await self._auto_context()
-            else:
-                result = self._auto_context()
+            result = await ensure_async(self._auto_context())
             parts.append(
                 result
             )
@@ -224,7 +227,6 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         self.beaker_kernel.server.set_proxy_target(subkernel.connected_kernel)
         return subkernel
 
-
     @classmethod
     def available_subkernels(cls) -> List["BeakerSubkernel"]:
         subkernels: Dict[str, BeakerSubkernel] = autodiscover("subkernels")
@@ -256,7 +258,7 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         else:
             return "{}"
 
-    def get_info(self) -> dict:
+    async def get_info(self) -> dict:
         """
 
         """
@@ -293,6 +295,25 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
         }
+
+        if get_datasource_root_method := getattr(self, "get_datasource_root", None):
+            if inspect.iscoroutinefunction(get_datasource_root_method):
+                root_path = await get_datasource_root_method()
+            elif callable(get_datasource_root_method):
+                root_path = get_datasource_method()
+            else:
+                raise ValueError("get_datasource_root defined but not callable")
+            payload["datasource_root"] = root_path
+        if get_datasource_method := getattr(self, "get_datasources", None):
+            datasources: list[Datasource] = []
+            if inspect.iscoroutinefunction(get_datasource_method):
+                datasources = await get_datasource_method()
+            elif callable(get_datasource_method):
+                datasources = get_datasource_method()
+            payload["datasources"] = [
+                asdict(datasource) if isinstance(datasource, Datasource) else datasource
+                for datasource in datasources
+            ]
         return payload
 
     async def get_subkernel_state(self):

@@ -23,6 +23,10 @@ module.exports = defineConfig({
       entry: 'src/pages/dev-interface.ts',
       title: "Beaker Development Interface",
     },
+    integrations: {
+      entry: 'src/pages/integrations-interface.ts',
+      title: "Beaker Integration Manager",
+    },
   },
   css: { extract: false },
   assetsDir: "static/",
