@@ -5,6 +5,7 @@
             class="query query-chat"
             @dblclick="promptDoubleClick"
         >
+            <!-- render user question and user response -->
             <div class="llm-prompt-container llm-prompt-container-chat">
                 <div v-show="isEditing" class="prompt-input-container">
                     <ContainedTextArea
@@ -65,6 +66,7 @@
                       style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
                     />
                 </div>
+                <!-- render agent question to user and any user responses -->
                 <div v-for="[messageEvent, messageClass] of messageEvents" v-bind:key="messageEvent.id">
                     <div style="display: flex; flex-direction: column;">
                         <BeakerQueryCellEvent
@@ -74,6 +76,7 @@
                         />
                     </div>
                 </div>
+                <!-- Show final agent response/answer to original query -->
                 <div 
                     class="query-answer-chat-override"
                     v-if="isLastEventTerminal(events)"
@@ -121,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch } from "vue";
+import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch, toRaw } from "vue";
 import Button from "primevue/button";
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
@@ -209,7 +212,8 @@ const lastEventThought = computed(() => {
 })
 
 const expandThoughts = () => {
-    if (session.notebook.selectedCell === cell.value) {
+    const previousSelectedCell = session.notebook.selectedCell;
+    if (previousSelectedCell === cell.value) {
         session.notebook.selectedCell = undefined;
     } else {
         session.notebook.selectedCell = cell.value;

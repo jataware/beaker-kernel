@@ -27,7 +27,7 @@
         <ChatQueryCellEvent 
           v-else
           v-for="(event, eventIndex) in filteredCellEvents"
-          :key="eventIndex" 
+          :key="eventIndex+props.selectedCell.id"
           :event="event" 
           :parent-query-cell="props.selectedCell"
         />
