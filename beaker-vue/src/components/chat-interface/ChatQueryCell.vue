@@ -1,130 +1,130 @@
 <template>
     <BaseQueryCell>
-    <template #query>
-        <div
-            class="query query-chat"
-            @dblclick="promptDoubleClick"
-        >
-            <!-- render user question and user response -->
-            <div class="llm-prompt-container llm-prompt-container-chat">
-                <div v-show="isEditing" class="prompt-input-container">
-                    <ContainedTextArea
-                        ref="textarea"
-                        class="prompt-input"
-                        v-model="promptText"
-                        :style="{minHeight: `${promptEditorMinHeight}px`}"
-                    />
-                    <div class="prompt-controls" style="">
-                        <Button label="Submit" @click="execute"/>
-                        <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
-                    </div>
-                </div>
-                <div
-                    v-show="!isEditing"
-                    class="llm-prompt-text llm-prompt-text-chat"
-                    :data-cell-id="cell.id"
-                >{{ cell.source }}</div>
-            </div>
-        </div>
-    </template>
-    <template #events>
-        <div class="event-container"
-            v-if="events.length > 0 || isLastEventTerminal(events) || showChatEventsEarly(cell)"
-        >
-            <div class="events">
-                <div
-                    class="expand-thoughts-button"
-                    :class="{ 'expanded': session.notebook.selectedCell === cell }"
-                    @click="expandThoughts"
-                >
-                    <div 
-                        class="white-space-nowrap"
-                        style="
-                            display: flex; 
-                            align-items: center;
-                            font-weight: 400;
-                            font-family: 'Courier New', Courier, monospace;
-                            font-size: 0.8rem;
-                            color: var(--text-color-secondary)
-                        "
-                    >
-                        <i
-                            class="pi pi-sparkles"
-                            :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
-                            style="
-                                color: var(--yellow-500);
-                                font-size: 1.25rem;
-                                margin-right: 0.6rem;
-                            "
-                        />
-                        {{ lastEventThought }}
-                    </div>
-                    <Button 
-                      :icon="session.notebook.selectedCell === cell ? 'pi pi-times' : 'pi pi-search'"
-                      text 
-                      rounded 
-                      style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
-                    />
-                </div>
-                <!-- render agent question to user and any user responses -->
-                <div v-for="[messageEvent, messageClass] of messageEvents" v-bind:key="messageEvent.id">
-                    <div style="display: flex; flex-direction: column;">
-                        <BeakerQueryCellEvent
-                            :event="messageEvent"
-                            :parent-query-cell="cell"
-                            :class="messageClass"
-                        />
-                    </div>
-                </div>
-                <!-- Show final agent response/answer to original query -->
-                <div 
-                    class="query-answer-chat-override"
-                    v-if="isLastEventTerminal(events)"
-                >
-                    <BeakerQueryCellEvent
-                        :event="cell?.events[cell?.events.length - 1]"
-                        :parent-query-cell="cell"
-                    />
-                </div>
-            </div>
-        </div>
-    </template>
-    <template #input-request>
-        <div
-            class="input-request-chat-override"
-            v-focustrap
-            v-if="cell.status === 'awaiting_input'"
-         >
+        <template #query>
             <div
-                class="input-request-wrapper input-request-wrapper-chat"
+                class="query query-chat"
+                @dblclick="promptDoubleClick"
             >
-                <InputGroup>
-                    <InputGroupAddon>
-                        <i class="pi pi-exclamation-triangle"></i>
-                    </InputGroupAddon>
-                    <InputText
-                        placeholder="Reply to the agent"
-                        @keydown.enter.exact.prevent="respond"
-                        @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
-                        @keydown.ctrl.enter.stop
-                        @keydown.shift.enter.stop
-                        autoFocus
-                        v-model="response"
-                    />
-                    <Button
-                        icon="pi pi-send"
-                        @click="respond"
-                    />
-                </InputGroup>
+                <!-- renders user questions -->
+                <div class="llm-prompt-container llm-prompt-container-chat">
+                    <div v-show="isEditing" class="prompt-input-container">
+                        <ContainedTextArea
+                            ref="textarea"
+                            class="prompt-input"
+                            v-model="promptText"
+                            :style="{minHeight: `${promptEditorMinHeight}px`}"
+                        />
+                        <div class="prompt-controls" style="">
+                            <Button label="Submit" @click="execute"/>
+                            <Button label="Cancel" @click="promptText = cell.source; isEditing = false"/>
+                        </div>
+                    </div>
+                    <div
+                        v-show="!isEditing"
+                        class="llm-prompt-text llm-prompt-text-chat"
+                        :data-cell-id="cell.id"
+                    >{{ cell.source }}</div>
+                </div>
             </div>
-        </div>
+        </template>
+        <template #events>
+            <div class="event-container"
+                v-if="events.length > 0 || isLastEventTerminal(events) || showChatEventsEarly(cell)"
+            >
+                <div class="events">
+                    <div
+                        class="expand-thoughts-button"
+                        :class="{ 'expanded': session.notebook.selectedCell === cell }"
+                        @click="expandThoughts"
+                    >
+                        <div 
+                            class="white-space-nowrap"
+                            style="
+                                display: flex; 
+                                align-items: center;
+                                font-weight: 400;
+                                font-family: 'Courier New', Courier, monospace;
+                                font-size: 0.8rem;
+                                color: var(--text-color-secondary)
+                            "
+                        >
+                            <i
+                                class="pi pi-sparkles"
+                                :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
+                                style="
+                                    color: var(--yellow-500);
+                                    font-size: 1.25rem;
+                                    margin-right: 0.6rem;
+                                "
+                            />
+                            {{ lastEventThought }}
+                        </div>
+                        <Button 
+                        :icon="session.notebook.selectedCell === cell ? 'pi pi-times' : 'pi pi-search'"
+                        text 
+                        rounded 
+                        style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                        />
+                    </div>
+                    <!-- renders questions from agent to user or any user responses to those questions -->
+                    <div v-for="[messageEvent, messageClass] of messageEvents" v-bind:key="messageEvent.id">
+                        <div style="display: flex; flex-direction: column;">
+                            <BeakerQueryCellEvent
+                                :event="messageEvent"
+                                :parent-query-cell="cell"
+                                :class="messageClass"
+                            />
+                        </div>
+                    </div>
+                    <!-- Show final agent response/answer to original user query -->
+                    <div 
+                        class="query-answer-chat-override"
+                        v-if="isLastEventTerminal(events)"
+                    >
+                        <BeakerQueryCellEvent
+                            :event="cell?.events[cell?.events.length - 1]"
+                            :parent-query-cell="cell"
+                        />
+                    </div>
+                </div>
+            </div>
+        </template>
+        <template #input-request>
+            <div
+                class="input-request-chat-override"
+                v-focustrap
+                v-if="cell.status === 'awaiting_input'"
+            >
+                <div
+                    class="input-request-wrapper input-request-wrapper-chat"
+                >
+                    <InputGroup>
+                        <InputGroupAddon>
+                            <i class="pi pi-exclamation-triangle"></i>
+                        </InputGroupAddon>
+                        <InputText
+                            placeholder="Reply to the agent"
+                            @keydown.enter.exact.prevent="respond"
+                            @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
+                            @keydown.ctrl.enter.stop
+                            @keydown.shift.enter.stop
+                            autoFocus
+                            v-model="response"
+                        />
+                        <Button
+                            icon="pi pi-send"
+                            @click="respond"
+                        />
+                    </InputGroup>
+                </div>
+            </div>
     </template>
   </BaseQueryCell>
 
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch, toRaw } from "vue";
+import { defineProps, defineExpose, inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch } from "vue";
 import Button from "primevue/button";
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';

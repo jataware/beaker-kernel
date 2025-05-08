@@ -1,4 +1,4 @@
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch } from "vue";
+import { ref, shallowRef, inject, computed, nextTick, getCurrentInstance } from "vue";
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
@@ -17,7 +17,6 @@ export const useBaseQueryCell = (props) => {
       return [...props.cell.events];
     });
   
-    // Common methods
     function execute() {
       const config: any = instance?.root?.props?.config;
       const sendNotebookState = config ? config.extra?.send_notebook_state : undefined;
