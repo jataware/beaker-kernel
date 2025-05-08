@@ -1,26 +1,18 @@
 <template>
   <div class="thoughts-pane">
     <div v-if="!selectedCell">
-      <em>Select <i class="pi pi-search" style="margin: 0 0.25rem; color: var(--text-color-secondary);"></i> agent actions from the conversation to view details.</em>
+      <em>Select <i class="pi pi-search" style="margin: 0 0.25rem; color: var(--text-color-secondary);"></i> agent activity from the conversation to view details.</em>
     </div>
     <div v-else class="thoughts-pane-content">
-      <div class="filter-controls">
-        <div class="filter-button-group">
-
-          <Button label="Scroll To Query" outlined @click="scrollToMessage" class="p-button-sm" />
-
-          <ToggleButton v-model="showCodeCells" outlined on-label="Hide Code" off-label="Show Code"
-            on-icon="pi pi-eye-slash" off-icon="pi pi-eye" class="p-button-sm filter-button" 
-            :disabled="shouldShowNoThoughtsPlaceholder"
-            @click="handleCodeToggle" />
-
-          <ToggleButton v-model="showThoughtCells" outlined on-label="Hide Thoughts" off-label="Show Thoughts"
-            on-icon="pi pi-eye-slash" off-icon="pi pi-eye" class="p-button-sm filter-button" 
-            :disabled="shouldShowNoThoughtsPlaceholder"
-            @click="handleThoughtToggle" />
-        </div>
+      <div class="pane-actions">
+        <Button
+          icon="pi pi-arrow-circle-right"
+          text
+          @click="scrollToMessage"
+          v-tooltip.bottom="'Scroll to related user message.'"
+        />
       </div>
-      <div class="events-scroll-container">
+      <div class="events-scroll-container" v-autoscroll>
         <div v-if="shouldShowNoThoughtsPlaceholder" class="no-thoughts-message">
           <em>No details available for this agent query.</em>
         </div>
@@ -54,19 +46,6 @@ const emit = defineEmits<{
   (e: 'scrollToMessage'): void
 }>();
 
-const showCodeCells = ref(true);
-const showThoughtCells = ref(true);
-
-const handleCodeToggle = () => {
-  if (!showCodeCells.value) {
-    showThoughtCells.value = true;
-  }
-};
-const handleThoughtToggle = () => {
-  if (!showThoughtCells.value) {
-    showCodeCells.value = true;
-  }
-};
 
 const isSelectedCellInProgress = computed(() => {
   return props.selectedCell.status === 'busy';
@@ -89,24 +68,7 @@ const filteredCellEvents = computed(() => {
   if (!selectedCellEvents.value) return [];
 
   return selectedCellEvents.value.filter(event => {
-
-    // User answer is displayed in the main conversation
-    if (event.type === 'user_answer') {
-      return false;
-    }
-    // Agent Response is displayed in the main conversation
-    if (event.type === 'response') {
-      return false;
-    }
-
-    if (!showCodeCells.value && event.type === 'code_cell') {
-      return false;
-    }
-    if (!showThoughtCells.value && event.type === 'thought') {
-      return false;
-    }
-
-    return true;
+    return !["user_answer", "response"].includes(event.type);
   })
   .map((event, index, all_events) => {
     const isLastEvent = index === all_events.length - 1;
@@ -139,7 +101,6 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
 <style scoped lang="scss">
 .thoughts-pane {
   padding: 1rem;
-  // margin-right: 1rem;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -158,7 +119,7 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
   color: var(--text-color);
 
   overflow-y: auto;
@@ -175,30 +136,13 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
   color: var(--text-color-secondary);
 }
 
-.filter-controls {
-    padding: 0.5rem;
-    margin-bottom: 0.5rem;
-    background-color: var(--surface-ground);
-    border-radius: 6px;
-}
-.filter-button-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-.filter-button {
-    background-color: var(--surface-card) !important;
-    border-color: var(--surface-border) !important;
-    color: var(--text-color-secondary) !important;
-}
-
-.filter-button.p-togglebutton.p-button.p-highlight :deep(.p-button-icon.p-button-icon-left),
-.filter-button.p-togglebutton.p-button.p-highlight :deep(.p-button-icon.p-button-icon-right) {
+.pane-actions {
+  position: fixed;
+  top: 2.5rem;
+  right: 5rem;
+  z-index: 100;
+  & > .p-button {
     color: var(--text-color-secondary);
-}
-
-.filter-button:hover {
-    background-color: var(--surface-hover) !important;
-    border-color: var(--primary-color) !important;
+  }
 }
 </style>

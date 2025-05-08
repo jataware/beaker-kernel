@@ -25,7 +25,7 @@
                         :outputs="cell.outputs" 
                         :busy="isBusy" 
                         v-show="!hideOutput" 
-                        :dropdown-layout="isChat ?? false"
+                        :dropdown-layout="false"
                     />
                 </div>
                 <div class="state-info">

@@ -102,7 +102,7 @@
                 @panel-hide="unselectCell"
             >
                 <SideMenuPanel
-                    label="Agent Actions"
+                    label="Agent Activity"
                     id="agent-actions"
                     icon="pi pi-lightbulb"
                     position="top"

@@ -245,11 +245,12 @@ watch(events, (newEvents) => {
         expandThoughts();
     }
 });
-watch(queryStatus, (newStatus) => {
-    if (newStatus === QueryStatuses.Done) {
-        session.notebook.selectedCell = undefined;
-    }
-});
+// In case we wish to auto-close the pane when the agent is done
+// watch(queryStatus, (newStatus) => {
+//     if (newStatus === QueryStatuses.Done) {
+//         session.notebook.selectedCell = undefined;
+//     }
+// });
 
 
 const messageEvents = computed(() => {
@@ -423,29 +424,31 @@ export default {
 }
 
 .expand-thoughts-button {
+    display: flex;
+    gap: 0.15rem;
     cursor: pointer;
-    border-radius: var(--border-radius);
     margin: auto;
-    display: block;
+    justify-content: space-between;
     padding: 0.75rem;
-
-    max-width: 80%;
     width: 100%;
+    max-width: 80%;
+    border: 1px solid var(--surface-b);
+    border-radius: var(--border-radius);
 
     &:hover {
         background-color: var(--surface-b);
-    }
-
-    [data-theme="dark"] &:hover {
-        background-color: var(--surface-a);
     }
 
     &.expanded {
         background-color: var(--surface-b);
     }
 
-    display: flex;
-    justify-content: space-between;
+    [data-theme="dark"] & {
+        border: 1px solid var(--surface-a);
+        &:hover, &.expanded {
+            background-color: var(--surface-a);
+        }
+    }
 
     & > div {
         flex: 1;

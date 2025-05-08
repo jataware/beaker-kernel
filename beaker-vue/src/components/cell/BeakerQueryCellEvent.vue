@@ -46,63 +46,6 @@
         </div>
         <div v-else-if="props.event?.type === 'thought'">
             <div v-html="marked.parse(props.event.content.thought)" />
-            <div v-if="props.event.content.background_code_executions.length">
-                <Accordion :multiple="true" :active-index="[]">
-                    <AccordionTab
-                        v-for="(code_execution, index) in event.content.background_code_executions"
-                        :key="`code_execution_${index}`"
-                        :pt="{
-                            header: {
-                                class: [`agent-response-header`]
-                            },
-                            headerAction: {
-                                class: [`agent-response-headeraction`]
-                            },
-                            content: {
-                                class: [`agent-response-content`]
-                            },
-                            headerIcon: {
-                                class: [`agent-response-icon`]
-                            }
-                        }"
-                    >
-                        <template #header>
-                            <span class="flex align-items-center gap-2 w-full" style="font-weight: normal">
-                                <span class="pi pi-icon pi-server"></span>
-                                <span>Background Execution by Agent</span>
-                            </span>
-                        </template>
-                        <div
-                            class="monospace pre"
-                            style="
-                                border: 1px var(--surface-border) solid;
-                                background-color: var(--surface-50);
-                                padding: 0.5rem;
-                                padding-top: 0rem;
-                                margin-bottom: 0.5rem;
-                                overflow: auto;
-                            "
-                        >
-                            {{ code_execution.code.trim() }}
-                        </div>
-                        <div v-if="code_execution.status === 'ok'">
-                            <span class="pi pi-icon pi-check"></span>
-                            Ran successfully
-                        </div>
-                        <div v-else>
-                            <span class="pi pi-icon pi-exclamation-triangle"></span>
-                            {{ capitalize(code_execution.status) }}
-                            <div v-if="code_execution.status === 'error'">
-                                <div>
-                                {{ code_execution.ename }}: {{ code_execution.evalue }}
-                                </div>
-                                <div class="monospace pre" v-html="ansiHtml(code_execution.traceback.join('\n').trim())"/>
-                            </div>
-                        </div>
-                    </AccordionTab>
-                </Accordion>
-
-            </div>
         </div>
         <div v-else-if="props.event?.type === 'code_cell'" style="position: relative;">
             <BeakerCodeCell
