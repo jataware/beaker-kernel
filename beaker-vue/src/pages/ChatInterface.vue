@@ -303,7 +303,6 @@ const iopubMessage = (msg) => {
         });
     } else if (msg.header.msg_type === "chat_history") {
         chatHistory.value = msg.content;
-        console.log(msg.content);
     }
     else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
         var incomingDatasources;
