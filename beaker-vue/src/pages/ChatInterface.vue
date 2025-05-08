@@ -108,7 +108,7 @@
                     position="top"
                     :selected="!!selectedCellId"
                 >
-                    <ThoughtsPane 
+                    <AgentActivityPane 
                         :selectedCell="selectedCell" 
                         @scrollToMessage="scrollToMessage" 
                         @unselectCell="unselectCell" 
@@ -176,7 +176,7 @@ import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
-import ThoughtsPane from '../components/chat-interface/ThoughtsPane.vue';
+import AgentActivityPane from '../components/chat-interface/AgentActivityPane.vue';
 import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
 
 const beakerInterfaceRef = ref();
