@@ -361,7 +361,6 @@ const fileTarget = ref();
 
 const openFileSelection = (target) => {
     fileTarget.value = target;
-    console.log("target:", target);
     fileInput.value?.click();
 }
 
@@ -408,7 +407,6 @@ const newDatasource = () => {
 const save = async () => {
     unsavedChanges.value = false;
     temporaryDatasource.value = undefined;
-    console.log(selectedDatasource.value.slug, slugWrapper.value)
 
     showToast({
         title: 'Saved!',
@@ -428,7 +426,6 @@ const save = async () => {
 const download = async (name) => {
     const folderRoot = props.folderRoot;
     const path = `${folderRoot}/${folderSlug.value}/documentation/${name}`;
-    console.log(`downloading ${name} (${path})`);
     await downloadFile(path);
 }
 
@@ -479,7 +476,6 @@ const onSelectFilesForUpload = async () => {
     await createFoldersForDatasource();
     await uploadFile(fileList);
     for (const file of fileList) {
-        console.log(fileList)
         selectedDatasource?.value.attached_files.push({
             name: file.name.split('.').slice(0, -1).join(''),
             filepath: file.name
