@@ -99,19 +99,17 @@
                 position="right"
                 highlight="line"
                 :expanded="false"
-                @panel-hide="unselectCell"
+                @panel-hide="deactivateQueryCell"
             >
                 <SideMenuPanel
                     label="Agent Activity"
                     id="agent-actions"
                     icon="pi pi-lightbulb"
                     position="top"
-                    :selected="!!selectedCellId"
+                    :selected="!!activeQueryCell"
                 >
                     <AgentActivityPane 
-                        :selectedCell="selectedCell" 
                         @scrollToMessage="scrollToMessage" 
-                        @unselectCell="unselectCell" 
                     />
                 </SideMenuPanel>
                 
@@ -147,7 +145,7 @@ import ChatPanel from '../components/chat-interface/ChatPanel.vue';
 import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 import InfoPanel from '../components/panels/InfoPanel.vue';
-import {ChatHistoryPanel, ChatHistoryProps, IChatHistory} from '../components/panels/ChatHistoryPanel';
+import {ChatHistoryPanel, IChatHistory} from '../components/panels/ChatHistoryPanel';
 
 import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
@@ -162,16 +160,15 @@ import BeakerSession from '../components/session/BeakerSession.vue';
 
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
+import { type IBeakerCell } from "beaker-kernel/src";
 import { JupyterMimeRenderer } from 'beaker-kernel/src';
-// import { _ } from '../util/whitelabel';
 import { NavOption } from '../components/misc/BeakerHeader.vue';
 
 
-import { defineProps, inject, ref, computed, watch } from 'vue';
+import { defineProps, inject, ref, computed, watch, provide } from 'vue';
 import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
 import { IBeakerTheme } from '../plugins/theme';
-import { vKeybindings } from '../directives/keybindings';
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
@@ -189,7 +186,7 @@ const rightSideMenuRef = ref();
 const contextPreviewData = ref<any>();
 const debugLogs = ref<object[]>([]);
 const datasources = ref([]);
-
+const activeQueryCell = ref<IBeakerCell | null>(null);
 const chatHistory = ref<IChatHistory>()
 
 type FilePreview = {
@@ -211,39 +208,29 @@ const isLastCellAwaitingInput = computed(() => {
     return false;
 })
 
-const selectedCellId = computed(() => {
-    return beakerSession.value?.session?.notebook?.selectedCell?.id ?? null;
-});
-
-const selectedCell = computed(() => {
-    if (!selectedCellId.value) return null;
-    const cells = beakerSession.value?.session?.notebook?.cells ?? [];
-    return cells.find(cell => cell.id === selectedCellId.value) || null;
-});
-
-const beakerSession = computed(() => {
-    return beakerInterfaceRef?.value?.beakerSession;
-});
-
-const unselectCell = () => {
-    beakerSession.value.session.notebook.selectedCell = undefined;
+const deactivateQueryCell = () => {
+    activeQueryCell.value = null;
 }
 
 const scrollToMessage = () => {
-    const chatCell = document.querySelector(`[data-cell-id="${selectedCellId.value}"]`);
+    const chatCell = document.querySelector(`[data-cell-id="${activeQueryCell.value?.id}"]`);
     if (chatCell) {
         chatCell.scrollIntoView({ behavior: 'smooth' });
     }
 }
 
+const beakerSession = computed(() => {
+    return beakerInterfaceRef?.value?.beakerSession;
+});
+
 /**
- * `selectedCell` indicates that the Thoughts pane should be open,
- * but clicking the x should always close the right pane.
+ * `activeQueryCell` indicates that the Agent Activity pane should be open,
+ * but clicking the x should always close the right-side pane.
  */
-watch(selectedCellId, (newValue) => {
+watch(activeQueryCell, (newValue) => {
     if(!rightSideMenuRef.value) return;
 
-    const anyPaneOpen = rightSideMenuRef.value.getSelectedPanelInfo()?.label;
+    const anyPaneOpen = Boolean(rightSideMenuRef.value.getSelectedPanelInfo());
 
     if (newValue) {
         rightSideMenuRef.value.selectPanel('agent-actions');
@@ -342,7 +329,6 @@ const cellComponentMapping = {
 }
 
 const connectionStatus = ref('connecting');
-const beakerSessionRef = ref<typeof BeakerSession>();
 
 
 const iopubMessage = (msg) => {
@@ -386,6 +372,8 @@ const restartSession = async () => {
     )
     await resetFuture;
 }
+
+provide('activeQueryCell', activeQueryCell);
 </script>
 
 <style lang="scss">

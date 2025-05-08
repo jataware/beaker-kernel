@@ -165,13 +165,6 @@ const isCodeCellSelected = computed(() => {
     return false;
 });
 
-const lastOutput = computed(() => {
-    if (props.parentQueryCell?.children?.length == 0) {
-        return [0]
-    }
-    return [props.parentQueryCell?.children?.length - 1];
-})
-
 const parentEntries = computed(() => {
     const isAllTextPlain = props.parentQueryCell?.children?.map((child =>
         child?.outputs?.every(output => {

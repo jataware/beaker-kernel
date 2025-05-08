@@ -1,6 +1,6 @@
 <template>
   <div class="thoughts-pane">
-    <div v-if="!selectedCell">
+    <div v-if="!activeQueryCell">
       <em>Select <i class="pi pi-search" style="margin: 0 0.25rem; color: var(--text-color-secondary);"></i> agent activity from the conversation to view details.</em>
     </div>
     <div v-else class="thoughts-pane-content">
@@ -19,12 +19,12 @@
         <ChatQueryCellEvent 
           v-else
           v-for="(event, eventIndex) in filteredCellEvents"
-          :key="eventIndex+props.selectedCell.id"
+          :key="`${eventIndex}-${activeQueryCell.id}`"
           :event="event" 
-          :parent-query-cell="props.selectedCell"
+          :parent-query-cell="activeQueryCell"
         />
 
-        <ProgressBar v-if="isSelectedCellInProgress" mode="indeterminate"
+        <ProgressBar v-if="isActiveQueryCellInProgress" mode="indeterminate"
           style="height: 6px; width: 40%; margin: 1rem auto;" />
       </div>
     </div>
@@ -32,32 +32,34 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, computed, ref, defineEmits } from 'vue';
+import { defineProps, computed, ref, defineEmits, inject } from 'vue';
 import ProgressBar from 'primevue/progressbar';
 import ToggleButton from 'primevue/togglebutton';
 import Button from 'primevue/button';
 import ChatQueryCellEvent from './ChatQueryCellEvent.vue';
-
-const props = defineProps<{
-  selectedCell: any | null
-}>();
+import { type IBeakerCell } from "beaker-kernel/src";
 
 const emit = defineEmits<{
   (e: 'scrollToMessage'): void
 }>();
 
+const activeQueryCell = inject<IBeakerCell | null>('activeQueryCell');
 
-const isSelectedCellInProgress = computed(() => {
-  return props.selectedCell.status === 'busy';
+const isActiveQueryCellInProgress = computed(() => {
+  return activeQueryCell.value?.status === 'busy';
 });
 
-const selectedCellEvents = computed(() => {
-  if (!props.selectedCell) {
+const activeQueryCellEvents = computed(() => {
+  if (!activeQueryCell.value) {
     return null;
   }
 
-  return props.selectedCell?.events || [];
+  return activeQueryCell.value?.events || [];
 });
+
+const unselectCell = () => {
+    activeQueryCell.value = null;
+};
 
 const scrollToMessage = () => {
   emit('scrollToMessage');
@@ -65,9 +67,9 @@ const scrollToMessage = () => {
 
 // Filter events based on toggle states
 const filteredCellEvents = computed(() => {
-  if (!selectedCellEvents.value) return [];
+  if (!activeQueryCellEvents.value) return [];
 
-  return selectedCellEvents.value.filter(event => {
+  return activeQueryCellEvents.value.filter(event => {
     return !["user_answer", "response"].includes(event.type);
   })
   .map((event, index, all_events) => {
@@ -85,15 +87,15 @@ const filteredCellEvents = computed(() => {
 });
 
 const shouldShowNoThoughtsPlaceholder = computed(() => {
-  if (!selectedCellEvents.value || isSelectedCellInProgress.value) {
+  if (!activeQueryCellEvents.value || isActiveQueryCellInProgress.value) {
     return false;
   }
 
   // Check if query is complete (idle) and has only a response event
-  const hasOnlyResponse = selectedCellEvents.value.length === 1 && 
-    selectedCellEvents.value[0].type === 'response';
+  const hasOnlyResponse = activeQueryCellEvents.value.length === 1 && 
+    activeQueryCellEvents.value[0].type === 'response';
 
-  return props.selectedCell.status === 'idle' && hasOnlyResponse;
+  return activeQueryCell.value?.status === 'idle' && hasOnlyResponse;
 });
 
 </script>

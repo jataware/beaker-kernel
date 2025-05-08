@@ -34,7 +34,7 @@
                 <div class="events">
                     <div
                         class="expand-thoughts-button"
-                        :class="{ 'expanded': session.notebook.selectedCell === cell }"
+                        :class="{ 'expanded': activeQueryCell === cell }"
                         @click="expandThoughts"
                     >
                         <div 
@@ -60,7 +60,7 @@
                             {{ lastEventThought }}
                         </div>
                         <Button 
-                        :icon="session.notebook.selectedCell === cell ? 'pi pi-times' : 'pi pi-search'"
+                        :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
                         text 
                         rounded 
                         style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
@@ -129,7 +129,7 @@ import Button from "primevue/button";
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
 import InputGroupAddon from 'primevue/inputgroupaddon';
-import { BeakerSession } from 'beaker-kernel/src';
+import { type IBeakerCell } from "beaker-kernel/src";
 import BeakerQueryCellEvent from "../cell/BeakerQueryCellEvent.vue";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
 import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
@@ -163,7 +163,7 @@ const enum QueryStatuses {
     Done,
 }
 
-const session: BeakerSession = inject("session");
+const activeQueryCell = inject<IBeakerCell | null>("activeQueryCell");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
 
@@ -212,11 +212,10 @@ const lastEventThought = computed(() => {
 })
 
 const expandThoughts = () => {
-    const previousSelectedCell = session.notebook.selectedCell;
-    if (previousSelectedCell === cell.value) {
-        session.notebook.selectedCell = undefined;
+    if (activeQueryCell.value === cell.value) {
+        activeQueryCell.value = null;
     } else {
-        session.notebook.selectedCell = cell.value;
+        activeQueryCell.value = cell.value;
     }
 };
 
@@ -248,7 +247,7 @@ watch(events, (newEvents) => {
 // In case we wish to auto-close the pane when the agent is done
 // watch(queryStatus, (newStatus) => {
 //     if (newStatus === QueryStatuses.Done) {
-//         session.notebook.selectedCell = undefined;
+//         activeQueryCell.value = null;
 //     }
 // });
 
