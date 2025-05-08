@@ -38,9 +38,6 @@ const props = defineProps([
     flex-direction: column;
     z-index: 3;
     overflow: auto;
-
-    // styling the scrollbar
-    scrollbar-color: var(--surface-d) var(--surface-a);
 }
 
 .flex-background {
