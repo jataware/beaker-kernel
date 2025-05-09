@@ -6,7 +6,7 @@
     "dev": "vite",
     "serve": "vite",
     "build": "run-p type-check \"build-only {@}\" --; run-p routes --",
-    "build-and-serve": "run-s build serve",
+    "build-and-serve": "run-s serve",
     "routes": "vite-node extractRoutes.ts",
     "preview": "vite preview",
     "test:unit": "vitest",

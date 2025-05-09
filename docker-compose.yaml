@@ -50,7 +50,7 @@ services:
       - ui-html:/ui/dist/html
     working_dir: "/ui"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/"]
+      test: [ "CMD", "ls", "/ui/dist/html/routes.json"]
       interval: 5s
       timeout: 10s
       retries: 36  # 3 minutes
@@ -61,7 +61,7 @@ services:
       - GID=1000
     ports:
       - "8080:8080"
-    command: "sh -c '(cd /beaker-ts && npm i && npm run build); npm i && npm run build-and-serve'"
+    command: "sh -c '(cd /beaker-ts && npm i); npm i; npm run routes; npm run serve'"
 volumes:
   ui-html:
   run:
