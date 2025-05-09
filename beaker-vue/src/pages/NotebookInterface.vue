@@ -82,6 +82,13 @@
                     <ChatHistoryPanel :chat-history="chatHistory"/>
                 </SideMenuPanel>
                 <SideMenuPanel
+                    id="integrations" label="Integrations" icon="pi pi-database"
+                    v-if="datasources.length > 0"
+                >
+                    <DatasourcePanel :datasources="datasources">
+                    </DatasourcePanel>
+                </SideMenuPanel>
+                <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
                     id="config"
                     :label="`${$tmpl._('short_title', 'Beaker')} Config`"
@@ -158,6 +165,7 @@ import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import { ChatHistoryPanel, type IChatHistory } from '../components/panels/ChatHistoryPanel';
+import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
 
 // context preview
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
@@ -210,8 +218,6 @@ const cellComponentMapping = {
     'raw': BeakerRawCell,
 }
 
-// const session = inject<BeakerSession>('session');
-
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
 const rawMessages = ref<object[]>([])
@@ -230,6 +236,7 @@ beakerApp.setPage("notebook");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
+const datasources = ref([]);
 
 type FilePreview = {
     url: string,
@@ -295,9 +302,11 @@ watch(
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
         contextPreviewData.value = msg.content;
-    } else if (msg.header.msg_type === "kernel_state_info") {
+    }
+    else if (msg.header.msg_type === "kernel_state_info") {
         kernelStateInfo.value = msg.content;
-    } else if (msg.header.msg_type === "debug_event") {
+    }
+    else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,
             body: msg.content.body,
@@ -306,6 +315,20 @@ const iopubMessage = (msg) => {
     } else if (msg.header.msg_type === "chat_history") {
         chatHistory.value = msg.content;
         console.log(msg.content);
+    }
+    else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
+        var incomingDatasources;
+        if (msg.header.msg_type === "context_setup_response") {
+            incomingDatasources = msg.content.datasources;
+
+        }
+        else if (msg.header.msg_type === "context_info_response") {
+            incomingDatasources = msg.content.info.datasources;
+        }
+        if (incomingDatasources === undefined) {
+            incomingDatasources = [];
+        }
+        datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
     }
 };
 
