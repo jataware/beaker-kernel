@@ -33,18 +33,9 @@
             v-if="events.length > 0 || isLastEventTerminal(events) || showChatEventsEarly(cell)"
         >
             <div class="events">
-                <!-- renders questions from agent to user or any user responses to those questions -->
-                <div v-for="[messageEvent, messageClass] of messageEvents" v-bind:key="messageEvent.id">
-                    <div style="display: flex; flex-direction: column;">
-                        <BeakerQueryCellEvent
-                            :event="messageEvent"
-                            :parent-query-cell="cell"
-                            :class="messageClass"
-                        />
-                    </div>
-                </div>
-
+                <!-- initial position of expand-thoughts-button -->
                 <div
+                    v-if="!hasUserResponses"
                     class="expand-thoughts-button"
                     :class="{ 'expanded': activeQueryCell === cell }"
                     @click="expandThoughts"
@@ -72,14 +63,61 @@
                         {{ lastEventThought }}
                     </div>
                     <Button 
-                    :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
-                    text 
-                    rounded 
-                    style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                        :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
+                        text 
+                        rounded 
+                        style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
                     />
                 </div>
 
-                <!-- Show final agent response/answer to original user query -->
+                <!-- render messages with expand-thoughts-button after last user response -->
+                <template v-for="([messageEvent, messageClass], index) in messageEvents" v-bind:key="messageEvent.id">
+                    <div style="display: flex; flex-direction: column;">
+                        <BeakerQueryCellEvent
+                            :event="messageEvent"
+                            :parent-query-cell="cell"
+                            :class="messageClass"
+                        />
+                    </div>
+                    <!-- show expand-thoughts-button after last user response -->
+                    <div
+                        v-if="isLastUserResponse(messageEvent, index)"
+                        class="expand-thoughts-button"
+                        :class="{ 'expanded': activeQueryCell === cell }"
+                        @click="expandThoughts"
+                    >
+                        <div 
+                            class="white-space-nowrap"
+                            style="
+                                display: flex; 
+                                align-items: center;
+                                font-weight: 400;
+                                font-family: 'Courier New', Courier, monospace;
+                                font-size: 0.8rem;
+                                color: var(--text-color-secondary)
+                            "
+                        >
+                            <i
+                                class="pi pi-sparkles"
+                                :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
+                                style="
+                                    color: var(--yellow-500);
+                                    font-size: 1.25rem;
+                                    margin-right: 0.6rem;
+                                "
+                            />
+                            {{ lastEventThought }}
+                        </div>
+                        <Button 
+                        :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
+                        text 
+                        rounded 
+                        style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                        />
+                    </div>
+                </template>
+
+                <!-- show final agent response/answer to original user query -->
                 <div 
                     class="query-answer-chat-override"
                     v-if="isLastEventTerminal(events)"
@@ -125,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch } from "vue";
+import { defineProps, defineExpose, inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch, toRaw } from "vue";
 import Button from "primevue/button";
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
@@ -190,8 +228,20 @@ const lastEventThought = computed(() => {
             eventCursor = events.value[events.value.length - offset];
         }
         if (eventCursor.type === 'thought') {
+            // if (eventCursor.content.thought === "Thinking..." && lastEvent.type === "response") {
+            //     // Walk backwards to find the next thought
+            //     let nextOffset = offset + 1;
+            //     let nextThought = events.value[events.value.length - nextOffset];
+            //     while (nextThought && nextThought.type !== 'thought' && events.value.length >= nextOffset) {
+            //         nextOffset += 1;
+            //         nextThought = events.value[events.value.length - nextOffset];
+            //     }
+            //     return nextThought?.type === 'thought' ? nextThought.content.thought : "Done";
+            // }
             if (eventCursor.content.thought === "Thinking..." && lastEvent.type === "response") {
-                return "Done";
+                // TODO then check the previous thought? <- Doesn't work because sometimes
+                // that last though occurs before the user response and is out of place.
+                return "Thinking...";
             }
             const endTags = {
                 'user_question': "(awaiting user input)",
@@ -212,10 +262,22 @@ const lastEventThought = computed(() => {
 })
 
 const expandThoughts = () => {
-    if (activeQueryCell.value === cell.value) {
+    const currentCell = toRaw(cell.value);
+    const currentActiveCell = toRaw(activeQueryCell.value);
+    console.log("expandThoughts", {
+        currentCell,
+        currentActiveCell,
+        cellIds: {
+            current: currentCell?.id,
+            active: currentActiveCell?.id
+        },
+        allRegisteredCells: Object.keys(beakerSession.cellRegistry)
+    });
+    
+    if (currentActiveCell?.id === currentCell?.id) {
         activeQueryCell.value = null;
     } else {
-        activeQueryCell.value = cell.value;
+        activeQueryCell.value = currentCell;
     }
 };
 
@@ -235,7 +297,7 @@ const queryStatus = computed<QueryStatuses>(() => {
     }
 })
 
-// Auto-select cell thoughts when we first start getting events
+// auto-select cell thoughts when we first start getting events
 // and auto-close when the agent is done, in which case the user can see the final response
 // on the chat history. User can always manually expand the thoughts to examine what occured before if they want to.
 watch(events, (newEvents) => {
@@ -244,7 +306,7 @@ watch(events, (newEvents) => {
         expandThoughts();
     }
 });
-// In case we wish to auto-close the pane when the agent is done
+// in case we wish to auto-close the pane when the agent is done
 // watch(queryStatus, (newStatus) => {
 //     if (newStatus === QueryStatuses.Done) {
 //         activeQueryCell.value = null;
@@ -278,6 +340,17 @@ const promptDoubleClick = (event) => {
     }
 }
 
+const hasUserResponses = computed(() => {
+    return messageEvents.value.some(([event]) => event.type === 'user_answer');
+});
+
+const isLastUserResponse = (event, index) => {
+    if (event.type !== 'user_answer') return false;
+    // last user response in the seq?
+    const remainingEvents = messageEvents.value.slice(index + 1);
+    return !remainingEvents.some(([e]) => e.type === 'user_answer');
+};
+
 defineExpose({
     execute,
     enter,
@@ -288,6 +361,9 @@ defineExpose({
 });
 
 onBeforeMount(() => {
+    console.log("ChatQueryCell mounted, cellID", cell.value.id);
+    console.log("ChatQueryCell mounted, existing cells", Object.keys(beakerSession.cellRegistry));
+    console.log("ChatQueryCell mounted, instance", instance.vnode);
     beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 });
 
