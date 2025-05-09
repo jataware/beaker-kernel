@@ -361,7 +361,6 @@ const fileTarget = ref();
 
 const openFileSelection = (target) => {
     fileTarget.value = target;
-    console.log("target:", target);
     fileInput.value?.click();
 }
 
@@ -405,10 +404,9 @@ const newDatasource = () => {
     temporaryDatasource.value = selectedDatasource.value
 }
 
-const save = () => {
+const save = async () => {
     unsavedChanges.value = false;
     temporaryDatasource.value = undefined;
-    console.log(selectedDatasource.value.slug, slugWrapper.value)
 
     showToast({
         title: 'Saved!',
@@ -416,6 +414,9 @@ const save = () => {
         severity: 'success',
         life: 4000
     });
+    await createFoldersForDatasource();
+    await writeDatasource(selectedDatasource.value);
+
     session.executeAction('save_datasource', {
         ...selectedDatasource.value,
         slug: slugWrapper.value
@@ -424,14 +425,13 @@ const save = () => {
 
 const download = async (name) => {
     const folderRoot = props.folderRoot;
-    const path = `${folderRoot.value}/${folderSlug.value}/documentation/${name}`;
-    console.log(`downloading ${name} (${path})`);
+    const path = `${folderRoot}/${folderSlug.value}/documentation/${name}`;
     await downloadFile(path);
 }
 
 const createFoldersForDatasource = async () => {
     const folderRoot = props.folderRoot;
-    const basepath = `${folderRoot.value}/${folderSlug.value}`
+    const basepath = `${folderRoot}/${folderSlug.value}`
 
     // is the datasource slug folder present?
     try {
@@ -442,7 +442,7 @@ const createFoldersForDatasource = async () => {
     }
     catch (e) {
         const directory = await contentManager.newUntitled({
-            path: `${folderRoot.value}`,
+            path: folderRoot,
             type: 'directory'
         })
         await contentManager.rename(directory.path, basepath);
@@ -476,7 +476,6 @@ const onSelectFilesForUpload = async () => {
     await createFoldersForDatasource();
     await uploadFile(fileList);
     for (const file of fileList) {
-        console.log(fileList)
         selectedDatasource?.value.attached_files.push({
             name: file.name.split('.').slice(0, -1).join(''),
             filepath: file.name
@@ -485,13 +484,79 @@ const onSelectFilesForUpload = async () => {
 
 }
 
+const formatDatasource = (datasource: {
+    name: string,
+    description: string,
+    source: string,
+    attached_files: any[]
+}): string => {
+    const slug = slugWrapper.value;
+    const indentLines = (text: string) => text
+        .split('\n')
+        .map(line => `\n    ${line}`)
+        .join('')
+        .trim()
+    const indentedDescription = indentLines(datasource?.description ?? "")
+    const indentedContents = indentLines(datasource?.source ?? "")
+    const filePayload = (datasource?.attached_files ?? [])
+        .map(attachment =>
+            `${attachment.name}: !load_txt documentation/${attachment.filepath}\n`)
+        .join('\n')
+
+    const template = `
+name: ${datasource.name}
+slug: ${slug}
+cache_key: api_assistant_${slug}
+examples: !load_yaml documentation/examples.yaml
+
+description: |
+    ${indentedDescription}
+
+${filePayload}
+
+documentation: !fill |
+    ${indentedContents}
+`
+    return template;
+}
+
+const writeDatasource = async (datasource) => {
+    const formattedDatasource = formatDatasource(datasource)
+    const folderRoot = props.folderRoot;
+    const basepath = `${folderRoot}/${folderSlug.value}`
+
+    const type = 'text/plain'
+    const content = btoa(formattedDatasource);
+    const format = 'base64';
+    const fileObj: Partial<Contents.IModel> = {
+        type,
+        format,
+        content,
+    };
+    let result;
+    try {
+        result = await contentManager.save(`${basepath}/api.yaml`, fileObj);
+        result = await contentManager.save(`${basepath}/documentation/examples.yaml`, {type, format, content: btoa("")});
+    }
+    catch(e) {
+        showToast({
+            title: 'Upload failed',
+            detail: `Unable to upload file "${basepath}/api.yaml": ${e}`,
+            severity: 'error',
+            life: 8000
+        });
+        return;
+    }
+
+}
+
 const uploadFile = async (files: FileList) => {
     const folderRoot = props.folderRoot;
     unsavedChanges.value = true;
     const promises = Array.from(files).map(async (file) => {
-        let path = `${folderRoot.value}/${folderSlug.value}/documentation/${file.name}`;
+        let path = `${folderRoot}/${folderSlug.value}/documentation/${file.name}`;
         if (fileTarget?.value !== undefined) {
-            path = `${folderRoot.value}/${folderSlug.value}/documentation/${fileTarget.value}`;
+            path = `${folderRoot}/${folderSlug.value}/documentation/${fileTarget.value}`;
         }
 
         const bytes = [];
@@ -547,17 +612,17 @@ const uploadFile = async (files: FileList) => {
 }
 
 const downloadFile = async (path) => {
-  let url = await contentManager.getDownloadUrl(path);
-  // Ensure we are downloading. Add the download query param
-  if (!/download=/.test(url)) {
-    if (/\?/.test(url)) {
-      url = url + "&download=1"
+    let url = await contentManager.getDownloadUrl(path);
+    // Ensure we are downloading. Add the download query param
+    if (!/download=/.test(url)) {
+        if (/\?/.test(url)) {
+            url = url + "&download=1"
+        }
+        else {
+            url = url + "?download=1"
+        }
     }
-    else {
-      url = url + "?download=1"
-    }
-  }
-  window.location.href = url;
+    window.location.href = url;
 };
 
 </script>
