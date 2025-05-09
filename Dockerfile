@@ -31,6 +31,8 @@ ENV BEAKER_AGENT_USER=jupyter
 ENV BEAKER_SUBKERNEL_USER=user
 ENV BEAKER_RUN_PATH=/var/run/beaker
 
+VOLUME /var/run/beaker /jupyter /jupyter/beaker_kernel/service/ui /usr/local/share/jupyter/kernels/beaker_kernel
+
 # Beaker Server should run as root, but local notebooks should not as Beaker Server sets the UID of running kernels to
 # an unprivileged user account when kernel processes are spawned
 USER root

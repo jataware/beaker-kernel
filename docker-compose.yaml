@@ -1,13 +1,18 @@
 ---
 services:
   jupyter:
-    user: jupyter
+    user: jupyter:jupyter
     build:
       dockerfile: ${DOCKERFILE:-Dockerfile}
       context: .
     ports:
       - "8888:8888"
+    depends_on:
+      ui:
+        condition: service_healthy
     environment:
+      - UID=1000
+      - GID=1000
       - DEBUG=1
       - JUPYTER_SERVER=http://jupyter:8888
       - JUPYTER_BASE_URL=${JUPYTER_BASE_URL:-http://localhost:8080}
@@ -24,17 +29,41 @@ services:
     volumes:
       - ./beaker_kernel:/usr/local/share/jupyter/kernels/beaker_kernel
       - .:/jupyter
-      # - ./run:/var/run/beaker/
+      - ui-html:/jupyter/beaker_kernel/service/ui
+      - run:/var/run/beaker/
     command: ["beaker", "dev", "watch", "--ip", "0.0.0.0"]
   ui:
-    image: node:20
-    user: node
+    build:
+      dockerfile_inline: |
+        FROM node:20
+        USER root:root
+        RUN mkdir -p /ui/node_modules /beaker-ts/node_modules /ui/dist/html
+        RUN chown -R node:node /ui /beaker-ts
+        VOLUME /ui /ui/node_modules /beaker-ts /beaker-ts/node_modules /ui/dist/html
+        USER node:node
+    user: node:node
     volumes:
       - ./beaker-vue:/ui
+      - vue-modules:/ui/node_modules
       - ./beaker-ts:/beaker-ts
+      - ts-modules:/beaker-ts/node_modules
+      - ui-html:/ui/dist/html
     working_dir: "/ui"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 10s
+      retries: 36  # 3 minutes
+      start_period: 5s
     environment:
       - PROXY=http://jupyter:8888
+      - UID=1000
+      - GID=1000
     ports:
       - "8080:8080"
-    command: "sh -c 'npm i && npm run serve'"
+    command: "sh -c '(cd /beaker-ts && npm i && npm run build); npm i && npm run build-and-serve'"
+volumes:
+  ui-html:
+  run:
+  vue-modules:
+  ts-modules:

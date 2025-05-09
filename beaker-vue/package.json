@@ -6,6 +6,7 @@
     "dev": "vite",
     "serve": "vite",
     "build": "run-p type-check \"build-only {@}\" --; run-p routes --",
+    "build-and-serve": "run-s build serve",
     "routes": "vite-node extractRoutes.ts",
     "preview": "vite preview",
     "test:unit": "vitest",
@@ -70,6 +71,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",
+    "@rollup/plugin-node-resolve": "^16.0.1",
     "@tsconfig/node22": "^22.0.1",
     "@types/content-disposition": "^0.5.8",
     "@types/cookie": "^0.6.0",
