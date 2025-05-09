@@ -32,12 +32,12 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, computed, ref, defineEmits, inject } from 'vue';
+import { computed, defineEmits, inject } from 'vue';
 import ProgressBar from 'primevue/progressbar';
-import ToggleButton from 'primevue/togglebutton';
 import Button from 'primevue/button';
 import ChatQueryCellEvent from './ChatQueryCellEvent.vue';
 import { type IBeakerCell } from "beaker-kernel/src";
+import { isLastEventTerminal } from "../cell/cellOperations";
 
 const emit = defineEmits<{
   (e: 'scrollToMessage'): void
@@ -46,20 +46,19 @@ const emit = defineEmits<{
 const activeQueryCell = inject<IBeakerCell | null>('activeQueryCell');
 
 const isActiveQueryCellInProgress = computed(() => {
-  return activeQueryCell.value?.status === 'busy';
+  return !isLastEventTerminal(activeQueryCell.value?.events || []);
 });
 
 const activeQueryCellEvents = computed(() => {
   if (!activeQueryCell.value) {
     return null;
   }
-
   return activeQueryCell.value?.events || [];
 });
 
-const unselectCell = () => {
-    activeQueryCell.value = null;
-};
+// const unselectCell = () => {
+//     activeQueryCell.value = null;
+// };
 
 const scrollToMessage = () => {
   emit('scrollToMessage');

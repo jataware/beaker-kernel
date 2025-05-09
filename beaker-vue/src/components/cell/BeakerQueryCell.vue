@@ -1,6 +1,5 @@
 <template>
-    <BaseQueryCell>
-      <template #query>
+    <div class="llm-query-cell">
         <div
             class="query"
             @dblclick="promptDoubleClick"
@@ -27,8 +26,6 @@
                 >{{ cell.source }}</div>
             </div>
         </div>
-      </template>
-      <template #events>
         <div class="event-container"
             v-if="events.length > 0 || isLastEventTerminal(events)"
         >
@@ -99,40 +96,35 @@
                 </div>
             </div>
         </div>
-      </template>
-      <template #thinking-indicator>
         <div class="thinking-indicator" v-if="cell.status === 'busy'">
             <span class="thought-icon"><ThinkingIcon/></span> Thinking <span class="thinking-animation"></span>
         </div>
-      </template>
-        <template #input-request>
+        <div
+            class="input-request"
+            v-focustrap
+            v-if="cell.status === 'awaiting_input'"
+        >
             <div
-                class="input-request"
-                v-focustrap
-                v-if="cell.status === 'awaiting_input'"
+                class="input-request-wrapper"
             >
-                <div
-                    class="input-request-wrapper"
-                >
-                    <InputGroup>
-                        <InputText
-                            placeholder="Reply to the agent"
-                            @keydown.enter.exact.prevent="respond"
-                            @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
-                            @keydown.ctrl.enter.stop
-                            @keydown.shift.enter.stop
-                            autoFocus
-                            v-model="response"
-                        />
-                        <Button
-                            icon="pi pi-send"
-                            @click="respond"
-                        />
-                    </InputGroup>
-                </div>
+                <InputGroup>
+                    <InputText
+                        placeholder="Reply to the agent"
+                        @keydown.enter.exact.prevent="respond"
+                        @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
+                        @keydown.ctrl.enter.stop
+                        @keydown.shift.enter.stop
+                        autoFocus
+                        v-model="response"
+                    />
+                    <Button
+                        icon="pi pi-send"
+                        @click="respond"
+                    />
+                </InputGroup>
             </div>
-        </template>
-    </BaseQueryCell>
+        </div>
+    </div>
 </template>
 
 
@@ -150,7 +142,6 @@ import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
 import { isLastEventTerminal } from "./cellOperations";
 import { useBaseQueryCell } from './BaseQueryCell';
-import BaseQueryCell from './BaseQueryCell.vue';
 
 
 const props = defineProps([
