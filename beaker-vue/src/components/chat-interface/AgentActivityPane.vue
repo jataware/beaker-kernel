@@ -1,7 +1,7 @@
 <template>
   <div class="thoughts-pane">
     <div v-if="!activeQueryCell">
-      <em>Select <i class="pi pi-search" style="margin: 0 0.25rem; color: var(--text-color-secondary);"></i> agent activity from the conversation to view details.</em>
+      <em>Select <i class="pi pi-search magnifier-reference"></i> agent activity from the conversation to view details.</em>
     </div>
     <div v-else class="thoughts-pane-content">
       <div class="pane-actions">
@@ -23,9 +23,10 @@
           :event="event" 
           :parent-query-cell="activeQueryCell"
         />
+      </div>
 
-        <ProgressBar v-if="isActiveQueryCellInProgress" mode="indeterminate"
-          style="height: 6px; width: 40%; margin: 1rem auto;" />
+      <div v-if="isActiveQueryCellInProgress" class="progress-area">
+        <ProgressBar  mode="indeterminate" />
       </div>
     </div>
   </div>
@@ -56,15 +57,10 @@ const activeQueryCellEvents = computed(() => {
   return activeQueryCell.value?.events || [];
 });
 
-// const unselectCell = () => {
-//     activeQueryCell.value = null;
-// };
-
 const scrollToMessage = () => {
   emit('scrollToMessage');
 }
 
-// Filter events based on toggle states
 const filteredCellEvents = computed(() => {
   if (!activeQueryCellEvents.value) return [];
 
@@ -75,7 +71,7 @@ const filteredCellEvents = computed(() => {
     const isLastEvent = index === all_events.length - 1;
     // if user_question event is last, add marker for unanswered question
     const unansweredQuestion = event.type === 'user_question' && isLastEvent;
-    if (unansweredQuestion) {
+    if (unansweredQuestion && isActiveQueryCellInProgress.value) {
       return {
         ...event,
         waitForUserInput: true
@@ -146,4 +142,18 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
     color: var(--text-color-secondary);
   }
 }
+
+.magnifier-reference {
+  margin: 0 0.25rem;
+  color: var(--text-color-secondary);
+}
+
+.progress-area {
+  width: 100%;
+  z-index: 100;
+  .p-progressbar {
+    height: 6px; width: 40%; margin: 1rem auto;
+  }
+}
+
 </style>

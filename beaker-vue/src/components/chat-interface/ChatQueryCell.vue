@@ -253,15 +253,6 @@ const lastEventThought = computed(() => {
 const expandThoughts = () => {
     const currentCell = toRaw(cell.value);
     const currentActiveCell = toRaw(activeQueryCell.value);
-    console.log("expandThoughts", {
-        currentCell,
-        currentActiveCell,
-        cellIds: {
-            current: currentCell?.id,
-            active: currentActiveCell?.id
-        },
-        allRegisteredCells: Object.keys(beakerSession.cellRegistry)
-    });
     
     if (currentActiveCell?.id === currentCell?.id) {
         activeQueryCell.value = null;
@@ -350,9 +341,6 @@ defineExpose({
 });
 
 onBeforeMount(() => {
-    console.log("ChatQueryCell mounted, cellID", cell.value.id);
-    console.log("ChatQueryCell mounted, existing cells", Object.keys(beakerSession.cellRegistry));
-    console.log("ChatQueryCell mounted, instance", instance.vnode);
     beakerSession.cellRegistry[cell.value.id] = instance.vnode;
 });
 
@@ -383,7 +371,6 @@ export default {
     display: flex;
     justify-content: space-between;
     flex-direction: column;
-    // margin-bottom: 0.25rem;
 }
 
 .query-chat {
@@ -458,18 +445,16 @@ export default {
 .event-container {
     padding: 0rem;
     border-radius: 6px;
+    margin-bottom: 0.25rem;
 }
 
 .query-answer-chat-override {
     padding-left: 1rem;
     padding-right: 1rem;
     border-radius: var(--border-radius);
-    // margin-top: 0.5rem;
     max-width: 80%;
     width: fit-content;
     background-color: var(--surface-c);
-
-    // margin-bottom: 1rem;
 }
 
 .prompt-input-container {
