@@ -228,19 +228,8 @@ const lastEventThought = computed(() => {
             eventCursor = events.value[events.value.length - offset];
         }
         if (eventCursor.type === 'thought') {
-            // if (eventCursor.content.thought === "Thinking..." && lastEvent.type === "response") {
-            //     // Walk backwards to find the next thought
-            //     let nextOffset = offset + 1;
-            //     let nextThought = events.value[events.value.length - nextOffset];
-            //     while (nextThought && nextThought.type !== 'thought' && events.value.length >= nextOffset) {
-            //         nextOffset += 1;
-            //         nextThought = events.value[events.value.length - nextOffset];
-            //     }
-            //     return nextThought?.type === 'thought' ? nextThought.content.thought : "Done";
-            // }
             if (eventCursor.content.thought === "Thinking..." && lastEvent.type === "response") {
-                // TODO then check the previous thought? <- Doesn't work because sometimes
-                // that last though occurs before the user response and is out of place.
+                // TODO eventually summarize the previous work
                 return "Thinking...";
             }
             const endTags = {
