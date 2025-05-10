@@ -5,7 +5,8 @@
                     class="code-data"
                     :class="{
                         'dark-mode': theme.mode === 'dark',
-                        'code-data-chat': isChat
+                        'code-data-chat': isChat,
+                        [codeStyles]: props.codeStyles
                     }"
                 >
                     <CodeEditor
@@ -24,7 +25,7 @@
                         :outputs="cell.outputs" 
                         :busy="isBusy" 
                         v-show="!hideOutput" 
-                        :dropdown-layout="isChat ?? false"
+                        :dropdown-layout="false"
                     />
                 </div>
                 <div class="state-info">
@@ -68,7 +69,8 @@ import { StyleOverride } from "../../pages/BaseInterface.vue"
 
 const props = defineProps([
     "cell",
-    "hideOutput"
+    "hideOutput",
+    "codeStyles"
 ]);
 
 const cell = ref(props.cell);
