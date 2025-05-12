@@ -312,6 +312,10 @@ onMounted(() => {
 
     });
     resizeObserver.value.observe(target);
+    const currWidth = (instance?.vnode?.el as HTMLDivElement)?.clientWidth;
+    if (currWidth) {
+        panelWidth.value =  currWidth;
+    }
 })
 
 onUnmounted(() => {
