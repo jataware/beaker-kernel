@@ -1,7 +1,10 @@
 <template>
   <div class="thoughts-pane">
     <div v-if="!activeQueryCell">
-      <em>Select <i class="pi pi-search magnifier-reference"></i> agent activity from the conversation to view details.</em>
+      <span v-if="props.isNotebookEmpty">
+         Start a conversation to view Beaker's activity as you interact with it.
+      </span>
+      <em v-else>Select <i class="pi pi-search magnifier-reference"></i> agent activity from the conversation to view details.</em>
     </div>
     <div v-else class="thoughts-pane-content">
       <div class="pane-actions">
@@ -14,7 +17,7 @@
       </div>
       <div class="events-scroll-container" v-autoscroll>
         <div v-if="shouldShowNoThoughtsPlaceholder" class="no-thoughts-message">
-          <em>No details available for this agent query.</em>
+          <em>No agent activity from this query.</em>
         </div>
         <ChatQueryCellEvent 
           v-else
@@ -33,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineEmits, inject } from 'vue';
+import { computed, defineEmits, inject, defineProps } from 'vue';
 import ProgressBar from 'primevue/progressbar';
 import Button from 'primevue/button';
 import ChatQueryCellEvent from './ChatQueryCellEvent.vue';
@@ -42,6 +45,10 @@ import { isLastEventTerminal } from "../cell/cellOperations";
 
 const emit = defineEmits<{
   (e: 'scrollToMessage'): void
+}>();
+
+const props = defineProps<{
+  isNotebookEmpty: boolean
 }>();
 
 const activeQueryCell = inject<IBeakerCell | null>('activeQueryCell');

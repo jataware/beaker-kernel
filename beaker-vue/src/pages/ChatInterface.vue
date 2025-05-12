@@ -98,7 +98,7 @@
                 ref="rightSideMenuRef"
                 position="right"
                 highlight="line"
-                :expanded="false"
+                :expanded="true"
                 @panel-hide="deactivateQueryCell"
             >
                 <SideMenuPanel
@@ -106,10 +106,11 @@
                     id="agent-actions"
                     icon="pi pi-lightbulb"
                     position="top"
-                    :selected="!!activeQueryCell"
+                    :selected="true"
                 >
                     <AgentActivityPane 
                         @scrollToMessage="scrollToMessage" 
+                        :is-notebook-empty="isNotebookEmpty"
                     />
                 </SideMenuPanel>
                 
@@ -196,6 +197,15 @@ type FilePreview = {
 const previewedFile = ref<FilePreview>();
 const previewVisible = ref<boolean>(false);
 
+const beakerSession = computed(() => {
+    return beakerInterfaceRef?.value?.beakerSession;
+});
+
+const isNotebookEmpty = computed(() => {
+    const cells = beakerSession.value?.session?.notebook?.cells ?? [];
+    return cells.length === 0;
+});
+
 const isLastCellAwaitingInput = computed(() => {
     const cells = beakerSession.value?.session?.notebook?.cells ?? [];
     if (cells.length == 0) {
@@ -218,10 +228,6 @@ const scrollToMessage = () => {
         chatCell.scrollIntoView({ behavior: 'smooth' });
     }
 }
-
-const beakerSession = computed(() => {
-    return beakerInterfaceRef?.value?.beakerSession;
-});
 
 /**
  * `activeQueryCell` indicates that the Agent Activity pane should be open,
@@ -374,6 +380,7 @@ const restartSession = async () => {
 }
 
 provide('activeQueryCell', activeQueryCell);
+
 </script>
 
 <style lang="scss">
@@ -397,7 +404,6 @@ provide('activeQueryCell', activeQueryCell);
     flex: 0 0 100%;
     padding-right: 1rem;
     padding-left: 1rem;
-    //border: 1px solid var(--surface-border);
     display: flex;
     flex-direction: column;
     max-width: 1260px;

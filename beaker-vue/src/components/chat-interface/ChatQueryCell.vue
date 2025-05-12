@@ -250,8 +250,14 @@ const lastEventThought = computed(() => {
     }
 })
 
-const expandThoughts = () => {
+const expandThoughts = (event: Event, forceOpen = false) => {
     const currentCell = toRaw(cell.value);
+
+    if (forceOpen) {
+        activeQueryCell.value = currentCell;
+        return;
+    }
+
     const currentActiveCell = toRaw(activeQueryCell.value);
     
     if (currentActiveCell?.id === currentCell?.id) {
@@ -283,7 +289,7 @@ const queryStatus = computed<QueryStatuses>(() => {
 watch(events, (newEvents) => {
     const startedRunning = queryStatus.value === QueryStatuses.Running && newEvents.length === 1;
     if (startedRunning) {
-        expandThoughts();
+        expandThoughts(null, true);
     }
 });
 // in case we wish to auto-close the pane when the agent is done
