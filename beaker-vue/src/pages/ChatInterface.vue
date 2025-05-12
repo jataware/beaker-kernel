@@ -99,6 +99,7 @@
                 position="right"
                 highlight="line"
                 :expanded="true"
+                initial-width="35vw"
                 @panel-hide="deactivateQueryCell"
             >
                 <SideMenuPanel
