@@ -1,7 +1,7 @@
 <template>
   <div class="thoughts-pane">
     <div v-if="!activeQueryCell">
-      <span v-if="props.isNotebookEmpty">
+      <span v-if="props.isChatEmpty">
          Start a conversation to view Beaker's activity as you interact with it.
       </span>
       <em v-else>Select <i class="pi pi-search magnifier-reference"></i> agent activity from the conversation to view details.</em>
@@ -48,7 +48,7 @@ const emit = defineEmits<{
 }>();
 
 const props = defineProps<{
-  isNotebookEmpty: boolean
+  isChatEmpty: boolean
 }>();
 
 const activeQueryCell = inject<IBeakerCell | null>('activeQueryCell');

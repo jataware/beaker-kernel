@@ -283,21 +283,12 @@ const queryStatus = computed<QueryStatuses>(() => {
     }
 })
 
-// auto-select cell thoughts when we first start getting events
-// and auto-close when the agent is done, in which case the user can see the final response
-// on the chat history. User can always manually expand the thoughts to examine what occured before if they want to.
-watch(events, (newEvents) => {
-    const startedRunning = queryStatus.value === QueryStatuses.Running && newEvents.length === 1;
-    if (startedRunning) {
+watch(queryStatus, (newStatus, oldStatus) => {
+     // Auto-expand thoughts the first time a cell transitions to Running
+     if (newStatus === QueryStatuses.Running && oldStatus !== QueryStatuses.Running) {
         expandThoughts(null, true);
-    }
+     }
 });
-// in case we wish to auto-close the pane when the agent is done
-// watch(queryStatus, (newStatus) => {
-//     if (newStatus === QueryStatuses.Done) {
-//         activeQueryCell.value = null;
-//     }
-// });
 
 
 const messageEvents = computed(() => {

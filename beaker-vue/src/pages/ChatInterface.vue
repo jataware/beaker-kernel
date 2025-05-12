@@ -110,7 +110,7 @@
                 >
                     <AgentActivityPane 
                         @scrollToMessage="scrollToMessage" 
-                        :is-notebook-empty="isNotebookEmpty"
+                        :is-chat-empty="isChatEmpty"
                     />
                 </SideMenuPanel>
                 
@@ -201,7 +201,7 @@ const beakerSession = computed(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
 
-const isNotebookEmpty = computed(() => {
+const isChatEmpty = computed(() => {
     const cells = beakerSession.value?.session?.notebook?.cells ?? [];
     return cells.length === 0;
 });
