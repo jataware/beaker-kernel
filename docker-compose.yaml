@@ -37,20 +37,27 @@ services:
       dockerfile_inline: |
         FROM node:20
         USER root:root
-        RUN mkdir -p /ui/node_modules /beaker-ts/node_modules /ui/dist/html
-        RUN chown -R node:node /ui /beaker-ts
-        VOLUME /ui /ui/node_modules /beaker-ts /beaker-ts/node_modules /ui/dist/html
+        RUN apt update && apt install -y vim
+        RUN npm install -g npm@11.3.0
+        RUN echo 'prefix = "/home/node"' > /home/node/.npmrc
+        RUN mkdir -p /home/node/beaker-vue/node_modules /home/node/beaker-ts/node_modules /home/node/beaker-vue/dist/html /home/node/node_modules
+        RUN chown -R node:node /home/node
+        VOLUME /home/node/node_modules /home/node/beaker-vue /home/node/beaker-vue/node_modules /home/node/beaker-ts /home/node/beaker-ts/node_modules /home/node/beaker-vue/dist/html
         USER node:node
+        RUN echo '{\n\
+            "workspaces": [ "beaker-ts", "beaker-vue" ]\n\
+        }' > /home/node/package.json
     user: node:node
     volumes:
-      - ./beaker-vue:/ui
-      - vue-modules:/ui/node_modules
-      - ./beaker-ts:/beaker-ts
-      - ts-modules:/beaker-ts/node_modules
-      - ui-html:/ui/dist/html
-    working_dir: "/ui"
+      - node-modules:/home/node/node_modules
+      - ./beaker-vue:/home/node/beaker-vue
+      - vue-modules:/home/node/beaker-vue/node_modules
+      - ./beaker-ts:/home/node/beaker-ts
+      - ts-modules:/home/node/beaker-ts/node_modules
+      - ui-html:/home/node/beaker-vue/dist/html
+    working_dir: "/home/node"
     healthcheck:
-      test: [ "CMD", "ls", "/ui/dist/html/routes.json"]
+      test: [ "CMD", "ls", "/home/node/beaker-vue/dist/html/routes.json"]
       interval: 5s
       timeout: 10s
       retries: 36  # 3 minutes
@@ -61,9 +68,15 @@ services:
       - GID=1000
     ports:
       - "8080:8080"
-    command: "sh -c '(cd /beaker-ts && npm i); npm i; npm run routes; npm run serve'"
+    command: |
+      sh -c '
+        npm i;
+        npm -w beaker-vue run routes;
+        npm -w beaker-vue run serve;
+      '
 volumes:
   ui-html:
   run:
   vue-modules:
   ts-modules:
+  node-modules:

@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url';
+import path from 'path';
 
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
@@ -39,8 +40,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      'node-fetch': fileURLToPath(new URL('./node_modules/isomorphic-fetch', import.meta.url)),
-      'path': fileURLToPath(new URL('./node_modules/path-browserify', import.meta.url)),
+      'node-fetch': path.resolve(require.resolve('isomorphic-fetch'), '..'),
+      'path': path.resolve(require.resolve('path-browserify'), '..'),
       // Allows automatic updating when beaker-ts is updated, but will use the dist version of beaker-ts/beaker-kernel
       // when building or running in production mode.
       'beaker-kernel': (
