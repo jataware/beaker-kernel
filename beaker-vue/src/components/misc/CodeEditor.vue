@@ -246,7 +246,7 @@ const extensions = computed(() => {
                 //     name: "Learn More",
                 //     apply: () => window.open(messageInfo.link, '_blank')
                 // }]
-            }
+            } as Diagnostic;
         });
     });
 

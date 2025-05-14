@@ -307,6 +307,9 @@ const iopubMessage = (msg) => {
     } else if (msg.header.msg_type === "chat_history") {
         chatHistory.value = msg.content;
         console.log(msg.content);
+    } else if (msg.header.msg_type === "lint_annotations") {
+        console.log("lint annotation came in, need to apply to proper code cell")
+        console.log(msg.content);
     }
 };
 

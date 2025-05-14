@@ -27,19 +27,18 @@ import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 
 import { NavOption } from '../components/misc/BeakerHeader.vue';
 
-import { defineProps, inject, ref, computed, ComponentInstance, Component, StyleHTMLAttributes, ComputedRef, shallowRef } from 'vue';
+import { defineProps, inject, ref, computed, ComponentInstance, Component, StyleHTMLAttributes, ComputedRef, shallowRef, toRaw } from 'vue';
 
 import { IBeakerTheme } from '../plugins/theme';
 
 import { Codemirror } from "vue-codemirror";
 import { EditorView, keymap } from "@codemirror/view";
-import { EditorState, Extension, Prec } from "@codemirror/state";
-import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorState, Extension, Prec, StateField, StateEffect } from "@codemirror/state";
 import { LanguageSupport } from "@codemirror/language";
 import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion } from "@codemirror/autocomplete";
 import { BeakerLanguage, LanguageRegistry, getCompletions } from "../util/autocomplete";
 import { BeakerSession } from 'beaker-kernel/src';
-import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
+import { linter, Diagnostic, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint";
 import sampleCodeText from "../assets/sample_code_aqs.txt?raw";
 
 const beakerInterfaceRef = ref();
@@ -76,12 +75,14 @@ const ANNOTATION_TYPES = {
             "assumption_in_algorithm": {
                 "title": "Assumption in algorithm",
                 "description": "The following assumption was made in this algorithm:\n",
-                "link": "https://lmgtfy.com/"
+                "link": "https://lmgtfy.com/",
+                "severity": "warning",
             },
             "assumption_in_value": {
                 "title": "Assumption in value",
                 "description": "The following assumption was made with regards to the value of this variable:\n",
-                "link": "https://lmgtfy.com/"
+                "link": "https://lmgtfy.com/",
+                "severity": "warning",
             }
         }
     }
@@ -106,114 +107,81 @@ const MOCK_ANNOTATIONS = [
     }
 ]
 
-// const createDiagnosticFromAnnotation = (annotation: typeof MOCK_ANNOTATIONS[0]): Diagnostic => {
-//   const annotationType = ANNOTATION_TYPES[annotation.error_type];
-//   const messageInfo = annotation.error_id ? 
-//     annotationType.message_table[annotation.error_id] : 
-//     null;
-
-//   return {
-//     from: annotation.start,
-//     to: annotation.end,
-//     severity: messageInfo?.severity || "info",
-//     message: annotation.message_override || messageInfo?.title || annotationType.display,
-//     actions: messageInfo?.link ? [{
-//       name: "Learn More",
-//       apply: () => window.open(messageInfo.link, '_blank')
-//     }] : undefined
-//   }
-// }
-
+// codemirror severity: "error" | "hint" | "info" | "warning"
+const SEVERITY_MAPPINGS = {
+    "major": "error",
+    "warning": "warning",
+    "info": "info",
+    "hint": "hint"
+};
 
 const sampleCode = ref(sampleCodeText);
 const model = ref<string>(sampleCode.value);
 
 const codeMirrorView = shallowRef<EditorView>();
 const codeMirrorState = shallowRef();
+const currentAnnotations = ref<typeof MOCK_ANNOTATIONS>([]);
 
-interface CodeHighlight {
-    from: number;
-    to: number;
-    message: string;
-}
+// Create diagnostic objects from annotations
+const createDiagnosticFromAnnotation = (annotation: typeof MOCK_ANNOTATIONS[0]): Diagnostic => {
+  const annotationType = ANNOTATION_TYPES[annotation.error_type];
+  const messageInfo = annotationType.message_table[annotation.error_id];
 
-// const currentHighlights = ref<CodeHighlight[]>([]);
-// const addHighlightEffect = StateEffect.define<CodeHighlight[]>();
+  return {
+    from: annotation.start,
+    to: annotation.end,
+    severity: SEVERITY_MAPPINGS[messageInfo.severity],
+    message: messageInfo.title,
+    markClass: "cm-diagnostic-beaker",
+    renderMessage() {
+      const el = document.createElement('div');
+      el.innerHTML = `<h4 style="margin: 0.2rem 0">${messageInfo.title}</h4><p>${messageInfo.description}</p><a href="${messageInfo.link}" target="_blank">Learn more</a>`;
+      return el;
+    },
+  };
+};
 
-// const createErrorDecoration = (message: string) => Decoration.mark({
-//     class: "cm-error-highlight",
-//     attributes: { title: message }
-// });
-// const highlightField = StateField.define<DecorationSet>({
-//     create() {
-//         return Decoration.none;
-//     },
-//     update(highlights, tr) {
-//         // map decorations through document changes
-//         highlights = highlights.map(tr.changes);
-        
-//         // apply any highlight effects from the transaction
-//         for (let e of tr.effects) {
-//             if (e.is(addHighlightEffect)) {
-//                 const decorations = e.value.map(highlight => 
-//                     createErrorDecoration(highlight.message).range(highlight.from, highlight.to)
-//                 );
-//                 highlights = Decoration.set(decorations, true);
-//             }
-//         }
-        
-//         return highlights;
-//     }
-// });
-
-// const addHighlight = (view: EditorView, from: number, to: number, message: string) => {
-//     currentHighlights.value.push({ from, to, message });
+// Mock service that would fetch annotations from a backend
+const fetchAnnotations = () => {
+  // Simulate API delay
+  setTimeout(() => {
+    // Simulate first batch of annotations
+    console.log("Adding first annotation");
+    currentAnnotations.value = [MOCK_ANNOTATIONS[0]];
+    updateDiagnostics();
     
-//     view.dispatch({
-//         effects: addHighlightEffect.of(currentHighlights.value)
-//     });
-// };
+    // Simulate second batch coming in later
+    setTimeout(() => {
+      console.log("Adding second annotation");
+      currentAnnotations.value = [...MOCK_ANNOTATIONS];
+      updateDiagnostics();
+    }, 4000);
+  }, 2000);
+};
+
+// Function to update diagnostics in the editor
+const updateDiagnostics = () => {
+  if (codeMirrorView.value) {
+    // console.log("Updating diagnostics with:", toRaw(currentAnnotations.value));
+    
+    // Convert annotations to diagnostics
+    const diagnostics = currentAnnotations.value.map(annotation => 
+      createDiagnosticFromAnnotation(annotation)
+    );
+    
+    // Use the setDiagnostics function to directly set diagnostics
+    codeMirrorView.value.dispatch(
+      setDiagnostics(codeMirrorView.value.state, diagnostics)
+    );
+  }
+};
 
 const handleReady = ({view, state}) => {
-    codeMirrorView.value = view;
-    codeMirrorState.value = state;
-    // currentHighlights.value = [];
-    
-    // NOTE helper for mocks to find position of text, although our engine
-    // will just provide the from/to without specifying the text
-    // const findPositionInDoc = (searchText: string): { from: number, to: number } | null => {
-    //     const doc = view.state.doc.toString();
-    //     const from = doc.indexOf(searchText);
-    //     if (from === -1) return null;
-    //     return {
-    //         from,
-    //         to: from + searchText.length
-    //     };
-    // };
-    
-    // add mock highlights
-    // setTimeout(() => {
-
-    //     const pos1 = {from: 10, to: 22};
-    //     if (pos1) {
-    //         addHighlight(
-    //             view,
-    //             pos1.from,
-    //             pos1.to,
-    //             "Type error: Cannot concatenate string with numbers"
-    //         );
-    //     }
-        
-    //     const pos2 = {from: 59, to: 85};
-    //     if (pos2) {
-    //         addHighlight(
-    //             view,
-    //             pos2.from,
-    //             pos2.to,
-    //             "Reference error: undefined_variable is not defined"
-    //         );
-    //     }
-    // }, 200);
+  codeMirrorView.value = view;
+  codeMirrorState.value = state;
+  
+  // Start the mock service to fetch annotations
+  fetchAnnotations();
 };
 
 const session: BeakerSession = inject('session');
@@ -363,57 +331,18 @@ const extensions = computed(() => {
         )
     }
 
-    const myLinter = linter(view => {
-        return MOCK_ANNOTATIONS.map(annotation => {
-            const annotationType = ANNOTATION_TYPES[annotation.error_type];
-            const messageInfo = annotationType.message_table[annotation.error_id];
-            
-            return {
-                from: annotation.start,
-                to: annotation.end,
-                severity: "error", // messageInfo.severity,
-                message: messageInfo.title,
-                // Rich HTML description with clickable link
-                renderMessage() {
-                    const el = document.createElement('div');
-                    el.innerHTML = `
-                        <div style="">
-                            <h4 style="margin: 0px;">${messageInfo.title}</h4>
-                            <p style="margin: 0px;">${messageInfo.description} <a href="${messageInfo.link}" target="_blank">Learn more</a>
-                            </p>
-                            <span style="display: none;"></span>
-                        </div>
-                    `;
-                    return el;
-                },
-                // optional add actions that appear as buttons
-                // actions: [{
-                //     name: "Learn More",
-                //     apply: () => window.open(messageInfo.link, '_blank')
-                // }]
-            }
-        });
+    // Create a custom linter that responds to our state effect
+    const myLinter = linter((view) => {
+        console.log("Linter running with annotations:", currentAnnotations.value);
+        return currentAnnotations.value.map(annotation => createDiagnosticFromAnnotation(annotation));
+    }, {
+        // Set delay to 0 to run immediately when triggered
+        delay: 0
     });
 
     enabledExtensions.push(myLinter);
     enabledExtensions.push(lintGutter({
-        // Customize hover delay (default is 300ms)
         hoverTime: 200,
-        
-        // Optional: Filter which diagnostics show markers
-        markerFilter: (diagnostics) => {
-            // Example: only show markers for errors and warnings
-            return diagnostics.filter(d => 
-                d.severity === "error" || d.severity === "warning"
-            );
-        },
-
-        // Optional: Filter which diagnostics show in tooltips
-        tooltipFilter: (diagnostics) => {
-            // You could show different information in the tooltip
-            // than what shows in the gutter
-            return diagnostics;
-        }
     }));
 
     return enabledExtensions;
@@ -488,29 +417,72 @@ div.status-container {
     white-space: normal;
 }
 
-// gutter markers
+// increasing wiggle lines size slightly (easier to see)
+.cm-lintRange {
+    background-size: 0.45rem;
+}
+
+// for gutter markers
 .cm-gutter-lint {
     width: 1.6em;
     
-    // Style the marker container
+    // marker container
     .cm-lint-marker {
         padding: 0.2em 0;
     }
 
-    // Style markers by severity
     .cm-lint-marker-error {
-        // color: blue;
-        // content: "🔴"; // needs to be an svg
-        // content: url("https://icons.terrastruct.com/essentials%2F073-add.svg");
-        // content: url("https://icons.terrastruct.com/essentials%2F218-edit.svg");
+
+        content: ""; /* clear the default content which requires an svg */
+        position: relative;
+    
+        &::before {
+            // content: "\e90b"; /* unicode for pi-times icon */
+            // content: "";   // pasting pi-times-circle from website, but below is better
+            // content: "\e90c"; /* unicode for pi-times-circle icon */
+            content: ""; /* character for pi-exclamation-circle icon */
+            font-family: 'PrimeIcons';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgb(236, 77, 77);
+            font-size: 0.9rem;
+        }
     }
     
     .cm-lint-marker-warning {
-        color: #ff9800;
+        content: ""; /* clear the default content which requires an svg */
+        position: relative;
+    
+        &::before {
+            font-family: 'PrimeIcons';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.9rem;
+            color: #ff9800;
+            content: ""; // exclamation triangle char
+        }
+
     }
     
     .cm-lint-marker-info {
-        color: #2196f3;
+
+        content: ""; /* clear the default content which requires an svg */
+        position: relative;
+    
+        &::before {
+            font-family: 'PrimeIcons';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.9rem;
+            color: #2196f3;
+            content: ""; // exclamation triangle char
+        }
     }
 }
 
