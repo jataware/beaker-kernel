@@ -312,6 +312,10 @@ onMounted(() => {
 
     });
     resizeObserver.value.observe(target);
+    const currWidth = (instance?.vnode?.el as HTMLDivElement)?.clientWidth;
+    if (currWidth) {
+        panelWidth.value =  currWidth;
+    }
 })
 
 onUnmounted(() => {
@@ -321,6 +325,15 @@ onUnmounted(() => {
 
 defineExpose({
     selectPanel,
+    getSelectedPanelInfo: () => {
+        if (selectedTabIndex.value === null) return null;
+        const panel = panels.value[selectedTabIndex.value];
+        return {
+            index: selectedTabIndex.value,
+            label: panel?.props?.label,
+            id: panel?.props?.id,
+        };
+    },
     hidePanel
 });
 
