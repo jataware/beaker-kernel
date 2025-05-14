@@ -620,7 +620,7 @@ const simulateLintAnnotations = () => {
           annotations: [
             {
               "start": 0,  // Character, not line
-              "end": 3,
+              "end": 5,
               "error_type": "logic_error",
               "error_id": "fallacy_1",
               "message_extra": "This is a simulated lint annotation for a top-level code cell." 
@@ -647,15 +647,15 @@ const simulateLintAnnotations = () => {
               cell_id: nestedCell.cellId, // Use the nested cell's own ID
               annotations: [
                 {
-                  "start": 4,
-                  "end": 6,
-                  "error_type": "logic_error",
-                  "error_id": "fallacy_1",
+                  "start": 213,
+                  "end": 233,
+                  "error_type": "assumptions",
+                  "error_id": "assumption_in_algorithm",
                   "message_extra": "This is a simulated lint annotation for a nested code cell."
                 },
                 {
-                  "start": 7, 
-                  "end": 9,
+                  "start": 375, 
+                  "end": 410,
                   "error_type": "assumptions",
                   "error_id": "assumption_in_value",
                   "message_extra": "Value is assumed to always be positive."

@@ -51,12 +51,14 @@ const ANNOTATION_TYPES = {
             "assumption_in_algorithm": {
                 "title": "Assumption in algorithm",
                 "description": "The following assumption was made in this algorithm:\n",
-                "link": "https://lmgtfy.com/"
+                "link": "https://lmgtfy.com/",
+                "severity": "info"
             },
             "assumption_in_value": {
                 "title": "Assumption in value",
                 "description": "The following assumption was made with regards to the value of this variable:\n",
-                "link": "https://lmgtfy.com/"
+                "link": "https://lmgtfy.com/",
+                "severity": "warning"
             }
         }
     }
@@ -241,7 +243,7 @@ watch(() => props.lintAnnotations, (newAnnotations) => {
 const SEVERITY_MAPPINGS = {
     "major": "error",
     "warning": "warning",
-    "info": "info",
+    "info": "hint",
     "hint": "hint"
 };
 
@@ -311,7 +313,7 @@ defineExpose({
 
 // increasing wiggle lines size slightly (easier to see)
 .cm-lintRange {
-    background-size: 0.45rem;
+    background-size: 0.5rem;
 }
 
 // for gutter markers
