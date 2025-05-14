@@ -36,6 +36,13 @@
                             size="small"
                             text
                         />
+                    <Button
+                        label="Lint"
+                        icon="pi pi-check"
+                        @click="simulateLintAnnotations"
+                        severity="info"
+                        text
+                    />
                     </template>
                 </BeakerNotebookToolbar>
                 <BeakerNotebookPanel
@@ -134,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, defineEmits, watch, provide, computed, nextTick, onUnmounted, inject, toRaw } from 'vue';
+import { defineProps, ref, watch, provide, computed, nextTick, defineExpose, inject, toRaw } from 'vue';
 import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel/src';
 import { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
 import { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
@@ -238,6 +245,8 @@ type FilePreview = {
 }
 const previewedFile = ref<FilePreview>();
 
+const lintAnnotations = ref<Record<string, any[]>>({});
+
 const headerNav = computed((): NavOption[] => {
     const nav = [];
     if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "chat"))) {
@@ -308,8 +317,9 @@ const iopubMessage = (msg) => {
         chatHistory.value = msg.content;
         console.log(msg.content);
     } else if (msg.header.msg_type === "lint_annotations") {
-        console.log("lint annotation came in, need to apply to proper code cell")
-        console.log(msg.content);
+        if (msg.content.cell_id && Array.isArray(msg.content.annotations)) {
+            lintAnnotations.value[msg.content.cell_id] = msg.content.annotations;
+        }
     }
 };
 
@@ -563,6 +573,115 @@ const notebookKeyBindings = {
         }
     },
 }
+
+provide('lintAnnotations', lintAnnotations);
+
+const simulateLintAnnotations = () => {
+  const allCells = beakerNotebookRef.value?.notebook.cells || [];
+  
+  const topLevelCodeCells = [];
+  const nestedCodeCells = [];
+  
+  allCells.forEach(cell => {
+    if (cell.cell_type === 'code') {
+      topLevelCodeCells.push(cell);
+    } else if (cell.cell_type === 'query' && cell.events) {
+      cell.events.forEach(event => {
+        if (event.type === 'code_cell' && event?.content?.cell_id) {
+          nestedCodeCells.push({
+            parentCell: cell,
+            event: event,
+            cellId: event.content.cell_id
+          });
+        }
+      });
+    }
+  });
+  
+  if (topLevelCodeCells.length === 0 && nestedCodeCells.length === 0) {
+    console.log("No code cells found to add lint annotations to");
+    return;
+  }
+  
+  // Target a top-level code cell for the first annotation if available
+  if (topLevelCodeCells.length > 0) {
+    const targetCell1 = topLevelCodeCells[0];
+    console.log(`Simulating lint annotations for top-level code cell ID: ${targetCell1.id}`);
+    
+    // Simulate a first batch of annotations for the top-level code cell
+    setTimeout(() => {
+      const mockMsg = {
+        header: {
+          msg_type: "lint_annotations",
+          date: new Date().toISOString()
+        },
+        content: {
+          cell_id: targetCell1.id,
+          annotations: [
+            {
+              "start": 0,  // Character, not line
+              "end": 3,
+              "error_type": "logic_error",
+              "error_id": "fallacy_1",
+              "message_extra": "This is a simulated lint annotation for a top-level code cell." 
+            }
+          ]
+        }
+      };
+      
+      iopubMessage(mockMsg);
+      console.log("First lint annotation added for top-level code cell");
+      
+      // Simulate a second batch after a delay for a nested code cell if available
+      setTimeout(() => {
+        if (nestedCodeCells.length > 0) {
+          const nestedCell = nestedCodeCells[0];
+          console.log(`Simulating lint annotations for nested code cell with ID: ${nestedCell.cellId}`);
+          
+          const secondMockMsg = {
+            header: {
+              msg_type: "lint_annotations",
+              date: new Date().toISOString()
+            },
+            content: {
+              cell_id: nestedCell.cellId, // Use the nested cell's own ID
+              annotations: [
+                {
+                  "start": 4,
+                  "end": 6,
+                  "error_type": "logic_error",
+                  "error_id": "fallacy_1",
+                  "message_extra": "This is a simulated lint annotation for a nested code cell."
+                },
+                {
+                  "start": 7, 
+                  "end": 9,
+                  "error_type": "assumptions",
+                  "error_id": "assumption_in_value",
+                  "message_extra": "Value is assumed to always be positive."
+                }
+              ]
+            }
+          };
+          
+          iopubMessage(secondMockMsg);
+          console.log("Second lint annotation batch added for nested code cell");
+        }  else {
+          console.log("No suitable target found for second annotation");
+        }
+      }, 3000);
+    }, 2000);
+  }
+};
+
+// You can expose this method for debugging
+defineExpose({
+  simulateLintAnnotations
+});
+
+// For development/testing, you can automatically trigger this
+// Add this at the end of your script if you want to auto-simulate
+// setTimeout(simulateLintAnnotations, 5000);
 
 </script>
 

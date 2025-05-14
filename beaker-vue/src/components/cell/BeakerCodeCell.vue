@@ -17,6 +17,7 @@
                         :disabled="isBusy"
                         @change="handleCodeChange"
                         @click="clicked"
+                        :lint-annotations="currentAnnotations"
                     />
                 </div>
                 <div class="code-output">
@@ -54,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
+import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick, watch } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
@@ -165,6 +166,23 @@ const clear = () => {
     cell.value.outputs.splice(0, cell.value.outputs.length);
 }
 
+const lintAnnotations = inject('lintAnnotations', ref({}));
+const currentAnnotations = ref<any[]>([]);
+
+watch(() => lintAnnotations.value[cell.value.id], (newAnnotations) => {
+    if (newAnnotations) {
+        console.log(`Cell ${cell.value.id} received ${newAnnotations.length} lint annotations`);
+        currentAnnotations.value = newAnnotations;
+    } else {
+        currentAnnotations.value = [];
+    }
+}, { immediate: true });
+
+const updateLintAnnotations = (annotations: any[]) => {
+    console.log(`Manual update: Cell ${cell.value.id} received ${annotations.length} lint annotations`);
+    currentAnnotations.value = annotations;
+};
+
 defineExpose({
     execute,
     enter,
@@ -172,6 +190,7 @@ defineExpose({
     clear,
     cell,
     editor: codeEditorRef,
+    updateLintAnnotations,
 });
 
 onBeforeMount(() => {
