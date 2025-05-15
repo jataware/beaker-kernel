@@ -30,7 +30,7 @@ class BeakerBuildHook(BuildHookInterface):
         for package in packages:
             if package.startswith('src/'):
                 package = str(Path(package).relative_to(Path('src/')))
-            package: str = package.replace('/', '.')
+            package: str = package.replace(os.path.sep, '.')
             base_mod = importlib.import_module(package)
             base_paths = map(Path, base_mod.__path__)
 
@@ -56,7 +56,7 @@ class BeakerBuildHook(BuildHookInterface):
                             if isinstance(symbol, ast.ClassDef):
                                 class_name = symbol.name
                                 relpath = fullpath.relative_to(import_path)
-                                mod_str = str(relpath).removesuffix('.py').replace('/', '.')
+                                mod_str = str(relpath).removesuffix('.py').replace(os.path.sep, '.')
                                 class_map[class_name] = (mod_str, str(import_path))
         return class_map
 
