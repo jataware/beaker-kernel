@@ -41,6 +41,10 @@ dependencies = [
   "numpy",
   "scipy",
   "openpyxl",
+  "tree-sitter",
+  "tree-sitter-python",
+  "tree-sitter-julia",
+  # "tree-sitter-"
 ]
 
 [project.entry-points.hatch]
@@ -129,9 +133,10 @@ path = "beaker_kernel/__about__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
+  "bump-my-version",
   "coverage[toml]>=6.5",
   "pytest",
-  "bump-my-version",
+  "pytest-asyncio",
 ]
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
