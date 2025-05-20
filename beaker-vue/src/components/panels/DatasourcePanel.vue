@@ -27,10 +27,9 @@
                 <a :href="`/integrations?selected=new${sessionIdParam}`">
                     <Button
                         style="height: 32px"
-                        outlined
-                    >
-                        Add New Integration
-                    </Button>
+                        icon="pi pi-plus"
+                        label="Add New Integration"
+                    />
                 </a>
             </div>
             <div
@@ -51,7 +50,7 @@
                         style="margin-right: 0.2rem;"
                     >
                     </i>
-                    <i>{{ datasources.length }} integrations loaded:</i>
+                    <i>{{ datasources.length }} integrations available:</i>
                     <span>{{ showTableOfContents ? 'Hide Names' : 'Show Names' }}</span>
                 </div>
                 <div
@@ -71,7 +70,6 @@
                         </li>
                     </ul>
                 </div>
-
             </div>
         </div>
         <div class="datasource-list">

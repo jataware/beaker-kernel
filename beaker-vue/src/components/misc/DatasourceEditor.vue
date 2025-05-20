@@ -233,164 +233,6 @@
                     Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
                 </Tag>
             </div>
-
-            <Fieldset legend="Examples">
-                <p>
-                    Examples are a way for the specialized agent to improve handling known-correct requests
-                    and reduce the variability of responses in the LLM, making it much more consistent on the given tasks,
-                    as well as attempting to use the information for other related tasks.
-                </p>
-                <Button
-                    style="height: 32px; width: fit-content; margin-bottom: 0.5rem;"
-                    icon="pi pi-plus"
-                    label="Add New Example"
-                    :disabled="!selectedDatasource"
-                    @click="newExample"
-                >
-                </Button>
-                <div class="datasource-editor-list">
-                    <div
-                        class="datasource-card"
-                        v-for="(example, index) in selectedDatasource?.examples"
-                        :key="index"
-                        :class="exampleState[index] === 'hidden' ? 'hidden-box-shadow' : ''"
-                    >
-                        <Card>
-                            <template #title>
-                                <div class="datasource-editor-card-title">
-                                    <div class="datasource-editor-button-container">
-                                        <div class="datasource-buttons-left">
-                                            <Button
-                                                outlined
-                                                icon="pi pi-pencil"
-                                                label="Edit"
-                                                v-if="exampleState[index] !== 'editing'"
-                                                @click="editExample(index)"
-                                            />
-                                            <Button
-                                                outlined
-                                                :icon="`pi ${exampleState[index] === 'showMore' ? 'pi-chevron-down' : 'pi-chevron-right'}`"
-                                                @click="
-                                                    exampleState[index] = (exampleState[index] === 'showMore')
-                                                        ? 'hidden'
-                                                        : 'showMore'
-                                                "
-                                                :label="exampleState[index] === 'showMore' ? 'Collapse' : 'Expand'"
-                                                v-if="exampleState[index] !== 'editing'"
-                                            />
-                                            <Button
-                                                :icon="`pi pi-save`"
-                                                @click="saveExample(index)"
-                                                label="Save Example"
-                                                v-if="exampleState[index] === 'editing'"
-                                                style="width: fit-content;"
-                                                severity="success"
-                                            />
-                                        </div>
-                                        <div class="datasource-buttons-right">
-                                            <Button
-                                                severity="warning"
-                                                icon="pi pi-times"
-                                                @click="
-                                                    exampleState[index] = 'hidden';
-                                                    exampleChanges = undefined;
-                                                "
-                                                label="Cancel Editing"
-                                                style="width: fit-content;"
-                                                v-if="exampleState[index] === 'editing'"
-                                            />
-                                            <Button
-                                                icon="pi pi-times"
-                                                severity="danger"
-                                                v-tooltip="'Delete Example'"
-                                                v-if="exampleState[index] !== 'editing'"
-                                                @click="deleteExample(index)"
-                                            />
-                                        </div>
-                                    </div>
-                                    <Divider></Divider>
-                                    <span
-                                        class="datasource-editor-card-title-text"
-                                        v-if="exampleState[index] !== 'editing'"
-                                    >
-                                        {{ example?.query }}
-                                    </span>
-                                    <Divider v-if="exampleState[index] !== 'editing'"></Divider>
-                                </div>
-                            </template>
-                            <template #content>
-                                <div
-                                    class="datasource-editor-main-content"
-                                    :style="`
-                                        display: flex;
-                                        overflow: hidden;
-                                        ${exampleState[index] === 'showMore' ? '' : 'height: 6rem;'}
-                                        flex-direction: ${exampleState[index] === 'showMore' ? 'column' : 'row'};
-                                    `"
-                                    v-show="exampleState[index] !== 'editing'"
-                                >
-                                    <div
-                                        :style="`${exampleState[index] === 'showMore' ? '' : 'width: 50%;'}`"
-                                    >
-                                        <p style="white-space: pre-wrap;">
-                                            {{ (example?.notes ?? "") === ""
-                                                    ? "No description provided for this example."
-                                                    : example.notes
-                                            }}
-                                        </p>
-                                    </div>
-                                    <div
-                                        :style="`${exampleState[index] === 'showMore' ? '' : 'width: 50%;'}`"
-                                    >
-                                        <CodeEditor
-                                            v-model="example.code"
-                                            placeholder="Example is empty."
-                                            :readonly="true"
-                                            language="python"
-                                            ref="examplePreviewCodeEditors"
-                                        />
-                                    </div>
-                                </div>
-                                <div
-                                    v-if="exampleState[index] === 'editing'"
-                                    class="datasource-editor-main-content"
-                                    style="flex-direction: column;"
-                                >
-                                    <Fieldset legend="Query">
-                                        <p>The query tells the specialist agent what task this example is for, e.g. "Fetch and display specific studies about a given topic.".</p>
-                                        <div class="constrained-editor-height">
-                                            <CodeEditor
-                                                v-if="exampleChanges?.query !== undefined"
-                                                v-model="exampleChanges.query"
-                                            />
-                                        </div>
-                                    </Fieldset>
-                                    <Fieldset legend="Description">
-                                        <p>Providing a description helps the specialist agent know when and in what cases this examples is useful.</p>
-                                        <div class="constrained-editor-height">
-                                            <CodeEditor
-                                                v-if="exampleChanges?.notes !== undefined"
-                                                v-model="exampleChanges.notes"
-                                            />
-                                        </div>
-                                    </Fieldset>
-                                    <Fieldset legend="Code">
-                                        <p>Code given for a specific example helps the specialist agent use a known-working approach to handle the user's request.</p>
-                                        <div class="constrained-editor-height">
-                                            <CodeEditor
-                                                v-if="exampleChanges?.code !== undefined"
-                                                v-model="exampleChanges.code"
-                                                language="python"
-                                            />
-                                        </div>
-                                    </Fieldset>
-                                </div>
-                            </template>
-                        </Card>
-                    </div>
-                </div>
-
-            </Fieldset>
         </Fieldset>
         <div v-if="unsavedChanges" class="floating-save">
             <span class="save-label">Unsaved changes!</span>
@@ -408,7 +250,7 @@
 
 <script setup lang="ts">
 
-import { defineProps, ref, watch, computed, nextTick, inject } from 'vue';
+import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
@@ -420,7 +262,6 @@ import Toolbar from 'primevue/toolbar';
 import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
 import Tag from 'primevue/tag';
-import Card from 'primevue/card';
 
 import cookie from 'cookie';
 
@@ -430,20 +271,31 @@ import CodeEditor from './CodeEditor.vue';
 import SplitButton from 'primevue/splitbutton';
 const showToast = inject<any>('show_toast');
 
-type Example = {
+export type Example = {
     query: string,
     code: string,
     notes?: string
 }
 
-type ExampleState = "hidden" | "showMore" | "editing"
-const exampleState = ref<ExampleState[]>([]);
+type AttachedFile = {
+    filepath: string,
+    name: string
+}
+
+type Datasource = {
+    description: string,
+    source: string,
+    attached_files: AttachedFile[],
+    examples: Example[],
+    slug: string,
+    name: string,
+    url: string
+}
 
 const props = defineProps(["datasources", "selectedOnLoad", "folderRoot"]);
-const selectedDatasource = ref(undefined);
+const selectedDatasource = defineModel<Datasource>('selectedDatasource', {required: true});
+const unsavedChanges = defineModel<boolean>('unsavedChanges', {required: true});
 const temporaryDatasource = ref(undefined);
-
-const exampleChanges = ref<Example>(undefined);
 
 const hasLoadedInitialSelection = ref(false);
 
@@ -507,32 +359,12 @@ const unincludedFiles = computed(() =>
             RegExp(`{${file?.name}}`).test(selectedDatasource?.value?.source) ? false : file?.name)
         ?.filter((x) => x))
 
-const unsavedChanges = ref(false);
 const setUnsavedChanges = () => {unsavedChanges.value = true;};
 const confirmUnsavedChanges = () => {
     if (unsavedChanges?.value) {
         return confirm("You currently have unsaved changes that would be lost with this change. Are you sure?")
     }
     return true;
-}
-
-const examplePreviewCodeEditors = ref();
-// codemirror sources aren't quite reactive without actions firing, so saving a new example
-// or removing existing examples should point the model to the correct reference
-const updateEditorRefs = () => {
-    const examples = selectedDatasource?.value?.examples;
-    if (examples === undefined || examples.length === 0) {
-        return;
-    }
-    if (examplePreviewCodeEditors.value !== undefined) {
-        for (let index = 0; index < examples.length; index++) {
-            if (exampleState.value?.[index] === 'editing') {
-                continue
-            } else {
-                examplePreviewCodeEditors.value[index].model = examples[index]?.code
-            }
-        }
-    }
 }
 
 watch(unsavedChanges, async (newValue, _) => {
@@ -586,55 +418,9 @@ const newDatasource = () => {
         source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
         description: "This is the description that the agent will use to determine when this integration should be used.",
         attached_files: [],
+        examples: []
     }
     temporaryDatasource.value = selectedDatasource.value
-}
-
-const newExample = () => {
-    if (selectedDatasource.value?.examples === undefined) {
-        selectedDatasource.value.examples = []
-    }
-    selectedDatasource.value.examples.unshift({
-        query: 'New Example',
-        notes: '',
-        code:  ''
-    })
-    exampleChanges.value = {...selectedDatasource.value.examples[0]}
-    exampleState.value.unshift('editing');
-    hideOtherExamples(0);
-    nextTick(() => updateEditorRefs())
-}
-
-const hideOtherExamples = (index) => {
-    for (let i = 0; i < exampleState.value.length || 0; i++) {
-        if (exampleState.value[i] === 'editing' && i != index) {
-            exampleState.value[i] = 'hidden';
-        }
-    }
-}
-
-const editExample = (index) => {
-    exampleState.value[index] = 'editing';
-    hideOtherExamples(index);
-    exampleChanges.value = {
-        notes: '',
-        ...selectedDatasource.value?.examples?.[index]
-    }
-}
-
-const saveExample = (index) => {
-    exampleState.value[index] = 'hidden';
-    selectedDatasource.value.examples[index] = exampleChanges.value;
-    exampleChanges.value = undefined;
-    unsavedChanges.value = true;
-    nextTick(() => updateEditorRefs());
-}
-
-const deleteExample = (index) => {
-    selectedDatasource.value.examples.splice(index, 1);
-    exampleState.value.splice(index, 1);
-    unsavedChanges.value = true;
-    nextTick(() => updateEditorRefs());
 }
 
 const save = async () => {
@@ -896,71 +682,6 @@ const downloadFile = async (path) => {
 }
 
 .datasource-editor > fieldset.p-fieldset legend.p-fieldset-legend {
-    display: flex;
-}
-
-.datasource-editor-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    overflow: auto;
-    // top card box shadow
-    padding: 0.2rem;
-    div.p-card .p-card-content {
-        padding: 0.25rem 0;
-    }
-    div.p-card-body {
-        padding: 0.75rem 0.75rem;
-    }
-}
-
-.datasource-editor-card-title {
-    display: flex;
-    flex-direction: column;
-    div.p-divider.p-divider-horizontal {
-        margin: 0.5rem 0;
-    }
-    .datasource-editor-button-container {
-        height: 2.4rem;
-        padding: 0.2rem;
-        width: 100%;
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        button {
-            width: fit-content;
-            height: 32px;
-            padding: 0 0.5rem;
-        }
-        .datasource-buttons-left {
-            button {
-                margin-right: 0.5rem;
-            }
-        }
-        .datasource-buttons-right {
-            button {
-                margin-left: 0.5rem;
-            }
-        }
-
-    }
-    .datasource-editor-card-title-text {
-        flex: 1 1;
-        font-size: 0.95rem;
-        margin: auto;
-        margin-left: 0;
-        font-weight: 500;
-    }
-}
-
-
-// for inner h1 being larger than header; rescale to make sensible whitespace
-.datasource-editor-main-content {
-    p, ul, li { margin-bottom: 0.8rem; margin-top: 0rem; }
-    > *:nth-child(1) {
-        margin-top: 0rem;
-    }
-    font-size: 0.8rem;
     display: flex;
 }
 
