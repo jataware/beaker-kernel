@@ -101,7 +101,7 @@
                     <Button
                         icon="pi pi-trash"
                         severity="danger"
-                        v-tooltip.left="'Delete Example'"
+                        label="Delete Example"
                         @click="deleteExample(panelState.focusedExample)"
                     />
                 </div>
