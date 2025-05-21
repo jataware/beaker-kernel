@@ -168,7 +168,7 @@
                     </template>
                     <template #end>
                         <Button
-                            icon="pi pi-times"
+                            icon="pi pi-trash"
                             severity="danger"
                             style="width: 32px; height: 32px"
                             @click="() => {
