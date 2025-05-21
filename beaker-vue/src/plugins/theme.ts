@@ -52,32 +52,44 @@ export const BeakerThemePlugin: Plugin = {
         theme = reactive(theme);
 
         const applyTheme = () => {
-            const themeLink: HTMLLinkElement = document.querySelector('#primevue-theme');
-            themeLink.addEventListener('error', (err) => {
-                // Error loading the theme. Fallback to default.
-                const failureCount = Number(localStorage.getItem('theme-failure-count')) || 0;
-                Object.keys(ThemeDefaults).forEach((key) => {
-                    theme[key] = ThemeDefaults[key];
-                });
-                // Clear theme from storage if it's a consistent problem.
-                if (failureCount >= 5) {
-                    localStorage.removeItem('theme');
-                    localStorage.removeItem('theme-failure-count');
-                }
-                else {
-                    localStorage.setItem('theme-failure-count', (failureCount+1).toString());
-                }
-                applyTheme()
-            }, {once: true});
 
-            // This helps adding the theme to the app element for children elements
-            // but doesn't work on initial state TODO dont merge until fixed
-            const appElement = document.querySelector('[data-v-app]');
-            if (appElement) {
-                appElement.setAttribute('data-theme', theme.mode);
+            const appElement = document.documentElement;
+            if (theme.mode === 'light' || theme.mode === 'default') {
+                appElement.classList.remove('beaker-dark');
             }
+            else {
+                appElement.classList.add('beaker-dark');
+            }
+            // if (appElement.classList) {
+                // appElement.setAttribute('data-theme', theme.mode);
+            // }
+            // document.documentElement.classList.toggle('beaker-dark');
+            // const themeLink: HTMLLinkElement = document.querySelector('#primevue-theme');
+            // themeLink.addEventListener('error', (err) => {
+            //     // Error loading the theme. Fallback to default.
+            //     const failureCount = Number(localStorage.getItem('theme-failure-count')) || 0;
+            //     Object.keys(ThemeDefaults).forEach((key) => {
+            //         theme[key] = ThemeDefaults[key];
+            //     });
+            //     // Clear theme from storage if it's a consistent problem.
+            //     if (failureCount >= 5) {
+            //         localStorage.removeItem('theme');
+            //         localStorage.removeItem('theme-failure-count');
+            //     }
+            //     else {
+            //         localStorage.setItem('theme-failure-count', (failureCount+1).toString());
+            //     }
+            //     applyTheme()
+            // }, {once: true});
 
-            themeLink.href = `/themes/${theme.mode === 'light'? theme.lightTheme : theme.darkTheme}/theme.css`;
+            // // This helps adding the theme to the app element for children elements
+            // // but doesn't work on initial state TODO dont merge until fixed
+            // const appElement = document.querySelector('[data-v-app]');
+            // if (appElement) {
+            //     appElement.setAttribute('data-theme', theme.mode);
+            // }
+
+            // themeLink.href = `/themes/${theme.mode === 'light'? theme.lightTheme : theme.darkTheme}/theme.css`;
         };
 
         const toggleDarkMode = () => {

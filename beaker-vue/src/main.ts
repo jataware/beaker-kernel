@@ -12,10 +12,11 @@ import { vAutoScroll } from './directives/autoscroll';
 import BeakerThemePlugin from './plugins/theme';
 import BeakerAppConfigPlugin from './plugins/appconfig';
 
-import Aura from '@primevue/themes/aura';
 
 import App from './App.vue'
 import router from './router'
+import { DefaultTheme } from './themes';
+console.log(DefaultTheme);
 
 
 import 'primeicons/primeicons.css';
@@ -36,10 +37,10 @@ app.use(createPinia())
 app.use(router)
 app.use(PrimeVue, {
     theme: {
-        preset: Aura,
+        preset: DefaultTheme,
         options: {
             prefix: '',
-            darkModeSelector: 'none',
+            darkModeSelector: '.beaker-dark',
             cssLayer: {
                 name: 'primevue',
                 order: 'primevue, beaker'
