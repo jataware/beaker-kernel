@@ -50,11 +50,6 @@
                 >
 
                 </SplitButton>
-
-                <span v-if="unsavedChanges">
-                    Unsaved changes!
-                </span>
-
             </template>
 
             <Fieldset legend="Name">
@@ -173,11 +168,11 @@
                     </template>
                     <template #end>
                         <Button
-                            icon="pi pi-times"
+                            icon="pi pi-trash"
                             severity="danger"
                             style="width: 32px; height: 32px"
                             @click="() => {
-                                selectedDatasource.attached_files = selectedDatasource.attached_files.splice(
+                                selectedDatasource.attached_files.splice(
                                     selectedDatasource.attached_files.indexOf(file), 1
                                 )
                             }"
@@ -185,9 +180,13 @@
                         />
                     </template>
                 </Toolbar>
-                <Button @click="openFileSelectionMultiple" style="width: fit-content;">
-                    Add New Files
-                </Button>
+                <Button
+                    @click="openFileSelectionMultiple"
+                    style="width: fit-content; height: 32px;"
+                    label="Add New Files"
+                    icon="pi pi-plus"
+                    :disabled="!selectedDatasource"
+                />
             </Fieldset>
 
             <Fieldset legend="Agent Instructions">
@@ -234,26 +233,24 @@
                     Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
                 </Tag>
             </div>
-
-
-            <Divider></Divider>
-
-            <div style="display: flex; flex-direction: column; gap: 0.5rem">
-                <Button
-                    style="width: fit-content"
-                    @click="save"
-                    :disabled="!selectedDatasource"
-                >Save</Button>
-            </div>
-
         </Fieldset>
+        <div v-if="unsavedChanges" class="floating-save">
+            <span class="save-label">Unsaved changes!</span>
+            <Button
+                @click="save"
+                :disabled="!selectedDatasource"
+                icon="pi pi-save"
+                severity="warning"
+                v-tooltip="`Save Changes`"
+            />
+        </div>
     </div>
 </template>
 
 
 <script setup lang="ts">
 
-import { defineProps, ref, defineEmits, watch, provide, computed, nextTick, onMounted, inject, toRaw, isReactive, reactive } from 'vue';
+import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
@@ -274,8 +271,30 @@ import CodeEditor from './CodeEditor.vue';
 import SplitButton from 'primevue/splitbutton';
 const showToast = inject<any>('show_toast');
 
+export type Example = {
+    query: string,
+    code: string,
+    notes?: string
+}
+
+type AttachedFile = {
+    filepath: string,
+    name: string
+}
+
+type Datasource = {
+    description: string,
+    source: string,
+    attached_files: AttachedFile[],
+    examples: Example[],
+    slug: string,
+    name: string,
+    url: string
+}
+
 const props = defineProps(["datasources", "selectedOnLoad", "folderRoot"]);
-const selectedDatasource = ref(undefined);
+const selectedDatasource = defineModel<Datasource>('selectedDatasource', {required: true});
+const unsavedChanges = defineModel<boolean>('unsavedChanges', {required: true});
 const temporaryDatasource = ref(undefined);
 
 const hasLoadedInitialSelection = ref(false);
@@ -340,7 +359,6 @@ const unincludedFiles = computed(() =>
             RegExp(`{${file?.name}}`).test(selectedDatasource?.value?.source) ? false : file?.name)
         ?.filter((x) => x))
 
-const unsavedChanges = ref(false);
 const setUnsavedChanges = () => {unsavedChanges.value = true;};
 const confirmUnsavedChanges = () => {
     if (unsavedChanges?.value) {
@@ -400,6 +418,7 @@ const newDatasource = () => {
         source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
         description: "This is the description that the agent will use to determine when this integration should be used.",
         attached_files: [],
+        examples: []
     }
     temporaryDatasource.value = selectedDatasource.value
 }
@@ -520,6 +539,22 @@ documentation: !fill |
     return template;
 }
 
+const formatExamples = (examples: Example[]): string => {
+    if (examples.length === 0) {
+        return "";
+    }
+    const newlineIndent = '\n    ';
+    const reindentFollowingLines = str => str.replaceAll('\n', newlineIndent)
+    const blockScalar = str => `|${newlineIndent}${reindentFollowingLines(str)}`
+    return examples.map((example) =>
+        [
+            `- query: ${example.query}`,
+            `code: ${blockScalar(example.code)}`,
+            example?.notes ? `notes: ${blockScalar(example.notes)}` : '',
+        ].join('\n  ')
+    ).join('\n')
+}
+
 const writeDatasource = async (datasource) => {
     const formattedDatasource = formatDatasource(datasource)
     const folderRoot = props.folderRoot;
@@ -533,10 +568,24 @@ const writeDatasource = async (datasource) => {
         format,
         content,
     };
+
+    // create examples if it doesn't exist, but don't fill it yet.
+    const examplePath = `${basepath}/documentation/examples.yaml`;
+    try {
+        await contentManager.get(examplePath);
+    }
+    catch (e) {
+        await contentManager.save(examplePath, {type, format, content: btoa("")});
+    }
+
     let result;
     try {
         result = await contentManager.save(`${basepath}/api.yaml`, fileObj);
-        result = await contentManager.save(`${basepath}/documentation/examples.yaml`, {type, format, content: btoa("")});
+        result = await contentManager.save(examplePath, {
+            type,
+            format,
+            content: btoa(formatExamples(selectedDatasource.value?.examples ?? []))
+        })
     }
     catch(e) {
         showToast({
@@ -547,7 +596,6 @@ const writeDatasource = async (datasource) => {
         });
         return;
     }
-
 }
 
 const uploadFile = async (files: FileList) => {
@@ -635,5 +683,27 @@ const downloadFile = async (path) => {
 
 .datasource-editor > fieldset.p-fieldset legend.p-fieldset-legend {
     display: flex;
+}
+
+.floating-save {
+    position: sticky;
+    bottom: 4rem;
+    left: calc(100% - 16rem);
+    height: 48px;
+    width: 12rem;
+    display: flex;
+    flex-direction: row;
+    border-radius: var(--border-radius);
+    justify-content: space-between;
+    background-color: var(--yellow-300);
+    border: 2px solid var(--yellow-500);
+    .save-label {
+        font-weight: bold;
+        margin: auto;
+    }
+    button {
+        width: 3rem;
+    }
+
 }
 </style>
