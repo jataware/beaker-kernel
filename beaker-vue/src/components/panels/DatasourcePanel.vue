@@ -41,80 +41,59 @@
                     gap: 0.5rem;
                     width: 100%;
             ">
-                <div
-                    class="clickable-table-of-contents"
-                    @click="showTableOfContents = !showTableOfContents"
-                >
-                    <i
-                        :class="`pi ${showTableOfContents ? 'pi-chevron-down' : 'pi-chevron-right'}`"
-                        style="margin-right: 0.2rem;"
-                    >
-                    </i>
+                <div>
                     <i>{{ datasources.length }} integrations available:</i>
-                    <span>{{ showTableOfContents ? 'Hide Names' : 'Show Names' }}</span>
-                </div>
-                <div
-                    v-if="showTableOfContents"
-                    style="
-                        border-radius: var(--border-radius);
-                        border: 1px solid var(--surface-200);
-                        padding: 0.25rem;
-                        width: 100%;
-                        height: 12rem;
-                        overflow-y: auto;
-                    "
-                >
-                    <ul>
-                        <li v-for="datasource in sortedDatasources" :key="datasource?.name">
-                            {{ datasource?.name }}
-                        </li>
-                    </ul>
                 </div>
             </div>
         </div>
         <div class="datasource-list">
-            <div class="datasource-card" v-for="(datasource, index) in renderedDatasources" :key="datasource?.name">
-                <Card>
+            <div
+                class="datasource-card"
+                v-for="(datasource, index) in renderedDatasources"
+                :key="datasource?.name"
+                @mouseleave="hoveredIntegration = undefined"
+                @mouseenter="hoveredIntegration = index"
+            >
+                <Card
+                    :pt = "{
+                        root: {
+                            style:
+                                'transition: background-color 150ms linear;' +
+                                (hoveredIntegration === index
+                                    ? 'background-color: var(--surface-100); cursor: pointer;'
+                                    : '')
+                        }
+                    }"
+                    @click="expandedIntegration = (expandedIntegration === index) ? undefined : index; "
+                >
                     <template #title>
                         <div class="datasource-card-title">
                             <span class="datasource-card-title-text">
                                 {{ datasource?.name }}
                             </span>
-                            <span>
+
+                            <span v-if="expandedIntegration === index">
                                 <a
                                     :href="`/integrations?selected=${datasource?.slug}${sessionIdParam}`"
                                     v-tooltip="'Edit Integration'"
                                 >
                                     <Button
                                         style="
-                                            width: 32px;
+                                            width: fit-content;
                                             height: 32px;
                                             margin-right: 0.5rem;
                                         "
-                                        outlined
                                         icon="pi pi-pencil"
+                                        label="Edit"
                                     />
                                 </a>
-                                <Button
-                                    style="
-                                        width: 32px;
-                                        height: 32px;
-                                    "
-                                    outlined
-                                    :icon="`pi ${cardState[index] ? 'pi-chevron-down' : 'pi-chevron-right'}`"
-                                    @click="cardState[index] = !cardState[index]"
-                                    v-tooltip="cardState[index] ? 'Show Less' : 'Show More'"
-                                />
                             </span>
                         </div>
                     </template>
-                    <template #content>
+                    <template #content v-if="expandedIntegration === index">
                         <div
                             class="datasource-main-content"
-                            :style="`
-                                overflow: hidden;
-                                ${cardState[index] ? '' : 'height: 6rem;'}
-                            `"
+                            style="overflow: hidden;"
                             v-html="datasource?.description ?? ''"
                         >
                         </div>
@@ -154,20 +133,18 @@ const renderedDatasources = computed(() =>
         ({...datasource, description: marked.parse(datasource?.description ?? "")})
 ))
 
-const cardState = ref<boolean[]>([]);
+const expandedIntegration = ref<number|undefined>(undefined);
+const hoveredIntegration = ref<number|undefined>(undefined);
 
 const showTableOfContents = ref(false);
 
 watch(searchText, () => {
     // if one result, fully show it
     if (filteredSortedDatasources?.value?.length === 1) {
-        cardState.value[0] = true;
+        expandedIntegration.value = 0;
         return;
     }
-    // otherwise rehide everything
-    for (let i = 0; i < cardState?.value?.length; ++i) {
-        cardState.value[i] = false;
-    }
+    expandedIntegration.value = undefined
 })
 
 </script>
@@ -182,7 +159,10 @@ watch(searchText, () => {
     padding-right: 0.25rem;
     gap: 0.5rem;
     div.p-card .p-card-content {
-        padding: 0.25rem 0;
+        padding: 0;
+    }
+    div.p-card .p-card-title {
+        margin-bottom: 0;
     }
     div.p-card-body {
         padding: 0.75rem 0.75rem;
@@ -200,9 +180,7 @@ watch(searchText, () => {
     flex-direction: column;
     gap: 0.5rem;
     overflow: auto;
-    // top card box shadow
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
+    padding: 0.2rem;
 }
 
 .datasource-card-title {
@@ -213,7 +191,8 @@ watch(searchText, () => {
     }
     .datasource-card-title-text {
         flex: 1 1;
-        font-size: 1.3rem;
+        font-size: 1rem;
+        font-weight: 500;
         margin: auto;
     }
 }
@@ -226,6 +205,7 @@ watch(searchText, () => {
 
 // for inner h1 being larger than header; rescale to make sensible whitespace
 .datasource-main-content {
+    margin-top: 0.5rem;
     h1 { font-size: 1.25rem; margin-bottom: 1rem;   }
     h2 { font-size: 1.2rem;  margin-bottom: 0.8rem; }
     h3 { font-size: 1.15rem; margin-bottom: 0.8rem; }
