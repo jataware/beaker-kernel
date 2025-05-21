@@ -69,6 +69,14 @@ export const BeakerThemePlugin: Plugin = {
                 }
                 applyTheme()
             }, {once: true});
+
+            // This helps adding the theme to the app element for children elements
+            // but doesn't work on initial state TODO dont merge until fixed
+            const appElement = document.querySelector('[data-v-app]');
+            if (appElement) {
+                appElement.setAttribute('data-theme', theme.mode);
+            }
+
             themeLink.href = `/themes/${theme.mode === 'light'? theme.lightTheme : theme.darkTheme}/theme.css`;
         };
 

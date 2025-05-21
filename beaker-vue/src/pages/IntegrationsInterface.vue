@@ -275,7 +275,7 @@ const iopubMessage = (msg) => {
             incomingDatasources = [];
         }
         datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
-        datasourcesFolderRoot.value = msg.content.datasource_root;
+        datasourcesFolderRoot.value = msg.content.info.datasource_root;
 
         if (!hasOpenedPanelOnce.value) {
             nextTick(() => sideMenuRef.value.selectPanel('integrations'))

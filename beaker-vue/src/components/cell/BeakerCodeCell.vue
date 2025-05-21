@@ -5,7 +5,7 @@
                     class="code-data"
                     :class="{
                         'dark-mode': theme.mode === 'dark',
-                        // 'code-data-chat': true
+                        [codeStyles]: props.codeStyles
                     }"
                 >
                     <CodeEditor
@@ -67,7 +67,8 @@ import type { IBeakerTheme } from '../../plugins/theme';
 
 const props = defineProps([
     "cell",
-    "hideOutput"
+    "hideOutput",
+    "codeStyles"
 ]);
 
 const cell = ref(props.cell);
