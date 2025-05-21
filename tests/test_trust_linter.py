@@ -6,12 +6,12 @@ from pathlib import Path
 import tree_sitter_python as tspython
 from tree_sitter import Language
 
-from beaker_kernel.lib.trust import TrustLinter
-from beaker_kernel.lib.trust.rules import LiteralCheckAST, LiteralCheckLLM, assumptions, groundings
-from beaker_kernel.lib.trust.linter import CodeCell, CodeCellLineDict, CodeCells
+from beaker_kernel.lib.code_analysis.analyzer import CodeAnalyzer
+from beaker_kernel.lib.code_analysis.rules import assumptions, groundings
+from beaker_kernel.lib.code_analysis.analysis_types import AnalysisCodeCell, AnalysisCodeCells
 
-solar_flare_nb = CodeCells([
-    CodeCell(
+solar_flare_nb = AnalysisCodeCells([
+    AnalysisCodeCell(
         cell_id="solar_flare_nb-c1",
         notebook_id="solar_flare_nb",
         content="""\
@@ -45,8 +45,8 @@ else:
     )
 ])
 
-epa_eqs_nb = CodeCells([
-    CodeCell(
+epa_eqs_nb = AnalysisCodeCells([
+    AnalysisCodeCell(
         cell_id="epa_eqs_nb-c1",
         notebook_id="epa_eqs_nb",
         content="""\
@@ -165,8 +165,8 @@ else:
 ])
 
 
-hercules_nb: CodeCells = CodeCells([
-    CodeCell(
+hercules_nb: AnalysisCodeCells = AnalysisCodeCells([
+    AnalysisCodeCell(
         cell_id="nb1-c1",
         notebook_id="nb1",
         content="""\
@@ -191,7 +191,7 @@ empty_weight_info = soup.find_all(text=lambda text: "empty weight" in text.lower
 empty_weight_info
 """
     ),
-    CodeCell(
+    AnalysisCodeCell(
         cell_id="nb1-c2",
         notebook_id="nb1",
         content="""\
@@ -210,7 +210,7 @@ pressure_psi = empty_weight_lbs / total_contact_area_sqft
 pressure_psi
 """
     ),
-    CodeCell(
+    AnalysisCodeCell(
         cell_id="nb1-c3",
         notebook_id="nb1",
         content="""\
@@ -226,17 +226,10 @@ required_ice_thickness
 ])
 
 
-# @pytest.mark.asyncio
-# async def test_linter_creation():
-#     language = Language(tspython.language())
-#     linter = TrustLinter([assumptions, groundings, LiteralCheckAST, LiteralCheckLLM], language=language)
-#     result = await linter.lint(Cells([CodeCell(cell_id='123', notebook_id='bcd', content=CODE_SAMPLE_2)]))
-#     assert result
-
-@pytest.mark.asyncio
 async def test_multi_codecell():
     language = Language(tspython.language())
-    linter = TrustLinter([assumptions, groundings], language=language)
-    result = await linter.lint(hercules_nb)
+    analyzer = CodeAnalyzer(rules=[assumptions, groundings], language=language)
+    result = await analyzer.analyze(hercules_nb)
     print(result)
     assert result
+    assert False

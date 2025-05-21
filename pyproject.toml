@@ -257,3 +257,14 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
 ]
+
+[tool.hatch.envs.hatch-test]
+extra-dependencies = [
+  "pytest",
+  "pytest-asyncio",
+  "rich",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
