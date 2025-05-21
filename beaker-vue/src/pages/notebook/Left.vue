@@ -1,62 +1,4 @@
 <template>
-    <div>
-    <!-- <BaseInterface
-        :title="$tmpl._('short_title', 'Beaker Notebook')"
-        :title-extra="saveAsFilename"
-        :header-nav="headerNav"
-        ref="beakerInterfaceRef"
-        :connectionSettings="props.config"
-        sessionName="notebook_interface"
-        defaultKernel="beaker_kernel"
-        :sessionId="sessionId"
-        :renderers="renderers"
-        :savefile="saveAsFilename"
-        @iopub-msg="iopubMessage"
-        @unhandled-msg="unhandledMessage"
-        @any-msg="anyMessage"
-        @session-status-changed="statusChanged"
-        @open-file="loadNotebook"
-    > -->
-        <div class="notebook-container">
-            <BeakerNotebook
-                ref="beakerNotebookRef"
-                :cell-map="cellComponentMapping"
-                v-keybindings.top="notebookKeyBindings"
-            >
-                <BeakerNotebookToolbar
-                    default-severity=""
-                    :saveAvailable="true"
-                    :save-as-filename="saveAsFilename"
-                    @notebook-saved="handleNotebookSaved"
-                    @open-file="loadNotebook"
-                >
-                    <template #end-extra>
-                        <Button
-                            @click="isMaximized = !isMaximized; beakerInterfaceRef.setMaximized(isMaximized);"
-                            :icon="`pi ${isMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`"
-                            size="small"
-                            text
-                        />
-                    </template>
-                </BeakerNotebookToolbar>
-                <BeakerNotebookPanel
-                    :selected-cell="beakerNotebookRef?.selectedCellId"
-                    v-autoscroll
-                >
-                    <template #notebook-background>
-                        <div class="welcome-placeholder">
-                            <SvgPlaceholder />
-                        </div>
-                    </template>
-                </BeakerNotebookPanel>
-                <BeakerAgentQuery
-                    ref="agentQueryRef"
-                    class="agent-query-container"
-                />
-            </BeakerNotebook>
-        </div>
-
-        <!-- <template #left-panel>
             <SideMenu
                 ref="sideMenuRef"
                 position="left"
@@ -83,14 +25,7 @@
                     <ChatHistoryPanel :chat-history="chatHistory"/>
                 </SideMenuPanel>
                 <SideMenuPanel
-                    id="integrations" label="Integrations" icon="pi pi-database"
-                    v-if="datasources.length > 0"
-                >
-                    <DatasourcePanel :datasources="datasources">
-                    </DatasourcePanel>
-                </SideMenuPanel>
-                <SideMenuPanel
-                    v-if="props.config.config_type !== 'server'"
+                    v-if="config.config_type !== 'server'"
                     id="config"
                     :label="`${$tmpl._('short_title', 'Beaker')} Config`"
                     icon="pi pi-cog"
@@ -103,84 +38,47 @@
                     />
                 </SideMenuPanel>
             </SideMenu>
-        </template>
-        <template #right-panel>
-            <SideMenu
-                ref="rightSideMenuRef"
-                position="right"
-                highlight="line"
-                :expanded="true"
-                initialWidth="25vi"
-                :maximized="isMaximized"
-            >
-                <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
-                    <PreviewPanel :previewData="contextPreviewData"/>
-                </SideMenuPanel>
-                <SideMenuPanel
-                    id="file-contents"
-                    label="File Contents"
-                    icon="pi pi-file beaker-zoom"
-                    no-overflow
-                >
-                    <FileContentsPanel
-                        :url="previewedFile?.url"
-                        :mimetype="previewedFile?.mimetype"
-                    />
-                </SideMenuPanel>
-                <SideMenuPanel id="media" label="Graphs and Images" icon="pi pi-chart-bar" no-overflow>
-                    <MediaPanel />
-                </SideMenuPanel>
-                <SideMenuPanel id="kernel-state" label="Kernel State" icon="pi pi-server" no-overflow>
-                    <KernelStatePanel :data="kernelStateInfo"/>
-                </SideMenuPanel>
-                <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
-                    <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
-                </SideMenuPanel>
-            </SideMenu>
-        </template> -->
-    <!-- </BaseInterface> -->
-    </div>
 </template>
 
 <script setup lang="tsx">
 import { ref, watch, computed, nextTick, inject, toRaw, getCurrentInstance } from 'vue';
 import { JupyterMimeRenderer } from 'beaker-kernel';
 import type { IBeakerCell, IMimeRenderer } from 'beaker-kernel';
-import type { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
-import type { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
-import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
-import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
-import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import { JavascriptRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, TableRenderer, type BeakerRenderOutput } from '../renderers';
-import { atStartOfInput, atEndOfInput } from '../util'
-import type { NavOption } from '../components/misc/BeakerHeader.vue';
+import type { BeakerNotebookComponentType } from '../../components/notebook/BeakerNotebook.vue';
+import type { BeakerSessionComponentType } from '../../components/session/BeakerSession.vue';
+import BeakerNotebook from '../../components/notebook/BeakerNotebook.vue';
+import BeakerNotebookToolbar from '../../components/notebook/BeakerNotebookToolbar.vue';
+import BeakerNotebookPanel from '../../components/notebook/BeakerNotebookPanel.vue';
+import { JavascriptRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, TableRenderer, type BeakerRenderOutput } from '../../renderers';
+import { atStartOfInput, atEndOfInput } from '../../util'
+import type { NavOption } from '../../components/misc/BeakerHeader.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
-import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
-import InfoPanel from '../components/panels/InfoPanel.vue';
-import FilePanel from '../components/panels/FilePanel.vue';
-import ConfigPanel from '../components/panels/ConfigPanel.vue';
-import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
-import SideMenu from "../components/sidemenu/SideMenu.vue";
-import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
-import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
-import { ChatHistoryPanel, type IChatHistory } from '../components/panels/ChatHistoryPanel';
-import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
+import BeakerAgentQuery from '../../components/agent/BeakerAgentQuery.vue';
+import InfoPanel from '../../components/panels/InfoPanel.vue';
+import FilePanel from '../../components/panels/FilePanel.vue';
+import ConfigPanel from '../../components/panels/ConfigPanel.vue';
+import SvgPlaceholder from '../../components/misc/SvgPlaceholder.vue';
+import SideMenu from "../../components/sidemenu/SideMenu.vue";
+import SideMenuPanel from "../../components/sidemenu/SideMenuPanel.vue";
+import FileContentsPanel from '../../components/panels/FileContentsPanel.vue';
+import { ChatHistoryPanel, type IChatHistory } from '../../components/panels/ChatHistoryPanel';
 
 // context preview
-import PreviewPanel from '../components/panels/PreviewPanel.vue';
+import PreviewPanel from '../../components/panels/PreviewPanel.vue';
 
-import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
-import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
-import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
-import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
-import type { IBeakerTheme } from '../plugins/theme';
-import MediaPanel from '../components/panels/MediaPanel.vue';
-import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
+import BeakerCodeCell from '../../components/cell/BeakerCodeCell.vue';
+import BeakerMarkdownCell from '../../components/cell/BeakerMarkdownCell.vue';
+import BeakerQueryCell from '../../components/cell/BeakerQueryCell.vue';
+import BeakerRawCell from '../../components/cell/BeakerRawCell.vue';
+import type { IBeakerTheme } from '../../plugins/theme';
+import MediaPanel from '../../components/panels/MediaPanel.vue';
+import KernelStatePanel from '../../components/panels/KernelStatePanel.vue';
 
-import DebugPanel from '../components/panels/DebugPanel.vue'
+import DebugPanel from '../../components/panels/DebugPanel.vue'
+import { useConfigStore } from '@/stores/config';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -196,13 +94,15 @@ const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "notebook_dev_session";
 
 const props = defineProps([
-    "config",
+    // "config",
     "connectionSettings",
     "sessionName",
     "sessionId",
     "defaultKernel",
     "renderers",
 ]);
+
+const config = useConfigStore();
 
 const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
@@ -219,6 +119,8 @@ const cellComponentMapping = {
     'query': BeakerQueryCell,
     'raw': BeakerRawCell,
 }
+
+// const session = inject<BeakerSession>('session');
 
 const connectionStatus = ref('connecting');
 const debugLogs = ref<object[]>([]);
@@ -238,7 +140,6 @@ beakerApp.setPage("notebook");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
-const datasources = ref([]);
 
 type FilePreview = {
     url: string,
@@ -304,11 +205,9 @@ watch(
 const iopubMessage = (msg) => {
     if (msg.header.msg_type === "preview") {
         contextPreviewData.value = msg.content;
-    }
-    else if (msg.header.msg_type === "kernel_state_info") {
+    } else if (msg.header.msg_type === "kernel_state_info") {
         kernelStateInfo.value = msg.content;
-    }
-    else if (msg.header.msg_type === "debug_event") {
+    } else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
             type: msg.content.event,
             body: msg.content.body,
@@ -317,20 +216,6 @@ const iopubMessage = (msg) => {
     } else if (msg.header.msg_type === "chat_history") {
         chatHistory.value = msg.content;
         console.log(msg.content);
-    }
-    else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
-        var incomingDatasources;
-        if (msg.header.msg_type === "context_setup_response") {
-            incomingDatasources = msg.content.datasources;
-
-        }
-        else if (msg.header.msg_type === "context_info_response") {
-            incomingDatasources = msg.content.info.datasources;
-        }
-        if (incomingDatasources === undefined) {
-            incomingDatasources = [];
-        }
-        datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
     }
 };
 
@@ -621,7 +506,7 @@ export const leftSidePanel = <SideMenu
                     <ChatHistoryPanel chat-history={chatHistory}/>
                 </SideMenuPanel> */}
                 <SideMenuPanel
-                    v-if="props.config.config_type !== 'server'"
+                    v-if="config.config_type !== 'server'"
                     id="config"
                     icon="pi pi-cog"
                     label="foo"

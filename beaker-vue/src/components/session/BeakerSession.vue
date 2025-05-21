@@ -12,6 +12,7 @@ import { BeakerSession } from 'beaker-kernel';
 import type { IMimeRenderer, IBeakerCell, BeakerKernelStatus } from 'beaker-kernel';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import type { ConnectionStatus as JupyterConnectionStatus } from '@jupyterlab/services/lib/kernel/kernel';
+import { useConfigStore } from '@/stores/config';
 
 
 export interface IBeakerCellComponent {
@@ -87,6 +88,8 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
     const activeContext = ref();
     const notebookComponent = ref();
 
+    const config = useConfigStore();
+
     const rawSession: BeakerSession = new BeakerSession(
       {
         settings: props.connectionSettings,
@@ -99,6 +102,7 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
         context: props.context,
       }
     );
+    // console.log({rawSession, props: JSON.stringify(props.connectionSettings)})
 
     status.value = "connecting";
 
