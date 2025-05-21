@@ -91,7 +91,7 @@
                 <SideMenuPanel
                     id="examples"
                     label="Example Editor"
-                    icon="pi pi-file beaker-zoom"
+                    icon="pi pi-list-check"
                     no-overflow
                 >
                     <ExamplesPanel
