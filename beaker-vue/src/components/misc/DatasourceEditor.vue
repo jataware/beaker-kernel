@@ -254,6 +254,14 @@ import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
+import {
+    type Datasource,
+    getDatasourceFolder,
+    getDatasourceSlug,
+    writeDatasource,
+    createFoldersForDatasource
+} from './IntegrationUtilities';
+
 import Dropdown from 'primevue/dropdown';
 import Fieldset from 'primevue/fieldset';
 import Button from "primevue/button";
@@ -270,27 +278,6 @@ import Badge from 'primevue/badge';
 import CodeEditor from './CodeEditor.vue';
 import SplitButton from 'primevue/splitbutton';
 const showToast = inject<any>('show_toast');
-
-export type Example = {
-    query: string,
-    code: string,
-    notes?: string
-}
-
-type AttachedFile = {
-    filepath: string,
-    name: string
-}
-
-type Datasource = {
-    description: string,
-    source: string,
-    attached_files: AttachedFile[],
-    examples: Example[],
-    slug: string,
-    name: string,
-    url: string
-}
 
 const props = defineProps(["datasources", "selectedOnLoad", "folderRoot"]);
 const selectedDatasource = defineModel<Datasource>('selectedDatasource', {required: true});
@@ -387,27 +374,19 @@ const openFileSelectionMultiple = () => {
     fileInputMultiple.value?.click();
 }
 
-const slugWrapper = computed(() => {
-    if (selectedDatasource?.value?.slug) {
-        return selectedDatasource.value.slug;
-    }
-    return selectedDatasource?.value?.name?.toLowerCase().replaceAll(' ', '_');
-})
-
 const contentManager = new ContentsManager({});
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
 
-const folderSlug = computed(() => {
-    let url = selectedDatasource?.value?.url;
-    if (url === undefined || url === null || url === '') {
-        return slugWrapper.value;
-    }
-    else if (url.endsWith('api.yaml')) {
-        return url.slice(0, -1 * ("/api.yaml".length))
-    }
-    return url
-})
+const slugWrapper = computed(() =>
+    (selectedDatasource.value === undefined)
+        ? ""
+        : getDatasourceSlug(selectedDatasource.value))
+
+const folderSlug = computed(() =>
+    (selectedDatasource.value === undefined)
+        ? ""
+        : getDatasourceFolder(selectedDatasource.value))
 
 const newDatasource = () => {
     unsavedChanges.value = true;
@@ -424,8 +403,13 @@ const newDatasource = () => {
 }
 
 const save = async () => {
+    const folderRoot = props.folderRoot;
     unsavedChanges.value = false;
     temporaryDatasource.value = undefined;
+
+    if (selectedDatasource.value === undefined) {
+        return;
+    }
 
     showToast({
         title: 'Saved!',
@@ -433,8 +417,13 @@ const save = async () => {
         severity: 'success',
         life: 4000
     });
-    await createFoldersForDatasource();
-    await writeDatasource(selectedDatasource.value);
+    await createFoldersForDatasource(folderRoot, selectedDatasource.value);
+    await writeDatasource(folderRoot, selectedDatasource.value, (e) => showToast({
+        title: 'Upload failed',
+        detail: `Unable to upload file "${folderRoot}/${folderSlug.value}/api.yaml": ${e}`,
+        severity: 'error',
+        life: 8000
+    }));
 
     session.executeAction('save_datasource', {
         ...selectedDatasource.value,
@@ -448,51 +437,17 @@ const download = async (name) => {
     await downloadFile(path);
 }
 
-const createFoldersForDatasource = async () => {
-    const folderRoot = props.folderRoot;
-    const basepath = `${folderRoot}/${folderSlug.value}`
-
-    // is the datasource slug folder present?
-    try {
-        const targetDir = await contentManager.get(basepath);
-        if (targetDir.type !== 'directory') {
-            throw "Slug overlaps with existing non-directory file."
-        }
-    }
-    catch (e) {
-        const directory = await contentManager.newUntitled({
-            path: folderRoot,
-            type: 'directory'
-        })
-        await contentManager.rename(directory.path, basepath);
-    }
-
-    // what about documentation/?
-    try {
-        const targetDir = await contentManager.get(`${basepath}/documentation`);
-        if (targetDir.type !== 'directory') {
-            throw "slug/documentation overlaps with existing non-directory file. Is there a file named 'documentation' with no extension?"
-        }
-    }
-    catch (e) {
-        const subdirectory = await contentManager.newUntitled({
-            path: basepath,
-            type: 'directory'
-        })
-        await contentManager.rename(subdirectory.path, `${basepath}/documentation`)
-    }
-}
 
 const onSelectFileForUpload = async () => {
     const fileList = uploadForm.value['uploadfiles']?.files;
-    await createFoldersForDatasource();
+    await createFoldersForDatasource(props.folderRoot, selectedDatasource.value);
     await uploadFile(fileList);
 }
 
 
 const onSelectFilesForUpload = async () => {
     const fileList = uploadFormMultiple.value['uploadfilesMultiple']?.files;
-    await createFoldersForDatasource();
+    await createFoldersForDatasource(props.folderRoot, selectedDatasource.value);
     await uploadFile(fileList);
     for (const file of fileList) {
         selectedDatasource?.value.attached_files.push({
@@ -501,101 +456,6 @@ const onSelectFilesForUpload = async () => {
         })
     }
 
-}
-
-const formatDatasource = (datasource: {
-    name: string,
-    description: string,
-    source: string,
-    attached_files: any[]
-}): string => {
-    const slug = slugWrapper.value;
-    const indentLines = (text: string) => text
-        .split('\n')
-        .map(line => `\n    ${line}`)
-        .join('')
-        .trim()
-    const indentedDescription = indentLines(datasource?.description ?? "")
-    const indentedContents = indentLines(datasource?.source ?? "")
-    const filePayload = (datasource?.attached_files ?? [])
-        .map(attachment =>
-            `${attachment.name}: !load_txt documentation/${attachment.filepath}\n`)
-        .join('\n')
-
-    const template = `
-name: ${datasource.name}
-slug: ${slug}
-cache_key: api_assistant_${slug}
-examples: !load_yaml documentation/examples.yaml
-
-description: |
-    ${indentedDescription}
-
-${filePayload}
-
-documentation: !fill |
-    ${indentedContents}
-`
-    return template;
-}
-
-const formatExamples = (examples: Example[]): string => {
-    if (examples.length === 0) {
-        return "";
-    }
-    const newlineIndent = '\n    ';
-    const reindentFollowingLines = str => str.replaceAll('\n', newlineIndent)
-    const blockScalar = str => `|${newlineIndent}${reindentFollowingLines(str)}`
-    return examples.map((example) =>
-        [
-            `- query: ${example.query}`,
-            `code: ${blockScalar(example.code)}`,
-            example?.notes ? `notes: ${blockScalar(example.notes)}` : '',
-        ].join('\n  ')
-    ).join('\n')
-}
-
-const writeDatasource = async (datasource) => {
-    const formattedDatasource = formatDatasource(datasource)
-    const folderRoot = props.folderRoot;
-    const basepath = `${folderRoot}/${folderSlug.value}`
-
-    const type = 'text/plain'
-    const content = btoa(formattedDatasource);
-    const format = 'base64';
-    const fileObj: Partial<Contents.IModel> = {
-        type,
-        format,
-        content,
-    };
-
-    // create examples if it doesn't exist, but don't fill it yet.
-    const examplePath = `${basepath}/documentation/examples.yaml`;
-    try {
-        await contentManager.get(examplePath);
-    }
-    catch (e) {
-        await contentManager.save(examplePath, {type, format, content: btoa("")});
-    }
-
-    let result;
-    try {
-        result = await contentManager.save(`${basepath}/api.yaml`, fileObj);
-        result = await contentManager.save(examplePath, {
-            type,
-            format,
-            content: btoa(formatExamples(selectedDatasource.value?.examples ?? []))
-        })
-    }
-    catch(e) {
-        showToast({
-            title: 'Upload failed',
-            detail: `Unable to upload file "${basepath}/api.yaml": ${e}`,
-            severity: 'error',
-            life: 8000
-        });
-        return;
-    }
 }
 
 const uploadFile = async (files: FileList) => {
