@@ -346,6 +346,12 @@ const iopubMessage = (msg) => {
                 session.executeAction('add_example', {
                     slug: integration
                 });
+                showToast({
+                    title: 'Example Added',
+                    detail: `The example has been successfully added.`,
+                    severity: 'success',
+                    life: 4000
+                });
             },
             (e) => {
                 showToast({
@@ -366,8 +372,14 @@ const iopubMessage = (msg) => {
             datasourcesFolderRoot.value,
             datasources.value,
             () => {
-                session.executeAction('add_integration', {
+                session.executeAction('save_integration', {
                     slug: integration
+                });
+                showToast({
+                    title: 'Integration Added',
+                    detail: `The integration '${integration}' has been successfully added.`,
+                    severity: 'success',
+                    life: 4000
                 });
             },
             (e) => {

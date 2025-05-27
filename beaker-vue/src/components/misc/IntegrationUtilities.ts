@@ -11,7 +11,7 @@ export type AttachedFile = {
     name: string
 }
 
-export type Datasource = {
+export type Integration = {
     description: string,
     source: string,
     attached_files: AttachedFile[],
@@ -30,31 +30,31 @@ export const formatExamples = (examples: Example[]): string => {
     const blockScalar = str => `|${newlineIndent}${reindentFollowingLines(str)}`
     return examples.map((example) =>
         [
-            `- query: ${example.query}`,
+            `- query: "${example.query}"`,
             `code: ${blockScalar(example.code)}`,
             example?.notes ? `notes: ${blockScalar(example.notes)}` : '',
         ].join('\n  ')
     ).join('\n')
 }
 
-export const formatDatasource = (datasource: Datasource): string => {
+export const formatIntegration = (integration: Integration): string => {
     //const slug = slugWrapper.value;
     const indentLines = (text: string) => text
         .split('\n')
         .map(line => `\n    ${line}`)
         .join('')
         .trim()
-    const indentedDescription = indentLines(datasource?.description ?? "")
-    const indentedContents = indentLines(datasource?.source ?? "")
-    const filePayload = (datasource?.attached_files ?? [])
+    const indentedDescription = indentLines(integration?.description ?? "")
+    const indentedContents = indentLines(integration?.source ?? "")
+    const filePayload = (integration?.attached_files ?? [])
         .map(attachment =>
             `${attachment.name}: !load_txt documentation/${attachment.filepath}\n`)
         .join('\n')
 
     const template = `
-name: ${datasource.name}
-slug: ${datasource.slug}
-cache_key: api_assistant_${datasource.slug}
+name: ${integration.name}
+slug: ${integration.slug}
+cache_key: api_assistant_${integration.slug}
 examples: !load_yaml documentation/examples.yaml
 
 description: |
@@ -68,13 +68,13 @@ documentation: !fill |
     return template;
 }
 
-export const getDatasourceSlug = (datasource: Datasource): string =>
-    datasource?.slug ?? datasource.name.toLowerCase().replaceAll(' ', '_');
+export const getIntegrationSlug = (integration: Integration): string =>
+    integration?.slug ?? integration.name.toLowerCase().replaceAll(' ', '_');
 
-export const getDatasourceFolder = (datasource: Datasource): string => {
-    const url = datasource?.url;
+export const getIntegrationFolder = (integration: Integration): string => {
+    const url = integration?.url;
     if (url === undefined || url === null || url === '') {
-        return getDatasourceSlug(datasource);
+        return getIntegrationSlug(integration);
     }
     else if (url.endsWith('api.yaml')) {
         return url.slice(0, -1 * ("/api.yaml".length))
@@ -82,14 +82,14 @@ export const getDatasourceFolder = (datasource: Datasource): string => {
     return url
 }
 
-export const writeDatasource = async (
+export const writeIntegration = async (
     folderRoot: string,
-    datasource: Datasource,
+    integration: Integration,
     onerror: (e: any) => void
 ) => {
     const contentManager = new ContentsManager({});
-    const formattedDatasource = formatDatasource(datasource)
-    const basepath = `${folderRoot}/${getDatasourceFolder(datasource)}`
+    const formattedDatasource = formatIntegration(integration)
+    const basepath = `${folderRoot}/${getIntegrationFolder(integration)}`
 
     const type = 'text/plain'
     const content = btoa(formattedDatasource);
@@ -114,20 +114,21 @@ export const writeDatasource = async (
         await contentManager.save(examplePath, {
             type,
             format,
-            content: btoa(formatExamples(datasource?.examples ?? []))
+            content: btoa(formatExamples(integration?.examples ?? []))
         })
     }
     catch(e) {
-        onerror(e)
-        return;
+        if (onerror !== undefined) {
+            onerror(e)
+        }
     }
 }
 
-export const createFoldersForDatasource = async (folderRoot: string, datasource: Datasource) => {
+export const createFoldersForIntegration = async (folderRoot: string, integration: Integration) => {
     const contentManager = new ContentsManager({});
-    const basepath = `${folderRoot}/${getDatasourceFolder(datasource)}`
+    const basepath = `${folderRoot}/${getIntegrationFolder(integration)}`
 
-    // is the datasource slug folder present?
+    // is the integration slug folder present?
     try {
         const targetDir = await contentManager.get(basepath);
         if (targetDir.type !== 'directory') {
@@ -161,7 +162,7 @@ export const createFoldersForDatasource = async (folderRoot: string, datasource:
 export const handleAddExampleMessage = async (
     msg,
     folderRoot: string,
-    datasources: Datasource[],
+    integrations: Integration[],
     success: () => void,
     failure?: (error: string) => void
 ) => {
@@ -176,7 +177,7 @@ export const handleAddExampleMessage = async (
         return;
     }
 
-    const target = datasources?.find((integration) =>
+    const target = integrations?.find((integration) =>
         integration?.name === content?.integration);
 
     if (target === undefined) {
@@ -184,7 +185,7 @@ export const handleAddExampleMessage = async (
         return;
     }
 
-    if (target?.examples === undefined) {
+    if (target?.examples === undefined || target?.examples === null) {
         target.examples = []
     }
 
@@ -196,14 +197,14 @@ export const handleAddExampleMessage = async (
         }
     )
 
-    await writeDatasource(folderRoot, target, (e) => fail(e));
+    await writeIntegration(folderRoot, target, (e) => fail(e));
     success();
 }
 
 export const handleAddIntegrationMessage = async (
     msg,
     folderRoot: string,
-    datasources: Datasource[],
+    integrations: Integration[],
     success: () => void,
     failure?: (error: string) => void
 ) => {
@@ -221,13 +222,49 @@ export const handleAddIntegrationMessage = async (
     const name = content.integration;
     const slug = name.toLowerCase().replaceAll(' ', '_');
     const description = content.description;
+    const baseUrl = content.base_url;
+    const schema = content.schema;
 
-    const target = datasources?.find((integration) =>
+    const target = integrations?.find((integration) =>
         integration?.name === content?.integration);
-
     if (target !== undefined) {
         fail(`Integration ${content?.integration} already exists.`)
         return;
     }
-    // unimplemented yet -- fetch schema and add base URL instructions based on the tool message contents
+
+    const integration: Integration = {
+        description,
+        source: '',
+        attached_files: [
+            {
+                name: 'schema',
+                filepath: 'schema.yaml'
+            }
+        ],
+        examples: [],
+        slug,
+        name,
+        url: ''
+    }
+    await createFoldersForIntegration(folderRoot, integration);
+    const basepath = `${folderRoot}/${getIntegrationFolder(integration)}`
+    const schemaFile: Partial<Contents.IModel> = {
+        type: 'text/plain',
+        format: 'base64',
+        content: btoa(schema),
+    };
+    const examplePath = `${basepath}/documentation/schema.yaml`;
+    const contentManager = new ContentsManager({});
+    await contentManager.save(examplePath, schemaFile);
+
+    const openAPIWrapper = `
+The base URL for the service is '${baseUrl}'
+Below is the OpenAPI schema for the desired service.
+
+{schema}`
+    integration.source = openAPIWrapper;
+    integrations.push(integration);
+    await writeIntegration(folderRoot, integration, failure);
+    success();
 }
+

@@ -255,11 +255,11 @@ import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 import {
-    type Datasource,
-    getDatasourceFolder,
-    getDatasourceSlug,
-    writeDatasource,
-    createFoldersForDatasource
+    type Integration,
+    getIntegrationFolder,
+    getIntegrationSlug,
+    writeIntegration,
+    createFoldersForIntegration
 } from './IntegrationUtilities';
 
 import Dropdown from 'primevue/dropdown';
@@ -280,7 +280,7 @@ import SplitButton from 'primevue/splitbutton';
 const showToast = inject<any>('show_toast');
 
 const props = defineProps(["datasources", "selectedOnLoad", "folderRoot"]);
-const selectedDatasource = defineModel<Datasource>('selectedDatasource', {required: true});
+const selectedDatasource = defineModel<Integration>('selectedDatasource', {required: true});
 const unsavedChanges = defineModel<boolean>('unsavedChanges', {required: true});
 const temporaryDatasource = ref(undefined);
 
@@ -381,12 +381,12 @@ const xsrfCookie = cookies._xsrf;
 const slugWrapper = computed(() =>
     (selectedDatasource.value === undefined)
         ? ""
-        : getDatasourceSlug(selectedDatasource.value))
+        : getIntegrationSlug(selectedDatasource.value))
 
 const folderSlug = computed(() =>
     (selectedDatasource.value === undefined)
         ? ""
-        : getDatasourceFolder(selectedDatasource.value))
+        : getIntegrationFolder(selectedDatasource.value))
 
 const newDatasource = () => {
     unsavedChanges.value = true;
@@ -417,15 +417,15 @@ const save = async () => {
         severity: 'success',
         life: 4000
     });
-    await createFoldersForDatasource(folderRoot, selectedDatasource.value);
-    await writeDatasource(folderRoot, selectedDatasource.value, (e) => showToast({
+    await createFoldersForIntegration(folderRoot, selectedDatasource.value);
+    await writeIntegration(folderRoot, selectedDatasource.value, (e) => showToast({
         title: 'Upload failed',
         detail: `Unable to upload file "${folderRoot}/${folderSlug.value}/api.yaml": ${e}`,
         severity: 'error',
         life: 8000
     }));
 
-    session.executeAction('save_datasource', {
+    session.executeAction('save_integration', {
         ...selectedDatasource.value,
         slug: slugWrapper.value
     });
@@ -440,14 +440,14 @@ const download = async (name) => {
 
 const onSelectFileForUpload = async () => {
     const fileList = uploadForm.value['uploadfiles']?.files;
-    await createFoldersForDatasource(props.folderRoot, selectedDatasource.value);
+    await createFoldersForIntegration(props.folderRoot, selectedDatasource.value);
     await uploadFile(fileList);
 }
 
 
 const onSelectFilesForUpload = async () => {
     const fileList = uploadFormMultiple.value['uploadfilesMultiple']?.files;
-    await createFoldersForDatasource(props.folderRoot, selectedDatasource.value);
+    await createFoldersForIntegration(props.folderRoot, selectedDatasource.value);
     await uploadFile(fileList);
     for (const file of fileList) {
         selectedDatasource?.value.attached_files.push({
