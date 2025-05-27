@@ -45,9 +45,9 @@
         <template #end>
             <nav class="flex">
                 <template v-for="navItem in navItems" :key="navItem">
-                    <a
+                    <RouterLink
                         v-if="navItem.type === 'link'"
-                        :href="navItem.href"
+                        :to="navItem.href"
                         :aria-label="navItem.label"
                         :rel="navItem.rel"
                         :target="navItem.target"
@@ -65,7 +65,7 @@
                                 :style="navItem.componentStyle"
                             />
                         </Button>
-                    </a>
+                    </RouterLink>
                     <Button v-else-if="navItem.type === 'button'"
                         :icon="`pi pi-${navItem.icon}`"
                         text
@@ -81,6 +81,7 @@
 
 <script setup lang="ts">
 import { computed, inject, getCurrentInstance, getCurrentScope } from "vue";
+import { RouterLink } from "vue-router";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
