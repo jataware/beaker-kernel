@@ -199,7 +199,7 @@ const searchFilter = (target?: string, name?: string, desc?: string) => {
 const newExample = () => {
     let examples = selectedDatasource.value?.examples;
 
-    if (examples === undefined) {
+    if (examples === undefined || examples === null) {
         examples = []
     }
 
