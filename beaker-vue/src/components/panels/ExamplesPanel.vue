@@ -200,7 +200,8 @@ const newExample = () => {
     let examples = selectedDatasource.value?.examples;
 
     if (examples === undefined || examples === null) {
-        examples = []
+        selectedDatasource.value.examples = [];
+        examples = selectedDatasource.value.examples;
     }
 
     examples.unshift({
