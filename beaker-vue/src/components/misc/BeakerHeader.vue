@@ -201,7 +201,7 @@ export interface NavOption {
         align-items: center;
 
         font-weight: 500;
-        color: var(--gray-500);
+        color: var(--p-gray-500);
 
         h4 {
             display: inline-block;
@@ -227,7 +227,7 @@ export interface NavOption {
     display: flex;
     line-height: inherit;
     align-items: center;
-    color: var(--text-color);
+    color: var(--p-text-color);
     width: 8rem;
     & > i {
         margin-right: 0.5rem;
@@ -236,7 +236,7 @@ export interface NavOption {
 }
 
 .connection-button {
-    color: var(--surface-500);
+    color: var(--p-surface-500);
     padding: 0.5em;
 }
 

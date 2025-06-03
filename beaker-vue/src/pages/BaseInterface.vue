@@ -420,7 +420,7 @@ main {
     grid-template: "left-panel center-panel right-panel";
     grid-template-columns: var(--columns);
     grid-template-rows: 100%;
-    background-color: var(--surface-0);
+    background-color: var(--p-content-background);
     overflow: visible hidden;
     max-width: 100%;
     max-height: 100%;
@@ -441,7 +441,7 @@ footer {
 #center-panel {
     grid-area: center-panel;
     border: 1px solid;
-    border-color: var(--surface-border);
+    border-color: var(--p-surface-border);
 }
 
 #center-panel-chat-override {
@@ -480,7 +480,7 @@ footer {
 
 #overlay-content .traceback {
     padding: 0.5rem;
-    background-color: var(--surface-50);
+    background-color: var(--p-surface-50);
 }
 
 </style>

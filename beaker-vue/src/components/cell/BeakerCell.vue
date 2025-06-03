@@ -231,7 +231,7 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
         10px 1.6rem 1fr 2.5em;
 
     &.selected .collapse-box {
-        background-color: var(--primary-400);
+        background-color: var(--p-primary-400);
     }
 
     &:focus {
@@ -247,7 +247,7 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
         bottom: -2px;
         right: 0px;
         z-index: 0;
-        background-color: var(--surface-border);
+        background-color: var(--p-surface-border);
     }
 
     &.collapsed {
@@ -267,18 +267,18 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
         //     left: 0;
         //     right: 0;
         //     height: 16px;
-        //     box-shadow: inset 0 -10px 8px -4px var(--surface-border);
+        //     box-shadow: inset 0 -10px 8px -4px var(--p-surface-border);
         // }
     }
 
     &.selected.collapsed .collapse-box {
-        background-color: var(--primary-400);
+        background-color: var(--p-primary-400);
     }
 
     &.collapsed .collapse-box {
-        --wave-color: var(--surface-border);
+        --wave-color: var(--p-surface-border);
         background-color: var(--wave-color);
-        box-shadow: 0.3em 0 0.5em var(--surface-border);
+        box-shadow: 0.3em 0 0.5em var(--p-surface-border);
 
         &:after {
             content: "";
@@ -301,13 +301,13 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
 
 .collapse-box {
     grid-area: collapse-box;
-    border: 1px inset var(--surface-border);
+    border: 1px inset var(--p-surface-border);
     border-top: unset;
     border-bottom: unset;
     cursor: pointer;
 
     &:hover {
-        background-color: color(from var(--surface-border) srgb r g b / 0.5);
+        background-color: color(from var(--p-surface-border) srgb r g b / 0.5);
     }
 }
 
@@ -383,7 +383,7 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
         aspect-ratio: 1 / 1;
         border-width: 0;
         padding: auto;
-        border-radius: var(--border-radius);
+        border-radius: var(--p-border-radius);
 
         .p-button-icon {
             font-size: smaller;
@@ -408,17 +408,17 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
 
     .p-button, .overlay-menu-button {
         background-color: var(--surface-a);
-        color: var(--primary-color);
+        color: var(--p-primary-color);
         --shadow: #777;
         aspect-ratio: 1 / 1;
         width: 1.75rem;
         padding: 0;
-        border-color: var(--surface-border);
+        border-color: var(--p-surface-border);
         box-shadow: 0px 3px 1px -2px color(from var(--shadow) srgb r g b / 0.5),
                     0px 2px 2px 0px color(from var(--shadow) srgb r g b / 0.25),
                     0px 1px 5px 0px color(from var(--shadow) srgb r g b / 0.22);
         .pi {
-            color: var(--primary-color);
+            color: var(--p-primary-color);
         }
     }
 

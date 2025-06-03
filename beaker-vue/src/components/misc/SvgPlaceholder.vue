@@ -102,6 +102,6 @@
     fill: var(--surface-d);
   }
   .alt-fill-2 {
-    fill: var(--surface-50);
+    fill: var(--p-surface-50);
   }
 </style>

@@ -140,7 +140,7 @@ const footerMenuItems = ref([
   margin-top: 0.5rem;
   border: 1px solid lightgray;
   border-radius: 3px;
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
 }
 
 .slide-enter-active {

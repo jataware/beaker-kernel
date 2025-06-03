@@ -27,10 +27,11 @@ import { options } from 'marked';
 
 const baseUrl = PageConfig.getBaseUrl();
 
-const confUrl = URLExt.join(baseUrl, '/config')
+const confUrl = URLExt.join(baseUrl, '/config') + `?q=${Date.now().toString()}`;
 const configResponse = await fetch(confUrl);
 const config = await configResponse.json();
 
+console.log({config, confUrl, baseUrl})
 const app = createApp(App, {config})
 
 app.use(createPinia())
@@ -39,7 +40,6 @@ app.use(PrimeVue, {
     theme: {
         preset: DefaultTheme,
         options: {
-            prefix: '',
             darkModeSelector: '.beaker-dark',
             cssLayer: {
                 name: 'primevue',
@@ -47,7 +47,7 @@ app.use(PrimeVue, {
             }
         }
 
-    }
+    },
 });
 app.use(ToastService);
 app.use(ConfirmationService);

@@ -307,18 +307,18 @@ export default {
         margin-bottom: 0.5rem;
         .p-inputgroup {
             width: 100%;
-            border: 1px solid var(--yellow-500);
-            box-shadow: 0 0 4px var(--yellow-700);
+            border: 1px solid var(--p-yellow-500);
+            box-shadow: 0 0 4px var(--p-yellow-700);
             transition: box-shadow linear 1s;
-            border-radius: var(--border-radius);
+            border-radius: var(--p-border-radius);
             button {
                 background-color: var(--surface-b);
-                border-color: var(--surface-border);
-                color: var(--text-color);
+                border-color: var(--p-surface-border);
+                color: var(--p-text-color);
                 border-left: 0px;
             }
             input {
-                border-color: var(--yellow-500);
+                border-color: var(--p-yellow-500);
             }
         }
     }
@@ -341,8 +341,8 @@ export default {
 }
 
 .cancel-button {
-    border-color: var(--surface-100);
-    color: var(--primary-text-color);
+    border-color: var(--p-surface-100);
+    color: var(--p-primary-text-color);
 }
 
 
@@ -350,7 +350,7 @@ export default {
     display: flex;
     flex-direction: column;
     background-color: var(--surface-c);
-    border-radius: var(--border-radius);
+    border-radius: var(--p-border-radius);
 }
 
 div.query-steps {
@@ -401,7 +401,7 @@ h3.query-steps {
         }
         > .p-toggleable-content > .p-accordion-content {
             border: 2px solid var(--surface-d);
-            border-radius: var(--border-radius);
+            border-radius: var(--p-border-radius);
             padding: 0.25rem;
             padding-left: 1.5rem;
             margin: 1rem;
@@ -415,7 +415,7 @@ h3.query-steps {
             }
         }
         .p-accordion-header {
-            border-radius: var(--border-radius);
+            border-radius: var(--p-border-radius);
             margin: 1rem;
             margin-bottom: 0rem;
             transition: background-color 0.2s;
@@ -499,7 +499,7 @@ a.query-tab-headeraction > span > span.pi {
     background-color: var(--surface-c);
     padding-left: 1rem;
     padding-bottom: 1rem;
-    border-radius: var(--border-radius);
+    border-radius: var(--p-border-radius);
     margin-top: 1rem;
 }
 

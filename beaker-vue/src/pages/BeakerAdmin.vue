@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
 }
 
 .p-datatable {
-  border: 1px solid var(--surface-border);
+  border: 1px solid var(--p-surface-border);
 }
 
 .stats-tables {

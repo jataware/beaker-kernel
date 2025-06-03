@@ -38,8 +38,8 @@
     "@jupyterlab/mathjax-extension": "^4.4.1",
     "@jupyterlab/rendermime": "^4.4.1",
     "@plutojl/lang-julia": "^0.12.1",
-    "@primevue/icons": "^4.3.3",
-    "@primevue/themes": "^4.3.3",
+    "@primevue/icons": "^4.3.4",
+    "@primevue/themes": "^4.3.4",
     "ansi-html-community": "^0.0.8",
     "beaker-kernel": "file:../beaker-ts",
     "buffer": "^6.0.3",
@@ -101,6 +101,6 @@
     "vue-tsc": "^2.2.8"
   },
   "peerDependencies": {
-    "primevue": "^4.3.3"
+    "primevue": "^4.3.4"
   }
 }

@@ -183,7 +183,7 @@ const filteredLogs = computed(() => {
 
 .log-panel::before {
   content: attr(data-index);
-  color: var(--gray-300);
+  color: var(--p-gray-300);
   position: absolute;
   right: 1rem;
   top: 0.4rem;
@@ -194,7 +194,7 @@ const filteredLogs = computed(() => {
   display: flex;
   margin-top: 0.5rem;
   justify-content: center;
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
 }
 
 .sort-actions {

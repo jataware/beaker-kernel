@@ -295,7 +295,7 @@ function downloadNotebook() {
             padding-right: 0;
         }
 
-        .p-splitbutton-menubutton {
+        .p-splitbutton-dropdown {
             padding-left: 0;
             padding-top: 0;
             padding-bottom: 0.5rem;

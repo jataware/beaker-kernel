@@ -124,7 +124,7 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  color: var(--text-color);
+  color: var(--p-text-color);
 
   overflow-y: auto;
   scrollbar-width: thin;
@@ -137,7 +137,7 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
 .no-thoughts-message {
   text-align: center;
   padding: 1rem;
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
 }
 
 .pane-actions {
@@ -146,13 +146,13 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
   right: 5rem;
   z-index: 100;
   & > .p-button {
-    color: var(--text-color-secondary);
+    color: var(--p-text-color-secondary);
   }
 }
 
 .magnifier-reference {
   margin: 0 0.25rem;
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
 }
 
 .progress-area {

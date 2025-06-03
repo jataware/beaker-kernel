@@ -48,14 +48,14 @@
                             font-weight: 400;
                             font-family: 'Courier New', Courier, monospace;
                             font-size: 0.8rem;
-                            color: var(--text-color-secondary)
+                            color: var(--p-text-color-secondary)
                         "
                     >
                         <i
                             class="pi pi-sparkles"
                             :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
                             style="
-                                color: var(--yellow-500);
+                                color: var(--p-yellow-500);
                                 font-size: 1.25rem;
                                 margin-right: 0.6rem;
                             "
@@ -66,7 +66,7 @@
                         :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
                         text
                         rounded
-                        style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                        style="background-color: var(--surface-c); color: var(--p-text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
                     />
                 </div>
 
@@ -94,14 +94,14 @@
                                 font-weight: 400;
                                 font-family: 'Courier New', Courier, monospace;
                                 font-size: 0.8rem;
-                                color: var(--text-color-secondary)
+                                color: var(--p-text-color-secondary)
                             "
                         >
                             <i
                                 class="pi pi-sparkles"
                                 :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
                                 style="
-                                    color: var(--yellow-500);
+                                    color: var(--p-yellow-500);
                                     font-size: 1.25rem;
                                     margin-right: 0.6rem;
                                 "
@@ -112,7 +112,7 @@
                         :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
                         text
                         rounded
-                        style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                        style="background-color: var(--surface-c); color: var(--p-text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
                         />
                     </div>
                 </template>
@@ -395,18 +395,18 @@ export default {
         flex-direction: column;
         .p-inputgroup {
             width: 100%;
-            border: 1px solid var(--yellow-500);
-            box-shadow: 0 0 4px var(--yellow-700);
+            border: 1px solid var(--p-yellow-500);
+            box-shadow: 0 0 4px var(--p-yellow-700);
             transition: box-shadow linear 1s;
-            border-radius: var(--border-radius);
+            border-radius: var(--p-border-radius);
             button {
                 background-color: var(--surface-b);
-                border-color: var(--surface-border);
-                color: var(--text-color);
+                border-color: var(--p-surface-border);
+                color: var(--p-text-color);
                 border-left: 0px;
             }
             input {
-                border-color: var(--yellow-500);
+                border-color: var(--p-yellow-500);
             }
         }
         margin-bottom: 0.5rem;
@@ -417,7 +417,7 @@ export default {
     display: flex;
     flex-direction: column;
     background-color: var(--surface-c);
-    border-radius: var(--border-radius);
+    border-radius: var(--p-border-radius);
 }
 
 .llm-prompt-container-chat {
@@ -448,7 +448,7 @@ export default {
 .query-answer-chat-override {
     padding-left: 1rem;
     padding-right: 1rem;
-    border-radius: var(--border-radius);
+    border-radius: var(--p-border-radius);
     max-width: 80%;
     width: fit-content;
     background-color: var(--surface-c);
@@ -482,7 +482,7 @@ export default {
     width: 100%;
     max-width: 80%;
     border: 1px solid var(--surface-b);
-    border-radius: var(--border-radius);
+    border-radius: var(--p-border-radius);
 
     &:hover {
         background-color: var(--surface-b);

@@ -52,8 +52,8 @@ const toggleExpansion = (event) => {
   width: 2rem;
   height: 2rem;
   padding: 0;
-  background: var(--surface-500);
-  border-color: var(--surface-500);
+  background: var(--p-surface-500);
+  border-color: var(--p-surface-500);
   &>.p-button-icon {
     font-weight: bold;
   }

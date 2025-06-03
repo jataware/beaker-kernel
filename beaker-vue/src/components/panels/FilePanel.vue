@@ -59,7 +59,7 @@
             <span :class="[...getFileIconClass(slotProps.data), 'file-icon', slotProps.data.type]"></span>
             <span
               :id="`file-list::${slotProps.data.path}`"
-              class="file-name"
+              class="file-name monospace"
               :class="slotProps.data.type"
             >
               {{ slotProps.data.name }}
@@ -419,7 +419,7 @@ defineExpose({
 
   .file-table {
     font-size: smaller;
-    border: 1px solid var(--surface-border);
+    border: 1px solid var(--p-surface-border);
     flex: 1;
     overflow: auto;
     display:flex;
@@ -503,7 +503,7 @@ defineExpose({
     aspect-ratio: 1/1;
     text-align: center;
 
-    > .p-column-header-content {
+    > .p-datatable-column-header-content {
       justify-content: center;
     }
   }
@@ -528,7 +528,7 @@ defineExpose({
 
   .file-icon {
     &.directory {
-      color: var(--primary-600);
+      color: var(--p-primary-600);
       font-weight: bold;
     }
   }
@@ -539,7 +539,7 @@ defineExpose({
     &.directory {
       text-decoration: underline ;
       text-underline-offset: 0.25rem;
-      // color: var(--primary-500);
+      // color: var(--p-primary-500);
     }
   }
 
@@ -555,7 +555,7 @@ defineExpose({
     display: flex;
     flex-direction: row;
     align-items: center;
-    border: 3px solid var(--surface-border);
+    border: 3px solid var(--p-surface-border);
     background-color: var(--surface-d);
     padding-left: 1em;
 

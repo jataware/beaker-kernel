@@ -72,8 +72,8 @@ watch(sortedMimetypes, (newSortedTypes, _) => {
 
 .p-selectbutton .p-button.p-highlight {
     background: var(--surface-a);
-    border: 3px solid var(--gray-300);
-    color: var(--primary-text-color);
+    border: 3px solid var(--p-gray-300);
+    color: var(--p-primary-text-color);
 }
 
 .p-selectbutton .p-button.p-highlight::before {
@@ -81,9 +81,9 @@ watch(sortedMimetypes, (newSortedTypes, _) => {
 }
 
 .p-selectbutton .p-button {
-    background: var(--gray-300);
-    border: 1px solid var(--gray-300);
-    color: var(--text-color-secondary);
+    background: var(--p-gray-300);
+    border: 1px solid var(--p-gray-300);
+    color: var(--p-text-color-secondary);
     transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, outline-color 0.2s;
     height: 2rem;
     font-size: 0.75rem;

@@ -133,7 +133,7 @@ const filteredLogs = computed(() => {
     display: flex;
     margin-top: 0.5rem;
     justify-content: center;
-    color: var(--text-color-secondary);
+    color: var(--p-text-color-secondary);
 }
 
 .debug-sort-actions {

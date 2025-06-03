@@ -276,6 +276,7 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
         ws_url = base_url.replace(base_scheme, ws_scheme)
 
         config_data = {
+            # "appendToken": True,
             "appUrl": os.environ.get("APP_URL", base_url),
             "baseUrl": base_url,
             "wsUrl": os.environ.get("JUPYTER_WS_URL", ws_url),

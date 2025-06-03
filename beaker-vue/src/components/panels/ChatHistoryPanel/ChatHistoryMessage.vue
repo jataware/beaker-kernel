@@ -4,7 +4,7 @@
             :style="{collapsed}"
             @toggle="collapsed = !collapsed"
             :pt="{
-                toggleablecontent: ({state}) => {
+                contentContainer: ({state}) => {
                     // Force internal collapsed state to be false, preventing
                     // panel contents from being hidden via v-show.
                     state.d_collapsed = false;
@@ -129,7 +129,7 @@ const capitalized = (str: string) => (
 }
 
 .chat-history-message-title-token-count {
-    color: var(--grey-300);
+    color: var(--p-grey-300);
     flex: 0 0 auto;
     margin-right: 0.5rem;
 }
@@ -139,7 +139,7 @@ const capitalized = (str: string) => (
     font-size: 0.9rem;
 }
 
-.chat-history-message-panel .p-toggleable-content.collapsed .p-panel-content{
+.chat-history-message-panel .p-panel-content-container.collapsed .p-panel-content {
     position: relative;
     overflow: hidden;
     height: 5rem;
@@ -147,7 +147,7 @@ const capitalized = (str: string) => (
 
     & .expand {
         text-align: center;
-        color: var(--primary-color-text);
+        color: var(--p-button-text-primary-active-background);
         display: block;
         position: absolute;
         background-color: inherit;
@@ -160,8 +160,8 @@ const capitalized = (str: string) => (
         cursor: pointer;
         background-color: transparent;
         box-shadow:
-                inset 0px -4rem 1.5rem -2.4rem var(--bluegray-500),
-                inset 0px -3.5rem 1rem -2.0rem var(--bluegray-500);
+                inset 0px -4rem 1.5rem -2.4rem var(--p-slate-500),
+                inset 0px -3.5rem 1rem -2.0rem var(--p-slate-500);
     }
 }
 

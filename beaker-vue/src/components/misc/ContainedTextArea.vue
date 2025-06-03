@@ -44,7 +44,7 @@ const allowScroll = ref(false);
     min-height: 3rem;
 
     &::placeholder {
-        color: var(--gray-400);
+        color: var(--p-gray-400);
     }
 }
 

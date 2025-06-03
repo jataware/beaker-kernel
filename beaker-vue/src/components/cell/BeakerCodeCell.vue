@@ -249,7 +249,7 @@ export default {
     aspect-ratio: 1/1;
     border-radius: 15%;
     &.secondary {
-        background-color: var(--surface-300);
+        background-color: var(--p-surface-300);
     }
 }
 
@@ -263,7 +263,7 @@ button.rollback-button {
 }
 
 .busy-icon {
-    color: var(--blue-500);
+    color: var(--p-blue-500);
     font-weight: bold;
     font-size: 1.3rem;
     margin-top: 1rem;

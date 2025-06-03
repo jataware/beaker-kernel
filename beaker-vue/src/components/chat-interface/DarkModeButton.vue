@@ -2,7 +2,7 @@
     <Button
         text
         @click="props.toggleDarkMode"
-        style="margin: 0; color: var(--gray-500);"
+        style="margin: 0; color: var(--p-gray-500);"
         :icon="themeIcon"
         v-tooltip.right="{value: 'Swap Theme', showDelay: 300}"
     />

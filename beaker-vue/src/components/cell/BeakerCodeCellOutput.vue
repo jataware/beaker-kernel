@@ -143,8 +143,8 @@ const rebundleError = (errorOutput) => {
             background-color: var(--surface-b);
 
             &:hover {
-                background-color: var(--surface-50);
-                border: 1px solid var(--text-color);
+                background-color: var(--p-surface-50);
+                border: 1px solid var(--p-text-color);
             }
         }
 
@@ -166,8 +166,8 @@ const rebundleError = (errorOutput) => {
             }
 
             td:hover {
-                background-color: var(--surface-200) !important;
-                border: 1px solid var(--text-color) !important;
+                background-color: var(--p-surface-200) !important;
+                border: 1px solid var(--p-text-color) !important;
             }
         }
     }
@@ -182,7 +182,7 @@ const rebundleError = (errorOutput) => {
     overflow-y: auto;
 
     .output-collapse-box {
-        background-color: var(--surface-border);
+        background-color: var(--p-surface-border);
     }
 }
 
@@ -196,11 +196,11 @@ const rebundleError = (errorOutput) => {
 .output-collapse-box {
     min-width: 10px;
     width: 10px;
-    border: 1px inset var(--surface-border);
+    border: 1px inset var(--p-surface-border);
     cursor: pointer;
 
     &:hover {
-        background-color: color(from var(--surface-border) srgb r g b / 0.5);
+        background-color: color(from var(--p-surface-border) srgb r g b / 0.5);
     }
     margin-right: 0.5em;
 
@@ -208,7 +208,7 @@ const rebundleError = (errorOutput) => {
 
 .stdout {
     // was dark purple and hard to see- replaced with theme colors
-    color: var(--text-color-secondary);
+    color: var(--p-text-color-secondary);
     white-space: pre;
     font-style: italic;
 }

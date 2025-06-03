@@ -268,7 +268,7 @@ onMounted(async () => {
 }
 
 .code-container {
-    border: 1px solid var(--surface-ground);
+    border: 1px solid var(--p-surface-ground);
     padding: 0.25rem;
     max-height: 15rem;
     overflow: auto;

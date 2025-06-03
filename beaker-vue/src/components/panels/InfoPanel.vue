@@ -33,7 +33,7 @@
         <template #action="slotProps">
             <div
                 @mousedown="($event.detail > 1) && $event.preventDefault();"
-                style="cursor: pointer; border-bottom: 1px dotted var(--text-color-secondary);"
+                style="cursor: pointer; border-bottom: 1px dotted var(--p-text-color-secondary);"
                 v-tooltip="{
                     value: `${slotProps.node.data}`,
                     pt: {
@@ -55,7 +55,7 @@
         </template>
         <template #tool="slotProps">
             <span
-                style="cursor: help; border-bottom: 1px dotted var(--text-color-secondary);"
+                style="cursor: help; border-bottom: 1px dotted var(--p-text-color-secondary);"
                 v-tooltip="{
                     value: `${slotProps.node.data}`,
                     pt: {
@@ -158,7 +158,7 @@ const contextNodes = computed<TreeNode[]>(() => {
 <style lang="scss">
 
 .context-heading {
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
   margin: 1rem 1.25rem 0.25rem 1.25rem;
 }
 
@@ -194,8 +194,8 @@ const contextNodes = computed<TreeNode[]>(() => {
   right: -0.5rem;
   top: 40%;
   background: var(--surface-a);
-  border-color: var(--surface-300);
-  color: var(--primary-300);
+  border-color: var(--p-surface-300);
+  color: var(--p-primary-300);
   z-index: 2;
 }
 

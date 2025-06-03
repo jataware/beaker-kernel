@@ -84,11 +84,11 @@
         </span>
         <InputSwitch
             :id="keyValue"
-            style="padding: 2px 8px;"
             :class="{dirty}"
             :name="keyValue"
             v-model="model"
         />
+            <!-- style="padding: 2px 8px;" -->
         </div>
     </template>
     <template v-else-if="schema?.type_str == 'int' && typeof(model) === 'number'">
@@ -297,7 +297,7 @@ Please make sure to update that value before saving.`,
 
         & select {
             width: 100%;
-            color: var(--text-color);
+            color: var(--p-text-color);
             background-color: transparent;
             padding-right: 2.5rem;
             z-index: 1;
@@ -360,10 +360,10 @@ Please make sure to update that value before saving.`,
     }
 
     .clear-icon {
-        color: var(--primary-color);
+        color: var(--p-primary-color);
 
         &.checked {
-            color: var(--primary-color-text)
+            color: var(--p-primary-color-text)
         }
     }
 

@@ -57,8 +57,8 @@
                 <div
                     v-if="showTableOfContents"
                     style="
-                        border-radius: var(--border-radius);
-                        border: 1px solid var(--surface-200);
+                        border-radius: var(--p-border-radius);
+                        border: 1px solid var(--p-surface-200);
                         padding: 0.25rem;
                         width: 100%;
                         height: 12rem;
@@ -221,8 +221,8 @@ watch(searchText, () => {
 }
 
 .clickable-table-of-contents {
-    &:hover, *:hover { cursor: pointer; color: var(--surface-600) }
-    &:active, *:active { cursor: pointer; color: var(--surface-800) }
+    &:hover, *:hover { cursor: pointer; color: var(--p-surface-600) }
+    &:active, *:active { cursor: pointer; color: var(--p-surface-800) }
     * { margin-right: 0.2rem; }
 }
 

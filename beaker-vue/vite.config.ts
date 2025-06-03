@@ -20,6 +20,7 @@ export default defineConfig({
       '/api': {
         target: `${ProxyHost}/`,
         ws: true,
+        xfwd: true,
         rewriteWsOrigin: true,
       },
       '/appconfig.js': `${ProxyHost}/`,

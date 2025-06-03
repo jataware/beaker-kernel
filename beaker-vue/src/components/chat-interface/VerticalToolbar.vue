@@ -33,7 +33,7 @@ import Toolbar from "primevue/toolbar";
     flex-direction: column;
 }
 .vertical-toolbar-divider {
-    background-color: var(--surface-200);
+    background-color: var(--p-surface-200);
     height: 1px;
     width: 80%
 }

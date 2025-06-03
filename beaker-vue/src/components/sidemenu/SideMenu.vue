@@ -394,7 +394,7 @@ defineExpose({
     &.minimize {
         .sidemenu-gutter {
             width: 8px;
-            background-color: var(--primary-color);
+            background-color: var(--p-primary-color);
             .sidemenu-gutter-handle {
                 right: -4px;
             }
@@ -418,7 +418,7 @@ defineExpose({
 
 .sidemenu-menu-selection {
     position: sticky;
-    border: 1px solid var(--surface-border);
+    border: 1px solid var(--p-surface-border);
     grid-area: menu;
     background-color: var(--surface-b);
     display: flex;
@@ -445,7 +445,7 @@ defineExpose({
     display: grid;
     flex-direction: row;
     align-items: center;
-    background-color: var(--surface-border);
+    background-color: var(--p-surface-border);
     z-index: 40;
 
     &:hover {
@@ -460,15 +460,15 @@ defineExpose({
     width: 14px;
     z-index: 100;
     height: 3rem;
-    background-color: var(--surface-400);
+    background-color: var(--p-surface-400);
     justify-content: space-around;
     align-items: center;
     overflow: clip;
-    border: 1px outset var(--surface-500);
+    border: 1px outset var(--p-surface-500);
 
     &:before {
         filter: blur(0.75px);
-        color: var(--surface-50);
+        color: var(--p-surface-50);
         writing-mode: sideways-lr;
         letter-spacing: -1px;
         content: "▮▮▮▮▮▮";
@@ -480,7 +480,7 @@ defineExpose({
 
 button.menu-button {
     background-color: transparent;
-    color: var(--primary-300);
+    color: var(--p-primary-300);
     border-color: transparent;
     aspect-ratio: 1;
     width: 100%;
@@ -496,17 +496,17 @@ button.menu-button {
     }
 
     &:hover {
-        color: var(--primary-700);
+        color: var(--p-primary-700);
         background-color: var(--surface-c);
-        border-color: var(--primary-700);
+        border-color: var(--p-primary-700);
     }
 
     &.disabled {
-        color: var(--surface-200);
+        color: var(--p-surface-200);
         cursor: default;
         &:hover {
             background-color: var(--surface-c);
-            border-color: var(--surface-200);
+            border-color: var(--p-surface-200);
 
         }
     }
@@ -521,20 +521,20 @@ button.menu-button {
         border-width: 0 0 0 5px;
     }
     &.full.selected {
-        background-color: var(--primary-color);
+        background-color: var(--p-primary-color);
         color: var(--surface-b);
     }
 
     &.selected {
-        border-color: var(--primary-color);
-        color: var(--primary-color);
+        border-color: var(--p-primary-color);
+        color: var(--p-primary-color);
     }
 
     &.shadow:hover {
-        box-shadow: inset 0 0 15px var(--primary-800);
+        box-shadow: inset 0 0 15px var(--p-primary-800);
     }
     &.shadow.selected {
-        box-shadow: inset 0 0 15px var(--primary-color);
+        box-shadow: inset 0 0 15px var(--p-primary-color);
     }
 }
 

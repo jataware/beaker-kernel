@@ -35,7 +35,7 @@
         </DataTable>
         <p v-else style="
             font-style: italic;
-            color:var(--surface-400);
+            color:var(--p-surface-400);
             margin-bottom: 0.5rem;
             margin-top: 0rem;
         ">
@@ -131,7 +131,7 @@
         <div class="log-message-details">
             <span style="
                 font-style: italic;
-                color: var(--surface-400);
+                color: var(--p-surface-400);
                 font-size: 0.85rem;"
             >
                 {{ logEntry?.body?.header?.msg_id }}
@@ -212,7 +212,7 @@ const showParentHeader = ref(false);
 }
 
 .log-message-date {
-    color: var(--grey-300);
+    color: var(--p-grey-300);
     flex: 0 0 auto;
 }
 
