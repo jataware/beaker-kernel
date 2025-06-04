@@ -92,7 +92,7 @@ const statusLabel = computed<string>(() => (statusLabels[status.value] || capita
 }
 
 .connection-button {
-    color: var(--p-surface-500);
+    color: var(--p-surface-g);
 }
 
 .reconnect-button {

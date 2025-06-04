@@ -58,7 +58,7 @@
                     v-if="showTableOfContents"
                     style="
                         border-radius: var(--p-border-radius);
-                        border: 1px solid var(--p-surface-200);
+                        border: 1px solid var(--p-surface-d);
                         padding: 0.25rem;
                         width: 100%;
                         height: 12rem;
@@ -221,8 +221,8 @@ watch(searchText, () => {
 }
 
 .clickable-table-of-contents {
-    &:hover, *:hover { cursor: pointer; color: var(--p-surface-600) }
-    &:active, *:active { cursor: pointer; color: var(--p-surface-800) }
+    &:hover, *:hover { cursor: pointer; color: var(--p-surface-h) }
+    &:active, *:active { cursor: pointer; color: var(--p-surface-i) }
     * { margin-right: 0.2rem; }
 }
 

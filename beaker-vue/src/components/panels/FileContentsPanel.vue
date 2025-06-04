@@ -315,7 +315,7 @@ watch(() => [props.url, props.mimetype], async (current, previous) => {
     width: 3px;
     min-height: 100%;
     z-index: 100;
-    background-color: var(--surface-b);
+    background-color: var(--p-surface-b);
 }
 .preview-draggable:hover {
     cursor: col-resize;
@@ -353,7 +353,7 @@ div.preview-standard-toolbar {
         border: none;
         border-radius: 0;
         flex-wrap: nowrap;
-        background-color: var(--surface-d);
+        background-color: var(--p-surface-d);
         .p-toolbar-group-start button.pdf-ui-close {
             margin-left: 0;
         }

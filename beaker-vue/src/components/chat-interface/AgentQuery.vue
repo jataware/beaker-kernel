@@ -76,7 +76,7 @@ const handleQuery = (e: any) => {
     }
 }
 .agent-query-container {
-    background-color: var(--surface-b);
+    background-color: var(--p-surface-b);
 }
 .agent-query-container div {
     padding: 0rem;

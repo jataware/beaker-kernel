@@ -47,7 +47,7 @@ const props = defineProps<{
 
 <style lang="scss">
 .p-accordion .p-accordion-header .p-accordion-header-link {
-    background: var(--surface-a);
+    background: var(--p-surface-a);
 }
 
 .mime-select-container {
@@ -58,7 +58,7 @@ const props = defineProps<{
 }
 
 .p-selectbutton .p-button.p-highlight {
-    background: var(--surface-a);
+    background: var(--p-surface-a);
     border: 3px solid var(--p-gray-300);
     color: var(--p-primary-text-color);
 }

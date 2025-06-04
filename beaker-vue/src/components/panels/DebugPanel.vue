@@ -109,7 +109,7 @@ const filteredLogs = computed(() => {
     // The internal class for the json viewer-
     // Change the hover color for better contrast
     .vjs-tree-node:hover {
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
     }
     height: 100%;
     width: 100%;
@@ -140,7 +140,7 @@ const filteredLogs = computed(() => {
     display: flex;
     flex-direction: row;
     .p-button {
-        border-color: var(--surface-d);
+        border-color: var(--p-surface-d);
     }
 }
 

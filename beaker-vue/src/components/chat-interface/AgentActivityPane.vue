@@ -128,7 +128,7 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
 
   overflow-y: auto;
   scrollbar-width: thin;
-  // scrollbar-color: var(--surface-d) var(--surface-a);
+  // scrollbar-color: var(--p-surface-d) var(--p-surface-a);
   padding-right: 0.5rem;
   margin-right: 0.5rem;
   padding-top: 0.5rem;

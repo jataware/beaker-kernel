@@ -23,7 +23,7 @@
                     <span v-if="logEntry?.body?.split('tool_calls=')?.[1]?.split(`'`)?.[3] === 'final_answer'">Processing final answer from tool output.</span>
                     <span v-else>{{ logEntry?.body?.split('tool_calls=')?.[0]?.split('text=')?.[1].slice(1, -3) }}</span>
                 </span>
-                <span v-if="logEntry?.type === 'agent_llm_request'" style="color: var(--p-surface-600);">Agent context setup and conversation history -- see details below</span>
+                <span v-if="logEntry?.type === 'agent_llm_request'" style="color: var(--p-surface-h);">Agent context setup and conversation history -- see details below</span>
                 <span v-if="rawStringMessageTypes.includes(logEntry?.type) || !Object.keys(userFacingNames).includes(logEntry?.type)">
                     {{ logEntry?.body }}
                 </span>
@@ -221,7 +221,7 @@ const showRaw = ref(false);
     white-space: pre-wrap;
 
     .p-panel-header {
-        background: var(--surface-b);
+        background: var(--p-surface-b);
         padding: 0.5rem 1rem;
     }
     .p-panel-content {
@@ -271,7 +271,7 @@ const showRaw = ref(false);
     flex-direction: row;
     gap: 0.2rem;
     justify-content: flex-start;
-    color: var(--p-surface-600);
+    color: var(--p-surface-h);
     span.pi {
         font-size: 0.85rem;
     }
@@ -282,7 +282,7 @@ const showRaw = ref(false);
         cursor: pointer;
         .debug-dropdown-label {
             text-decoration: underline;
-            color: var(--p-surface-400);
+            color: var(--p-surface-f);
         }
     }
 }
@@ -303,7 +303,7 @@ const showRaw = ref(false);
         font-family: monospace;
     }
     tbody tr:nth-child(1) td {
-        border-top: 1px solid var(--surface-d);
+        border-top: 1px solid var(--p-surface-d);
     }
 }
 
@@ -323,7 +323,7 @@ const showRaw = ref(false);
 }
 
 .debug-separator {
-    background-color: var(--p-surface-200);
+    background-color: var(--p-surface-d);
     height: 1px;
     width: 100%;
     margin: 0.5rem 0;

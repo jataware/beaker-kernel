@@ -66,7 +66,7 @@
                         :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
                         text
                         rounded
-                        style="background-color: var(--surface-c); color: var(--p-text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                        style="background-color: var(--p-surface-c); color: var(--p-text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
                     />
                 </div>
 
@@ -112,7 +112,7 @@
                         :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
                         text
                         rounded
-                        style="background-color: var(--surface-c); color: var(--p-text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                        style="background-color: var(--p-surface-c); color: var(--p-text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
                         />
                     </div>
                 </template>
@@ -400,7 +400,7 @@ export default {
             transition: box-shadow linear 1s;
             border-radius: var(--p-border-radius);
             button {
-                background-color: var(--surface-b);
+                background-color: var(--p-surface-b);
                 border-color: var(--p-surface-border);
                 color: var(--p-text-color);
                 border-left: 0px;
@@ -416,7 +416,7 @@ export default {
 .llm-prompt-container {
     display: flex;
     flex-direction: column;
-    background-color: var(--surface-c);
+    background-color: var(--p-surface-c);
     border-radius: var(--p-border-radius);
 }
 
@@ -424,7 +424,7 @@ export default {
     width: fit-content;
     max-width: 80%;
     align-self: flex-end;
-    background-color: var(--surface-d);
+    background-color: var(--p-surface-d);
 }
 
 .llm-prompt-text {
@@ -451,7 +451,7 @@ export default {
     border-radius: var(--p-border-radius);
     max-width: 80%;
     width: fit-content;
-    background-color: var(--surface-c);
+    background-color: var(--p-surface-c);
 }
 
 .prompt-input-container {
@@ -481,21 +481,21 @@ export default {
     padding: 0.75rem;
     width: 100%;
     max-width: 80%;
-    border: 1px solid var(--surface-b);
+    border: 1px solid var(--p-surface-b);
     border-radius: var(--p-border-radius);
 
     &:hover {
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
     }
 
     &.expanded {
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
     }
 
     [data-theme="dark"] & {
-        border: 1px solid var(--surface-a);
+        border: 1px solid var(--p-surface-a);
         &:hover, &.expanded {
-            background-color: var(--surface-a);
+            background-color: var(--p-surface-a);
         }
     }
 

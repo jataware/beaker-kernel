@@ -265,7 +265,7 @@ const displayNumber = (rawValue: number): string => {
     width: 100%;
     height: 1.5rem;
     border-radius: 0.5rem;
-    background-color: var(--surface-d);
+    background-color: var(--p-surface-d);
     overflow: hidden;
     margin-bottom: 0.5rem;
 
@@ -280,7 +280,7 @@ const displayNumber = (rawValue: number): string => {
     // The internal class for the json viewer-
     // Change the hover color for better contrast
     .vjs-tree-node:hover {
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
     }
     height: 100%;
     width: 100%;
@@ -311,7 +311,7 @@ const displayNumber = (rawValue: number): string => {
     display: flex;
     flex-direction: row;
     .p-button {
-        border-color: var(--surface-d);
+        border-color: var(--p-surface-d);
     }
 }
 

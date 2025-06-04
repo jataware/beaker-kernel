@@ -206,10 +206,10 @@ export default {
 
 .code-data {
     grid-area: code;
-    background-color: var(--surface-a);
+    background-color: var(--p-surface-a);
 
     .cm-editor {
-        border: 1px solid var(--surface-d);
+        border: 1px solid var(--p-surface-d);
     }
     .cm-focused {
         outline: none;
@@ -249,7 +249,7 @@ export default {
     aspect-ratio: 1/1;
     border-radius: 15%;
     &.secondary {
-        background-color: var(--p-surface-300);
+        background-color: var(--p-surface-e);
     }
 }
 

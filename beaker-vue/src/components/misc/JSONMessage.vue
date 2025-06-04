@@ -35,7 +35,7 @@
         </DataTable>
         <p v-else style="
             font-style: italic;
-            color:var(--p-surface-400);
+            color:var(--p-surface-f);
             margin-bottom: 0.5rem;
             margin-top: 0rem;
         ">
@@ -131,7 +131,7 @@
         <div class="log-message-details">
             <span style="
                 font-style: italic;
-                color: var(--p-surface-400);
+                color: var(--p-surface-f);
                 font-size: 0.85rem;"
             >
                 {{ logEntry?.body?.header?.msg_id }}
@@ -187,7 +187,7 @@ const showParentHeader = ref(false);
     white-space: pre-wrap;
 
     .p-panel-header {
-        background: var(--surface-b);
+        background: var(--p-surface-b);
         padding: 0.5rem 1rem;
     }
     .p-panel-content {
@@ -253,7 +253,7 @@ const showParentHeader = ref(false);
         font-family: monospace;
     }
     tbody tr:nth-child(1) td {
-        border-top: 1px solid var(--surface-d);
+        border-top: 1px solid var(--p-surface-d);
     }
 }
 

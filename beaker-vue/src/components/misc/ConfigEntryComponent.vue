@@ -293,7 +293,7 @@ Please make sure to update that value before saving.`,
 
     & .select-wrap {
         position: relative;
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
 
         & select {
             width: 100%;
@@ -312,7 +312,7 @@ Please make sure to update that value before saving.`,
         }
 
         & option {
-            background-color: var(--surface-a);
+            background-color: var(--p-surface-a);
 
             &:disabled {
                 color: #777;

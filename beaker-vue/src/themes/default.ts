@@ -1,69 +1,82 @@
-import { definePreset, palette, dt } from '@primevue/themes';
+import { definePreset, palette, shade, tint, mix, dt } from '@primevue/themes';
 import type { Preset, Theme, PaletteDesignToken } from '@primeuix/themes/types';
 import Aura from '@primeuix/themes/aura';
+import { makePalette } from './util';
 
-const lightSurfacePalette: PaletteDesignToken = {
-    ...palette('#708da9') as object,
-    0: "#ffffff",
-};
-const lightPrimaryPalette: PaletteDesignToken = {
-    ...(palette('#7254f3') as object),
-    0: "#5080AA",
-};
+const primarySurfaceColor = '#708da9';
+
+const lightSurfacePalette: PaletteDesignToken = makePalette(primarySurfaceColor, 7, 95);
+const lightPrimaryPalette: PaletteDesignToken = makePalette("#7254f3");
 
 const BeakerTheme: Preset = definePreset(Aura, {
-    primitive: <Object>{
-        bluegrey: palette("#6878a0"),
-    },
     semantic: {
         primary: lightPrimaryPalette,
         colorScheme: {
             light: {
-                surface: lightSurfacePalette,
+                surface: <PaletteDesignToken>{
+                    ...lightSurfacePalette,
+                    border: dt('surface.200'),
+                    a: dt('surface.0'),
+                    b: dt('surface.50'),
+                    c: dt('surface.100'),
+                    d: dt('surface.200'),
+                    e: dt('surface.300'),
+                    f: dt('surface.400'),
+                    g: dt('surface.500'),
+                    h: dt('surface.600'),
+                    i: dt('surface.700'),
+                    j: dt('surface.800'),
+                    k: dt('surface.900'),
+                    l: dt('surface.950'),
+                }
+
             },
+            // Allow defualt dark palette generation from light version.
+            dark: {
+                surface: <PaletteDesignToken>{
+                    ...lightSurfacePalette,
+                    border: dt('surface.800'),
+                    a: dt('surface.950'),
+                    b: dt('surface.900'),
+                    c: dt('surface.800'),
+                    d: dt('surface.700'),
+                    e: dt('surface.600'),
+                    f: dt('surface.500'),
+                    g: dt('surface.400'),
+                    h: dt('surface.300'),
+                    i: dt('surface.200'),
+                    j: dt('surface.100'),
+                    k: dt('surface.50'),
+                    l: dt('surface.0'),
+                },
+            }
         },
     },
     components: {
         toolbar: {
             root: {
-                background: 'var(--surface-b)',
+                background: 'var(--p-surface-b)',
             }
         },
         menubar: {
             root: {
-                background: 'var(--surface-b)',
+                background: 'var(--p-surface-b)',
             }
         },
         datatable: {
             headerCell: {
-                background: 'var(--surface-b)',
+                background: 'var(--p-surface-b)',
             }
-        }
-
+        },
     },
     extend: {
         surface: {
-            border: "#dfe7ef",
             borderRadius: "6px",
         },
         tree: {
             borderColor: dt('content.border.color'),
         },
     },
-//     css: ({ dt }) => `
-// :root {
-//     --foo: ${dt('content.background')};
-//     --foo-a: ${dt('content.border.color')};
-//     --foo-b: ${dt('content.border')};
-// }
-// .p-tree {
-//     border: ${dt('content.border.width')} solid ${dt('content.border.color')};
-//     border-radius: ${dt('surface.borderRadius')}
-// }
-//     `,
 });
-
-
-console.log({Aura});
 
 export default BeakerTheme;

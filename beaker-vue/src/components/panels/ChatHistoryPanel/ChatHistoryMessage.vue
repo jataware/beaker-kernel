@@ -103,7 +103,7 @@ const capitalized = (str: string) => (
     white-space: pre-wrap;
 
     .p-panel-header {
-        background: var(--surface-b);
+        background: var(--p-surface-b);
         padding: 0.5rem 1rem;
     }
     .p-panel-content {
@@ -194,7 +194,7 @@ const capitalized = (str: string) => (
         font-family: monospace;
     }
     tbody tr:nth-child(1) td {
-        border-top: 1px solid var(--surface-d);
+        border-top: 1px solid var(--p-surface-d);
     }
 }
 </style>

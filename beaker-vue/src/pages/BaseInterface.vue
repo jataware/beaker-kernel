@@ -480,7 +480,7 @@ footer {
 
 #overlay-content .traceback {
     padding: 0.5rem;
-    background-color: var(--p-surface-50);
+    background-color: var(--p-surface-b);
 }
 
 </style>

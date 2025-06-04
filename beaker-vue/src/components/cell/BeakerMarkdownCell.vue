@@ -153,11 +153,11 @@ export default {
 
 .markdown-edit-data {
     grid-area: code;
-    background-color: var(--surface-a);
+    background-color: var(--p-surface-a);
     // white-space: pre-wrap;
 
     .cm-editor {
-        border: 1px solid var(--surface-d);
+        border: 1px solid var(--p-surface-d);
         // white-space: pre-wrap;
     }
     .cm-focused {

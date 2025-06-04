@@ -136,7 +136,7 @@ const filteredLogs = computed(() => {
   // The internal class for the json viewer-
   // Change the hoder color for better contrast
   .vjs-tree-node:hover{
-    background-color: var(--surface-b);
+    background-color: var(--p-surface-b);
   }
   height: 100%;
   width: 100%;
@@ -166,7 +166,7 @@ const filteredLogs = computed(() => {
   white-space: pre-wrap;
 
   .p-panel-header {
-    background: var(--surface-b);
+    background: var(--p-surface-b);
     padding: 0.5rem 1rem;
   }
   .p-panel-content {
@@ -176,7 +176,7 @@ const filteredLogs = computed(() => {
   // If we wanted to alternate widget panel-heading bg color or so:
   // &.odd {
   //   .p-panel-header {
-  //     background: var(--surface-b);
+  //     background: var(--p-surface-b);
   //   }
   // }
 }
@@ -199,7 +199,7 @@ const filteredLogs = computed(() => {
 
 .sort-actions {
   .p-button {
-    border-color: var(--surface-d);
+    border-color: var(--p-surface-d);
   }
 }
 

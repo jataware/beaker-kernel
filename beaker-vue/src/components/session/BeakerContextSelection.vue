@@ -275,7 +275,7 @@ onMounted(async () => {
 }
 
 .p-dialog-header {
-    background-image: linear-gradient(45deg, var(--surface-a), var(--surface-a), var(--surface-a), var(--surface-b), var(--surface-b), var(--surface-b));
+    background-image: linear-gradient(45deg, var(--p-surface-a), var(--p-surface-a), var(--p-surface-a), var(--p-surface-b), var(--p-surface-b), var(--p-surface-b));
 }
 
 </style>

@@ -312,7 +312,7 @@ export default {
             transition: box-shadow linear 1s;
             border-radius: var(--p-border-radius);
             button {
-                background-color: var(--surface-b);
+                background-color: var(--p-surface-b);
                 border-color: var(--p-surface-border);
                 color: var(--p-text-color);
                 border-left: 0px;
@@ -341,7 +341,7 @@ export default {
 }
 
 .cancel-button {
-    border-color: var(--p-surface-100);
+    border-color: var(--p-surface-c);
     color: var(--p-primary-text-color);
 }
 
@@ -349,7 +349,7 @@ export default {
 .llm-prompt-container {
     display: flex;
     flex-direction: column;
-    background-color: var(--surface-c);
+    background-color: var(--p-surface-c);
     border-radius: var(--p-border-radius);
 }
 
@@ -374,7 +374,7 @@ h3.query-steps {
 }
 
 .query-events-header {
-    background-color: var(--surface-b);
+    background-color: var(--p-surface-b);
     border-radius: 6px 6px 0 0;
 }
 
@@ -400,14 +400,14 @@ h3.query-steps {
             width: 100%;
         }
         > .p-toggleable-content > .p-accordion-content {
-            border: 2px solid var(--surface-d);
+            border: 2px solid var(--p-surface-d);
             border-radius: var(--p-border-radius);
             padding: 0.25rem;
             padding-left: 1.5rem;
             margin: 1rem;
             margin-bottom: 0rem;
             > * {
-                border-bottom: 2px solid var(--surface-d);
+                border-bottom: 2px solid var(--p-surface-d);
                 margin-right: 1rem;
             }
             > *:last-child {
@@ -421,7 +421,7 @@ h3.query-steps {
             transition: background-color 0.2s;
 
             &:hover {
-                background-color: var(--surface-a);
+                background-color: var(--p-surface-a);
             }
         }
     }
@@ -496,7 +496,7 @@ a.query-tab-headeraction > span > span.pi {
 }
 
 .query-answer {
-    background-color: var(--surface-c);
+    background-color: var(--p-surface-c);
     padding-left: 1rem;
     padding-bottom: 1rem;
     border-radius: var(--p-border-radius);

@@ -114,7 +114,7 @@ export default {
     padding-right: 2em;
 
     .cm-editor {
-        border: 1px solid var(--surface-d);
+        border: 1px solid var(--p-surface-d);
     }
     .cm-focused {
         outline: none;

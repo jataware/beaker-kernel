@@ -203,8 +203,8 @@ const selectAction = (actionName: string) => {
   position: absolute;
   right: -0.5rem;
   top: 40%;
-  background: var(--surface-a);
-  border-color: var(--p-surface-300);
+  background: var(--p-surface-a);
+  border-color: var(--p-surface-e);
   color: var(--p-primary-300);
   z-index: 2;
 }
@@ -214,7 +214,7 @@ const selectAction = (actionName: string) => {
 }
 
 .loading-area {
-    background: var(--surface-a);
+    background: var(--p-surface-a);
     display: flex;
     flex-direction: column;
     align-items: center;

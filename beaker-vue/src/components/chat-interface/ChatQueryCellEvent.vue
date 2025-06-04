@@ -6,10 +6,10 @@
         :should-hide-answered-questions="true"
     >
         <template #code-cell-controls>
-            <Button 
-                :icon="!isExpanded ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" 
+            <Button
+                :icon="!isExpanded ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"
                 size="small"
-                class="code-cell-toggle-button" 
+                class="code-cell-toggle-button"
                 @click.stop="toggleExpansion"
                 :title="!isExpanded ? 'Shrink code cell' : 'Expand code cell'"
             />
@@ -52,8 +52,8 @@ const toggleExpansion = (event) => {
   width: 2rem;
   height: 2rem;
   padding: 0;
-  background: var(--p-surface-500);
-  border-color: var(--p-surface-500);
+  background: var(--p-surface-g);
+  border-color: var(--p-surface-g);
   &>.p-button-icon {
     font-weight: bold;
   }

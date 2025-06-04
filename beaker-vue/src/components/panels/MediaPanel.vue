@@ -102,7 +102,7 @@ const currentMimeBundle = computed(() => {
 
 div.media-toolbar {
     padding: 3px;
-    background: var(--surface-d);
+    background: var(--p-surface-d);
     border-radius: 0;
     border: none;
     margin-bottom: 0.5rem;

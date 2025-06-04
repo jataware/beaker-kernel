@@ -123,13 +123,13 @@ onMounted(() => {
 .xlsx-table {
     table {
         border-collapse: collapse;
-        //border: 2px solid var(--surface-d);
+        //border: 2px solid var(--p-surface-d);
         letter-spacing: 1px;
         font-size: 0.8rem;
     }
 
     td, th {
-        border: 1px solid var(--surface-f);
+        border: 1px solid var(--p-surface-f);
         padding: 10px 20px;
     }
 
@@ -142,11 +142,11 @@ onMounted(() => {
     }
 
     tr:nth-child(even) td {
-        background-color: var(--surface-a);
+        background-color: var(--p-surface-a);
     }
 
     tr:nth-child(odd) td {
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
     }
 
     caption {

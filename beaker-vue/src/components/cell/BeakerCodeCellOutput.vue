@@ -116,7 +116,7 @@ const rebundleError = (errorOutput) => {
     --collapse-height: 3em;
 
     padding: 0 0.5em 0.5em 0;
-    background-color: var(--surface-c);
+    background-color: var(--p-surface-c);
     position: relative;
     .execute_result {
         pre {
@@ -140,17 +140,17 @@ const rebundleError = (errorOutput) => {
 
         th {
             font-weight: bold;
-            background-color: var(--surface-b);
+            background-color: var(--p-surface-b);
 
             &:hover {
-                background-color: var(--p-surface-50);
+                background-color: var(--p-surface-b);
                 border: 1px solid var(--p-text-color);
             }
         }
 
         thead {
             text-align: start;
-            background-color: var(--surface-b);
+            background-color: var(--p-surface-b);
         }
 
         tbody {
@@ -159,14 +159,14 @@ const rebundleError = (errorOutput) => {
             }
 
             tr {
-                background-color: var(--surface-c);
+                background-color: var(--p-surface-c);
             }
             tr:nth-child(even) {
-                background-color: var(--surface-a);
+                background-color: var(--p-surface-a);
             }
 
             td:hover {
-                background-color: var(--p-surface-200) !important;
+                background-color: var(--p-surface-d) !important;
                 border: 1px solid var(--p-text-color) !important;
             }
         }

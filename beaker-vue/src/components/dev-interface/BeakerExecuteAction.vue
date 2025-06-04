@@ -225,7 +225,7 @@ defineExpose({
 }
 
 .code {
-    border: 1px solid var(--surface-b);
+    border: 1px solid var(--p-surface-b);
     flex: 1;
     width: 100%;
 }

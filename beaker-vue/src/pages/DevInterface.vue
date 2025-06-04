@@ -466,7 +466,7 @@ const notebookKeyBindings = {
 //     margin: 0;
 //     padding: 0;
 //     overflow: hidden;
-//     background-color: var(--surface-b);
+//     background-color: var(--p-surface-b);
 // }
 
 // header {

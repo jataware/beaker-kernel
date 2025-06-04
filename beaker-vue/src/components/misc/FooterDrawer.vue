@@ -116,8 +116,8 @@ const footerMenuItems = ref([
     top: 0;
     bottom: 0;
     left: -2.1rem;
-    background-color: var(--surface-b);
-    box-shadow: var(--surface-b) 0px 0px 4px;
+    background-color: var(--p-surface-b);
+    box-shadow: var(--p-surface-b) 0px 0px 4px;
   }
 }
 

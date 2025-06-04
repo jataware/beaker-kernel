@@ -93,15 +93,15 @@
     height: 90%;
   }
   .main-fill {
-    fill: var(--surface-b);
+    fill: var(--p-surface-c);
   }
   .alt-fill {
-    fill: var(--surface-c);
+    fill: var(--p-surface-d);
   }
   .contrast-fill {
-    fill: var(--surface-d);
+    fill: var(--p-surface-e);
   }
   .alt-fill-2 {
-    fill: var(--p-surface-50);
+    fill: var(--p-surface-f);
   }
 </style>

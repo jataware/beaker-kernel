@@ -221,7 +221,7 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
     display: grid;
     border-radius: 0;
     position: relative;
-    background-color: var(--surface-a);
+    background-color: var(--p-surface-a);
     --collapsed-height: 3.5em;
     min-height: 3.5em;
 
@@ -407,7 +407,7 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
     }
 
     .p-button, .overlay-menu-button {
-        background-color: var(--surface-a);
+        background-color: var(--p-surface-a);
         color: var(--p-primary-color);
         --shadow: #777;
         aspect-ratio: 1 / 1;

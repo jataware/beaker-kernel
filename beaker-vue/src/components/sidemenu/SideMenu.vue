@@ -420,7 +420,7 @@ defineExpose({
     position: sticky;
     border: 1px solid var(--p-surface-border);
     grid-area: menu;
-    background-color: var(--surface-b);
+    background-color: var(--p-surface-b);
     display: flex;
     flex-direction: column;
     min-width: 4rem;
@@ -460,15 +460,15 @@ defineExpose({
     width: 14px;
     z-index: 100;
     height: 3rem;
-    background-color: var(--p-surface-400);
+    background-color: var(--p-surface-f);
     justify-content: space-around;
     align-items: center;
     overflow: clip;
-    border: 1px outset var(--p-surface-500);
+    border: 1px outset var(--p-surface-g);
 
     &:before {
         filter: blur(0.75px);
-        color: var(--p-surface-50);
+        color: var(--p-surface-b);
         writing-mode: sideways-lr;
         letter-spacing: -1px;
         content: "▮▮▮▮▮▮";
@@ -497,16 +497,16 @@ button.menu-button {
 
     &:hover {
         color: var(--p-primary-700);
-        background-color: var(--surface-c);
+        background-color: var(--p-surface-c);
         border-color: var(--p-primary-700);
     }
 
     &.disabled {
-        color: var(--p-surface-200);
+        color: var(--p-surface-d);
         cursor: default;
         &:hover {
-            background-color: var(--surface-c);
-            border-color: var(--p-surface-200);
+            background-color: var(--p-surface-c);
+            border-color: var(--p-surface-d);
 
         }
     }
@@ -522,7 +522,7 @@ button.menu-button {
     }
     &.full.selected {
         background-color: var(--p-primary-color);
-        color: var(--surface-b);
+        color: var(--p-surface-b);
     }
 
     &.selected {

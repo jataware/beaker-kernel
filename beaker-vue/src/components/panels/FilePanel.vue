@@ -556,7 +556,7 @@ defineExpose({
     flex-direction: row;
     align-items: center;
     border: 3px solid var(--p-surface-border);
-    background-color: var(--surface-d);
+    background-color: var(--p-surface-d);
     padding-left: 1em;
 
     > button {

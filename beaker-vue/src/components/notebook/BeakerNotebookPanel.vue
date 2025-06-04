@@ -151,7 +151,7 @@ defineExpose({
 .cell-container {
     position: relative;
     flex: 1;
-    background-color: var(--surface-a);
+    background-color: var(--p-surface-b);
     z-index: 3;
     overflow: auto;
     width: 100%;
