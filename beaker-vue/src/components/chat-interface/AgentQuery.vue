@@ -3,6 +3,7 @@
         <template #content>
             <InputGroup>
                 <ContainedTextArea
+                    class="agent-query-textarea"
                     @keydown.enter.exact.prevent="handleQuery"
                     @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
                     v-model="query"
@@ -86,6 +87,7 @@ const handleQuery = (e: any) => {
     align-self: flex-end;
     margin-top: 0.175rem;
     margin-bottom: 0.25rem;
+    background-color: var(--p-surface-a);
 }
 .query-input-container {
     display: flex;
@@ -101,5 +103,8 @@ const handleQuery = (e: any) => {
     flex: 0 1 3rem;
     align-self: flex-end;
     height: 3rem;
+}
+.agent-query-textarea {
+    flex: 1;
 }
 </style>

@@ -524,7 +524,13 @@ def register_handlers(app: LabServerApp):
     if route_file.exists():
         routes: dict[str, dict] = json.loads(route_file.read_text())
     else:
-        routes = []
+        # If no json file exists, ensure that at least 'home' exists
+        routes = {
+            "/": {
+                "path": "/",
+                "name": "home",
+            },
+        }
 
     for path, route in routes.items():
         name = route["name"]

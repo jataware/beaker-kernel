@@ -52,6 +52,7 @@
                             @update:model-value="(value) => {notebook.convertCellType(cell, value); hoverMenuRef.hide();}"
                             :options="Object.keys(cellMap || {})"
                             :dropdown-icon="cellIcon"
+                            :label-style="{display: 'none'}"
                             append-to="self"
                         >
                             <template #value="slotProps">
