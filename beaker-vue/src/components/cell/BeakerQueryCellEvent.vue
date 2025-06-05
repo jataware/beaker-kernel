@@ -256,6 +256,8 @@ defineExpose({
     & p {
         margin-bottom: 0rem;
         margin-top: 0rem;
+        padding-bottom: 0rem;
+        padding-top: 0rem;
     }
 }
 
@@ -346,10 +348,10 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     }
 
     p:first-child {
-        margin-top: 0.5rem;
+        padding-top: 0.5rem;
     }
     p:last-child {
-        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
     }
 }
 

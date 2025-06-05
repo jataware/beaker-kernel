@@ -52,6 +52,7 @@
                             @update:model-value="(value) => {notebook.convertCellType(cell, value); hoverMenuRef.hide();}"
                             :options="Object.keys(cellMap || {})"
                             :dropdown-icon="cellIcon"
+                            :label-style="{display: 'none'}"
                             append-to="self"
                         >
                             <template #value="slotProps">
@@ -383,7 +384,7 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
         aspect-ratio: 1 / 1;
         border-width: 0;
         padding: auto;
-        border-radius: var(--p-border-radius);
+        border-radius: var(--p-surface-border-radius);
 
         .p-button-icon {
             font-size: smaller;

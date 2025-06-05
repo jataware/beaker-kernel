@@ -57,7 +57,7 @@
                 <div
                     v-if="showTableOfContents"
                     style="
-                        border-radius: var(--p-border-radius);
+                        border-radius: var(--p-surface-border-radius);
                         border: 1px solid var(--p-surface-d);
                         padding: 0.25rem;
                         width: 100%;

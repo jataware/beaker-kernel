@@ -398,7 +398,7 @@ export default {
             border: 1px solid var(--p-yellow-500);
             box-shadow: 0 0 4px var(--p-yellow-700);
             transition: box-shadow linear 1s;
-            border-radius: var(--p-border-radius);
+            border-radius: var(--p-surface-border-radius);
             button {
                 background-color: var(--p-surface-b);
                 border-color: var(--p-surface-border);
@@ -417,7 +417,7 @@ export default {
     display: flex;
     flex-direction: column;
     background-color: var(--p-surface-c);
-    border-radius: var(--p-border-radius);
+    border-radius: var(--p-surface-border-radius);
 }
 
 .llm-prompt-container-chat {
@@ -448,7 +448,7 @@ export default {
 .query-answer-chat-override {
     padding-left: 1rem;
     padding-right: 1rem;
-    border-radius: var(--p-border-radius);
+    border-radius: var(--p-surface-border-radius);
     max-width: 80%;
     width: fit-content;
     background-color: var(--p-surface-c);
@@ -482,7 +482,7 @@ export default {
     width: 100%;
     max-width: 80%;
     border: 1px solid var(--p-surface-b);
-    border-radius: var(--p-border-radius);
+    border-radius: var(--p-surface-border-radius);
 
     &:hover {
         background-color: var(--p-surface-b);

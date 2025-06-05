@@ -74,7 +74,7 @@ const BeakerTheme: Preset = definePreset(Aura, {
             borderRadius: "6px",
         },
         tree: {
-            borderColor: dt('content.border.color'),
+            borderColor: `solid 1px ${dt('content.border.color')}`,
         },
     },
 });
