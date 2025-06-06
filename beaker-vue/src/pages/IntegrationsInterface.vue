@@ -17,11 +17,10 @@
     >
         <div class="datasource-container">
             <div class="beaker-notebook">
-                <DatasourceEditor
-                    :datasources="datasources"
+                <IntegrationEditor
+                    :integrations="datasources"
                     :selected-on-load="selectedOnLoad"
-                    :folderRoot="datasourcesFolderRoot"
-                    v-model:selected-datasource="selectedDatasource"
+                    v-model:selected-integration="selectedDatasource"
                     v-model:unsaved-changes="unsavedChanges"
                 />
             </div>
@@ -128,7 +127,7 @@ import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import { IBeakerTheme } from '../plugins/theme';
 import DebugPanel from '../components/panels/DebugPanel.vue'
 
-import DatasourceEditor from '../components/misc/DatasourceEditor.vue';
+import IntegrationEditor from '../components/misc/IntegrationEditor.vue';
 import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
 import ExamplesPanel from '../components/panels/ExamplesPanel.vue';
 
@@ -177,7 +176,6 @@ beakerApp.setPage("integrations");
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
 const datasources = ref([]);
-const datasourcesFolderRoot = ref("");
 
 const hasOpenedPanelOnce = ref(false);
 
@@ -294,7 +292,6 @@ const iopubMessage = (msg) => {
             incomingDatasources = [];
         }
         datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
-        datasourcesFolderRoot.value = msg.content.info.datasource_root;
 
         // rather than onMounted, we fire once we get the message that sets datasources, and hence
         // creates/populates the panel

@@ -296,8 +296,6 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "verbose": self.beaker_kernel.verbose,
         }
 
-        if get_datasource_root_method := getattr(self, "get_datasource_root", None):
-            payload["datasource_root"] = await ensure_async(get_datasource_root_method())
         if get_datasource_method := getattr(self, "get_datasources", None):
             datasources: list[Datasource] = await ensure_async(get_datasource_method())
             payload["datasources"] = [

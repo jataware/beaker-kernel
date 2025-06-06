@@ -179,7 +179,7 @@ import MediaPanel from '../components/panels/MediaPanel.vue';
 import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 import DebugPanel from '../components/panels/DebugPanel.vue'
-import { handleAddExampleMessage, handleAddIntegrationMessage } from '../components/misc/IntegrationUtilities';
+import { handleAddExampleMessage, handleAddIntegrationMessage } from '../util/integration';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -239,7 +239,6 @@ beakerApp.setPage("notebook");
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
 const datasources = ref([]);
-const datasourcesFolderRoot = ref("");
 
 type FilePreview = {
     url: string,
@@ -332,65 +331,49 @@ const iopubMessage = (msg) => {
             incomingDatasources = [];
         }
         datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
-        datasourcesFolderRoot.value = msg.content.info.datasource_root;
     }
     else if (msg.header.msg_type === "add_example") {
         const showToast = beakerInterfaceRef.value.showToast;
         const session = beakerInterfaceRef.value.getSession();
-        const integration = msg.content.integration;
-        handleAddExampleMessage(
-            msg,
-            datasourcesFolderRoot.value,
-            datasources.value,
-            () => {
-                session.executeAction('add_example', {
-                    slug: integration
-                });
-                showToast({
-                    title: 'Example Added',
-                    detail: `The example has been successfully added.`,
-                    severity: 'success',
-                    life: 4000
-                });
-            },
-            (e) => {
-                showToast({
-                    title: 'Error',
-                    detail: `Unable to add example: ${e}.`,
-                    severity: 'error',
-                    life: 8000
-                });
-            }
-        )
+        try {
+            handleAddExampleMessage(msg, datasources.value, session)
+            showToast({
+                title: 'Example Added',
+                detail: `The example has been successfully added.`,
+                severity: 'success',
+                life: 4000
+            });
+        }
+        catch (error) {
+            showToast({
+                title: 'Error',
+                detail: `Unable to add example: ${error}.`,
+                severity: 'error',
+                life: 8000
+            });
+        }
     }
     else if (msg.header.msg_type === "add_integration") {
         const showToast = beakerInterfaceRef.value.showToast;
         const session = beakerInterfaceRef.value.getSession();
         const integration = msg.content.integration;
-        handleAddIntegrationMessage(
-            msg,
-            datasourcesFolderRoot.value,
-            datasources.value,
-            () => {
-                session.executeAction('save_integration', {
-                    slug: integration
-                });
-                showToast({
-                    title: 'Integration Added',
-                    detail: `The integration '${integration}' has been successfully added.`,
-                    severity: 'success',
-                    life: 4000
-                });
-            },
-            (e) => {
-                showToast({
-                    title: 'Error',
-                    detail: `Unable to add integration: ${e}.`,
-                    severity: 'error',
-                    life: 8000
-                });
-            }
-        )
+        try {
+            handleAddIntegrationMessage(msg, datasources.value, session)
+            showToast({
+                title: 'Integration Added',
+                detail: `The integration '${integration}' has been successfully added.`,
+                severity: 'success',
+                life: 4000
+            });
+        }
+        catch (error) {
+            showToast({
+                title: 'Error',
+                detail: `Unable to add integration: ${error}.`,
+                severity: 'error',
+                life: 8000
+            });
+        }
     }
 };
 

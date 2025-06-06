@@ -166,7 +166,7 @@ import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputText from "primevue/inputtext";
 import CodeEditor from '../misc/CodeEditor.vue';
-import { type Example } from '../misc/IntegrationUtilities'
+import { type Example } from '../../util/integration'
 
 type ExamplePanelState =
     | { view: "tableOfContents" }

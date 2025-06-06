@@ -1,6 +1,6 @@
 <template>
-    <div class="datasource-editor">
-        <div class="datasource-loading" v-if="beakerSession.status === 'connecting'">
+    <div class="integration-editor">
+        <div class="integration-loading" v-if="beakerSession.status === 'connecting'">
             <ProgressSpinner></ProgressSpinner>
             Loading integrations...
             {{beakerSession?.status}}
@@ -9,10 +9,10 @@
         <Fieldset v-else>
             <template #legend>
                 <Dropdown :options="
-                    allDatasources.map((datasource) => {
+                    allIntegrations.map((integration) => {
                         return {
-                            label: datasource.name,
-                            value: datasource
+                            label: integration.name,
+                            value: integration
                         }
                     })"
                 :option-label="(option) => option?.label ?? 'Select integration...'"
@@ -23,17 +23,17 @@
                         event.preventDefault;
                     } else {
                         unsavedChanges = false;
-                        temporaryDatasource = undefined;
+                        temporaryIntegration = undefined;
                     }
                 }"
-                v-model="selectedDatasource">
+                v-model="selectedIntegration">
 
                 </Dropdown>
 
                 <SplitButton
                     @click="() => {
                         if (confirmUnsavedChanges()) {
-                            newDatasource();
+                            newIntegration();
                         }
                     }"
                     label="New API Integration"
@@ -54,9 +54,9 @@
 
             <Fieldset legend="Name">
                 <InputText
-                    v-if="selectedDatasource"
-                    v-model="selectedDatasource.name"
-                    :placeholder="selectedDatasource?.name ? 'Name' : 'No integration selected.'"
+                    v-if="selectedIntegration"
+                    v-model="selectedIntegration.name"
+                    :placeholder="selectedIntegration?.name ? 'Name' : 'No integration selected.'"
                     @change="unsavedChanges = true;"
                 />
                 <InputText
@@ -73,8 +73,8 @@
                 </p>
                 <div class="constrained-editor-height">
                     <CodeEditor
-                        v-if="selectedDatasource"
-                        v-model="selectedDatasource.description"
+                        v-if="selectedIntegration"
+                        v-model="selectedIntegration.description"
                         @change="setUnsavedChanges"
                         ref="descriptionEditor"
                     />
@@ -123,12 +123,12 @@
                         :value="xsrfCookie"
                     />
                 </form>
-                <Toolbar v-for="file in selectedDatasource?.attached_files" :key="file?.filepath">
+                <Toolbar v-for="file in selectedIntegration?.attached_files" :key="file?.filepath">
                     <template #start>
                         <Badge
                             severity="warning"
                             size="large"
-                            v-if="!RegExp(`\{${file?.name}\}`).test(selectedDatasource?.source)"
+                            v-if="!RegExp(`\{${file?.name}\}`).test(selectedIntegration?.source)"
                             style="margin-right: 0.5rem;"
                             v-tooltip="{
                                 value: `${file?.name} is not used in the below agent instructions.
@@ -172,8 +172,8 @@
                             severity="danger"
                             style="width: 32px; height: 32px"
                             @click="() => {
-                                selectedDatasource.attached_files.splice(
-                                    selectedDatasource.attached_files.indexOf(file), 1
+                                selectedIntegration.attached_files.splice(
+                                    selectedIntegration.attached_files.indexOf(file), 1
                                 )
                             }"
                             v-tooltip="'Remove File'"
@@ -185,7 +185,7 @@
                     style="width: fit-content; height: 32px;"
                     label="Add New Files"
                     icon="pi pi-plus"
-                    :disabled="!selectedDatasource"
+                    :disabled="!selectedIntegration"
                 />
             </Fieldset>
 
@@ -206,8 +206,8 @@
                 </span>
                 <div class="constrained-editor-height">
                     <CodeEditor
-                        v-if="selectedDatasource"
-                        v-model="selectedDatasource.source"
+                        v-if="selectedIntegration"
+                        v-model="selectedIntegration.source"
                         @change="setUnsavedChanges"
                         ref="instructionEditor"
                     />
@@ -238,7 +238,7 @@
             <span class="save-label">Unsaved changes!</span>
             <Button
                 @click="save"
-                :disabled="!selectedDatasource"
+                :disabled="!selectedIntegration"
                 icon="pi pi-save"
                 severity="warning"
                 v-tooltip="`Save Changes`"
@@ -254,13 +254,7 @@ import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from
 import { BeakerSession } from 'beaker-kernel/src';
 import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
-import {
-    type Integration,
-    getIntegrationFolder,
-    getIntegrationSlug,
-    writeIntegration,
-    createFoldersForIntegration
-} from './IntegrationUtilities';
+import { type Integration } from '../../util/integration';
 
 import Dropdown from 'primevue/dropdown';
 import Fieldset from 'primevue/fieldset';
@@ -279,21 +273,22 @@ import CodeEditor from './CodeEditor.vue';
 import SplitButton from 'primevue/splitbutton';
 const showToast = inject<any>('show_toast');
 
-const props = defineProps(["datasources", "selectedOnLoad", "folderRoot"]);
-const selectedDatasource = defineModel<Integration>('selectedDatasource', {required: true});
+const props = defineProps(["integrations", "selectedOnLoad"]);
+const selectedIntegration = defineModel<Integration>('selectedIntegration', {required: true});
 const unsavedChanges = defineModel<boolean>('unsavedChanges', {required: true});
-const temporaryDatasource = ref(undefined);
+// buffer for changes not yet committed
+const temporaryIntegration = ref(undefined);
 
 const hasLoadedInitialSelection = ref(false);
 
-const sortedDatasources = computed(() =>
-    props?.datasources?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
+const sortedIntegrations = computed(() =>
+    props?.integrations?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
 
-const allDatasources = computed(() =>
-    [...sortedDatasources?.value, ...(temporaryDatasource?.value ? [temporaryDatasource.value] : [])])
+const allIntegrations = computed(() =>
+    [...sortedIntegrations?.value, ...(temporaryIntegration?.value ? [temporaryIntegration.value] : [])])
 
-watch(props.datasources, (updatedDatasources) => {
-    if (updatedDatasources.length === 0) {
+watch(props.integrations, (updatedIntegrations) => {
+    if (updatedIntegrations.length === 0) {
         return;
     }
     if (hasLoadedInitialSelection.value) {
@@ -302,12 +297,12 @@ watch(props.datasources, (updatedDatasources) => {
     if (props?.selectedOnLoad) {
         nextTick(() => {
             if (props?.selectedOnLoad === 'new') {
-                newDatasource();
+                newIntegration();
                 return;
             }
-            for (const datasource of updatedDatasources) {
-                if (datasource?.slug === props?.selectedOnLoad) {
-                    selectedDatasource.value = datasource;
+            for (const integration of updatedIntegrations) {
+                if (integration?.slug === props?.selectedOnLoad) {
+                    selectedIntegration.value = integration;
                     return;
                 }
             }
@@ -317,14 +312,14 @@ watch(props.datasources, (updatedDatasources) => {
 })
 
 const descriptionEditor = ref();
-watch(() => [selectedDatasource.value?.description], (current) => {
+watch(() => [selectedIntegration.value?.description], (current) => {
     if (descriptionEditor.value) {
         descriptionEditor.value.model = current[0];
     }
 })
 
 const instructionEditor = ref();
-watch(() => [selectedDatasource.value?.source], (current) => {
+watch(() => [selectedIntegration.value?.source], (current) => {
     if (instructionEditor.value) {
         instructionEditor.value.model = current[0];
     }
@@ -341,9 +336,9 @@ const uploadForm = ref<HTMLFormElement|undefined>(undefined);
 const uploadFormMultiple = ref<HTMLFormElement|undefined>(undefined);
 
 const unincludedFiles = computed(() =>
-    (selectedDatasource?.value?.attached_files ?? [])
+    (selectedIntegration?.value?.attached_files ?? [])
         ?.map((file) =>
-            RegExp(`{${file?.name}}`).test(selectedDatasource?.value?.source) ? false : file?.name)
+            RegExp(`{${file?.name}}`).test(selectedIntegration?.value?.source) ? false : file?.name)
         ?.filter((x) => x))
 
 const setUnsavedChanges = () => {unsavedChanges.value = true;};
@@ -378,19 +373,9 @@ const contentManager = new ContentsManager({});
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
 
-const slugWrapper = computed(() =>
-    (selectedDatasource.value === undefined)
-        ? ""
-        : getIntegrationSlug(selectedDatasource.value))
-
-const folderSlug = computed(() =>
-    (selectedDatasource.value === undefined)
-        ? ""
-        : getIntegrationFolder(selectedDatasource.value))
-
-const newDatasource = () => {
+const newIntegration = () => {
     unsavedChanges.value = true;
-    selectedDatasource.value = {
+    selectedIntegration.value = {
         name: "New Integration",
         url: "",
         slug: undefined,
@@ -399,15 +384,14 @@ const newDatasource = () => {
         attached_files: [],
         examples: []
     }
-    temporaryDatasource.value = selectedDatasource.value
+    temporaryIntegration.value = selectedIntegration.value
 }
 
 const save = async () => {
-    const folderRoot = props.folderRoot;
     unsavedChanges.value = false;
-    temporaryDatasource.value = undefined;
+    temporaryIntegration.value = undefined;
 
-    if (selectedDatasource.value === undefined) {
+    if (selectedIntegration.value === undefined) {
         return;
     }
 
@@ -417,40 +401,35 @@ const save = async () => {
         severity: 'success',
         life: 4000
     });
-    await createFoldersForIntegration(folderRoot, selectedDatasource.value);
-    await writeIntegration(folderRoot, selectedDatasource.value, (e) => showToast({
-        title: 'Upload failed',
-        detail: `Unable to upload file "${folderRoot}/${folderSlug.value}/api.yaml": ${e}`,
-        severity: 'error',
-        life: 8000
-    }));
 
     session.executeAction('save_integration', {
-        ...selectedDatasource.value,
-        slug: slugWrapper.value
+        ...selectedIntegration.value,
     });
 }
 
+const getIntegrationRoot = async (integration) => {
+    const future = session.executeAction('get_integration_root', {
+        integration
+    })
+    return (await future.done).content?.return;
+}
+
 const download = async (name) => {
-    const folderRoot = props.folderRoot;
-    const path = `${folderRoot}/${folderSlug.value}/documentation/${name}`;
+    const folderRoot = await getIntegrationRoot(selectedIntegration.value);
+    const path = `${folderRoot}/documentation/${name}`;
     await downloadFile(path);
 }
 
-
 const onSelectFileForUpload = async () => {
     const fileList = uploadForm.value['uploadfiles']?.files;
-    await createFoldersForIntegration(props.folderRoot, selectedDatasource.value);
     await uploadFile(fileList);
 }
 
-
 const onSelectFilesForUpload = async () => {
     const fileList = uploadFormMultiple.value['uploadfilesMultiple']?.files;
-    await createFoldersForIntegration(props.folderRoot, selectedDatasource.value);
     await uploadFile(fileList);
     for (const file of fileList) {
-        selectedDatasource?.value.attached_files.push({
+        selectedIntegration?.value.attached_files.push({
             name: file.name.split('.').slice(0, -1).join(''),
             filepath: file.name
         })
@@ -459,12 +438,16 @@ const onSelectFilesForUpload = async () => {
 }
 
 const uploadFile = async (files: FileList) => {
-    const folderRoot = props.folderRoot;
+    await session.executeAction('create_integration_folders_for_upload', {
+        integration: selectedIntegration.value
+    }).done;
+
+    const folderRoot = await getIntegrationRoot(selectedIntegration.value);
     unsavedChanges.value = true;
     const promises = Array.from(files).map(async (file) => {
-        let path = `${folderRoot}/${folderSlug.value}/documentation/${file.name}`;
+        let path = `${folderRoot}/documentation/${file.name}`;
         if (fileTarget?.value !== undefined) {
-            path = `${folderRoot}/${folderSlug.value}/documentation/${fileTarget.value}`;
+            path = `${folderRoot}/documentation/${fileTarget.value}`;
         }
 
         const bytes = [];
@@ -541,7 +524,7 @@ const downloadFile = async (path) => {
     overflow-y: auto;
 }
 
-.datasource-editor > fieldset.p-fieldset legend.p-fieldset-legend {
+.integration-editor > fieldset.p-fieldset legend.p-fieldset-legend {
     display: flex;
 }
 
