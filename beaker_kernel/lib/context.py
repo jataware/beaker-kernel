@@ -632,6 +632,49 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             logger.debug("Subkernel: %s\nResult:\n%s", self.subkernel.connected_kernel, result)
         return result
 
+    @action(action_name="get_integration_root")
+    async def get_integration_root(self, message):
+        """
+        Integration handling action for getting the root folder of an integration
+        in the canonicalized jupyter path. Not implemented by default but should be
+        overridden by any context using integration support.
+        """
+        raise NotImplementedError
+
+    @action(action_name="create_integration_folders_for_upload")
+    async def create_integration_folders_for_upload(self, message):
+        """
+        Integration handling action for creating folders in the backend storage
+        to support uploading additional datasets and files. Distinct from
+        writing the integration for the case in which a temporary/unsaved buffer
+        needs to have file uploads.
+
+        Not implemented by default but should be overridden
+        by any context using integration support.
+        """
+        raise NotImplementedError
+
+    @action(action_name="add_example")
+    async def add_example(self, message):
+        """
+        Integration handling action for adding an example to a given integration.
+
+        Not implemented by default but should be overridden
+        by any context using integration support.
+        """
+        raise NotImplementedError
+
+    @action(action_name="save_integration")
+    async def save_integration(self, message):
+        """
+        Integration handling action for one-shot creation of a new integration
+        from a schema URI (either a URL or a local filepath) and a base URL.
+
+        Not implemented by default but should be overridden
+        by any context using integration support.
+        """
+        raise NotImplementedError
+
 # Provided for backwards compatibility
 BaseContext = BeakerContext
 
