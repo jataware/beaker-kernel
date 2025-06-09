@@ -8,7 +8,7 @@
 
         <Fieldset v-else>
             <template #legend>
-                <Dropdown :options="
+                <Select :options="
                     allDatasources.map((datasource) => {
                         return {
                             label: datasource.name,
@@ -28,7 +28,7 @@
                 }"
                 v-model="selectedDatasource">
 
-                </Dropdown>
+                </Select>
 
                 <SplitButton
                     @click="() => {
@@ -257,7 +257,7 @@ import { ref, watch, computed, nextTick, inject } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import Fieldset from 'primevue/fieldset';
 import Button from "primevue/button";
 import Divider from 'primevue/divider';

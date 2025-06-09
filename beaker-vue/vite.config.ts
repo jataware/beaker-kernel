@@ -83,6 +83,17 @@ export default defineConfig({
     assetsDir: 'static/',
     outDir: 'dist/html/',
     rollupOptions: {
+      onwarn(warning, warn) {
+        // Custom warning suppression for known issues that are not a concern
+        if (
+          (warning.code === "MISSING_EXPORT" && warning.message.includes('json5') && warning.message.includes('@jupyterlab/settingregistry'))
+          // TODO: Leaving this in but commented out for now as we may need it in the future, but will try to remove the requirement on pageconfig.js completely.
+          // || ((warning.code === "EVAL" && warning.message.includes('@jupyterlab/coreutils/lib/pageconfig.js')))
+        ) {
+          return;
+        }
+        warn(warning);
+      },
       output: {
         manualChunks: {
           primevue: [

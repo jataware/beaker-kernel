@@ -15,15 +15,15 @@
             <Select
                 v-model="selectedContextSlug"
                 :options="contextOptions"
-                optionLabel="slug"
-                optionValue="slug"
+                option-label="slug"
+                option-value="slug"
             />
 
             <Select
                 v-model="selectedLanguage"
                 :options="languageOptions"
-                optionLabel="slug"
-                optionValue="subkernel"
+                option-label="slug"
+                option-value="subkernel"
             />
         </InputGroup>
 
