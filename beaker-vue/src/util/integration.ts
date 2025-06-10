@@ -1,4 +1,4 @@
-import { BeakerSession } from 'beaker-kernel/src';
+import { BeakerSession } from 'beaker-kernel';
 
 export type Example = {
     query: string,
