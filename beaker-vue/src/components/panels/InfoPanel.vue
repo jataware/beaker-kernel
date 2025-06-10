@@ -82,7 +82,7 @@
 <script setup lang="ts">
 import { ref, computed, inject } from "vue";
 import Tree from 'primevue/tree';
-import { type TreeNode } from 'primevue/treenode';
+import type { TreeNode } from 'primevue/treenode';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 const contextPanelOpen = ref(true);
