@@ -23,7 +23,7 @@
                     <CodeCellOutput
                         :outputs="cell.outputs"
                         :busy="isBusy"
-                        v-show="!hideOutput"
+                        v-show="!hideOutput && cell.outputs.length"
                         :dropdown-layout="false"
                     />
                 </div>

@@ -307,7 +307,7 @@ Please make sure to update that value before saving.`,
         & .select-dropdown {
             position: absolute;
             top: 0.8rem;
-            right: -1rem;
+            right: 0.5rem;
             z-index: 0;
         }
 

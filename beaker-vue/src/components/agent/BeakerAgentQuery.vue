@@ -16,8 +16,8 @@
                 <Button
                     @click="handleQuery"
                     class="agent-submit-button"
-                    icon="pi pi-reply"
-                    :label="$tmpl._('agent_submit_button_label', 'enter')"
+                    icon="pi pi-send"
+                    :label="$tmpl._('agent_submit_button_label', 'Submit')"
                     :foo="$tmpl"
                 />
             </div>
@@ -87,7 +87,6 @@ const handleQuery = (e: any) => {
 
 .query-input-container {
     display: flex;
-    align-items: flex-start;
 }
 
 .agent-submit-button {

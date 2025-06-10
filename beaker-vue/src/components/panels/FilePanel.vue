@@ -424,7 +424,7 @@ defineExpose({
     overflow: auto;
     display:flex;
 
-    .p-datatable-wrapper {
+    .p-datatable-table-container {
       flex: 1;
     }
 

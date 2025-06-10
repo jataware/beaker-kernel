@@ -274,8 +274,4 @@ onMounted(async () => {
     overflow: auto;
 }
 
-.p-dialog-header {
-    background-image: linear-gradient(45deg, var(--p-surface-a), var(--p-surface-a), var(--p-surface-a), var(--p-surface-b), var(--p-surface-b), var(--p-surface-b));
-}
-
 </style>

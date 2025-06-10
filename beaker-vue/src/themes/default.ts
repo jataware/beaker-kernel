@@ -53,6 +53,19 @@ const BeakerTheme: Preset = definePreset(Aura, {
         },
     },
     components: {
+        panel: {
+            header: {
+                borderRadius: `${dt('panel.root.borderRadius')} ${dt('panel.root.borderRadius')} 0 0`,
+            },
+            extend: {
+                contentBorderRadius: `0 0 ${dt('panel.root.borderRadius')} ${dt('panel.root.borderRadius')}`,
+            }
+        },
+        dialog: {
+            extend: {
+                "headerImage": "linear-gradient(45deg, var(--p-surface-a), var(--p-surface-a), var(--p-surface-a), var(--p-surface-b), var(--p-surface-b), var(--p-surface-b));",
+            }
+        },
         toolbar: {
             root: {
                 background: 'var(--p-surface-b)',
@@ -77,6 +90,22 @@ const BeakerTheme: Preset = definePreset(Aura, {
             borderColor: `solid 1px ${dt('content.border.color')}`,
         },
     },
+        css: ({dt}) => `
+.p-panel-content {
+    border-radius: ${dt('panel.contentBorderRadius')};
+}
+
+.p-dialog-header {
+    background-image: ${dt('dialog.headerImage')};
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+}
+
+.p-dialog-footer {
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
+}
+        `,
 });
 
 export default BeakerTheme;
