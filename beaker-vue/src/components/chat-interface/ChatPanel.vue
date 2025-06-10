@@ -19,8 +19,8 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, inject, defineProps, defineExpose } from 'vue';
-import { BeakerSession } from 'beaker-kernel/src';
+import { ref, inject } from 'vue';
+import { BeakerSession } from 'beaker-kernel';
 
 const session = inject<BeakerSession>('session');
 
@@ -38,7 +38,6 @@ const props = defineProps([
     flex-direction: column;
     z-index: 3;
     overflow: auto;
-    //margin-top: 1rem;
 }
 
 .flex-background {

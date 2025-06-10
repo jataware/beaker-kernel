@@ -8,15 +8,11 @@ from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
 from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
 from jupyter_server.serverapp import ServerApp
 from jupyterlab_server import LabServerApp
-from tornado.web import StaticFileHandler
 
 from beaker_kernel.lib.app import BeakerApp
 from beaker_kernel.lib.config import config
 from beaker_kernel.lib.utils import import_dotted_class
-from beaker_kernel.service.handlers import (
-    PageHandler, StatsHandler, ConfigHandler, ContextHandler, SummaryHandler, ExportAsHandler, DownloadHandler,
-    ConfigController, AppConfigHandler, request_log_handler, sanitize_env
-)
+from beaker_kernel.service.handlers import register_handlers, SummaryHandler, request_log_handler, sanitize_env
 
 logger = logging.getLogger(__file__)
 
@@ -180,54 +176,8 @@ class BeakerJupyterApp(LabServerApp):
 
     def initialize_handlers(self):
         """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""
-        # Build up static and page definitions for handler pages and static files
-        pages = []
-        statics = []
-        default_page_filename = "index.html"
-
-        beaker_app: BeakerApp = self.extension_config.get("app", None)
-        if beaker_app and beaker_app.asset_dir:
-            if os.path.isdir(beaker_app.asset_dir):
-                self.handlers.append((f"/assets/{beaker_app.slug}/(.*)", StaticFileHandler, {"path": beaker_app.asset_dir}))
-
-        try:
-            ui_files = os.listdir(self.ui_path)
-        except FileNotFoundError:
-            ui_files = []
-        for file in ui_files:
-            if file.startswith(('_', '.')):
-                continue
-            if file.endswith(".html"):
-                page = os.path.splitext(file)[0]
-                if beaker_app:
-                    if page in beaker_app.pages:
-                        pages.append(page)
-                        if getattr(beaker_app._pages[page], "default", False):
-                            default_page_filename = file
-                else:
-                    pages.append(page)
-            else:
-                if os.path.isdir(os.path.join(self.ui_path, file)):
-                    statics.append(f"{file}/")
-                else:
-                    statics.append(f"{file}$")
-
-
-        self.handlers.append(("/contexts", ContextHandler))
-        self.handlers.append(("/config/control", ConfigController))
-        self.handlers.append(("/config", ConfigHandler))
-        self.handlers.append(("/stats", StatsHandler))
-        self.handlers.append(("/appconfig.js", AppConfigHandler))
-        self.handlers.append((r"/admin/?()", StaticFileHandler, {"path": self.ui_path, "default_filename": "admin.html"}))
         self.handlers.append((r"/summary", SummaryHandler))
-        self.handlers.append((r"/export/(?P<format>\w+)", ExportAsHandler)),
-        self.handlers.append((f"/()", PageHandler, {"path": self.ui_path, "default_filename": default_page_filename}))
-        if statics:
-            static_handler = ("/((" + "|".join(statics) + ").*)", StaticFileHandler, {"path": self.ui_path})
-            self.handlers.append(static_handler)
-        if pages:
-            page_handler = ("/(" + "|".join(pages) + ")", PageHandler, {"path": self.ui_path, "default_filename": default_page_filename})
-            self.handlers.append(page_handler)
+        register_handlers(self)
         super().initialize_handlers()
 
     def initialize_settings(self):
@@ -244,7 +194,6 @@ class BeakerJupyterApp(LabServerApp):
         else:
             self.extension_config["app_cls"] = None
             self.extension_config["app"] = None
-
 
 
 if __name__ == "__main__":

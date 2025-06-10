@@ -2,7 +2,7 @@
     <Button
         text
         @click="props.toggleDarkMode"
-        style="margin: 0; color: var(--gray-500);"
+        style="margin: 0; color: var(--p-gray-500);"
         :icon="themeIcon"
         v-tooltip.right="{value: 'Swap Theme', showDelay: 300}"
     />
@@ -10,7 +10,7 @@
 
 <script setup>
 
-import { defineProps, computed, inject } from "vue";
+import { computed, inject } from "vue";
 import Button from 'primevue/button';
 const props = defineProps([
     "toggleDarkMode",

@@ -2,17 +2,11 @@
     <div class="llm-query-cell">
         <div
             class="query"
-            :class="{
-                'query-chat': isChat
-            }"
             @dblclick="promptDoubleClick"
         >
-            <div v-if="!isChat" class="query-steps">User Query:</div>
+            <div class="query-steps">User Query:</div>
             <div
                 class="llm-prompt-container"
-                :class="{
-                            'llm-prompt-container-chat': isChat
-                        }"
             >
                 <div v-show="isEditing" class="prompt-input-container">
                     <ContainedTextArea
@@ -29,24 +23,21 @@
                 <div
                     v-show="!isEditing"
                     class="llm-prompt-text"
-                    :class="{
-                        'llm-prompt-text-chat': isChat
-                    }"
                 >{{ cell.source }}</div>
             </div>
         </div>
         <div class="event-container"
-            v-if="events.length > 0 || isLastEventTerminal() || showChatEventsEarly(cell)"
+            v-if="events.length > 0 || isLastEventTerminal(events)"
         >
             <div class="events">
                 <div
                     class="query-steps"
-                    v-if="events.length > 0 && !isChat"
+                    v-if="events.length > 0"
                 >
                     Agent actions:
                 </div>
                 <Accordion
-                    v-if="events.length > 0 && !isChat"
+                    v-if="events.length > 0"
                     :multiple="true"
                     :class="'query-accordion'"
                     v-model:active-index="selectedEvents"
@@ -80,59 +71,7 @@
                         <BeakerQueryCellEvent
                             :key="eventIndex"
                             :event="event"
-                            :parentQueryCell="cell"
-                        />
-                    </AccordionTab>
-                </Accordion>
-                <Accordion
-                    :class="'query-accordion-chat'"
-                    v-if="isChat"
-                >
-                    <AccordionTab
-                    :pt="{
-                            header: {
-                                class: [`query-tab`, `query-tab-thought`, `query-tab-thought-chat`]
-                            },
-                            headerAction: {
-                                class: [`query-tab-headeraction`, `query-tab-headeraction-thought`]
-                            },
-                            content: {
-                                class: [`query-tab-content-thought`]
-                            },
-                            headerIcon: {
-                                class: [`query-tab-icon-thought`]
-                            },
-                        }"
-                    >
-                        <template #headericon>
-                            <i
-                                class="pi pi-sparkles"
-                                style="
-                                    color: var(--yellow-500);
-                                    margin-right: 0.5rem;
-                                "
-                            />
-                        </template>
-                        <template #header>
-                            <span class="flex align-items-center gap-2 w-full">
-                                <span
-                                    class="white-space-nowrap"
-                                    style="
-                                        font-weight: 400;
-                                        font-family: 'Courier New', Courier, monospace;
-                                        font-size: 0.8rem;
-                                        color: var(--text-color-secondary)
-                                    ">
-                                    {{ lastEventThought }}
-                                    <span class="thinking-animation" style="font-size: unset !important;" v-if="cell.status === 'busy'"/>
-                                </span>
-                            </span>
-                        </template>
-                        <BeakerQueryCellEvent
-                            v-for="(event, eventIndex) in events"
-                            :key="eventIndex"
-                            :event="event"
-                            :parentQueryCell="cell"
+                            :parent-query-cell="cell"
                         />
                     </AccordionTab>
                 </Accordion>
@@ -145,13 +84,11 @@
                         />
                     </div>
                 </div>
-                <div :class="{
-                        'query-answer': !isChat,
-                        'query-answer-chat-override': isChat
-                    }"
-                    v-if="isLastEventTerminal()"
+                <div
+                    class="query-answer"
+                    v-if="isLastEventTerminal(events)"
                 >
-                    <h3 v-show="!isChat" class="query-steps">Result</h3>
+                    <h3 class="query-steps">Result</h3>
                     <BeakerQueryCellEvent
                         :event="cell?.events[cell?.events.length - 1]"
                         :parent-query-cell="cell"
@@ -159,27 +96,18 @@
                 </div>
             </div>
         </div>
-        <div class="thinking-indicator" v-if="cell.status === 'busy' && !isChat">
+        <div class="thinking-indicator" v-if="cell.status === 'busy'">
             <span class="thought-icon"><ThinkingIcon/></span> Thinking <span class="thinking-animation"></span>
         </div>
         <div
-            :class="{
-                'input-request': !isChat,
-                'input-request-chat-override': isChat
-            }"
+            class="input-request"
             v-focustrap
             v-if="cell.status === 'awaiting_input'"
-         >
+        >
             <div
                 class="input-request-wrapper"
-                :class="{
-                    'input-request-wrapper-chat': isChat
-                }"
             >
                 <InputGroup>
-                    <InputGroupAddon v-show="isChat">
-                        <i class="pi pi-exclamation-triangle"></i>
-                    </InputGroupAddon>
                     <InputText
                         placeholder="Reply to the agent"
                         @keydown.enter.exact.prevent="respond"
@@ -197,31 +125,45 @@
             </div>
         </div>
     </div>
-
 </template>
 
+
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
+import { ref, inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerQueryCellEvent from "./BeakerQueryCellEvent.vue";
-import { BeakerQueryEvent, type BeakerQueryEventType } from "beaker-kernel/src/notebook";
+import type { BeakerQueryEventType } from "beaker-kernel";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-import { BeakerSession } from 'beaker-kernel/src';
-import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import ThinkingIcon from "../../assets/icon-components/BrainIcon.vue";
-import { StyleOverride } from "../../pages/BaseInterface.vue"
-
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
-import InputGroupAddon from 'primevue/inputgroupaddon';
+import { isLastEventTerminal } from "./cellOperations";
+import { useBaseQueryCell } from './BaseQueryCell';
 
 
 const props = defineProps([
     'index',
     'cell',
 ]);
+
+const {
+  cell,
+  isEditing,
+  promptEditorMinHeight,
+  promptText,
+  response,
+  textarea,
+  events,
+  execute,
+  enter,
+  exit,
+  clear,
+  respond
+} = useBaseQueryCell(props);
+
 
 const eventIconMap = {
     "code_cell": "pi pi-code",
@@ -230,134 +172,31 @@ const eventIconMap = {
     "user_question": "pi pi-question-circle"
 }
 
-const terminalEvents = [
-    "error",
-    "response"
-]
-
-const enum QueryStatuses {
-    NotExecuted,
-    Running,
-    Done,
-}
-
-const cell = shallowRef(props.cell);
-const isEditing = ref<boolean>(cell.value.source === "");
-const promptEditorMinHeight = ref<number>(100);
-const promptText = ref<string>(cell.value.source);
-const response = ref("");
-const textarea = ref();
-const session: BeakerSession = inject("session");
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-
-const styleOverrides = inject<StyleOverride[]>("styleOverrides")
-const isChat = ref(styleOverrides.includes('chat'))
-
 const instance = getCurrentInstance();
-
-
-const events = computed(() => {
-    return [...props.cell.events];
-})
-
-const lastEventThought = computed(() => {
-    const fallback = "Thinking";
-    // initial state
-    if (events.value.length < 1) {
-        return fallback;
-    }
-    // grab the text from the last thought.
-    const lastEvent = events.value[events.value.length - 1];
-    if (lastEvent.type === 'thought') {
-        return lastEvent.content.thought;
-    }
-    else {
-        // walk backwards through events to determine the last thought
-        let offset = 2;
-        let eventCursor = events.value[events.value.length - offset];
-        if (eventCursor === undefined) {
-            return fallback;
-        }
-        while (eventCursor.type !== 'thought' && events.value.length >= offset) {
-            offset += 1;
-            eventCursor = events.value[events.value.length - offset];
-        }
-        if (eventCursor.type === 'thought') {
-            if (eventCursor.content.thought === "Thinking..." && lastEvent.type === "response") {
-                return "Done";
-            }
-            const endTags = {
-                'user_question': "(awaiting user input)",
-                'user_answer': "(answer received, thinking)",
-                'code_cell': "(code is now running)",
-            }
-            if (endTags[lastEvent.type]) {
-                return `${eventCursor.content.thought} ${endTags[lastEvent.type]}`;
-            }
-            else {
-                return eventCursor.content.thought;
-            }
-        // no thought, end of stack
-        } else {
-            return fallback;
-        }
-    }
-})
-
-const taggedCellEvents = computed(() => {
-    let index = 0;
-    const events: BeakerQueryEvent[] = [...props.cell.events];
-    for (const queryEvent of events) {
-        if (queryEvent.type == "code_cell") {
-            queryEvent.content.metadata.subindex = index;
-            index += 1;
-        }
-    }
-    return events.filter((e) => !terminalEvents.includes(e.type));
-});
-
-const queryStatus = computed<QueryStatuses>(() => {
-    const eventCount = events.value.length;
-    if (props.cell.status === 'busy') {
-        return QueryStatuses.Running;
-    }
-    if (eventCount === 0) {
-        return QueryStatuses.NotExecuted;
-    }
-    else if (terminalEvents.includes(events.value[eventCount - 1].type)) {
-        return QueryStatuses.Done;
-    }
-    else {
-        return QueryStatuses.Running;
-    }
-})
 
 const messageEvents = computed(() => {
     return props.cell?.events?.filter(
         (event) => ["user_question", "user_answer"].includes(event.type)
     ).map(
         (event) => {
-            var messageClass;
+// <<<<<<< HEAD
+            let messageClass;
             if (event.type === "user_question") {
                 messageClass = "query-answer-chat query-answer-chat-override";
             }
             else {
                 messageClass = "llm-prompt-container llm-prompt-container-chat llm-prompt-text llm-prompt-text-chat";
+// =======
+//             var messageClass = "";
+//             if (event.type !== "user_question") {
+//                 messageClass = "llm-prompt-container llm-prompt-text";
+// >>>>>>> origin/dev
             }
             return [event, messageClass];
         }
     );
 })
-
-const showChatEventsEarly = (cell) => isChat.value ? (cell.status === 'busy') : false;
-
-const isLastEventTerminal = () => {
-    const events: BeakerQueryEvent[] = props.cell.events;
-    if (events?.length > 0) {
-        return terminalEvents.includes(events[events.length - 1].type);
-    }
-    return false;
-};
 
 // behavior: temporarily show last event and all code cells, until terminal, in which case,
 // only show code cells
@@ -398,63 +237,6 @@ const promptDoubleClick = (event) => {
     }
 }
 
-const respond = () => {
-    if (!response.value.trim()) {
-        return; // Do nothing unless the reply has contents
-    }
-    props.cell.respond(response.value, session);
-    response.value = "";
-};
-
-function execute() {
-    const config: any = instance?.root?.props?.config;
-    const sendNotebookState = config ? config.extra?.send_notebook_state : undefined;
-    cell.value.source = promptText.value;
-    isEditing.value = false;
-    nextTick(() => {
-        const future = props.cell.execute(session, sendNotebookState);
-        // Add reference to cell for downstream processing.
-        future.registerMessageHook(
-            (msg) => {
-                msg.cell = cell.value;
-            }
-        )
-    });
-}
-
-function enter(position?: "start" | "end" | number) {
-    if (!isEditing.value) {
-        isEditing.value = true;
-    }
-    if (position === "start") {
-        position = 0;
-    }
-    else if (position === "end") {
-        position = textarea.value?.$el?.value.length || -1;
-    }
-    nextTick(() => {
-        textarea.value?.$el?.focus();
-        textarea.value.$el.setSelectionRange(position, position);
-    });
-}
-
-function exit() {
-    if (promptText.value === cell.value.source) { // Query has not changed
-        isEditing.value = false;
-    }
-    else {
-        textarea.value?.$el?.blur();
-    }
-}
-
-function clear() {
-    cell.value.source = "";
-    isEditing.value = true;
-    promptEditorMinHeight.value = 100;
-    promptText.value = "";
-    response.value = "";
-}
-
 defineExpose({
     execute,
     enter,
@@ -475,7 +257,7 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerQueryCell } from "beaker-kernel/src";
+import { BeakerQueryCell } from "beaker-kernel";
 export default {
     modelClass: BeakerQueryCell,
     icon: "pi pi-sparkles",
@@ -504,19 +286,6 @@ export default {
     margin-bottom: 0.25rem;
 }
 
-.query-chat {
-    align-items: flex-end;
-}
-
-.thought {
-    color: var(--blue-500);
-}
-
-.response {
-    margin-top: 0.75em;
-    white-space: pre-line;
-}
-
 .input-request {
     padding: 0.5rem 0;
     display: flex;
@@ -535,23 +304,23 @@ export default {
     .input-request-wrapper-chat {
         align-items: flex-end;
         flex-direction: column;
+        margin-bottom: 0.5rem;
         .p-inputgroup {
             width: 100%;
-            border: 1px solid var(--yellow-500);
-            box-shadow: 0 0 4px var(--yellow-700);
+            border: 1px solid var(--p-yellow-500);
+            box-shadow: 0 0 4px var(--p-yellow-700);
             transition: box-shadow linear 1s;
-            border-radius: var(--border-radius);
+            border-radius: var(--p-surface-border-radius);
             button {
-                background-color: var(--surface-b);
-                border-color: var(--surface-border);
-                color: var(--text-color);
+                background-color: var(--p-surface-b);
+                border-color: var(--p-surface-border);
+                color: var(--p-text-color);
                 border-left: 0px;
             }
             input {
-                border-color: var(--yellow-500);
+                border-color: var(--p-yellow-500);
             }
         }
-        margin-bottom: 0.5rem;
     }
 }
 
@@ -572,23 +341,16 @@ export default {
 }
 
 .cancel-button {
-    border-color: var(--surface-100);
-    color: var(--primary-text-color);
+    border-color: var(--p-surface-c);
+    color: var(--p-primary-text-color);
 }
 
 
 .llm-prompt-container {
     display: flex;
     flex-direction: column;
-    background-color: var(--surface-c);
-    border-radius: var(--border-radius);
-}
-
-.llm-prompt-container-chat {
-    width: fit-content;
-    max-width: 80%;
-    align-self: flex-end;
-    background-color: var(--surface-d);
+    background-color: var(--p-surface-c);
+    border-radius: var(--p-surface-border-radius);
 }
 
 div.query-steps {
@@ -606,18 +368,13 @@ h3.query-steps {
     width: fit-content;
 }
 
-.llm-prompt-text-chat {
-    margin-left: 0.5rem;
-    margin-right: 0.5rem;
-}
-
 .event-container {
     padding: 0rem;
     border-radius: 6px;
 }
 
 .query-events-header {
-    background-color: var(--surface-b);
+    background-color: var(--p-surface-b);
     border-radius: 6px 6px 0 0;
 }
 
@@ -634,23 +391,23 @@ h3.query-steps {
     margin-bottom: 0.5rem;
     width: 100%;
     > .p-accordion-tab {
-        > * {
-            max-width: 80%;
-            width: 100%;
-        }
         width: 100%;
         display: flex;
         align-items: center;
         flex-direction: column;
+        > * {
+            max-width: 80%;
+            width: 100%;
+        }
         > .p-toggleable-content > .p-accordion-content {
-            border: 2px solid var(--surface-d);
-            border-radius: var(--border-radius);
+            border: 2px solid var(--p-surface-d);
+            border-radius: var(--p-surface-border-radius);
             padding: 0.25rem;
             padding-left: 1.5rem;
             margin: 1rem;
             margin-bottom: 0rem;
             > * {
-                border-bottom: 2px solid var(--surface-d);
+                border-bottom: 2px solid var(--p-surface-d);
                 margin-right: 1rem;
             }
             > *:last-child {
@@ -658,13 +415,13 @@ h3.query-steps {
             }
         }
         .p-accordion-header {
-            border-radius: var(--border-radius);
+            border-radius: var(--p-surface-border-radius);
             margin: 1rem;
             margin-bottom: 0rem;
             transition: background-color 0.2s;
 
             &:hover {
-                background-color: var(--surface-a);
+                background-color: var(--p-surface-a);
             }
         }
     }
@@ -739,23 +496,11 @@ a.query-tab-headeraction > span > span.pi {
 }
 
 .query-answer {
-    background-color: var(--surface-c);
+    background-color: var(--p-surface-c);
     padding-left: 1rem;
     padding-bottom: 1rem;
-    border-radius: var(--border-radius);
+    border-radius: var(--p-surface-border-radius);
     margin-top: 1rem;
-}
-
-.query-answer-chat-override {
-    padding-left: 1rem;
-    padding-right: 1rem;
-    border-radius: var(--border-radius);
-    margin-top: 1rem;
-    max-width: 80%;
-    width: fit-content;
-    background-color: var(--surface-c);
-
-    margin-bottom: 1rem;
 }
 
 .prompt-input-container {
@@ -817,6 +562,5 @@ a.query-tab-headeraction > span > span.pi {
     right: -4em;
   }
 }
-
 
 </style>

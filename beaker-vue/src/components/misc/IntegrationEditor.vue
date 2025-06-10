@@ -8,7 +8,7 @@
 
         <Fieldset v-else>
             <template #legend>
-                <Dropdown :options="
+                <Select :options="
                     allIntegrations.map((integration) => {
                         return {
                             label: integration.name,
@@ -28,7 +28,7 @@
                 }"
                 v-model="selectedIntegration">
 
-                </Dropdown>
+                </Select>
 
                 <SplitButton
                     @click="() => {
@@ -251,12 +251,11 @@
 <script setup lang="ts">
 
 import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
-import { BeakerSession } from 'beaker-kernel/src';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-
 import { type Integration } from '../../util/integration';
+import { BeakerSession } from 'beaker-kernel';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import Fieldset from 'primevue/fieldset';
 import Button from "primevue/button";
 import Divider from 'primevue/divider';
@@ -265,7 +264,7 @@ import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
 import Tag from 'primevue/tag';
 
-import cookie from 'cookie';
+import * as cookie from 'cookie';
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
 import Badge from 'primevue/badge';

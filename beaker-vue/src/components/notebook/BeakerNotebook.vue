@@ -5,9 +5,10 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, computed, nextTick, provide, inject, DefineComponent, watch } from "vue";
-import { IBeakerCell, BeakerSession, BeakerNotebook, BeakerMarkdownCell, BeakerCodeCell, BeakerQueryCell, BeakerRawCell, BeakerBaseCell } from 'beaker-kernel/src';
-import { IBeakerCellComponent, type BeakerSessionComponentType, toBeakerCellComponent } from "../session/BeakerSession.vue";
+import { defineComponent, ref, computed, nextTick, provide, inject, type DefineComponent } from "vue";
+import { BeakerSession, BeakerNotebook, BeakerCodeCell, BeakerBaseCell } from 'beaker-kernel';
+import type { IBeakerCell } from 'beaker-kernel';
+import type { IBeakerCellComponent, BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import scrollIntoView from 'scroll-into-view-if-needed';
 
 export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineComponent({
@@ -93,7 +94,7 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
         },
 
         nextCell(referenceCell?: IBeakerCell): IBeakerCellComponent | null {
-            var cellIndex: number;
+            let cellIndex: number;
             if (referenceCell === undefined) {
                 cellIndex = this.notebook.cells.indexOf(this.selectedCell().cell);
             }
@@ -109,7 +110,7 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
         },
 
         prevCell(referenceCell?: IBeakerCell): IBeakerCellComponent | null {
-            var cellIndex: number;
+            let cellIndex: number;
             if (referenceCell === undefined) {
                 cellIndex = this.notebook.cells.indexOf(this.selectedCell().cell);
             }
@@ -125,7 +126,7 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
         },
 
         selectNextCell(referenceCell?: IBeakerCell, enter=false): IBeakerCell | null {
-            let nextCell: IBeakerCell | null = this.nextCell(referenceCell);
+            const nextCell: IBeakerCell | null = this.nextCell(referenceCell);
             if (nextCell) {
                 return this.selectCell(nextCell, enter);
             }
@@ -152,7 +153,7 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
         },
 
         selectPrevCell(referenceCell?: IBeakerCell, enter=false): IBeakerCell | null {
-            let prevCell: IBeakerCell | null = this.prevCell(referenceCell);
+            const prevCell: IBeakerCell | null = this.prevCell(referenceCell);
             if (prevCell) {
                 return this.selectCell(prevCell, enter);
             }
@@ -179,7 +180,7 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
             if (newCell === undefined) {
                 newCell = new this.defaultCellModel({source: ""})
             }
-            let index = (referenceCell === undefined ? this.notebook.cells.length-1 : this.notebook.cells.findIndex((cell) => cell === referenceCell.cell));
+            const index = (referenceCell === undefined ? this.notebook.cells.length-1 : this.notebook.cells.findIndex((cell) => cell === referenceCell.cell));
             this.notebook.cells.splice(index + 1, 0, newCell);
             nextTick(() => this.selectCell(newCell, enter));
             return newCell;

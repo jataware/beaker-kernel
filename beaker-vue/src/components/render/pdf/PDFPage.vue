@@ -5,15 +5,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, defineProps, defineExpose } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { getDocument } from 'pdfjs-dist';
 
-const loadPdfjs = async function () { 
-    const pdfjs = await import("pdfjs-dist/build/pdf"); 
+const loadPdfjs = async function () {
+    const pdfjs = await import("pdfjs-dist/build/pdf");
     pdfjs.GlobalWorkerOptions.workerSrc = new URL(
         "pdfjs-dist/build/pdf.worker.mjs",
         import.meta.url
-    ).toString(); 
+    ).toString();
 };
 
 const props = defineProps([

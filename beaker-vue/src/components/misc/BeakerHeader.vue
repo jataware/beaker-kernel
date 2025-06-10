@@ -45,9 +45,9 @@
         <template #end>
             <nav class="flex">
                 <template v-for="navItem in navItems" :key="navItem">
-                    <a
+                    <RouterLink
                         v-if="navItem.type === 'link'"
-                        :href="navItem.href"
+                        :to="navItem.href"
                         :aria-label="navItem.label"
                         :rel="navItem.rel"
                         :target="navItem.target"
@@ -65,7 +65,7 @@
                                 :style="navItem.componentStyle"
                             />
                         </Button>
-                    </a>
+                    </RouterLink>
                     <Button v-else-if="navItem.type === 'button'"
                         :icon="`pi pi-${navItem.icon}`"
                         text
@@ -80,14 +80,15 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject, withDefaults, getCurrentInstance, getCurrentScope } from "vue";
+import { computed, inject, getCurrentInstance, getCurrentScope } from "vue";
+import { RouterLink } from "vue-router";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { IBeakerTheme } from '../../plugins/theme';
+import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { type IBeakerTheme } from '../../plugins/theme';
 import SessionStatus from "../session/SessionStatus.vue";
 
-interface BeakerHeaderProps {
+export interface BeakerHeaderProps {
     title: string;
     titleExtra?: string;
     nav?: any[];
@@ -158,7 +159,7 @@ const showContextSelection = computed(() => {
 </script>
 
 <script lang="ts">
-import { Component } from 'vue';
+import { type Component } from 'vue';
 export interface NavOption {
     type: "button"|"link";
     href?: string
@@ -200,7 +201,7 @@ export interface NavOption {
         align-items: center;
 
         font-weight: 500;
-        color: var(--gray-500);
+        color: var(--p-slate-500);
 
         h4 {
             display: inline-block;
@@ -226,7 +227,7 @@ export interface NavOption {
     display: flex;
     line-height: inherit;
     align-items: center;
-    color: var(--text-color);
+    color: var(--p-text-color);
     width: 8rem;
     & > i {
         margin-right: 0.5rem;
@@ -235,7 +236,7 @@ export interface NavOption {
 }
 
 .connection-button {
-    color: var(--surface-500);
+    color: var(--p-slate-500);
     padding: 0.5em;
 }
 

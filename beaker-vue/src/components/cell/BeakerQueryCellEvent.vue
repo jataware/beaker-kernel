@@ -1,12 +1,19 @@
 <template>
     <div class="llm-query-event">
+        <div v-if="waitForUserAnswer(event)">
+            <span class="waiting-text">
+                <i class="pi pi-spin pi-spinner" style="font-size: 1rem"></i> Waiting for user input in conversation.
+            </span>
+        </div>
+        <div v-else-if="event.type === 'user_question' && props.shouldHideAnsweredQuestions">
+        </div>
         <div
-            v-if="isMarkdown(event) && isValidResponse(event)"
+            v-else-if="isMarkdown(event) && isValidResponse(event)"
             v-html="markdownBody"
             class="md-inline"
         />
+
         <div v-if="props.event?.type === 'response' && parentEntries !== 0">
-            <!-- <h4 class="agent-outputs">Outputs:</h4> -->
             <Accordion :multiple="true" :active-index="meaningfulOutputs">
                 <AccordionTab
                     v-for="[index, child] in parentEntries"
@@ -39,69 +46,13 @@
         </div>
         <div v-else-if="props.event?.type === 'thought'">
             <div v-html="marked.parse(props.event.content.thought)" />
-            <div v-if="props.event.content.background_code_executions.length">
-                <Accordion :multiple="true" :active-index="[]">
-                    <AccordionTab
-                        v-for="(code_execution, index) in event.content.background_code_executions"
-                        :key="`code_execution_${index}`"
-                        :pt="{
-                            header: {
-                                class: [`agent-response-header`]
-                            },
-                            headerAction: {
-                                class: [`agent-response-headeraction`]
-                            },
-                            content: {
-                                class: [`agent-response-content`]
-                            },
-                            headerIcon: {
-                                class: [`agent-response-icon`]
-                            }
-                        }"
-                    >
-                        <template #header>
-                            <span class="flex align-items-center gap-2 w-full" style="font-weight: normal">
-                                <span class="pi pi-icon pi-server"></span>
-                                <span>Background Execution by Agent</span>
-                            </span>
-                        </template>
-                        <div
-                            class="monospace pre"
-                            style="
-                                border: 1px var(--surface-border) solid;
-                                background-color: var(--surface-50);
-                                padding: 0.5rem;
-                                padding-top: 0rem;
-                                margin-bottom: 0.5rem;
-                                overflow: auto;
-                            "
-                        >
-                            {{ code_execution.code.trim() }}
-                        </div>
-                        <div v-if="code_execution.status === 'ok'">
-                            <span class="pi pi-icon pi-check"></span>
-                            Ran successfully
-                        </div>
-                        <div v-else>
-                            <span class="pi pi-icon pi-exclamation-triangle"></span>
-                            {{ capitalize(code_execution.status) }}
-                            <div v-if="code_execution.status === 'error'">
-                                <div>
-                                {{ code_execution.ename }}: {{ code_execution.evalue }}
-                                </div>
-                                <div class="monospace pre" v-html="ansiHtml(code_execution.traceback.join('\n').trim())"/>
-                            </div>
-                        </div>
-                    </AccordionTab>
-                </Accordion>
-
-            </div>
         </div>
-        <span v-else-if="props.event?.type === 'code_cell'">
+        <div v-else-if="props.event?.type === 'code_cell'" style="position: relative;">
             <BeakerCodeCell
                 @click="codeCellOnClick"
                 :cell="getCellModelById(props?.event.content.cell_id)"
                 :drag-enabled="false"
+                :code-styles="props.codeStyles"
                 :class="{
                     selected: isCodeCellSelected,
                     'query-event-code-cell': true
@@ -117,8 +68,9 @@
                     }
                 }"
             />
+            <slot name="code-cell-controls" />
             <!-- <span class="output-hide-text">(Output hidden -- shown in full response below.)</span> -->
-        </span>
+        </div>
         <span v-else-if="props.event?.type === 'error' && props.event.content.ename === 'CancelledError'">
             <h4 class="p-error">Request cancelled.</h4>
         </span>
@@ -163,18 +115,17 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, inject, onBeforeMount, computed, ref, capitalize } from "vue";
-import { BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel/src/notebook";
+import { inject, onBeforeMount, computed, ref, capitalize } from "vue";
+import { type BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";
 import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
-import stripAnsi from "strip-ansi";
 import ansiHtml from "ansi-html-community";
 import { formatOutputs, chooseOutputIcon } from './BeakerCodeCellOutputUtilities'
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 
 // use session where possible - notebook may or may not exist, but matters for selection!
@@ -185,6 +136,8 @@ const codeCellRef = ref();
 const props = defineProps([
     'event',
     'parentQueryCell',
+    'codeStyles',
+    'shouldHideAnsweredQuestions'
 ]);
 
 onBeforeMount(() => {
@@ -192,7 +145,7 @@ onBeforeMount(() => {
     //    gfm: true,
     //    sanitize: false,
     //    langPrefix: `language-`,
-     });
+    });
 })
 
 // these need to be no-ops if notebook doesn't exist in the parent UI.
@@ -212,13 +165,6 @@ const isCodeCellSelected = computed(() => {
     }
     return false;
 });
-
-const lastOutput = computed(() => {
-    if (props.parentQueryCell?.children?.length == 0) {
-        return [0]
-    }
-    return [props.parentQueryCell?.children?.length - 1];
-})
 
 const parentEntries = computed(() => {
     const isAllTextPlain = props.parentQueryCell?.children?.map((child =>
@@ -287,6 +233,10 @@ const isValidResponse = (event: BeakerQueryEvent) => {
     return true;
 }
 
+const waitForUserAnswer = (event: BeakerQueryEvent) => {
+    return event.type === 'user_question' && event.waitForUserInput;
+}
+
 const markdownBody = computed(() =>
     isMarkdown(props.event) ? marked.parse(props.event.content, {async: false}).trim() : "");
 
@@ -301,6 +251,15 @@ defineExpose({
 </script>
 
 <style lang="scss">
+
+.llm-query-event {
+    & p {
+        margin-bottom: 0rem;
+        margin-top: 0rem;
+        padding-bottom: 0rem;
+        padding-top: 0rem;
+    }
+}
 
 .query-event-code-cell {
     font-size: 0.75rem;
@@ -384,18 +343,22 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
         overflow-x: auto;
         code {
             display: inline-block;
-            // min-width: 100%;
-            // width: 0px;
             font-size: 0.75rem;
         }
     }
 
     p:first-child {
-        margin-top: 0.5rem;
+        padding-top: 0.5rem;
     }
     p:last-child {
-        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
     }
+}
+
+.waiting-text {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 </style>

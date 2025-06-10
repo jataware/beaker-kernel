@@ -44,7 +44,7 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, defineEmits, defineProps } from "vue";
+import { ref, computed } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import DebugLogMessage from "../misc/DebugLogMessage.vue";
@@ -109,7 +109,7 @@ const filteredLogs = computed(() => {
     // The internal class for the json viewer-
     // Change the hover color for better contrast
     .vjs-tree-node:hover {
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
     }
     height: 100%;
     width: 100%;
@@ -133,14 +133,14 @@ const filteredLogs = computed(() => {
     display: flex;
     margin-top: 0.5rem;
     justify-content: center;
-    color: var(--text-color-secondary);
+    color: var(--p-text-color-secondary);
 }
 
 .debug-sort-actions {
     display: flex;
     flex-direction: row;
     .p-button {
-        border-color: var(--surface-d);
+        border-color: var(--p-surface-d);
     }
 }
 

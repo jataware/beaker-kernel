@@ -3,6 +3,7 @@
         <template #content>
             <InputGroup>
                 <ContainedTextArea
+                    class="agent-query-textarea"
                     @keydown.enter.exact.prevent="handleQuery"
                     @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
                     v-model="query"
@@ -21,12 +22,13 @@
 
 
 <script setup lang="ts">
-import { defineEmits, ref, nextTick, inject, defineProps } from "vue";
+import { ref, nextTick, inject } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
-import { BeakerSession } from 'beaker-kernel/src';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { BeakerSession } from 'beaker-kernel';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
+
 import InputGroup from 'primevue/inputgroup';
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
@@ -75,7 +77,7 @@ const handleQuery = (e: any) => {
     }
 }
 .agent-query-container {
-    background-color: var(--surface-b);
+    background-color: var(--p-surface-b);
 }
 .agent-query-container div {
     padding: 0rem;
@@ -85,6 +87,7 @@ const handleQuery = (e: any) => {
     align-self: flex-end;
     margin-top: 0.175rem;
     margin-bottom: 0.25rem;
+    background-color: var(--p-surface-a);
 }
 .query-input-container {
     display: flex;
@@ -100,5 +103,8 @@ const handleQuery = (e: any) => {
     flex: 0 1 3rem;
     align-self: flex-end;
     height: 3rem;
+}
+.agent-query-textarea {
+    flex: 1;
 }
 </style>

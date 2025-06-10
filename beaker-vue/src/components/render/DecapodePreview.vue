@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed, ref, nextTick, inject, onMounted, onBeforeUnmount } from "vue";
+import { computed, ref, nextTick, inject, onMounted, onBeforeUnmount } from "vue";
 import Textarea from 'primevue/textarea';
 import cytoscape from "cytoscape";
 import { v4 as uuidv4 } from 'uuid';
@@ -21,9 +21,9 @@ const layoutConfig = {
 const nodes = computed(() => props.data.graph.V.map(e => {return {group: 'nodes', data: {id: e["_id"], color: 'green', ...e.vprops}}}));
 const edges = computed(() => props.data.graph.E.map(e => {return {group: 'edges', data: {id: `${e.src}-${e.tgt}`, source: e.src, target: e.tgt, ...e.eprops}}}));
 
-var resizingTimeout = null;
-var lastWidth = null;
-var lastHeight = null;
+let resizingTimeout = null;
+let lastWidth = null;
+let lastHeight = null;
 
 // Fairly complex logic to ensure that nodes are properly sized and layed out based on the dynamic size of the side panel.
 const resize = () => {

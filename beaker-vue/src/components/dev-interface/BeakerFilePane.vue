@@ -61,7 +61,7 @@
 
 <script lang="ts" setup>
 
-import { ref, inject, defineProps, onMounted } from "vue";
+import { ref, inject, onMounted } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import 'vue-json-pretty/lib/styles.css';

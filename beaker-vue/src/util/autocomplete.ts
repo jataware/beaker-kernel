@@ -1,15 +1,16 @@
-import { LanguageSupport, Language as CMLanguage, LRLanguage, language as languageFacet } from "@codemirror/language";
-import { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
+import { LanguageSupport, language as languageFacet } from "@codemirror/language";
+import type { Language as CMLanguage, LRLanguage } from "@codemirror/language";
+import type { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-import { BeakerSession, IBeakerFuture } from 'beaker-kernel/src';
+import { BeakerSession, type IBeakerFuture } from 'beaker-kernel';
 
 import { pythonLanguage, python } from "@codemirror/lang-python";
 import { rLanguage, r } from 'codemirror-lang-r';
 import { markdownLanguage, markdown } from "@codemirror/lang-markdown";
 import { jsonLanguage, json } from "@codemirror/lang-json";
 import { javascriptLanguage, javascript } from "@codemirror/lang-javascript";
-import { julia, JuliaLanguageConfig } from "@plutojl/lang-julia";
-import { Extension } from "@codemirror/state";
+import { julia, type JuliaLanguageConfig } from "@plutojl/lang-julia";
+import type { Extension } from "@codemirror/state";
 
 const juliaLanguage: LRLanguage = <LRLanguage>julia().language;
 

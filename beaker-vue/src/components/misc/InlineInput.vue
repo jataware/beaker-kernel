@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, toRaw, defineModel } from 'vue';
+import { ref, toRaw } from 'vue';
 import Inplace from 'primevue/inplace';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';

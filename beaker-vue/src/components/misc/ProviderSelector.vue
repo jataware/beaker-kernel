@@ -14,7 +14,7 @@
             </div>
             <div class="list-buttons">
                 <Button icon="pi pi-plus" @click="saveAsHoverMenuRef.toggle($event)" severity="info"/>
-                <OverlayPanel
+                <Popover
                     class="saveas-overlay"
                     ref="saveAsHoverMenuRef"
                     :popup="true"
@@ -30,7 +30,7 @@
                         />
                         <Button label="Save" @click="addProvider()"/>
                     </InputGroup>
-                </OverlayPanel>
+                </Popover>
                 <Button icon="pi pi-trash" :disabled="!inputModel.provider" @click="removeProvider" severity="danger"/>
             </div>
             <div class="dialog-buttons">
@@ -58,9 +58,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, onBeforeMount, inject, defineEmits, computed, nextTick } from "vue";
+import { ref, onBeforeMount, inject, computed, nextTick } from "vue";
 import Button from "primevue/button";
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ConfigEntryComponent from '../misc/ConfigEntryComponent.vue'
 import Listbox from "primevue/listbox";
 import { useConfirm } from "primevue/useconfirm";
@@ -72,9 +72,9 @@ import {
     type IConfigDefinitions,
     type ISchema,
 } from "../panels/ConfigPanel.vue";
-import OverlayPanel from "primevue/overlaypanel";
 import InputGroup from "primevue/inputgroup";
 import InputText from "primevue/inputtext";
+import Popover from "primevue/popover";
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
@@ -154,8 +154,8 @@ const save = async (override = false) => {
         });
     }
     else {
-        var confirmationText: string;
-        var callback;
+        let confirmationText: string;
+        let callback;
         if (config.value.config_type === "file") {
             confirmationText = `You are about to update file '${config.value.config_id}'.\nProceed?`;
             callback = async () => {

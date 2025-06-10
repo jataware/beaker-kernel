@@ -22,7 +22,7 @@
                     <InputGroupAddon class="media-dropdown-icon">
                         <i class="pi pi-chart-bar"></i>
                     </InputGroupAddon>
-                    <Dropdown
+                    <Select
                         v-model="currentOutput"
                         :options="Array.from(notebookOutputs.map((_v, i) => {return {label: i + 1, value: i}}))"
                         option-label="label"
@@ -43,13 +43,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, defineEmits, inject, computed } from "vue";
-import { BeakerQueryCell, BeakerCodeCell, BeakerSession, IBeakerCell } from 'beaker-kernel/src';
+import { ref, inject, computed } from "vue";
+import type { BeakerQueryCell, BeakerCodeCell, BeakerSession, IBeakerCell } from 'beaker-kernel';
 import Toolbar from "primevue/toolbar";
 import Button from "primevue/button";
 import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 
 const session = inject<BeakerSession>('session');
@@ -102,7 +102,7 @@ const currentMimeBundle = computed(() => {
 
 div.media-toolbar {
     padding: 3px;
-    background: var(--surface-d);
+    background: var(--p-surface-d);
     border-radius: 0;
     border: none;
     margin-bottom: 0.5rem;

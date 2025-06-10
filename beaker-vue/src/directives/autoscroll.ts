@@ -1,14 +1,16 @@
+import { type Directive} from 'vue';
 
-const isFlush = (el) => (
+const isFlush = (el: HTMLElement) => (
     (el.scrollTop + el.clientHeight) >= el.scrollHeight // Was scrolled to bottom of screen
     ||
     (el.scrollTop == 0 && el.clientHeight >= el.scrollHeight) // No scrolling,
 );
 
+// const autoScrollKey = Symbol("_v_autoscroll");
 const autoScrollKey = Symbol("_v_autoscroll");
 
-export const vAutoScroll = {
-    mounted(el, binding, vnode) {
+export const vAutoScroll: Directive = {
+    mounted(el) {
         // Define state object to track observers, etc.
         el[autoScrollKey] = {
             observer: null,
@@ -26,7 +28,7 @@ export const vAutoScroll = {
         el.addEventListener("scroll", scrollHandler)
 
         // Tracks when things may change on the page that would affect the scroll position
-        const mutationHandler = (mutationList, observer) => {
+        const mutationHandler = () => {
             if (state.wasFlush && !isFlush(el)) {
                 el.scrollTo({
                     left: 0,
@@ -47,7 +49,7 @@ export const vAutoScroll = {
         state.scrollHandler = scrollHandler;
     },
 
-    unmounted(el: HTMLElement, binding, vnode) {
+    unmounted(el: HTMLElement) {
         // Cleanup
         const state = el[autoScrollKey];
         state.observer.disconnect();

@@ -37,7 +37,7 @@ Execute selected cell                       - Ctrl-Enter
 
 <script setup lang="ts">
 
-import { ref, computed, defineProps, inject } from "vue";
+import { ref, computed, inject } from "vue";
 
 import Menubar from 'primevue/menubar';
 
@@ -116,8 +116,8 @@ const footerMenuItems = ref([
     top: 0;
     bottom: 0;
     left: -2.1rem;
-    background-color: var(--surface-b);
-    box-shadow: var(--surface-b) 0px 0px 4px;
+    background-color: var(--p-surface-b);
+    box-shadow: var(--p-surface-b) 0px 0px 4px;
   }
 }
 
@@ -140,7 +140,7 @@ const footerMenuItems = ref([
   margin-top: 0.5rem;
   border: 1px solid lightgray;
   border-radius: 3px;
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
 }
 
 .slide-enter-active {

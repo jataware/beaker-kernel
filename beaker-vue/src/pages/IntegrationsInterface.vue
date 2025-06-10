@@ -108,12 +108,12 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, defineEmits, watch, provide, computed, nextTick, onMounted, inject, toRaw, isReactive, reactive } from 'vue';
-import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer, BeakerSession } from 'beaker-kernel/src';
-import { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
-import { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, BeakerRenderOutput, TableRenderer } from '../renderers';
-import { NavOption } from '../components/misc/BeakerHeader.vue';
+import { ref, watch, computed, nextTick, onMounted, inject } from 'vue';
+import { JupyterMimeRenderer, type IMimeRenderer } from 'beaker-kernel';
+import type { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
+import type { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
+import { JSONRenderer, LatexRenderer, MarkdownRenderer, wrapJupyterRenderer, type BeakerRenderOutput, TableRenderer } from '../renderers';
+import type { NavOption } from '../components/misc/BeakerHeader.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
 import BaseInterface from './BaseInterface.vue';
@@ -124,7 +124,7 @@ import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 
-import { IBeakerTheme } from '../plugins/theme';
+import type { IBeakerTheme } from '../plugins/theme';
 import DebugPanel from '../components/panels/DebugPanel.vue'
 
 import IntegrationEditor from '../components/misc/IntegrationEditor.vue';
@@ -158,7 +158,6 @@ const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     JSONRenderer,
     LatexRenderer,
     MarkdownRenderer,
-    DecapodeRenderer,
     TableRenderer
 ];
 
@@ -341,7 +340,7 @@ const restartSession = async () => {
 
 .beaker-notebook {
     flex: 2 0 calc(50vw - 2px);
-    border: 2px solid var(--surface-border);
+    border: 2px solid var(--p-surface-border);
     border-radius: 0;
     border-top: 0;
     max-width: 100%;

@@ -1,27 +1,26 @@
-import { Plugin, App, reactive } from 'vue';
+import { reactive } from 'vue';
+import type { Plugin, App } from 'vue';
 
 export declare type ThemeMode = "light" | "dark" | "default";
 
 export declare interface IThemeConfig {
     name: string,
-    lightTheme?: string, // Name of theme directory as exists in your public themes folder.
-    darkTheme?: string, // Name of theme directory as exists in your public themes folder.
+    path?: string,
     defaultMode?: ThemeMode, // Default light/dark mode to use if not set.
     mode?: ThemeMode,  // Currently set light/dark mode value.
-    overrides?: any, // css to override any defaults
     saveTheme?: boolean,
 }
 
 export declare interface IBeakerTheme {
     theme: IThemeConfig;
-    setTheme: (name: string, mode: ThemeMode) => void;
+    setTheme: (path: string, mode: ThemeMode) => void;
     toggleDarkMode: () => void;
+    setDarkMode: () => void;
 }
 
 export const ThemeDefaults: IThemeConfig = {
     name: 'beaker-default',
-    lightTheme: "beaker-light",
-    darkTheme: "beaker-dark",
+    // path: '@/themes/default',
     defaultMode: 'light',
     saveTheme: false,
 }
@@ -51,24 +50,14 @@ export const BeakerThemePlugin: Plugin = {
         theme = reactive(theme);
 
         const applyTheme = () => {
-            const themeLink: HTMLLinkElement = document.querySelector('#primevue-theme');
-            themeLink.addEventListener('error', (err) => {
-                // Error loading the theme. Fallback to default.
-                const failureCount = Number(localStorage.getItem('theme-failure-count')) || 0;
-                Object.keys(ThemeDefaults).forEach((key) => {
-                    theme[key] = ThemeDefaults[key];
-                });
-                // Clear theme from storage if it's a consistent problem.
-                if (failureCount >= 5) {
-                    localStorage.removeItem('theme');
-                    localStorage.removeItem('theme-failure-count');
-                }
-                else {
-                    localStorage.setItem('theme-failure-count', (failureCount+1).toString());
-                }
-                applyTheme()
-            }, {once: true});
-            themeLink.href = `/themes/${theme.mode === 'light'? theme.lightTheme : theme.darkTheme}/theme.css`;
+
+            const appElement = document.documentElement;
+            if (theme.mode === 'light' || theme.mode === 'default') {
+                appElement.classList.remove('beaker-dark');
+            }
+            else {
+                appElement.classList.add('beaker-dark');
+            }
         };
 
         const toggleDarkMode = () => {
@@ -90,10 +79,20 @@ export const BeakerThemePlugin: Plugin = {
             applyTheme();
         };
 
+        const setDarkMode = (mode) => {
+            theme.mode = mode || theme.defaultMode;
+            if (theme.saveTheme) {
+                localStorage.setItem('theme', JSON.stringify(theme));
+            }
+            localStorage.setItem('theme-lightmode', theme.mode);
+            applyTheme();
+        }
+
         app.config.globalProperties.$beakerTheme = <IBeakerTheme>{
             theme,
             setTheme,
             toggleDarkMode,
+            setDarkMode,
         }
         app.provide('theme', app.config.globalProperties.$beakerTheme);
         applyTheme();

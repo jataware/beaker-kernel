@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, ref, shallowRef, computed, getCurrentInstance, inject, onBeforeMount, onBeforeUnmount } from "vue";
+import { ref, shallowRef, computed, getCurrentInstance, inject, onBeforeMount, onBeforeUnmount } from "vue";
 import CodeEditor from "../misc/CodeEditor.vue";
 import { findSelectableParent } from "../../util";
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
@@ -73,7 +73,7 @@ const enter = (position?: "start" | "end" | number) => {
 const exit = () => {
     // Be sure to blur editor even if we don't also refocus below.
     codeEditorRef.value.blur();
-    let target: HTMLElement = (instance.vnode.el as HTMLElement);
+    const target: HTMLElement = (instance.vnode.el as HTMLElement);
     const selectableParent = findSelectableParent(target);
     selectableParent?.focus();
 }
@@ -101,7 +101,7 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerRawCell } from "beaker-kernel/src";
+import { BeakerRawCell } from "beaker-kernel";
 export default {
     modelClass: BeakerRawCell,
     icon: "pi pi-question-circle",
@@ -114,7 +114,7 @@ export default {
     padding-right: 2em;
 
     .cm-editor {
-        border: 1px solid var(--surface-d);
+        border: 1px solid var(--p-surface-d);
     }
     .cm-focused {
         outline: none;

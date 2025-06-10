@@ -98,8 +98,23 @@
                 ref="rightSideMenuRef"
                 position="right"
                 highlight="line"
-                :expanded="false"
+                :expanded="true"
+                initial-width="35vw"
+                @panel-hide="deactivateQueryCell"
             >
+                <SideMenuPanel
+                    label="Agent Activity"
+                    id="agent-actions"
+                    icon="pi pi-lightbulb"
+                    position="top"
+                    :selected="true"
+                >
+                    <AgentActivityPane
+                        @scrollToMessage="scrollToMessage"
+                        :is-chat-empty="isChatEmpty"
+                    />
+                </SideMenuPanel>
+
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
@@ -132,11 +147,11 @@ import ChatPanel from '../components/chat-interface/ChatPanel.vue';
 import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 import InfoPanel from '../components/panels/InfoPanel.vue';
-import {ChatHistoryPanel, ChatHistoryProps, IChatHistory} from '../components/panels/ChatHistoryPanel';
+import {ChatHistoryPanel, type IChatHistory} from '../components/panels/ChatHistoryPanel';
 
 import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
-import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
+import ChatQueryCell from '../components/chat-interface/ChatQueryCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
@@ -147,21 +162,22 @@ import BeakerSession from '../components/session/BeakerSession.vue';
 
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
-import { JupyterMimeRenderer } from 'beaker-kernel/src';
-// import { _ } from '../util/whitelabel';
-import { NavOption } from '../components/misc/BeakerHeader.vue';
+import { JupyterMimeRenderer, type IBeakerCell } from 'beaker-kernel';
+import type { NavOption } from '../components/misc/BeakerHeader.vue';
 
 import { handleAddExampleMessage, handleAddIntegrationMessage } from '../util/integration';
 
-import { defineProps, inject, ref, computed, ComponentInstance, Component, StyleHTMLAttributes, ComputedRef, } from 'vue';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
+import { inject, ref, computed, watch, provide } from 'vue';
+import { JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
-import { IBeakerTheme } from '../plugins/theme';
+import type { IBeakerTheme } from '../plugins/theme';
 import { vKeybindings } from '../directives/keybindings';
+
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
+import AgentActivityPane from '../components/chat-interface/AgentActivityPane.vue';
 import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
 
 const beakerInterfaceRef = ref();
@@ -174,7 +190,7 @@ const rightSideMenuRef = ref();
 const contextPreviewData = ref<any>();
 const debugLogs = ref<object[]>([]);
 const datasources = ref([]);
-
+const activeQueryCell = ref<IBeakerCell | null>(null);
 const chatHistory = ref<IChatHistory>()
 
 type FilePreview = {
@@ -183,6 +199,15 @@ type FilePreview = {
 }
 const previewedFile = ref<FilePreview>();
 const previewVisible = ref<boolean>(false);
+
+const beakerSession = computed(() => {
+    return beakerInterfaceRef?.value?.beakerSession;
+});
+
+const isChatEmpty = computed(() => {
+    const cells = beakerSession.value?.session?.notebook?.cells ?? [];
+    return cells.length === 0;
+});
 
 const isLastCellAwaitingInput = computed(() => {
     const cells = beakerSession.value?.session?.notebook?.cells ?? [];
@@ -196,6 +221,33 @@ const isLastCellAwaitingInput = computed(() => {
     return false;
 })
 
+const deactivateQueryCell = () => {
+    activeQueryCell.value = null;
+}
+
+const scrollToMessage = () => {
+    const chatCell = document.querySelector(`[data-cell-id="${activeQueryCell.value?.id}"]`);
+    if (chatCell) {
+        chatCell.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+/**
+ * `activeQueryCell` indicates that the Agent Activity pane should be open,
+ * but clicking the x should always close the right-side pane.
+ */
+watch(activeQueryCell, (newValue) => {
+    if(!rightSideMenuRef.value) return;
+
+    const anyPaneOpen = Boolean(rightSideMenuRef.value.getSelectedPanelInfo());
+
+    if (newValue) {
+        rightSideMenuRef.value.selectPanel('agent-actions');
+    }
+    else if (anyPaneOpen) {
+        rightSideMenuRef.value.hidePanel();
+    }
+});
 
 const headerNav = computed((): NavOption[] => {
     const nav: NavOption[] = [
@@ -254,9 +306,6 @@ const headerNav = computed((): NavOption[] => {
     return nav;
 });
 
-const beakerSession = computed(() => {
-    return beakerInterfaceRef?.value?.beakerSession;
-});
 
 const loadNotebook = (notebookJSON: any) => {
     beakerSession.value?.session.loadNotebook(notebookJSON);
@@ -278,18 +327,16 @@ const renderers = [
     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
     JSONRenderer,
     LatexRenderer,
-    DecapodeRenderer,
 ];
 
 const cellComponentMapping = {
     'code': BeakerCodeCell,
     'markdown': BeakerMarkdownCell,
-    'query': BeakerQueryCell,
+    'query': ChatQueryCell,
     'raw': BeakerRawCell,
 }
 
 const connectionStatus = ref('connecting');
-const beakerSessionRef = ref<typeof BeakerSession>();
 
 
 const iopubMessage = (msg) => {
@@ -375,130 +422,17 @@ const restartSession = async () => {
     )
     await resetFuture;
 }
+
+provide('activeQueryCell', activeQueryCell);
+
 </script>
 
 <style lang="scss">
-// #app {
-//     margin: 0;
-//     padding: 0.5em;
-//     overflow: hidden;
-//     background-color: var(--surface-b);
-//     height: 100vh;
-//     width: 100vw;
-// }
-// header {
-//     display: flex;
-//     justify-content: space-between;
-//     align-items: start;
-//     flex: 25;
-// }
-// main {
-//     flex: 50;
-// }
-// footer {
-//     // grid-area: r-sidebar;
-//     flex: 25;
-// }
-// .main-panel {
-//     display: flex;
-//     flex-direction: column;
-//     &:focus {
-//         outline: none;
-//     }
-// }
-// div.beaker-notebook {
-//     padding-top: 1rem;
-// }
-
-// .central-panel {
-//     flex: 50;
-//     display: flex;
-//     flex-direction: column;
-//     max-width: 820px;
-//     margin: auto;
-// }
-
-// .beaker-session-container {
-//     height: 100%;
-// }
-
-// div.cell-container {
-//     position: relative;
-//     display: flex;
-//     flex: 1;
-//     background-color: var(--surface-b);
-//     flex-direction: column;
-//     z-index: 3;
-//     overflow: auto;
-// }
-
-// div.llm-query-cell.beaker-chat-cell {
-//     padding: 0;
-// }
-
-// div.llm-prompt-container {
-//     margin-right: 0;
-// }
-
-// div.llm-prompt-container h2.llm-prompt-text {
-//     font-size: 1.25rem;
-//     max-width: 70%;
-//     margin-left: auto;
-//     background-color: var(--surface-a);
-//     padding: 1rem;
-//     border-radius: 16px;
-// }
-
-// div.llm-prompt-container {
-//     text-align: right;
-//     max-width: 60%;
-//     align-self: end;
-// }
-
-// div.query {
-//     display: flex;
-//     flex-direction: column;
-// }
-
-// div.query-steps {
-//     display: none;
-// }
-
-// div.events div.query-answer {
-//     background-color: var(--surface-b);
-// }
-
-// div.beaker-toolbar {
-//     flex-direction: column;
-// }
-
-// div.beaker-toolbar div {
-//     flex-direction: column;
-// }
-
-// div.central-panel, div.beaker-notebook {
-//     height: 100%;
-// }
-
-// button.connection-button {
-//     border: none;
-// }
-
-// div.code-cell {
-//     margin-bottom: 2rem;
-// }
-
-// div.code-cell.query-event-code-cell {
-//     margin-bottom: 0.25rem;
-// }
-
 .spacer {
     &.left {
-        //flex: 0 1000 25vw;
         display: none;
     }
     &.right {
-        //flex: 0 1000 25vw;
         display: none;
     }
 }
@@ -514,7 +448,6 @@ const restartSession = async () => {
     flex: 0 0 100%;
     padding-right: 1rem;
     padding-left: 1rem;
-    //border: 1px solid var(--surface-border);
     display: flex;
     flex-direction: column;
     max-width: 1260px;

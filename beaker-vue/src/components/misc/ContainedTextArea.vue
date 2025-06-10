@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref, nextTick, inject } from "vue";
+import { ref, nextTick, inject } from "vue";
 import Textarea from 'primevue/textarea';
 
 const props = defineProps({
@@ -44,7 +44,7 @@ const allowScroll = ref(false);
     min-height: 3rem;
 
     &::placeholder {
-        color: var(--gray-400);
+        color: var(--p-gray-400);
     }
 }
 

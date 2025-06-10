@@ -1,5 +1,6 @@
 import { EditorView as CodeMirrorView } from "@codemirror/view";
-import  PrimevueTextarea from "primevue/textarea";
+import PrimevueTextarea from "primevue/textarea";
+
 
 /**
  *
@@ -76,7 +77,7 @@ export function isErrorObject(obj): obj is ErrorObject {
     return Object.hasOwn(obj, "ename") && Object.hasOwn(obj, "evalue");
 }
 
-type InputElement = HTMLTextAreaElement | HTMLInputElement | CodeMirrorView | PrimevueTextarea;
+type InputElement = HTMLTextAreaElement | HTMLInputElement | CodeMirrorView | typeof PrimevueTextarea;
 
 export function normalizeInputElement(input: object): InputElement {
     if (Object.hasOwn(input, "view") && Object.hasOwn(input["view"], "viewState")) {
@@ -95,7 +96,7 @@ export function is_codemirror(input: InputElement): input is CodeMirrorView {
     return result;
 }
 
-export function is_primevue(input: InputElement): input is PrimevueTextarea {
+export function is_primevue(input: InputElement): input is typeof PrimevueTextarea {
     return false;
 }
 

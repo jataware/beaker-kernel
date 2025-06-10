@@ -29,9 +29,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeMount, inject, defineEmits, nextTick } from "vue";
+import { ref, onBeforeMount, inject, nextTick } from "vue";
 import Button from "primevue/button";
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import ConfigEntryComponent from '../misc/ConfigEntryComponent.vue'
 import { useConfirm } from "primevue/useconfirm";
 import ProgressSpinner from "primevue/progressspinner";
@@ -113,7 +113,7 @@ export interface IConfigDefinitions {
 export function objectifyTables(schema: ISchema, obj: unknown) {
     // Make sure to recurse through types that can hold other types
     if (schema.type_str.startsWith('Dataclass')) {
-        let output = {};
+        const output = {};
         for (const key of Object.keys(schema.fields)) {
             const value = obj[key];
             const childSchema = schema.fields[key];
@@ -135,7 +135,7 @@ export function objectifyTables(schema: ISchema, obj: unknown) {
 
 export function tablifyObjects(schema: ISchema, obj: unknown) {
     if (schema.type_str.startsWith('Dataclass')) {
-        let output = {};
+        const output = {};
         for (const key of Object.keys(schema.fields)) {
             const value = obj[key];
             const childSchema = schema.fields[key];
@@ -160,7 +160,7 @@ export function tablifyObjects(schema: ISchema, obj: unknown) {
 
 export function dropUnchangedValues(schema: ISchema, currentConfig: IConfig, originalConfig: IConfig) {
     if (schema.type_str.startsWith('Dataclass')) {
-        let output = {};
+        const output = {};
         for (const key of Object.keys(schema.fields)) {
             const value = currentConfig[key];
             const childSchema = schema.fields[key];

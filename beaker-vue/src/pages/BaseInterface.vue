@@ -84,8 +84,9 @@
 </template>
 
 <script setup lang="tsx">
-import { ErrorObject, isErrorObject } from '../util';
-import { h, defineEmits, defineProps, useSlots, isVNode, ref, onMounted, provide, nextTick, onUnmounted, toRaw, defineExpose, Component, ComponentInstance } from 'vue';
+import { type ErrorObject, isErrorObject } from '../util';
+import { h, useSlots, isVNode, ref, onMounted, provide, nextTick, onUnmounted, toRaw} from 'vue';
+import { type Component, type ComponentInstance } from 'vue';
 import Dialog from 'primevue/dialog';
 import DynamicDialog from 'primevue/dynamicdialog';
 import { useDialog } from 'primevue/usedialog';
@@ -95,7 +96,7 @@ import BeakerHeader from '../components/misc/BeakerHeader.vue';
 import Card from 'primevue/card';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
-import {BeakerSession as Session} from 'beaker-kernel/src'
+import {BeakerSession as Session} from 'beaker-kernel'
 import InputText from 'primevue/inputtext';
 import InputGroup from 'primevue/inputgroup';
 import Button from 'primevue/button';
@@ -106,7 +107,7 @@ import {default as ConfigPanel, getConfigAndSchema, dropUnchangedValues, objecti
 import SideMenu, { type MenuPosition } from '../components/sidemenu/SideMenu.vue';
 import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import FooterDrawer from '../components/misc/FooterDrawer.vue';
-import { DynamicDialogInstance } from 'primevue/dynamicdialogoptions';
+import type { DynamicDialogInstance, DynamicDialogOptions } from 'primevue/dynamicdialogoptions';
 
 const dialog = useDialog();
 const toast = useToast();
@@ -132,15 +133,12 @@ const showToast = (options: ShowToastOptions) => {
     });
 };
 
-export type StyleOverride = 'chat'
-
 const props = defineProps<{
-  title: string
-  titleExtra?: string
-  savefile?: string
-  headerNav?: any
-  apiKeyPrompt?: boolean
-  styleOverrides?: StyleOverride[]
+  title: string;
+  titleExtra?: string;
+  savefile?: string;
+  headerNav?: any;
+  apiKeyPrompt?: boolean;
 }>();
 
 const emit = defineEmits([
@@ -221,9 +219,7 @@ const showOverlay = (contents: string | Component | HTMLElement | ErrorObject, t
 provide('show_toast', showToast);
 provide('show_overlay', showOverlay);
 
-const styleOverrides = props.styleOverrides ?? [];
-provide('styleOverrides', styleOverrides)
-const isChat = styleOverrides.includes('chat')
+const isChat = ref(true);
 
 const connectionFailure = (error: Error) => {
     let errorName = error.name;
@@ -425,7 +421,7 @@ main {
     grid-template: "left-panel center-panel right-panel";
     grid-template-columns: var(--columns);
     grid-template-rows: 100%;
-    background-color: var(--surface-0);
+    background-color: var(--p-content-background);
     overflow: visible hidden;
     max-width: 100%;
     max-height: 100%;
@@ -446,7 +442,7 @@ footer {
 #center-panel {
     grid-area: center-panel;
     border: 1px solid;
-    border-color: var(--surface-border);
+    border-color: var(--p-surface-border);
 }
 
 #center-panel-chat-override {
@@ -485,7 +481,7 @@ footer {
 
 #overlay-content .traceback {
     padding: 0.5rem;
-    background-color: var(--surface-50);
+    background-color: var(--p-surface-b);
 }
 
 </style>

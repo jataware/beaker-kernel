@@ -59,7 +59,7 @@
             <span :class="[...getFileIconClass(slotProps.data), 'file-icon', slotProps.data.type]"></span>
             <span
               :id="`file-list::${slotProps.data.path}`"
-              class="file-name"
+              class="file-name monospace"
               :class="slotProps.data.type"
             >
               {{ slotProps.data.name }}
@@ -121,15 +121,15 @@
 
 <script lang="ts" setup>
 
-import { ref, inject, capitalize, defineProps, defineExpose, onMounted, computed, defineEmits } from "vue";
+import { ref, inject, capitalize, onMounted, computed } from "vue";
 import Button from 'primevue/button';
 import 'vue-json-pretty/lib/styles.css';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
-import cookie from 'cookie';
-import {filesize} from 'filesize';
-import {Time} from '@jupyterlab/coreutils/src/time';
+import * as cookie from 'cookie';
+import { filesize } from 'filesize';
+import { Time } from '@jupyterlab/coreutils';
 import scroll from 'scroll-into-view-if-needed'
 
 const previewFile = (path, mimetype) => {
@@ -272,7 +272,7 @@ const uploadFiles = async (files: FileList) => {
     const fullPath = `${curDir.value}/${file.name}`;
     const bytes = [];
     const reader = file.stream().getReader();
-    var chunk = (await reader.read()).value;
+    let chunk = (await reader.read()).value;
     while (chunk?.length > 0) {
       bytes.push(Array.from(chunk, (byte) => String.fromCharCode(byte)).join(""));
       chunk = (await reader.read()).value;
@@ -419,12 +419,12 @@ defineExpose({
 
   .file-table {
     font-size: smaller;
-    border: 1px solid var(--surface-border);
+    border: 1px solid var(--p-surface-border);
     flex: 1;
     overflow: auto;
     display:flex;
 
-    .p-datatable-wrapper {
+    .p-datatable-table-container {
       flex: 1;
     }
 
@@ -503,7 +503,7 @@ defineExpose({
     aspect-ratio: 1/1;
     text-align: center;
 
-    > .p-column-header-content {
+    > .p-datatable-column-header-content {
       justify-content: center;
     }
   }
@@ -528,7 +528,7 @@ defineExpose({
 
   .file-icon {
     &.directory {
-      color: var(--primary-600);
+      color: var(--p-primary-600);
       font-weight: bold;
     }
   }
@@ -539,7 +539,7 @@ defineExpose({
     &.directory {
       text-decoration: underline ;
       text-underline-offset: 0.25rem;
-      // color: var(--primary-500);
+      // color: var(--p-primary-500);
     }
   }
 
@@ -555,8 +555,8 @@ defineExpose({
     display: flex;
     flex-direction: row;
     align-items: center;
-    border: 3px solid var(--surface-border);
-    background-color: var(--surface-d);
+    border: 3px solid var(--p-surface-border);
+    background-color: var(--p-surface-d);
     padding-left: 1em;
 
     > button {

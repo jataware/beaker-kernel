@@ -26,13 +26,13 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, inject, computed, nextTick, onBeforeMount, defineExpose, getCurrentInstance, onBeforeUnmount} from "vue";
+import { ref, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount} from "vue";
 import { marked } from 'marked';
 import { findSelectableParent } from '../../util';
-import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 import CodeEditor from '../misc/CodeEditor.vue';
-import { IBeakerTheme } from '../../plugins/theme';
+import type { IBeakerTheme } from '../../plugins/theme';
 
 const props = defineProps([
     "cell"
@@ -92,7 +92,7 @@ const exit = () => {
     }
     else {
         codeEditorRef.value?.blur();
-        let target: HTMLElement = (instance.vnode.el as HTMLElement);
+        const target: HTMLElement = (instance.vnode.el as HTMLElement);
         const selectableParent = findSelectableParent(target);
         selectableParent?.focus();
     }
@@ -127,7 +127,7 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerMarkdownCell } from "beaker-kernel/src";
+import { BeakerMarkdownCell } from "beaker-kernel";
 export default {
     modelClass: BeakerMarkdownCell,
     icon: "pi pi-pencil",
@@ -153,11 +153,11 @@ export default {
 
 .markdown-edit-data {
     grid-area: code;
-    background-color: var(--surface-a);
+    background-color: var(--p-surface-a);
     // white-space: pre-wrap;
 
     .cm-editor {
-        border: 1px solid var(--surface-d);
+        border: 1px solid var(--p-surface-d);
         // white-space: pre-wrap;
     }
     .cm-focused {

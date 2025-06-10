@@ -35,7 +35,7 @@
         </DataTable>
         <p v-else style="
             font-style: italic;
-            color:var(--surface-400);
+            color:var(--p-surface-f);
             margin-bottom: 0.5rem;
             margin-top: 0rem;
         ">
@@ -131,7 +131,7 @@
         <div class="log-message-details">
             <span style="
                 font-style: italic;
-                color: var(--surface-400);
+                color: var(--p-surface-f);
                 font-size: 0.85rem;"
             >
                 {{ logEntry?.body?.header?.msg_id }}
@@ -142,7 +142,7 @@
 </template>
 <script lang="ts" setup>
 
-import { ref, computed, defineEmits, defineProps } from "vue";
+import { ref, computed } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import VueJsonPretty from 'vue-json-pretty';
@@ -187,7 +187,7 @@ const showParentHeader = ref(false);
     white-space: pre-wrap;
 
     .p-panel-header {
-        background: var(--surface-b);
+        background: var(--p-surface-b);
         padding: 0.5rem 1rem;
     }
     .p-panel-content {
@@ -212,7 +212,7 @@ const showParentHeader = ref(false);
 }
 
 .log-message-date {
-    color: var(--grey-300);
+    color: var(--p-grey-300);
     flex: 0 0 auto;
 }
 
@@ -220,14 +220,15 @@ const showParentHeader = ref(false);
     font-size: 0.9rem;
     display: flex;
     flex-direction: row;
+    justify-content: flex-start;
     gap: 0.2rem;
+
     span.pi {
         font-size: 0.85rem;
     }
     * {
         margin: auto 0.2rem auto 0;
     }
-    justify-content: flex-start;
     &:hover {
         cursor: pointer;
         .log-dropdown-label {
@@ -252,7 +253,7 @@ const showParentHeader = ref(false);
         font-family: monospace;
     }
     tbody tr:nth-child(1) td {
-        border-top: 1px solid var(--surface-d);
+        border-top: 1px solid var(--p-surface-d);
     }
 }
 

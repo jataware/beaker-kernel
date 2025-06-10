@@ -21,8 +21,8 @@
                     <span class="progress-bar-usage summary" :style="{width: `${summaryUsagePct}%`}"></span>
                     <span class="progress-bar-usage message" :style="{width: `${messageUsagePct}%`}"></span>
                 </div>
-                <div style="width: 2px; height: 100%; background-color: var(--orange-600); position: absolute; top: 0;" :style="{left:`${summarizationThresholdLowPct}%`}"></div>
-                <div style="width: 2px; height: 100%; background-color: var(--red-600); position: absolute; top: 0;" :style="{left: `85%`}"></div>
+                <div style="width: 2px; height: 100%; background-color: var(--p-orange-600); position: absolute; top: 0;" :style="{left:`${summarizationThresholdLowPct}%`}"></div>
+                <div style="width: 2px; height: 100%; background-color: var(--p-red-600); position: absolute; top: 0;" :style="{left: `85%`}"></div>
                 <div style="width: 100%; position: absolute; top: 1%; text-align: center;">
                     {{ usageLabel }}
                 </div>
@@ -87,13 +87,7 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, defineEmits, defineProps } from "vue";
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import ProgressBar from "primevue/progressbar";
-import Knob from "primevue/knob";
-
-import DebugLogMessage from "../../misc/DebugLogMessage.vue";
+import { ref, computed } from "vue";
 import ChatHistoryMessage from "./ChatHistoryMessage.vue";
 
 
@@ -203,8 +197,8 @@ const roundToFiveHundred = (rawValue: number): number => {
 }
 
 const displayNumber = (rawValue: number): string => {
-    var label = 'k';
-    var value: string = rawValue.toLocaleString();
+    let label = 'k';
+    let value: string = rawValue.toLocaleString();
     if (rawValue >= 1000) {
         label = 'M';
         value = (rawValue / 1000).toFixed(2);
@@ -229,19 +223,19 @@ const displayNumber = (rawValue: number): string => {
 }
 
 .overhead {
-    --context-color: var(--gray-500);
+    --p-context-color: var(--p-gray-500);
 }
 
 .summary {
-    --context-color: var(--blue-900);
+    --p-context-color: var(--p-blue-900);
 }
 
 .message {
-    --context-color: var(--blue-600);
+    --p-context-color: var(--p-blue-600);
 }
 
 .total {
-    --context-color: var(--primary-color);
+    --p-context-color: var(--p-primary-color);
 }
 
 .progress-bar-map {
@@ -263,7 +257,7 @@ const displayNumber = (rawValue: number): string => {
         width: 1.5rem;
         height: 1.5rem;
         border-radius: 1.5rem;
-        background-color: var(--context-color);
+        background-color: var(--p-context-color);
     }
 }
 
@@ -271,14 +265,14 @@ const displayNumber = (rawValue: number): string => {
     width: 100%;
     height: 1.5rem;
     border-radius: 0.5rem;
-    background-color: var(--surface-d);
+    background-color: var(--p-surface-d);
     overflow: hidden;
     margin-bottom: 0.5rem;
 
     .progress-bar-usage {
         display: inline-block;
         height: 100%;
-        background-color: var(--context-color);
+        background-color: var(--p-context-color);
     }
 }
 
@@ -286,7 +280,7 @@ const displayNumber = (rawValue: number): string => {
     // The internal class for the json viewer-
     // Change the hover color for better contrast
     .vjs-tree-node:hover {
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
     }
     height: 100%;
     width: 100%;
@@ -310,14 +304,14 @@ const displayNumber = (rawValue: number): string => {
     display: flex;
     margin-top: 0.5rem;
     justify-content: center;
-    color: var(--text-color-secondary);
+    color: var(--p-text-color-secondary);
 }
 
 .debug-sort-actions {
     display: flex;
     flex-direction: row;
     .p-button {
-        border-color: var(--surface-d);
+        border-color: var(--p-surface-d);
     }
 }
 

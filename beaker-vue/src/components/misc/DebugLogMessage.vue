@@ -23,7 +23,7 @@
                     <span v-if="logEntry?.body?.split('tool_calls=')?.[1]?.split(`'`)?.[3] === 'final_answer'">Processing final answer from tool output.</span>
                     <span v-else>{{ logEntry?.body?.split('tool_calls=')?.[0]?.split('text=')?.[1].slice(1, -3) }}</span>
                 </span>
-                <span v-if="logEntry?.type === 'agent_llm_request'" style="color: var(--surface-600);">Agent context setup and conversation history -- see details below</span>
+                <span v-if="logEntry?.type === 'agent_llm_request'" style="color: var(--p-surface-h);">Agent context setup and conversation history -- see details below</span>
                 <span v-if="rawStringMessageTypes.includes(logEntry?.type) || !Object.keys(userFacingNames).includes(logEntry?.type)">
                     {{ logEntry?.body }}
                 </span>
@@ -136,7 +136,7 @@
 </template>
 <script lang="ts" setup>
 
-import { ref, computed, defineEmits, defineProps } from "vue";
+import { ref, computed } from "vue";
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
@@ -221,7 +221,7 @@ const showRaw = ref(false);
     white-space: pre-wrap;
 
     .p-panel-header {
-        background: var(--surface-b);
+        background: var(--p-surface-b);
         padding: 0.5rem 1rem;
     }
     .p-panel-content {
@@ -246,7 +246,7 @@ const showRaw = ref(false);
 }
 
 .debug-message-date {
-    color: var(--grey-300);
+    color: var(--p-grey-300);
     flex: 0 0 auto;
 }
 
@@ -270,19 +270,19 @@ const showRaw = ref(false);
     display: flex;
     flex-direction: row;
     gap: 0.2rem;
+    justify-content: flex-start;
+    color: var(--p-surface-h);
     span.pi {
         font-size: 0.85rem;
     }
     * {
         margin: auto 0.2rem auto 0;
     }
-    justify-content: flex-start;
-    color: var(--surface-600);
     &:hover {
         cursor: pointer;
         .debug-dropdown-label {
             text-decoration: underline;
-            color: var(--surface-400);
+            color: var(--p-surface-f);
         }
     }
 }
@@ -303,7 +303,7 @@ const showRaw = ref(false);
         font-family: monospace;
     }
     tbody tr:nth-child(1) td {
-        border-top: 1px solid var(--surface-d);
+        border-top: 1px solid var(--p-surface-d);
     }
 }
 
@@ -323,7 +323,7 @@ const showRaw = ref(false);
 }
 
 .debug-separator {
-    background-color: var(--surface-200);
+    background-color: var(--p-surface-d);
     height: 1px;
     width: 100%;
     margin: 0.5rem 0;

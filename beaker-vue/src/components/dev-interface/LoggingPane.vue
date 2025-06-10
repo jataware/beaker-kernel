@@ -81,7 +81,7 @@
 
 <script lang="ts" setup>
 
-import { ref, computed, defineEmits, defineProps } from "vue";
+import { ref, computed } from "vue";
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import VueJsonPretty from 'vue-json-pretty';
@@ -136,7 +136,7 @@ const filteredLogs = computed(() => {
   // The internal class for the json viewer-
   // Change the hoder color for better contrast
   .vjs-tree-node:hover{
-    background-color: var(--surface-b);
+    background-color: var(--p-surface-b);
   }
   height: 100%;
   width: 100%;
@@ -166,7 +166,7 @@ const filteredLogs = computed(() => {
   white-space: pre-wrap;
 
   .p-panel-header {
-    background: var(--surface-b);
+    background: var(--p-surface-b);
     padding: 0.5rem 1rem;
   }
   .p-panel-content {
@@ -176,14 +176,14 @@ const filteredLogs = computed(() => {
   // If we wanted to alternate widget panel-heading bg color or so:
   // &.odd {
   //   .p-panel-header {
-  //     background: var(--surface-b);
+  //     background: var(--p-surface-b);
   //   }
   // }
 }
 
 .log-panel::before {
   content: attr(data-index);
-  color: var(--gray-300);
+  color: var(--p-gray-300);
   position: absolute;
   right: 1rem;
   top: 0.4rem;
@@ -194,12 +194,12 @@ const filteredLogs = computed(() => {
   display: flex;
   margin-top: 0.5rem;
   justify-content: center;
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
 }
 
 .sort-actions {
   .p-button {
-    border-color: var(--surface-d);
+    border-color: var(--p-surface-d);
   }
 }
 

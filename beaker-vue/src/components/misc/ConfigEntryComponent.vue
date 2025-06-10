@@ -84,11 +84,11 @@
         </span>
         <InputSwitch
             :id="keyValue"
-            style="padding: 2px 8px;"
             :class="{dirty}"
             :name="keyValue"
             v-model="model"
         />
+            <!-- style="padding: 2px 8px;" -->
         </div>
     </template>
     <template v-else-if="schema?.type_str == 'int' && typeof(model) === 'number'">
@@ -136,7 +136,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, defineProps, defineModel, watch, inject, onBeforeMount, onMounted, toRaw, getCurrentInstance, computed, withDefaults} from "vue";
+import { ref, watch, inject, onBeforeMount, onMounted, toRaw, getCurrentInstance, computed} from "vue";
 import InlineInput from "./InlineInput.vue";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
@@ -145,7 +145,7 @@ import InputSwitch from "primevue/inputswitch";
 import Button from "primevue/button";
 import scrollIntoView from "scroll-into-view-if-needed";
 import ToggleButton from "primevue/togglebutton";
-import { IConfigDefinitions, ISchema } from "../panels/ConfigPanel.vue";
+import type { IConfigDefinitions, ISchema } from "../panels/ConfigPanel.vue";
 
 export interface ConfigEntryComponentProps {
     name?: string;
@@ -218,7 +218,7 @@ onBeforeMount(() => {
 
 onMounted(() => {
     if (props.schema?.type_str?.startsWith('Choice')) {
-        var sourceObject = props.configObject[props.schema?.choice_source];
+        const sourceObject = props.configObject[props.schema?.choice_source];
         if (sourceObject) {
             watch(sourceObject, () => {
                 if (!sourceObject.map((obj) => obj.name).includes(model.value)) {
@@ -231,7 +231,7 @@ Please make sure to update that value before saving.`,
                         life: 15000,
                     })
                     setTimeout(() => {
-                        var div: HTMLDivElement = instance.vnode.el.parentElement;
+                        const div: HTMLDivElement = instance.vnode.el.parentElement;
                         scrollIntoView(
                             div,
                             {
@@ -293,11 +293,11 @@ Please make sure to update that value before saving.`,
 
     & .select-wrap {
         position: relative;
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
 
         & select {
             width: 100%;
-            color: var(--text-color);
+            color: var(--p-text-color);
             background-color: transparent;
             padding-right: 2.5rem;
             z-index: 1;
@@ -307,12 +307,12 @@ Please make sure to update that value before saving.`,
         & .select-dropdown {
             position: absolute;
             top: 0.8rem;
-            right: -1rem;
+            right: 0.5rem;
             z-index: 0;
         }
 
         & option {
-            background-color: var(--surface-a);
+            background-color: var(--p-surface-a);
 
             &:disabled {
                 color: #777;
@@ -360,10 +360,10 @@ Please make sure to update that value before saving.`,
     }
 
     .clear-icon {
-        color: var(--primary-color);
+        color: var(--p-primary-color);
 
         &.checked {
-            color: var(--primary-color-text)
+            color: var(--p-primary-color-text)
         }
     }
 
