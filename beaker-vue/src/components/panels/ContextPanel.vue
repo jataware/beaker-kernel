@@ -13,7 +13,7 @@
             <div
                 @mousedown="($event.detail > 1) && $event.preventDefault();"
                 @dblclick.stop.prevent="selectAction(slotProps.node.label)"
-                style="cursor: pointer; border-bottom: 1px dotted var(--text-color-secondary);"
+                style="cursor: pointer; border-bottom: 1px dotted var(--p-text-color-secondary);"
                 v-tooltip="{
                     value: `${slotProps.node.data}`,
                     pt: {
@@ -35,7 +35,7 @@
         </template>
         <template #tool="slotProps">
             <span
-                style="cursor: help; border-bottom: 1px dotted var(--text-color-secondary);"
+                style="cursor: help; border-bottom: 1px dotted var(--p-text-color-secondary);"
                 v-tooltip="{
                     value: `${slotProps.node.data}`,
                     pt: {
@@ -59,11 +59,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, computed, inject } from "vue";
+import { ref, computed, inject } from "vue";
 import Tree from 'primevue/tree';
-import { TreeNode } from 'primevue/treenode';
-import { emitError } from "vue-json-pretty/types/utils";
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { TreeNode } from 'primevue/treenode';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 const contextPanelOpen = ref(true);
 const toggleContextPanel = () => {
@@ -169,7 +168,7 @@ const selectAction = (actionName: string) => {
 <style lang="scss">
 
 .context-heading {
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
   margin: 1rem 1.25rem 0.25rem 1.25rem;
 }
 
@@ -204,9 +203,9 @@ const selectAction = (actionName: string) => {
   position: absolute;
   right: -0.5rem;
   top: 40%;
-  background: var(--surface-a);
-  border-color: var(--surface-300);
-  color: var(--primary-300);
+  background: var(--p-surface-a);
+  border-color: var(--p-surface-e);
+  color: var(--p-primary-300);
   z-index: 2;
 }
 
@@ -215,7 +214,7 @@ const selectAction = (actionName: string) => {
 }
 
 .loading-area {
-    background: var(--surface-a);
+    background: var(--p-surface-a);
     display: flex;
     flex-direction: column;
     align-items: center;

@@ -1,4 +1,4 @@
-import { BeakerQueryEvent } from "beaker-kernel/src";
+import type { BeakerQueryEvent } from "beaker-kernel";
 
 const terminalEvents = [
     "error",

@@ -1,0 +1,44 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.lib.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "target": "ESNext",
+    "strict": false,
+    "jsx": "preserve",
+    "jsxImportSource": "vue",
+    "declaration": true,
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "useDefineForClassFields": true,
+    "emitDeclarationOnly": false,
+
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.lib.tsbuildinfo",
+    "verbatimModuleSyntax": false, // Disables requirement that all types are imported using type identifier
+
+    "paths": {
+      "@/*": ["./src/*"],
+      "path": ["./node_modules/path-browserify"]
+    }
+  },
+
+  "include": [
+    "env.d.ts",
+    "src/components/**/*.ts",
+    "src/components/**/*.tsx",
+    "src/components/**/*.vue",
+    "src/directives/**/*.ts",
+    "src/directives/**/*.tsx",
+    "src/directives/**/*.vue",
+    "src/plugins/**/*.ts",
+    "src/plugins/**/*.tsx",
+    "src/plugins/**/*.vue",
+    "src/util/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules/**"
+  ]
+}

@@ -68,7 +68,7 @@
               <span style="flex: 100"></span>
               <span style="font-size: large;">Session count: {{ adminStats.sessions?.length || 0 }}</span>
               <span style="padding: 0 1rem"> | </span>
-              <Dropdown :options="['---', 'destroy']" v-model="sessionAction"></Dropdown>
+              <Select :options="['---', 'destroy']" v-model="sessionAction"></Select>
               <Button severity="success" raised @click="groupSessionAction">Go</Button>
           </div>
         </template>
@@ -136,12 +136,12 @@
 
 <script setup lang="ts">
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';
-import { defineProps, reactive, ref, onBeforeMount, provide, onBeforeUnmount, computed } from 'vue';
+import { reactive, ref, onBeforeMount, provide, onBeforeUnmount, computed } from 'vue';
 import DataTable from 'primevue/datatable';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import ConfirmDialog from 'primevue/confirmdialog';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import Toast from 'primevue/toast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
 }
 
 .p-datatable {
-  border: 1px solid var(--surface-border);
+  border: 1px solid var(--p-surface-border);
 }
 
 .stats-tables {

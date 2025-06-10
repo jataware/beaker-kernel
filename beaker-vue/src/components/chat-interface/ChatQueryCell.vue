@@ -40,33 +40,33 @@
                     :class="{ 'expanded': activeQueryCell === cell }"
                     @click="expandThoughts"
                 >
-                    <div 
+                    <div
                         class="white-space-nowrap"
                         style="
-                            display: flex; 
+                            display: flex;
                             align-items: center;
                             font-weight: 400;
                             font-family: 'Courier New', Courier, monospace;
                             font-size: 0.8rem;
-                            color: var(--text-color-secondary)
+                            color: var(--p-text-color-secondary)
                         "
                     >
                         <i
                             class="pi pi-sparkles"
                             :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
                             style="
-                                color: var(--yellow-500);
+                                color: var(--p-yellow-500);
                                 font-size: 1.25rem;
                                 margin-right: 0.6rem;
                             "
                         />
                         {{ lastEventThought }}
                     </div>
-                    <Button 
+                    <Button
                         :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
-                        text 
-                        rounded 
-                        style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                        text
+                        rounded
+                        style="background-color: var(--p-surface-c); color: var(--p-text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
                     />
                 </div>
 
@@ -86,39 +86,39 @@
                         :class="{ 'expanded': activeQueryCell === cell }"
                         @click="expandThoughts"
                     >
-                        <div 
+                        <div
                             class="white-space-nowrap"
                             style="
-                                display: flex; 
+                                display: flex;
                                 align-items: center;
                                 font-weight: 400;
                                 font-family: 'Courier New', Courier, monospace;
                                 font-size: 0.8rem;
-                                color: var(--text-color-secondary)
+                                color: var(--p-text-color-secondary)
                             "
                         >
                             <i
                                 class="pi pi-sparkles"
                                 :class="{'animate-sparkles': queryStatus === QueryStatuses.Running}"
                                 style="
-                                    color: var(--yellow-500);
+                                    color: var(--p-yellow-500);
                                     font-size: 1.25rem;
                                     margin-right: 0.6rem;
                                 "
                             />
                             {{ lastEventThought }}
                         </div>
-                        <Button 
+                        <Button
                         :icon="activeQueryCell === cell ? 'pi pi-times' : 'pi pi-search'"
-                        text 
-                        rounded 
-                        style="background-color: var(--surface-c); color: var(--text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
+                        text
+                        rounded
+                        style="background-color: var(--p-surface-c); color: var(--p-text-color-secondary); width: 2rem; height: 2rem; padding: 0;"
                         />
                     </div>
                 </template>
 
                 <!-- show final agent response/answer to original user query -->
-                <div 
+                <div
                     class="query-answer-chat-override"
                     v-if="isLastEventTerminal(events)"
                 >
@@ -168,10 +168,10 @@ import Button from "primevue/button";
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
 import InputGroupAddon from 'primevue/inputgroupaddon';
-import { type IBeakerCell } from "beaker-kernel/src";
+import { type IBeakerCell } from "beaker-kernel";
 import BeakerQueryCellEvent from "../cell/BeakerQueryCellEvent.vue";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import { isLastEventTerminal } from "../cell/cellOperations";
 import { useBaseQueryCell } from '../cell/BaseQueryCell';
 
@@ -259,7 +259,7 @@ const expandThoughts = (event: Event, forceOpen = false) => {
     }
 
     const currentActiveCell = toRaw(activeQueryCell.value);
-    
+
     if (currentActiveCell?.id === currentCell?.id) {
         activeQueryCell.value = null;
     } else {
@@ -348,7 +348,7 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerQueryCell } from "beaker-kernel/src";
+import { BeakerQueryCell } from "beaker-kernel";
 export default {
     modelClass: BeakerQueryCell,
     icon: "pi pi-sparkles",
@@ -395,18 +395,18 @@ export default {
         flex-direction: column;
         .p-inputgroup {
             width: 100%;
-            border: 1px solid var(--yellow-500);
-            box-shadow: 0 0 4px var(--yellow-700);
+            border: 1px solid var(--p-yellow-500);
+            box-shadow: 0 0 4px var(--p-yellow-700);
             transition: box-shadow linear 1s;
-            border-radius: var(--border-radius);
+            border-radius: var(--p-surface-border-radius);
             button {
-                background-color: var(--surface-b);
-                border-color: var(--surface-border);
-                color: var(--text-color);
+                background-color: var(--p-surface-b);
+                border-color: var(--p-surface-border);
+                color: var(--p-text-color);
                 border-left: 0px;
             }
             input {
-                border-color: var(--yellow-500);
+                border-color: var(--p-yellow-500);
             }
         }
         margin-bottom: 0.5rem;
@@ -416,15 +416,15 @@ export default {
 .llm-prompt-container {
     display: flex;
     flex-direction: column;
-    background-color: var(--surface-c);
-    border-radius: var(--border-radius);
+    background-color: var(--p-surface-c);
+    border-radius: var(--p-surface-border-radius);
 }
 
 .llm-prompt-container-chat {
     width: fit-content;
     max-width: 80%;
     align-self: flex-end;
-    background-color: var(--surface-d);
+    background-color: var(--p-surface-d);
 }
 
 .llm-prompt-text {
@@ -448,10 +448,10 @@ export default {
 .query-answer-chat-override {
     padding-left: 1rem;
     padding-right: 1rem;
-    border-radius: var(--border-radius);
+    border-radius: var(--p-surface-border-radius);
     max-width: 80%;
     width: fit-content;
-    background-color: var(--surface-c);
+    background-color: var(--p-surface-c);
 }
 
 .prompt-input-container {
@@ -481,21 +481,21 @@ export default {
     padding: 0.75rem;
     width: 100%;
     max-width: 80%;
-    border: 1px solid var(--surface-b);
-    border-radius: var(--border-radius);
+    border: 1px solid var(--p-surface-b);
+    border-radius: var(--p-surface-border-radius);
 
     &:hover {
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
     }
 
     &.expanded {
-        background-color: var(--surface-b);
+        background-color: var(--p-surface-b);
     }
 
     [data-theme="dark"] & {
-        border: 1px solid var(--surface-a);
+        border: 1px solid var(--p-surface-a);
         &:hover, &.expanded {
-            background-color: var(--surface-a);
+            background-color: var(--p-surface-a);
         }
     }
 

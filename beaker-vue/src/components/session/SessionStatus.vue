@@ -16,11 +16,9 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, inject, capitalize } from "vue";
+import { computed, inject, capitalize } from "vue";
 import Button from 'primevue/button';
-// import { capitalize } from '../../util';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { IBeakerTheme } from '../../plugins/theme';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 // TODO too many granular props- use a slot instead?
 const props = defineProps([
@@ -53,7 +51,7 @@ const statusLabel = computed<string>(() => (statusLabels[status.value] || capita
     line-height: inherit;
     align-items: center;
     justify-content: start;
-    color: var(--text-color);
+    color: var(--p-text-color);
     min-width: 9rem;
     padding-left: 0.5rem;
     margin-right: 1rem;
@@ -64,28 +62,28 @@ const statusLabel = computed<string>(() => (statusLabels[status.value] || capita
     margin-right: 0.5rem;
 
     &.connected {
-        color: var(--green-300);
+        color: var(--p-green-300);
     }
     &.starting {
-        color: var(--green-400);
+        color: var(--p-green-400);
     }
     &.idle {
-        color: var(--green-400);
+        color: var(--p-green-400);
     }
     &.connecting, &.starting {
-        color: var(--green-200);
+        color: var(--p-green-200);
     }
     &.reconnecting {
-        color: var(--orange-300);
+        color: var(--p-orange-300);
     }
     &.busy, &.terminating {
-        color: var(--orange-400);
+        color: var(--p-orange-400);
     }
     &.dead, &.disconnected {
         color: var(--pink-300);
     }
     &.restarting, &.terminating, &.autorestarting {
-        color: var(--orange(600))
+        color: var(--p-orange(600))
     }
 }
 
@@ -94,7 +92,7 @@ const statusLabel = computed<string>(() => (statusLabels[status.value] || capita
 }
 
 .connection-button {
-    color: var(--surface-500);
+    color: var(--p-surface-g);
 }
 
 .reconnect-button {

@@ -16,8 +16,8 @@
                 <Button
                     @click="handleQuery"
                     class="agent-submit-button"
-                    icon="pi pi-reply"
-                    :label="$tmpl._('agent_submit_button_label', 'enter')"
+                    icon="pi pi-send"
+                    :label="$tmpl._('agent_submit_button_label', 'Submit')"
                     :foo="$tmpl"
                 />
             </div>
@@ -27,12 +27,12 @@
 
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, nextTick, inject } from "vue";
+import { ref, nextTick, inject } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
 
-import { BeakerSession } from 'beaker-kernel/src';
+import { BeakerSession } from 'beaker-kernel';
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
@@ -87,7 +87,6 @@ const handleQuery = (e: any) => {
 
 .query-input-container {
     display: flex;
-    align-items: flex-start;
 }
 
 .agent-submit-button {

@@ -1,23 +1,23 @@
-import { withModifiers, withKeys } from "@vue/runtime-dom";
-import { ObjectDirective, DirectiveBinding } from "@vue/runtime-core";
+import { withModifiers, withKeys } from "vue";
+import { type ObjectDirective, type DirectiveBinding } from "vue";
 
 const keybindingKey = Symbol("_v_keybinding");
 
-const modifierKeys = [
+export const modifierKeys = [
     "ctrl",
     "alt",
     "shift",
     "meta",
 ];
 
-const eventModifiersValues = [
+export const eventModifiersValues = [
     "passive",
     "once",
     "capture",
 ];
 
 const checkInEditor = (event: Event): boolean => {
-    let target: HTMLElement = (event.target as HTMLElement);
+    let target: HTMLElement | null = (event.target as HTMLElement);
     const docElement = (event.target as HTMLElement).ownerDocument.documentElement;
     const inputTags = ['INPUT', 'TEXTAREA', 'SELECT'];
     const inputRoles = ['textbox', 'searchbox'];
@@ -33,7 +33,7 @@ const checkInEditor = (event: Event): boolean => {
 
         if (target.hasAttribute('tabindex') && target.hasAttribute('role')) {
             const role = target.getAttribute('role');
-            if (inputRoles.includes(role)) {
+            if (role && inputRoles.includes(role)) {
                 return true;
             }
         }
@@ -48,7 +48,7 @@ const containsCellClass = (target: HTMLElement) => {
 }
 
 const checkInCell = (event: Event): boolean => {
-    let target: HTMLElement = (event.target as HTMLElement);
+    let target: HTMLElement | null= (event.target as HTMLElement);
     const docElement = (event.target as HTMLElement).ownerDocument.documentElement;
     while (target !== null && target !== docElement) {
         if (containsCellClass(target)) {
@@ -60,7 +60,7 @@ const checkInCell = (event: Event): boolean => {
 }
 
 const selected = (event: Event): boolean => {
-    let target: HTMLElement = (event.target as HTMLElement);
+    let target: HTMLElement | null= (event.target as HTMLElement);
     const docElement = (event.target as HTMLElement).ownerDocument.documentElement;
     while (target !== null && target !== docElement) {
         if (containsCellClass(target) && target.classList.contains("selected")) {
@@ -78,7 +78,7 @@ const beakerModifiersMappings: {[key: string]: (event: Event) => boolean} = {
 }
 
 function withBeakerModifiers(fn: EventCallback, modifiers: string[]): EventCallback {
-    return (event, ...args) => {
+    return (event, ...args): EventCallback => {
         for (let modifier of modifiers) {
             let negated = false;
             if (modifier.startsWith('!')) {
@@ -99,7 +99,7 @@ function withBeakerModifiers(fn: EventCallback, modifiers: string[]): EventCallb
     }
 }
 
-export declare type EventCallback = (evt: Event, ...args: any[]) => any;
+export declare type EventCallback<CallBackArgs extends Array<any> = [], CallBackReturn=any> = (evt: Event, ...args: CallBackArgs) => CallBackReturn;
 
 export declare interface EventDefintion {
         eventType: string,

@@ -26,9 +26,9 @@
                                 <span>Outputs</span>
                             </span>
                         </template>
-                        <div 
+                        <div
                             class="code-cell-dropdown-content"
-                            v-for="output of props.outputs" 
+                            v-for="output of props.outputs"
                             :key="`${output}-dropdown`"
                         >
                             <div
@@ -52,10 +52,10 @@
             </div>
         </div>
         <div v-else>
-            <div 
-                class="code-cell-output-box" 
-                :class="{'collapsed-output': output.metadata?.collapsed}" 
-                v-for="output of props.outputs" 
+            <div
+                class="code-cell-output-box"
+                :class="{'collapsed-output': output.metadata?.collapsed}"
+                v-for="output of props.outputs"
                 :key="output"
             >
                 <div class="output-collapse-box" @click.capture.stop.prevent="collapseOutput(output)"></div>
@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineExpose } from "vue";
+import { ref } from "vue";
 import BeakerMimeBundle from "../render/BeakerMimeBundle.vue";
 import ansiHtml from "ansi-html-community";
 import escapeHtml from "escape-html";
@@ -116,7 +116,7 @@ const rebundleError = (errorOutput) => {
     --collapse-height: 3em;
 
     padding: 0 0.5em 0.5em 0;
-    background-color: var(--surface-c);
+    background-color: var(--p-surface-c);
     position: relative;
     .execute_result {
         pre {
@@ -140,17 +140,17 @@ const rebundleError = (errorOutput) => {
 
         th {
             font-weight: bold;
-            background-color: var(--surface-b);
+            background-color: var(--p-surface-b);
 
             &:hover {
-                background-color: var(--surface-50);
-                border: 1px solid var(--text-color);
+                background-color: var(--p-surface-b);
+                border: 1px solid var(--p-text-color);
             }
         }
 
         thead {
             text-align: start;
-            background-color: var(--surface-b);
+            background-color: var(--p-surface-b);
         }
 
         tbody {
@@ -159,15 +159,15 @@ const rebundleError = (errorOutput) => {
             }
 
             tr {
-                background-color: var(--surface-c);
+                background-color: var(--p-surface-c);
             }
             tr:nth-child(even) {
-                background-color: var(--surface-a);
+                background-color: var(--p-surface-a);
             }
 
             td:hover {
-                background-color: var(--surface-200) !important;
-                border: 1px solid var(--text-color) !important;
+                background-color: var(--p-surface-d) !important;
+                border: 1px solid var(--p-text-color) !important;
             }
         }
     }
@@ -182,7 +182,7 @@ const rebundleError = (errorOutput) => {
     overflow-y: auto;
 
     .output-collapse-box {
-        background-color: var(--surface-border);
+        background-color: var(--p-surface-border);
     }
 }
 
@@ -196,11 +196,11 @@ const rebundleError = (errorOutput) => {
 .output-collapse-box {
     min-width: 10px;
     width: 10px;
-    border: 1px inset var(--surface-border);
+    border: 1px inset var(--p-surface-border);
     cursor: pointer;
 
     &:hover {
-        background-color: color(from var(--surface-border) srgb r g b / 0.5);
+        background-color: color(from var(--p-surface-border) srgb r g b / 0.5);
     }
     margin-right: 0.5em;
 
@@ -208,7 +208,7 @@ const rebundleError = (errorOutput) => {
 
 .stdout {
     // was dark purple and hard to see- replaced with theme colors
-    color: var(--text-color-secondary);
+    color: var(--p-text-color-secondary);
     white-space: pre;
     font-style: italic;
 }

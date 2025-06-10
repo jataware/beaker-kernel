@@ -20,10 +20,10 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, inject, computed, watch } from "vue";
+import { ref, inject, computed, watch } from "vue";
 import SelectButton from "primevue/selectbutton";
-import { BeakerSession } from "beaker-kernel/src";
-import { BeakerRenderOutput } from "../../renderers";
+import { BeakerSession } from "beaker-kernel";
+import type { BeakerRenderOutput } from "../../renderers";
 
 const props = defineProps([
     "mimeBundle",
@@ -60,7 +60,7 @@ watch(sortedMimetypes, (newSortedTypes, _) => {
 
 <style lang="scss">
 .p-accordion .p-accordion-header .p-accordion-header-link {
-    background: var(--surface-a);
+    background: var(--p-surface-a);
 }
 
 .mime-select-container {
@@ -71,9 +71,9 @@ watch(sortedMimetypes, (newSortedTypes, _) => {
 }
 
 .p-selectbutton .p-button.p-highlight {
-    background: var(--surface-a);
-    border: 3px solid var(--gray-300);
-    color: var(--primary-text-color);
+    background: var(--p-surface-a);
+    border: 3px solid var(--p-gray-300);
+    color: var(--p-primary-text-color);
 }
 
 .p-selectbutton .p-button.p-highlight::before {
@@ -81,9 +81,9 @@ watch(sortedMimetypes, (newSortedTypes, _) => {
 }
 
 .p-selectbutton .p-button {
-    background: var(--gray-300);
-    border: 1px solid var(--gray-300);
-    color: var(--text-color-secondary);
+    background: var(--p-gray-300);
+    border: 1px solid var(--p-gray-300);
+    color: var(--p-text-color-secondary);
     transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, outline-color 0.2s;
     height: 2rem;
     font-size: 0.75rem;

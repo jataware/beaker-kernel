@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="tsx">
-import { defineProps, defineEmits, ref, watch, withDefaults, defineExpose } from "vue";
+import { ref, watch } from "vue";
 
 const extraClasses = ref<string[]>([]);
 

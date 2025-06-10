@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, computed, inject, watch } from "vue";
+import { ref, computed, inject, watch } from "vue";
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 import Button from 'primevue/button';
 import AutoComplete from 'primevue/autocomplete';
@@ -89,8 +89,8 @@ import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import Panel from 'primevue/panel';
 
-import { BeakerSession } from 'beaker-kernel/src';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { BeakerSession } from 'beaker-kernel';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import CodeEditor from '../misc/CodeEditor.vue';
 
 const props = defineProps([
@@ -225,7 +225,7 @@ defineExpose({
 }
 
 .code {
-    border: 1px solid var(--surface-b);
+    border: 1px solid var(--p-surface-b);
     flex: 1;
     width: 100%;
 }

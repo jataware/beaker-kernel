@@ -115,16 +115,17 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineExpose, inject, onBeforeMount, computed, ref, capitalize } from "vue";
-import { BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel/src/notebook";
+import { inject, onBeforeMount, computed, ref, capitalize } from "vue";
+import { type BeakerQueryEvent, type BeakerQueryEventType, type IBeakerCell } from "beaker-kernel";
 import { marked } from 'marked';
 import BeakerCodeCell from "./BeakerCodeCell.vue";
 import BeakerCodecellOutput from "./BeakerCodeCellOutput.vue";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import ansiHtml from "ansi-html-community";
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+import { formatOutputs, chooseOutputIcon } from './BeakerCodeCellOutputUtilities'
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 
 
 // use session where possible - notebook may or may not exist, but matters for selection!
@@ -255,6 +256,8 @@ defineExpose({
     & p {
         margin-bottom: 0rem;
         margin-top: 0rem;
+        padding-bottom: 0rem;
+        padding-top: 0rem;
     }
 }
 
@@ -345,10 +348,10 @@ div.lm-Widget.jp-RenderedText.jp-mod-trusted {
     }
 
     p:first-child {
-        margin-top: 0.5rem;
+        padding-top: 0.5rem;
     }
     p:last-child {
-        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
     }
 }
 

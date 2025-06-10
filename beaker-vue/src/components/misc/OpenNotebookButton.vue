@@ -20,9 +20,9 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, defineEmits, inject, defineProps, withDefaults } from "vue";
+import { ref, inject } from "vue";
 import Button from 'primevue/button';
-import { ButtonProps } from "primevue/button";
+import type { ButtonProps } from "primevue/button";
 
 interface OpenNotebookButtonProps {
     severity?: ButtonProps["badgeSeverity"];

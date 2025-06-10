@@ -57,8 +57,8 @@
                 <div
                     v-if="showTableOfContents"
                     style="
-                        border-radius: var(--border-radius);
-                        border: 1px solid var(--surface-200);
+                        border-radius: var(--p-surface-border-radius);
+                        border: 1px solid var(--p-surface-d);
                         padding: 0.25rem;
                         width: 100%;
                         height: 12rem;
@@ -128,7 +128,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, computed, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import Button from "primevue/button";
 import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
@@ -221,8 +221,8 @@ watch(searchText, () => {
 }
 
 .clickable-table-of-contents {
-    &:hover, *:hover { cursor: pointer; color: var(--surface-600) }
-    &:active, *:active { cursor: pointer; color: var(--surface-800) }
+    &:hover, *:hover { cursor: pointer; color: var(--p-surface-h) }
+    &:active, *:active { cursor: pointer; color: var(--p-surface-i) }
     * { margin-right: 0.2rem; }
 }
 

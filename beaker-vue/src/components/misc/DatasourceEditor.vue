@@ -8,7 +8,7 @@
 
         <Fieldset v-else>
             <template #legend>
-                <Dropdown :options="
+                <Select :options="
                     allDatasources.map((datasource) => {
                         return {
                             label: datasource.name,
@@ -28,7 +28,7 @@
                 }"
                 v-model="selectedDatasource">
 
-                </Dropdown>
+                </Select>
 
                 <SplitButton
                     @click="() => {
@@ -253,11 +253,11 @@
 
 <script setup lang="ts">
 
-import { defineProps, ref, defineEmits, watch, provide, computed, nextTick, onMounted, inject, toRaw, isReactive, reactive } from 'vue';
-import { BeakerSession } from 'beaker-kernel/src';
-import { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import { ref, watch, computed, nextTick, inject } from 'vue';
+import { BeakerSession } from 'beaker-kernel';
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import Fieldset from 'primevue/fieldset';
 import Button from "primevue/button";
 import Divider from 'primevue/divider';
@@ -266,7 +266,7 @@ import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
 import Tag from 'primevue/tag';
 
-import cookie from 'cookie';
+import * as cookie from 'cookie';
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
 import Badge from 'primevue/badge';

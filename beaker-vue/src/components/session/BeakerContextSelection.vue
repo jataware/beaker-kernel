@@ -12,18 +12,18 @@
             Select context and language.
         </p>
         <InputGroup>
-            <Dropdown
+            <Select
                 v-model="selectedContextSlug"
                 :options="contextOptions"
-                optionLabel="slug"
-                optionValue="slug"
+                option-label="slug"
+                option-value="slug"
             />
 
-            <Dropdown
+            <Select
                 v-model="selectedLanguage"
                 :options="languageOptions"
-                optionLabel="slug"
-                optionValue="subkernel"
+                option-label="slug"
+                option-value="subkernel"
             />
         </InputGroup>
 
@@ -68,13 +68,13 @@
 
 <script setup lang="ts">
 
-import { defineProps, defineEmits, ref, onMounted, computed, watch, inject } from "vue";
+import { ref, onMounted, computed, watch, inject } from "vue";
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import Checkbox from 'primevue/checkbox';
-import { BeakerSessionComponentType } from './BeakerSession.vue';
+import type { BeakerSessionComponentType } from './BeakerSession.vue';
 import CodeEditor from '../misc/CodeEditor.vue';
 
 const props = defineProps([
@@ -268,14 +268,10 @@ onMounted(async () => {
 }
 
 .code-container {
-    border: 1px solid var(--surface-ground);
+    border: 1px solid var(--p-surface-ground);
     padding: 0.25rem;
     max-height: 15rem;
     overflow: auto;
-}
-
-.p-dialog-header {
-    background-image: linear-gradient(45deg, var(--surface-a), var(--surface-a), var(--surface-a), var(--surface-b), var(--surface-b), var(--surface-b));
 }
 
 </style>

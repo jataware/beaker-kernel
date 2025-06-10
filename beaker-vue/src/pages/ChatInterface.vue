@@ -109,12 +109,12 @@
                     position="top"
                     :selected="true"
                 >
-                    <AgentActivityPane 
-                        @scrollToMessage="scrollToMessage" 
+                    <AgentActivityPane
+                        @scrollToMessage="scrollToMessage"
                         :is-chat-empty="isChatEmpty"
                     />
                 </SideMenuPanel>
-                
+
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
@@ -147,7 +147,7 @@ import ChatPanel from '../components/chat-interface/ChatPanel.vue';
 import SideMenu from '../components/sidemenu/SideMenu.vue';
 import SideMenuPanel from '../components/sidemenu/SideMenuPanel.vue';
 import InfoPanel from '../components/panels/InfoPanel.vue';
-import {ChatHistoryPanel, IChatHistory} from '../components/panels/ChatHistoryPanel';
+import {ChatHistoryPanel, type IChatHistory} from '../components/panels/ChatHistoryPanel';
 
 import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
@@ -162,15 +162,16 @@ import BeakerSession from '../components/session/BeakerSession.vue';
 
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 
-import { type IBeakerCell } from "beaker-kernel/src";
-import { JupyterMimeRenderer } from 'beaker-kernel/src';
-import { NavOption } from '../components/misc/BeakerHeader.vue';
+import { JupyterMimeRenderer, type IBeakerCell } from 'beaker-kernel';
+import type { NavOption } from '../components/misc/BeakerHeader.vue';
 
 
-import { defineProps, inject, ref, computed, watch, provide } from 'vue';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
+import { inject, ref, computed, watch, provide } from 'vue';
+import { JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
-import { IBeakerTheme } from '../plugins/theme';
+import type { IBeakerTheme } from '../plugins/theme';
+import { vKeybindings } from '../directives/keybindings';
+
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
@@ -241,7 +242,7 @@ watch(activeQueryCell, (newValue) => {
 
     if (newValue) {
         rightSideMenuRef.value.selectPanel('agent-actions');
-    } 
+    }
     else if (anyPaneOpen) {
         rightSideMenuRef.value.hidePanel();
     }
@@ -325,7 +326,6 @@ const renderers = [
     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
     JSONRenderer,
     LatexRenderer,
-    DecapodeRenderer,
 ];
 
 const cellComponentMapping = {

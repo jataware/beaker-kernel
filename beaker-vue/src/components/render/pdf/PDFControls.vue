@@ -2,15 +2,15 @@
     <div ref="controlsContainer" class="controls-container">
         <Toolbar>
             <template #start>
-                <Button 
-                    class="pdf-ui-button" 
-                    icon="pi pi-chevron-left" 
+                <Button
+                    class="pdf-ui-button"
+                    icon="pi pi-chevron-left"
                     @click="emit('pdf-page-prev')"
                     :disabled="isLoading"
                 />
-                <Button 
-                    class="pdf-ui-button" 
-                    icon="pi pi-chevron-right" 
+                <Button
+                    class="pdf-ui-button"
+                    icon="pi pi-chevron-right"
                     @click="emit('pdf-page-next')"
                     :disabled="isLoading"
                 />
@@ -22,15 +22,15 @@
                 </InputGroup>
             </template>
 
-            <template #center> 
-                <Button 
-                    class="pdf-ui-button" 
-                    icon="pi pi-search-minus" 
+            <template #center>
+                <Button
+                    class="pdf-ui-button"
+                    icon="pi pi-search-minus"
                     @click="emit('pdf-zoom-out')"
                 />
-                <Button 
-                    class="pdf-ui-button" 
-                    icon="pi pi-search-plus" 
+                <Button
+                    class="pdf-ui-button"
+                    icon="pi pi-search-plus"
                     @click="emit('pdf-zoom-in')"
                 />
                 <InputGroup class="pdf-ui-inputselection">
@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue';
+import { ref } from 'vue';
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
@@ -77,7 +77,7 @@ div.controls-container {
     div.p-toolbar {
         padding: 0.5rem;
         padding-left: 0.25rem;
-    } 
+    }
 }
 
 button.pdf-ui-button {

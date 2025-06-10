@@ -41,10 +41,10 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, inject, computed, defineExpose, defineEmits } from 'vue';
-import { BeakerSession } from 'beaker-kernel/src';
+import { ref, inject, computed } from 'vue';
+import type { BeakerSession } from 'beaker-kernel';
 import BeakerCell from '../cell/BeakerCell.vue';
-import { type BeakerNotebookComponentType } from './BeakerNotebook.vue';
+import type { BeakerNotebookComponentType } from './BeakerNotebook.vue';
 
 const session = inject<BeakerSession>('session');
 const cellMap = inject("cell-component-mapping");
@@ -76,7 +76,7 @@ function handleMoveCell(fromIndex, toIndex) {
  **/
 function handleDragStart(event: DragEvent, beakerCell, index)  {
     if (event.target instanceof HTMLElement && event.dataTransfer !== null && event.target.matches(".drag-handle *")) {
-        var paintTarget = event.target.closest('.beaker-cell');
+        const paintTarget = event.target.closest('.beaker-cell');
 
         event.dataTransfer.dropEffect = 'move';
         event.dataTransfer.effectAllowed = 'move';
@@ -151,7 +151,7 @@ defineExpose({
 .cell-container {
     position: relative;
     flex: 1;
-    background-color: var(--surface-a);
+    background-color: var(--p-surface-b);
     z-index: 3;
     overflow: auto;
     width: 100%;

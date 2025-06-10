@@ -84,7 +84,7 @@
                         />
                     </div>
                 </div>
-                <div 
+                <div
                     class="query-answer"
                     v-if="isLastEventTerminal(events)"
                 >
@@ -129,14 +129,14 @@
 
 
 <script setup lang="ts">
-import { defineProps, defineExpose, inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
+import { ref, inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
 import Button from "primevue/button";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
 import BeakerQueryCellEvent from "./BeakerQueryCellEvent.vue";
-import { type BeakerQueryEventType } from "beaker-kernel/src/notebook";
+import type { BeakerQueryEventType } from "beaker-kernel";
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import ThinkingIcon from "../../assets/icon-components/BrainIcon.vue";
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
@@ -175,15 +175,23 @@ const eventIconMap = {
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
 
-
 const messageEvents = computed(() => {
     return props.cell?.events?.filter(
         (event) => ["user_question", "user_answer"].includes(event.type)
     ).map(
         (event) => {
-            var messageClass = "";
-            if (event.type !== "user_question") {
-                messageClass = "llm-prompt-container llm-prompt-text";
+// <<<<<<< HEAD
+            let messageClass;
+            if (event.type === "user_question") {
+                messageClass = "query-answer-chat query-answer-chat-override";
+            }
+            else {
+                messageClass = "llm-prompt-container llm-prompt-container-chat llm-prompt-text llm-prompt-text-chat";
+// =======
+//             var messageClass = "";
+//             if (event.type !== "user_question") {
+//                 messageClass = "llm-prompt-container llm-prompt-text";
+// >>>>>>> origin/dev
             }
             return [event, messageClass];
         }
@@ -249,7 +257,7 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerQueryCell } from "beaker-kernel/src";
+import { BeakerQueryCell } from "beaker-kernel";
 export default {
     modelClass: BeakerQueryCell,
     icon: "pi pi-sparkles",
@@ -290,6 +298,32 @@ export default {
     width: 100%;
 }
 
+.input-request-chat-override {
+    align-items: flex-end;
+    width: 100%;
+    .input-request-wrapper-chat {
+        align-items: flex-end;
+        flex-direction: column;
+        margin-bottom: 0.5rem;
+        .p-inputgroup {
+            width: 100%;
+            border: 1px solid var(--p-yellow-500);
+            box-shadow: 0 0 4px var(--p-yellow-700);
+            transition: box-shadow linear 1s;
+            border-radius: var(--p-surface-border-radius);
+            button {
+                background-color: var(--p-surface-b);
+                border-color: var(--p-surface-border);
+                color: var(--p-text-color);
+                border-left: 0px;
+            }
+            input {
+                border-color: var(--p-yellow-500);
+            }
+        }
+    }
+}
+
 .actions {
     display: flex;
     .p-button-icon {
@@ -307,16 +341,16 @@ export default {
 }
 
 .cancel-button {
-    border-color: var(--surface-100);
-    color: var(--primary-text-color);
+    border-color: var(--p-surface-c);
+    color: var(--p-primary-text-color);
 }
 
 
 .llm-prompt-container {
     display: flex;
     flex-direction: column;
-    background-color: var(--surface-c);
-    border-radius: var(--border-radius);
+    background-color: var(--p-surface-c);
+    border-radius: var(--p-surface-border-radius);
 }
 
 div.query-steps {
@@ -340,7 +374,7 @@ h3.query-steps {
 }
 
 .query-events-header {
-    background-color: var(--surface-b);
+    background-color: var(--p-surface-b);
     border-radius: 6px 6px 0 0;
 }
 
@@ -353,6 +387,56 @@ h3.query-steps {
     padding-bottom: 0rem;
 }
 
+.query-accordion-chat {
+    margin-bottom: 0.5rem;
+    width: 100%;
+    > .p-accordion-tab {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        > * {
+            max-width: 80%;
+            width: 100%;
+        }
+        > .p-toggleable-content > .p-accordion-content {
+            border: 2px solid var(--p-surface-d);
+            border-radius: var(--p-surface-border-radius);
+            padding: 0.25rem;
+            padding-left: 1.5rem;
+            margin: 1rem;
+            margin-bottom: 0rem;
+            > * {
+                border-bottom: 2px solid var(--p-surface-d);
+                margin-right: 1rem;
+            }
+            > *:last-child {
+                border-bottom: none;
+            }
+        }
+        .p-accordion-header {
+            border-radius: var(--p-surface-border-radius);
+            margin: 1rem;
+            margin-bottom: 0rem;
+            transition: background-color 0.2s;
+
+            &:hover {
+                background-color: var(--p-surface-a);
+            }
+        }
+    }
+
+}
+
+.query-tab-title-chat {
+    font-weight: 400;
+}
+
+.query-tab-thought-chat {
+    .p-accordion-header-link svg {
+        flex-shrink: 0;
+    }
+}
 
 .query-steps {
     font-size: large;
@@ -412,10 +496,10 @@ a.query-tab-headeraction > span > span.pi {
 }
 
 .query-answer {
-    background-color: var(--surface-c);
+    background-color: var(--p-surface-c);
     padding-left: 1rem;
     padding-bottom: 1rem;
-    border-radius: var(--border-radius);
+    border-radius: var(--p-surface-border-radius);
     margin-top: 1rem;
 }
 

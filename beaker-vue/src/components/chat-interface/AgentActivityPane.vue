@@ -19,11 +19,11 @@
         <div v-if="shouldShowNoThoughtsPlaceholder" class="no-thoughts-message">
           <em>No agent activity from this query.</em>
         </div>
-        <ChatQueryCellEvent 
+        <ChatQueryCellEvent
           v-else
           v-for="(event, eventIndex) in filteredCellEvents"
           :key="`${eventIndex}-${activeQueryCell.id}`"
-          :event="event" 
+          :event="event"
           :parent-query-cell="activeQueryCell"
         />
       </div>
@@ -40,7 +40,7 @@ import { computed, defineEmits, inject, defineProps } from 'vue';
 import ProgressBar from 'primevue/progressbar';
 import Button from 'primevue/button';
 import ChatQueryCellEvent from './ChatQueryCellEvent.vue';
-import { type IBeakerCell } from "beaker-kernel/src";
+import { type IBeakerCell } from "beaker-kernel";
 import { isLastEventTerminal } from "../cell/cellOperations";
 
 const emit = defineEmits<{
@@ -94,7 +94,7 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
   }
 
   // Check if query is complete (idle) and has only a response event
-  const hasOnlyResponse = activeQueryCellEvents.value.length === 1 && 
+  const hasOnlyResponse = activeQueryCellEvents.value.length === 1 &&
     activeQueryCellEvents.value[0].type === 'response';
 
   return activeQueryCell.value?.status === 'idle' && hasOnlyResponse;
@@ -124,11 +124,11 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  color: var(--text-color);
+  color: var(--p-text-color);
 
   overflow-y: auto;
   scrollbar-width: thin;
-  // scrollbar-color: var(--surface-d) var(--surface-a);
+  // scrollbar-color: var(--p-surface-d) var(--p-surface-a);
   padding-right: 0.5rem;
   margin-right: 0.5rem;
   padding-top: 0.5rem;
@@ -137,7 +137,7 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
 .no-thoughts-message {
   text-align: center;
   padding: 1rem;
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
 }
 
 .pane-actions {
@@ -146,13 +146,13 @@ const shouldShowNoThoughtsPlaceholder = computed(() => {
   right: 5rem;
   z-index: 100;
   & > .p-button {
-    color: var(--text-color-secondary);
+    color: var(--p-text-color-secondary);
   }
 }
 
 .magnifier-reference {
   margin: 0 0.25rem;
-  color: var(--text-color-secondary);
+  color: var(--p-text-color-secondary);
 }
 
 .progress-area {

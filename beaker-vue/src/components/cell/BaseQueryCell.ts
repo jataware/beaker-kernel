@@ -1,6 +1,6 @@
 import { ref, shallowRef, inject, computed, nextTick, getCurrentInstance } from "vue";
-import { BeakerSession } from 'beaker-kernel/src';
-import { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import { BeakerSession } from 'beaker-kernel';
+import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 export const useBaseQueryCell = (props) => {
     const cell = shallowRef(props.cell);
@@ -12,11 +12,11 @@ export const useBaseQueryCell = (props) => {
     const session: BeakerSession = inject("session");
     const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
     const instance = getCurrentInstance();
-  
+
     const events = computed(() => {
       return [...props.cell.events];
     });
-  
+
     function execute() {
       const config: any = instance?.root?.props?.config;
       const sendNotebookState = config ? config.extra?.send_notebook_state : undefined;
@@ -31,7 +31,7 @@ export const useBaseQueryCell = (props) => {
         )
       });
     }
-  
+
     function enter(position?: "start" | "end" | number) {
       if (!isEditing.value) {
         isEditing.value = true;
@@ -47,7 +47,7 @@ export const useBaseQueryCell = (props) => {
         textarea.value.$el.setSelectionRange(position, position);
       });
     }
-  
+
     function exit() {
       if (promptText.value === cell.value.source) {
         isEditing.value = false;
@@ -56,7 +56,7 @@ export const useBaseQueryCell = (props) => {
         textarea.value?.$el?.blur();
       }
     }
-  
+
     function clear() {
       cell.value.source = "";
       isEditing.value = true;
@@ -64,7 +64,7 @@ export const useBaseQueryCell = (props) => {
       promptText.value = "";
       response.value = "";
     }
-  
+
     function respond() {
       if (!response.value.trim()) {
         return;
@@ -72,7 +72,7 @@ export const useBaseQueryCell = (props) => {
       props.cell.respond(response.value, session);
       response.value = "";
     }
-  
+
     return {
       cell,
       isEditing,

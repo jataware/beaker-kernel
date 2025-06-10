@@ -4,7 +4,7 @@
             :style="{collapsed}"
             @toggle="collapsed = !collapsed"
             :pt="{
-                toggleablecontent: ({state}) => {
+                contentContainer: ({state}) => {
                     // Force internal collapsed state to be false, preventing
                     // panel contents from being hidden via v-show.
                     state.d_collapsed = false;
@@ -72,15 +72,13 @@
 </template>
 <script lang="ts" setup>
 
-import { ref, computed, defineProps, getCurrentInstance, ComponentInstance } from "vue";
-import VueJsonPretty from 'vue-json-pretty';
-import { PrimeIcons } from 'primevue/api';
-import MinusIcon from 'primevue/icons/minus';
-import PlusIcon from 'primevue/icons/plus';
-import 'vue-json-pretty/lib/styles.css';
+import { ref, computed } from "vue";
+import MinusIcon from '@primevue/icons/minus';
+import PlusIcon from '@primevue/icons/plus';
 import Panel from 'primevue/panel';
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
+import 'vue-json-pretty/lib/styles.css';
 
 const props = defineProps([
     "record",
@@ -105,7 +103,7 @@ const capitalized = (str: string) => (
     white-space: pre-wrap;
 
     .p-panel-header {
-        background: var(--surface-b);
+        background: var(--p-surface-b);
         padding: 0.5rem 1rem;
     }
     .p-panel-content {
@@ -131,7 +129,7 @@ const capitalized = (str: string) => (
 }
 
 .chat-history-message-title-token-count {
-    color: var(--grey-300);
+    color: var(--p-grey-300);
     flex: 0 0 auto;
     margin-right: 0.5rem;
 }
@@ -141,7 +139,7 @@ const capitalized = (str: string) => (
     font-size: 0.9rem;
 }
 
-.chat-history-message-panel .p-toggleable-content.collapsed .p-panel-content{
+.chat-history-message-panel .p-panel-content-container.collapsed .p-panel-content {
     position: relative;
     overflow: hidden;
     height: 5rem;
@@ -149,7 +147,7 @@ const capitalized = (str: string) => (
 
     & .expand {
         text-align: center;
-        color: var(--primary-color-text);
+        color: var(--p-button-text-primary-active-background);
         display: block;
         position: absolute;
         background-color: inherit;
@@ -162,8 +160,8 @@ const capitalized = (str: string) => (
         cursor: pointer;
         background-color: transparent;
         box-shadow:
-                inset 0px -4rem 1.5rem -2.4rem var(--bluegray-500),
-                inset 0px -3.5rem 1rem -2.0rem var(--bluegray-500);
+                inset 0px -4rem 1.5rem -2.4rem var(--p-slate-500),
+                inset 0px -3.5rem 1rem -2.0rem var(--p-slate-500);
     }
 }
 
@@ -196,7 +194,7 @@ const capitalized = (str: string) => (
         font-family: monospace;
     }
     tbody tr:nth-child(1) td {
-        border-top: 1px solid var(--surface-d);
+        border-top: 1px solid var(--p-surface-d);
     }
 }
 </style>

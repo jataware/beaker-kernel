@@ -112,26 +112,19 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, watch, computed, inject, toRaw, provide, nextTick, onUnmounted } from 'vue';
-import { JupyterMimeRenderer, IBeakerCell, IMimeRenderer } from 'beaker-kernel/src';
+import { ref, watch, computed, inject, toRaw, nextTick } from 'vue';
+import { JupyterMimeRenderer, type IBeakerCell, type IMimeRenderer } from 'beaker-kernel';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BaseInterface from './BaseInterface.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
-import BeakerSession from '../components/session/BeakerSession.vue';
-import BeakerHeader from '../components/misc/BeakerHeader.vue';
-import Toast from 'primevue/toast';
-import { useToast } from 'primevue/usetoast';
-import { DecapodeRenderer, JSONRenderer, LatexRenderer, wrapJupyterRenderer, BeakerRenderOutput } from '../renderers';
+import { JSONRenderer, LatexRenderer, wrapJupyterRenderer, type BeakerRenderOutput } from '../renderers';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
-import scrollIntoView from 'scroll-into-view-if-needed';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
 
 import Button from "primevue/button";
 import Card from 'primevue/card';
-import LoggingPane from '../components/dev-interface/LoggingPane.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
-import BeakerContextSelection from "../components/session/BeakerContextSelection.vue";
 import BeakerExecuteAction from "../components/dev-interface/BeakerExecuteAction.vue";
 import ContextPanel from '../components/panels/ContextPanel.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
@@ -139,13 +132,12 @@ import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
-import FooterDrawer from '../components/misc/FooterDrawer.vue';
 
 import BeakerCodeCell from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCell from '../components/cell/BeakerMarkdownCell.vue';
 import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
-import { IBeakerTheme } from '../plugins/theme';
+import type { IBeakerTheme } from '../plugins/theme';
 import MessagesPanel from '../components/panels/MessagesPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
 
@@ -176,7 +168,6 @@ const renderers: IMimeRenderer<BeakerRenderOutput>[] = [
     ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
     JSONRenderer,
     LatexRenderer,
-    DecapodeRenderer,
 ];
 
 const cellComponentMapping = {
@@ -456,7 +447,7 @@ const notebookKeyBindings = {
 
 .beaker-notebook {
     flex: 2 0 calc(50vw - 2px);
-    border: 2px solid var(--surface-border);
+    border: 2px solid var(--p-surface-border);
     border-radius: 0;
     border-top: 0;
     max-width: 100%;
@@ -475,7 +466,7 @@ const notebookKeyBindings = {
 //     margin: 0;
 //     padding: 0;
 //     overflow: hidden;
-//     background-color: var(--surface-b);
+//     background-color: var(--p-surface-b);
 // }
 
 // header {

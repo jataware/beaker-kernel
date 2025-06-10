@@ -5,7 +5,6 @@
                     class="code-data"
                     :class="{
                         'dark-mode': theme.mode === 'dark',
-                        'code-data-chat': isChat,
                         [codeStyles]: props.codeStyles
                     }"
                 >
@@ -21,10 +20,10 @@
                     />
                 </div>
                 <div class="code-output">
-                    <CodeCellOutput 
-                        :outputs="cell.outputs" 
-                        :busy="isBusy" 
-                        v-show="!hideOutput" 
+                    <CodeCellOutput
+                        :outputs="cell.outputs"
+                        :busy="isBusy"
+                        v-show="!hideOutput && cell.outputs.length"
                         :dropdown-layout="false"
                     />
                 </div>
@@ -55,17 +54,16 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, defineExpose, ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
+import { ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 import { findSelectableParent } from "../../util";
-import { BeakerSession } from "beaker-kernel/src";
+import { BeakerSession } from "beaker-kernel";
 import CodeEditor from "../misc/CodeEditor.vue";
-import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
-import { IBeakerTheme } from '../../plugins/theme';
-import { StyleOverride } from "../../pages/BaseInterface.vue"
+import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+import type { IBeakerTheme } from '../../plugins/theme';
 
 const props = defineProps([
     "cell",
@@ -80,9 +78,6 @@ const codeEditorRef = ref<InstanceType<typeof CodeEditor>>();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const instance = getCurrentInstance();
-
-const styleOverrides = inject<StyleOverride[]>("styleOverrides") ?? [];
-const isChat = ref(styleOverrides.includes('chat'))
 
 const emit = defineEmits([
     'blur',
@@ -157,7 +152,7 @@ const enter = (position?: "start" | "end" | number) => {
 const exit = () => {
     // Be sure to blur editor even if we don't also refocus below.
     codeEditorRef.value?.blur();
-    let target: HTMLElement = (instance.vnode.el as HTMLElement);
+    const target: HTMLElement = (instance.vnode.el as HTMLElement);
     const selectableParent = findSelectableParent(target);
     selectableParent?.focus();
 }
@@ -187,7 +182,7 @@ onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
-import { BeakerCodeCell } from "beaker-kernel/src";
+import { BeakerCodeCell } from "beaker-kernel";
 export default {
     modelClass: BeakerCodeCell,
     icon: "pi pi-code",
@@ -211,10 +206,10 @@ export default {
 
 .code-data {
     grid-area: code;
-    background-color: var(--surface-a);
+    background-color: var(--p-surface-a);
 
     .cm-editor {
-        border: 1px solid var(--surface-d);
+        border: 1px solid var(--p-surface-d);
     }
     .cm-focused {
         outline: none;
@@ -254,7 +249,7 @@ export default {
     aspect-ratio: 1/1;
     border-radius: 15%;
     &.secondary {
-        background-color: var(--surface-300);
+        background-color: var(--p-surface-e);
     }
 }
 
@@ -268,7 +263,7 @@ button.rollback-button {
 }
 
 .busy-icon {
-    color: var(--blue-500);
+    color: var(--p-blue-500);
     font-weight: bold;
     font-size: 1.3rem;
     margin-top: 1rem;
