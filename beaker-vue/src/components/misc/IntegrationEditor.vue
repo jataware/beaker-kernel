@@ -5,9 +5,8 @@
             Loading integrations...
             {{beakerSession?.status}}
         </div>
-
-        <Fieldset v-else>
-            <template #legend>
+        <div class="integration-main-content" v-else>
+            <div class="integration-header">
                 <Select :options="
                     allIntegrations.map((integration) => {
                         return {
@@ -15,19 +14,18 @@
                             value: integration
                         }
                     })"
-                :option-label="(option) => option?.label ?? 'Select integration...'"
-                option-value="value"
-                placeholder="Select a integration..."
-                @click="(event) => {
-                    if (!confirmUnsavedChanges()) {
-                        event.preventDefault;
-                    } else {
-                        unsavedChanges = false;
-                        temporaryIntegration = undefined;
-                    }
-                }"
-                v-model="selectedIntegration">
-
+                    :option-label="(option) => option?.label ?? 'Select integration...'"
+                    option-value="value"
+                    placeholder="Select a integration..."
+                    @click="(event) => {
+                        if (!confirmUnsavedChanges()) {
+                            event.preventDefault;
+                        } else {
+                            unsavedChanges = false;
+                            temporaryIntegration = undefined;
+                        }
+                    }"
+                    v-model="selectedIntegration">
                 </Select>
 
                 <SplitButton
@@ -48,9 +46,8 @@
                         }
                     ]"
                 >
-
                 </SplitButton>
-            </template>
+            </div>
 
             <Fieldset legend="Name">
                 <InputText
@@ -233,16 +230,17 @@
                     Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
                 </Tag>
             </div>
-        </Fieldset>
-        <div v-if="unsavedChanges" class="floating-save">
-            <span class="save-label">Unsaved changes!</span>
-            <Button
-                @click="save"
-                :disabled="!selectedIntegration"
-                icon="pi pi-save"
-                severity="warning"
-                v-tooltip="`Save Changes`"
-            />
+        </div>
+        <div style="flex: 1 0; margin: 0.2rem; display: flex; justify-content: flex-end;">
+            <div v-if="unsavedChanges" style="flex-shrink: 0;">
+                <Button
+                    @click="save"
+                    :disabled="!selectedIntegration"
+                    icon="pi pi-save"
+                    label="Save Changes"
+                    severity="success"
+                />
+            </div>
         </div>
     </div>
 </template>
@@ -518,6 +516,23 @@ const downloadFile = async (path) => {
 </script>
 
 <style lang="scss">
+.integration-editor {
+    display: flex;
+    flex-direction: column;
+    .integration-main-content {
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        .integration-header {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+        }
+    }
+    padding: 0 0.4rem;
+    height: 100%
+}
+
 .constrained-editor-height {
     max-height: 16rem;
     overflow-y: auto;
@@ -525,27 +540,5 @@ const downloadFile = async (path) => {
 
 .integration-editor > fieldset.p-fieldset legend.p-fieldset-legend {
     display: flex;
-}
-
-.floating-save {
-    position: sticky;
-    bottom: 4rem;
-    left: calc(100% - 16rem);
-    height: 48px;
-    width: 12rem;
-    display: flex;
-    flex-direction: row;
-    border-radius: var(--border-radius);
-    justify-content: space-between;
-    background-color: var(--yellow-300);
-    border: 2px solid var(--yellow-500);
-    .save-label {
-        font-weight: bold;
-        margin: auto;
-    }
-    button {
-        width: 3rem;
-    }
-
 }
 </style>

@@ -33,6 +33,11 @@ const routeMap: Routes = {
       "path": "/admin",
       "name": "admin",
       "component": () => import('../pages/BeakerAdmin.vue')
+    },
+    "/integrations": {
+      "path": "/integrations",
+      "name": "integrations",
+      "component": () => import('../pages/IntegrationsInterface.vue')
     }
 }
 
