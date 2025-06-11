@@ -379,6 +379,7 @@ defineExpose({
     beakerSession,
     showToast,
     setMaximized,
+    getSession: () => beakerSession.value.getSession()
 });
 
 </script>

@@ -17,10 +17,11 @@
     >
         <div class="datasource-container">
             <div class="beaker-notebook">
-                <DatasourceEditor
-                    :datasources="datasources"
+                <IntegrationEditor
+                    :integrations="datasources"
                     :selected-on-load="selectedOnLoad"
-                    :folderRoot="datasourcesFolderRoot"
+                    v-model:selected-integration="selectedDatasource"
+                    v-model:unsaved-changes="unsavedChanges"
                 />
             </div>
         </div>
@@ -72,7 +73,7 @@
                 position="right"
                 highlight="line"
                 :expanded="true"
-                initialWidth="25vi"
+                initialWidth="36vi"
                 :maximized="isMaximized"
             >
                 <SideMenuPanel
@@ -84,6 +85,18 @@
                     <FileContentsPanel
                         :url="previewedFile?.url"
                         :mimetype="previewedFile?.mimetype"
+                    />
+                </SideMenuPanel>
+                <SideMenuPanel
+                    id="examples"
+                    label="Example Editor"
+                    icon="pi pi-list-check"
+                    no-overflow
+                >
+                    <ExamplesPanel
+                        v-model="selectedDatasource"
+                        :disabled="!selectedDatasource"
+                        @onchange="unsavedChanges = true"
                     />
                 </SideMenuPanel>
                 <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
@@ -114,8 +127,9 @@ import NotebookSvg from '../assets/icon-components/NotebookSvg.vue';
 import type { IBeakerTheme } from '../plugins/theme';
 import DebugPanel from '../components/panels/DebugPanel.vue'
 
-import DatasourceEditor from '../components/misc/DatasourceEditor.vue';
+import IntegrationEditor from '../components/misc/IntegrationEditor.vue';
 import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
+import ExamplesPanel from '../components/panels/ExamplesPanel.vue';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -161,9 +175,11 @@ beakerApp.setPage("integrations");
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
 const datasources = ref([]);
-const datasourcesFolderRoot = ref("");
 
 const hasOpenedPanelOnce = ref(false);
+
+const selectedDatasource = ref();
+const unsavedChanges = ref<boolean>(false);
 
 type FilePreview = {
     url: string,
@@ -275,10 +291,14 @@ const iopubMessage = (msg) => {
             incomingDatasources = [];
         }
         datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
-        datasourcesFolderRoot.value = msg.content.info.datasource_root;
 
+        // rather than onMounted, we fire once we get the message that sets datasources, and hence
+        // creates/populates the panel
         if (!hasOpenedPanelOnce.value) {
-            nextTick(() => sideMenuRef.value.selectPanel('integrations'))
+            nextTick(() => sideMenuRef.value.selectPanel('integrations'));
+            nextTick(() => rightSideMenuRef.value.selectPanel('examples'));
+            (document.querySelector("div.sidemenu.right") as HTMLElement).style.width = '36vi';
+            (document.querySelector("div.sidemenu.left") as HTMLElement).style.width = '25vi';
             hasOpenedPanelOnce.value = true;
         }
     }
@@ -307,8 +327,6 @@ const restartSession = async () => {
     )
     await resetFuture;
 }
-
-
 
 </script>
 
@@ -383,7 +401,7 @@ const restartSession = async () => {
         flex: 1 1000 25vw;
     }
     &.right {
-        flex: 1 1 25vw;
+        flex: 1 1 36vw;
     }
 }
 
