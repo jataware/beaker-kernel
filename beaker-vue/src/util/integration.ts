@@ -34,7 +34,9 @@ export const handleAddExampleMessage = async (
     }
 
     const target = integrations?.find((integration) =>
-        integration?.name === content?.integration);
+        integration?.slug === content?.integration
+        || integration?.name === content?.integration
+    );
 
     if (target === undefined) {
         throw `Integration ${content?.integration} does not exist in integrations list.`
