@@ -5,7 +5,6 @@
         :header-nav="headerNav"
         ref="beakerInterfaceRef"
         :connectionSettings="props.config"
-        sessionName="notebook_interface"
         defaultKernel="beaker_kernel"
         :sessionId="sessionId"
         :renderers="renderers"
