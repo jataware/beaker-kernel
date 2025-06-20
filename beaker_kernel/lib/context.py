@@ -16,6 +16,7 @@ from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError, ensure_async
 from beaker_kernel.lib.config import config as beaker_config
+from beaker_kernel.lib.integrations.base import BaseIntegrationProvider
 from beaker_kernel.lib.types import Integration
 
 
@@ -50,12 +51,14 @@ class BeakerContext:
 
     notebook_state: Optional[dict]
     kernel_state: Optional[dict]
+    integrations: list[BaseIntegrationProvider]
 
     SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
     def __init__(self, beaker_kernel: "BeakerKernel", agent_cls: "BeakerAgent", config: Dict[str, Any]):
         self.intercepts = []
+        self.integrations = []
         self.jinja_env = None
         self.templates = {}
         self.beaker_kernel = beaker_kernel
@@ -632,33 +635,33 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             logger.debug("Subkernel: %s\nResult:\n%s", self.subkernel.connected_kernel, result)
         return result
 
-    async def get_integration_root(self, message):
-        raise NotImplementedError
+    # async def get_integration_root(self, message):
+    #     raise NotImplementedError
 
-    @action(action_name="get_integration_root")
-    async def get_integration_root_action(self, message):
-        """
-        Integration handling action for getting the root folder of an integration
-        in the canonicalized jupyter path. Not implemented by default but should be
-        overridden by any context using integration support.
-        """
-        return await self.get_integration_root(message)
+    # @action(action_name="get_integration_root")
+    # async def get_integration_root_action(self, message):
+    #     """
+    #     Integration handling action for getting the root folder of an integration
+    #     in the canonicalized jupyter path. Not implemented by default but should be
+    #     overridden by any context using integration support.
+    #     """
+    #     return await self.get_integration_root(message)
 
-    async def create_integration_folders_for_upload(self, message):
-        raise NotImplementedError
+    # async def create_integration_folders_for_upload(self, message):
+    #     raise NotImplementedError
 
-    @action(action_name="create_integration_folders_for_upload")
-    async def create_integration_folders_for_upload_action(self, message):
-        """
-        Integration handling action for creating folders in the backend storage
-        to support uploading additional datasets and files. Distinct from
-        writing the integration for the case in which a temporary/unsaved buffer
-        needs to have file uploads.
+    # @action(action_name="create_integration_folders_for_upload")
+    # async def create_integration_folders_for_upload_action(self, message):
+    #     """
+    #     Integration handling action for creating folders in the backend storage
+    #     to support uploading additional datasets and files. Distinct from
+    #     writing the integration for the case in which a temporary/unsaved buffer
+    #     needs to have file uploads.
 
-        Not implemented by default but should be overridden
-        by any context using integration support.
-        """
-        return await self.create_integration_folders_for_upload(message)
+    #     Not implemented by default but should be overridden
+    #     by any context using integration support.
+    #     """
+    #     return await self.create_integration_folders_for_upload(message)
 
     async def add_example(self, message):
         raise NotImplementedError

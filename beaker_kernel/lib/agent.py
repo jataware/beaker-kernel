@@ -32,6 +32,14 @@ class BeakerAgent(ReActAgent):
             "debug": self.context.beaker_kernel.debug_enabled,
             "verbose": self.context.beaker_kernel.verbose,
         })
+
+        if tools is None:
+            tools = []
+        if context.integrations:
+            for integration in self.context.integrations:
+                if integration.tools:
+                    tools.extend(integration.tools)
+
         super().__init__(
             model=model,
             api_key=config.llm_service_token,
