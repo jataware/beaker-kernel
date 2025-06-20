@@ -1,39 +1,37 @@
 <template>
-    <div class="datasource-editor">
-        <div class="datasource-loading" v-if="beakerSession.status === 'connecting'">
+    <div class="integration-editor">
+        <div class="integration-loading" v-if="beakerSession.status === 'connecting'">
             <ProgressSpinner></ProgressSpinner>
             Loading integrations...
             {{beakerSession?.status}}
         </div>
-
-        <Fieldset v-else>
-            <template #legend>
+        <div class="integration-main-content" v-else>
+            <div class="integration-header">
                 <Select :options="
-                    allDatasources.map((datasource) => {
+                    allIntegrations.map((integration) => {
                         return {
-                            label: datasource.name,
-                            value: datasource
+                            label: integration.name,
+                            value: integration
                         }
                     })"
-                :option-label="(option) => option?.label ?? 'Select integration...'"
-                option-value="value"
-                placeholder="Select a integration..."
-                @click="(event) => {
-                    if (!confirmUnsavedChanges()) {
-                        event.preventDefault;
-                    } else {
-                        unsavedChanges = false;
-                        temporaryDatasource = undefined;
-                    }
-                }"
-                v-model="selectedDatasource">
-
+                    :option-label="(option) => option?.label ?? 'Select integration...'"
+                    option-value="value"
+                    placeholder="Select a integration..."
+                    @click="(event) => {
+                        if (!confirmUnsavedChanges()) {
+                            event.preventDefault;
+                        } else {
+                            unsavedChanges = false;
+                            temporaryIntegration = undefined;
+                        }
+                    }"
+                    v-model="selectedIntegration">
                 </Select>
 
                 <SplitButton
                     @click="() => {
                         if (confirmUnsavedChanges()) {
-                            newDatasource();
+                            newIntegration();
                         }
                     }"
                     label="New API Integration"
@@ -48,20 +46,14 @@
                         }
                     ]"
                 >
-
                 </SplitButton>
-
-                <span v-if="unsavedChanges">
-                    Unsaved changes!
-                </span>
-
-            </template>
+            </div>
 
             <Fieldset legend="Name">
                 <InputText
-                    v-if="selectedDatasource"
-                    v-model="selectedDatasource.name"
-                    :placeholder="selectedDatasource?.name ? 'Name' : 'No integration selected.'"
+                    v-if="selectedIntegration"
+                    v-model="selectedIntegration.name"
+                    :placeholder="selectedIntegration?.name ? 'Name' : 'No integration selected.'"
                     @change="unsavedChanges = true;"
                 />
                 <InputText
@@ -78,8 +70,8 @@
                 </p>
                 <div class="constrained-editor-height">
                     <CodeEditor
-                        v-if="selectedDatasource"
-                        v-model="selectedDatasource.description"
+                        v-if="selectedIntegration"
+                        v-model="selectedIntegration.description"
                         @change="setUnsavedChanges"
                         ref="descriptionEditor"
                     />
@@ -128,12 +120,12 @@
                         :value="xsrfCookie"
                     />
                 </form>
-                <Toolbar v-for="file in selectedDatasource?.attached_files" :key="file?.filepath">
+                <Toolbar v-for="file in selectedIntegration?.attached_files" :key="file?.filepath">
                     <template #start>
                         <Badge
                             severity="warning"
                             size="large"
-                            v-if="!RegExp(`\{${file?.name}\}`).test(selectedDatasource?.source)"
+                            v-if="!RegExp(`\{${file?.name}\}`).test(selectedIntegration?.source)"
                             style="margin-right: 0.5rem;"
                             v-tooltip="{
                                 value: `${file?.name} is not used in the below agent instructions.
@@ -173,21 +165,25 @@
                     </template>
                     <template #end>
                         <Button
-                            icon="pi pi-times"
+                            icon="pi pi-trash"
                             severity="danger"
                             style="width: 32px; height: 32px"
                             @click="() => {
-                                selectedDatasource.attached_files = selectedDatasource.attached_files.splice(
-                                    selectedDatasource.attached_files.indexOf(file), 1
+                                selectedIntegration.attached_files.splice(
+                                    selectedIntegration.attached_files.indexOf(file), 1
                                 )
                             }"
                             v-tooltip="'Remove File'"
                         />
                     </template>
                 </Toolbar>
-                <Button @click="openFileSelectionMultiple" style="width: fit-content;">
-                    Add New Files
-                </Button>
+                <Button
+                    @click="openFileSelectionMultiple"
+                    style="width: fit-content; height: 32px;"
+                    label="Add New Files"
+                    icon="pi pi-plus"
+                    :disabled="!selectedIntegration"
+                />
             </Fieldset>
 
             <Fieldset legend="Agent Instructions">
@@ -207,8 +203,8 @@
                 </span>
                 <div class="constrained-editor-height">
                     <CodeEditor
-                        v-if="selectedDatasource"
-                        v-model="selectedDatasource.source"
+                        v-if="selectedIntegration"
+                        v-model="selectedIntegration.source"
                         @change="setUnsavedChanges"
                         ref="instructionEditor"
                     />
@@ -234,26 +230,26 @@
                     Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
                 </Tag>
             </div>
-
-
-            <Divider></Divider>
-
-            <div style="display: flex; flex-direction: column; gap: 0.5rem">
+        </div>
+        <div style="flex: 1 0; margin: 0.2rem; display: flex; justify-content: flex-end;">
+            <div v-if="unsavedChanges" style="flex-shrink: 0;">
                 <Button
-                    style="width: fit-content"
                     @click="save"
-                    :disabled="!selectedDatasource"
-                >Save</Button>
+                    :disabled="!selectedIntegration"
+                    icon="pi pi-save"
+                    label="Save Changes"
+                    severity="success"
+                />
             </div>
-
-        </Fieldset>
+        </div>
     </div>
 </template>
 
 
 <script setup lang="ts">
 
-import { ref, watch, computed, nextTick, inject } from 'vue';
+import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
+import { type Integration } from '../../util/integration';
 import { BeakerSession } from 'beaker-kernel';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
@@ -274,20 +270,22 @@ import CodeEditor from './CodeEditor.vue';
 import SplitButton from 'primevue/splitbutton';
 const showToast = inject<any>('show_toast');
 
-const props = defineProps(["datasources", "selectedOnLoad", "folderRoot"]);
-const selectedDatasource = ref(undefined);
-const temporaryDatasource = ref(undefined);
+const props = defineProps(["integrations", "selectedOnLoad"]);
+const selectedIntegration = defineModel<Integration>('selectedIntegration', {required: true});
+const unsavedChanges = defineModel<boolean>('unsavedChanges', {required: true});
+// buffer for changes not yet committed
+const temporaryIntegration = ref(undefined);
 
 const hasLoadedInitialSelection = ref(false);
 
-const sortedDatasources = computed(() =>
-    props?.datasources?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
+const sortedIntegrations = computed(() =>
+    props?.integrations?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
 
-const allDatasources = computed(() =>
-    [...sortedDatasources?.value, ...(temporaryDatasource?.value ? [temporaryDatasource.value] : [])])
+const allIntegrations = computed(() =>
+    [...sortedIntegrations?.value, ...(temporaryIntegration?.value ? [temporaryIntegration.value] : [])])
 
-watch(props.datasources, (updatedDatasources) => {
-    if (updatedDatasources.length === 0) {
+watch(props.integrations, (updatedIntegrations) => {
+    if (updatedIntegrations.length === 0) {
         return;
     }
     if (hasLoadedInitialSelection.value) {
@@ -296,12 +294,12 @@ watch(props.datasources, (updatedDatasources) => {
     if (props?.selectedOnLoad) {
         nextTick(() => {
             if (props?.selectedOnLoad === 'new') {
-                newDatasource();
+                newIntegration();
                 return;
             }
-            for (const datasource of updatedDatasources) {
-                if (datasource?.slug === props?.selectedOnLoad) {
-                    selectedDatasource.value = datasource;
+            for (const integration of updatedIntegrations) {
+                if (integration?.slug === props?.selectedOnLoad) {
+                    selectedIntegration.value = integration;
                     return;
                 }
             }
@@ -311,14 +309,14 @@ watch(props.datasources, (updatedDatasources) => {
 })
 
 const descriptionEditor = ref();
-watch(() => [selectedDatasource.value?.description], (current) => {
+watch(() => [selectedIntegration.value?.description], (current) => {
     if (descriptionEditor.value) {
         descriptionEditor.value.model = current[0];
     }
 })
 
 const instructionEditor = ref();
-watch(() => [selectedDatasource.value?.source], (current) => {
+watch(() => [selectedIntegration.value?.source], (current) => {
     if (instructionEditor.value) {
         instructionEditor.value.model = current[0];
     }
@@ -335,12 +333,11 @@ const uploadForm = ref<HTMLFormElement|undefined>(undefined);
 const uploadFormMultiple = ref<HTMLFormElement|undefined>(undefined);
 
 const unincludedFiles = computed(() =>
-    (selectedDatasource?.value?.attached_files ?? [])
+    (selectedIntegration?.value?.attached_files ?? [])
         ?.map((file) =>
-            RegExp(`{${file?.name}}`).test(selectedDatasource?.value?.source) ? false : file?.name)
+            RegExp(`{${file?.name}}`).test(selectedIntegration?.value?.source) ? false : file?.name)
         ?.filter((x) => x))
 
-const unsavedChanges = ref(false);
 const setUnsavedChanges = () => {unsavedChanges.value = true;};
 const confirmUnsavedChanges = () => {
     if (unsavedChanges?.value) {
@@ -369,44 +366,31 @@ const openFileSelectionMultiple = () => {
     fileInputMultiple.value?.click();
 }
 
-const slugWrapper = computed(() => {
-    if (selectedDatasource?.value?.slug) {
-        return selectedDatasource.value.slug;
-    }
-    return selectedDatasource?.value?.name?.toLowerCase().replaceAll(' ', '_');
-})
-
 const contentManager = new ContentsManager({});
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
 
-const folderSlug = computed(() => {
-    let url = selectedDatasource?.value?.url;
-    if (url === undefined || url === null || url === '') {
-        return slugWrapper.value;
-    }
-    else if (url.endsWith('api.yaml')) {
-        return url.slice(0, -1 * ("/api.yaml".length))
-    }
-    return url
-})
-
-const newDatasource = () => {
+const newIntegration = () => {
     unsavedChanges.value = true;
-    selectedDatasource.value = {
+    selectedIntegration.value = {
         name: "New Integration",
         url: "",
         slug: undefined,
         source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
         description: "This is the description that the agent will use to determine when this integration should be used.",
         attached_files: [],
+        examples: []
     }
-    temporaryDatasource.value = selectedDatasource.value
+    temporaryIntegration.value = selectedIntegration.value
 }
 
 const save = async () => {
     unsavedChanges.value = false;
-    temporaryDatasource.value = undefined;
+    temporaryIntegration.value = undefined;
+
+    if (selectedIntegration.value === undefined) {
+        return;
+    }
 
     showToast({
         title: 'Saved!',
@@ -414,69 +398,35 @@ const save = async () => {
         severity: 'success',
         life: 4000
     });
-    await createFoldersForDatasource();
-    await writeDatasource(selectedDatasource.value);
 
-    session.executeAction('save_datasource', {
-        ...selectedDatasource.value,
-        slug: slugWrapper.value
+    session.executeAction('save_integration', {
+        ...selectedIntegration.value,
     });
 }
 
-const download = async (name) => {
-    const folderRoot = props.folderRoot;
-    const path = `${folderRoot}/${folderSlug.value}/documentation/${name}`;
-    await downloadFile(path);
+const getIntegrationRoot = async (integration) => {
+    const future = session.executeAction('get_integration_root', {
+        integration
+    })
+    return (await future.done).content?.return;
 }
 
-const createFoldersForDatasource = async () => {
-    const folderRoot = props.folderRoot;
-    const basepath = `${folderRoot}/${folderSlug.value}`
-
-    // is the datasource slug folder present?
-    try {
-        const targetDir = await contentManager.get(basepath);
-        if (targetDir.type !== 'directory') {
-            throw "Slug overlaps with existing non-directory file."
-        }
-    }
-    catch (e) {
-        const directory = await contentManager.newUntitled({
-            path: folderRoot,
-            type: 'directory'
-        })
-        await contentManager.rename(directory.path, basepath);
-    }
-
-    // what about documentation/?
-    try {
-        const targetDir = await contentManager.get(`${basepath}/documentation`);
-        if (targetDir.type !== 'directory') {
-            throw "slug/documentation overlaps with existing non-directory file. Is there a file named 'documentation' with no extension?"
-        }
-    }
-    catch (e) {
-        const subdirectory = await contentManager.newUntitled({
-            path: basepath,
-            type: 'directory'
-        })
-        await contentManager.rename(subdirectory.path, `${basepath}/documentation`)
-    }
+const download = async (name) => {
+    const folderRoot = await getIntegrationRoot(selectedIntegration.value);
+    const path = `${folderRoot}/documentation/${name}`;
+    await downloadFile(path);
 }
 
 const onSelectFileForUpload = async () => {
     const fileList = uploadForm.value['uploadfiles']?.files;
-    await createFoldersForDatasource();
     await uploadFile(fileList);
 }
 
-
 const onSelectFilesForUpload = async () => {
     const fileList = uploadFormMultiple.value['uploadfilesMultiple']?.files;
-    await createFoldersForDatasource();
     await uploadFile(fileList);
     for (const file of fileList) {
-        selectedDatasource?.value.attached_files.push({
+        selectedIntegration?.value.attached_files.push({
             name: file.name.split('.').slice(0, -1).join(''),
             filepath: file.name
         })
@@ -484,79 +434,17 @@ const onSelectFilesForUpload = async () => {
 
 }
 
-const formatDatasource = (datasource: {
-    name: string,
-    description: string,
-    source: string,
-    attached_files: any[]
-}): string => {
-    const slug = slugWrapper.value;
-    const indentLines = (text: string) => text
-        .split('\n')
-        .map(line => `\n    ${line}`)
-        .join('')
-        .trim()
-    const indentedDescription = indentLines(datasource?.description ?? "")
-    const indentedContents = indentLines(datasource?.source ?? "")
-    const filePayload = (datasource?.attached_files ?? [])
-        .map(attachment =>
-            `${attachment.name}: !load_txt documentation/${attachment.filepath}\n`)
-        .join('\n')
-
-    const template = `
-name: ${datasource.name}
-slug: ${slug}
-cache_key: api_assistant_${slug}
-examples: !load_yaml documentation/examples.yaml
-
-description: |
-    ${indentedDescription}
-
-${filePayload}
-
-documentation: !fill |
-    ${indentedContents}
-`
-    return template;
-}
-
-const writeDatasource = async (datasource) => {
-    const formattedDatasource = formatDatasource(datasource)
-    const folderRoot = props.folderRoot;
-    const basepath = `${folderRoot}/${folderSlug.value}`
-
-    const type = 'text/plain'
-    const content = btoa(formattedDatasource);
-    const format = 'base64';
-    const fileObj: Partial<Contents.IModel> = {
-        type,
-        format,
-        content,
-    };
-    let result;
-    try {
-        result = await contentManager.save(`${basepath}/api.yaml`, fileObj);
-        result = await contentManager.save(`${basepath}/documentation/examples.yaml`, {type, format, content: btoa("")});
-    }
-    catch(e) {
-        showToast({
-            title: 'Upload failed',
-            detail: `Unable to upload file "${basepath}/api.yaml": ${e}`,
-            severity: 'error',
-            life: 8000
-        });
-        return;
-    }
-
-}
-
 const uploadFile = async (files: FileList) => {
-    const folderRoot = props.folderRoot;
+    await session.executeAction('create_integration_folders_for_upload', {
+        integration: selectedIntegration.value
+    }).done;
+
+    const folderRoot = await getIntegrationRoot(selectedIntegration.value);
     unsavedChanges.value = true;
     const promises = Array.from(files).map(async (file) => {
-        let path = `${folderRoot}/${folderSlug.value}/documentation/${file.name}`;
+        let path = `${folderRoot}/documentation/${file.name}`;
         if (fileTarget?.value !== undefined) {
-            path = `${folderRoot}/${folderSlug.value}/documentation/${fileTarget.value}`;
+            path = `${folderRoot}/documentation/${fileTarget.value}`;
         }
 
         const bytes = [];
@@ -628,12 +516,29 @@ const downloadFile = async (path) => {
 </script>
 
 <style lang="scss">
+.integration-editor {
+    display: flex;
+    flex-direction: column;
+    .integration-main-content {
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        .integration-header {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+        }
+    }
+    padding: 0 0.4rem;
+    height: 100%
+}
+
 .constrained-editor-height {
     max-height: 16rem;
     overflow-y: auto;
 }
 
-.datasource-editor > fieldset.p-fieldset legend.p-fieldset-legend {
+.integration-editor > fieldset.p-fieldset legend.p-fieldset-legend {
     display: flex;
 }
 </style>
