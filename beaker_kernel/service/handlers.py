@@ -67,22 +67,6 @@ def request_log_handler(handler: JupyterHandler):
     )
 
 
-class AppConfigHandler(ExtensionHandlerMixin, JupyterHandler):
-    def get(self):
-        # TODO: Confirm proper error handling if app config can't be written.
-        try:
-            extension_config = self.extensionapp.extension_config
-            self.set_header("Content-Type", "application/javascript")
-            beaker_app: BeakerApp|None = extension_config.get("app", None)
-            if beaker_app:
-                output = beaker_app.to_javascript()
-                self.write(output)
-        except Exception as err:
-            self.log_exception(err.__class__, err, err.__traceback__)
-        finally:
-            self.finish()
-
-
 class PageHandler(StaticFileHandler):
     """
     Special handler that
@@ -275,6 +259,9 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
             ws_scheme = "ws"
         ws_url = base_url.replace(base_scheme, ws_scheme)
 
+        extension_config = self.extensionapp.extension_config
+        beaker_app: BeakerApp|None = extension_config.get("app", None)
+
         config_data = {
             # "appendToken": True,
             "appUrl": os.environ.get("APP_URL", base_url),
@@ -286,6 +273,8 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
         }
         if hasattr(config, "send_notebook_state"):
             config_data["extra"]["send_notebook_state"] = config.send_notebook_state
+        if beaker_app:
+            config_data["appConfig"] = beaker_app.as_dict()
 
         # Ensure a proper xsrf cookie value is set.
         cookie_name = self.settings.get("xsrf_cookie_name", "_xsrf")
@@ -513,23 +502,43 @@ class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
 
 def register_handlers(app: LabServerApp):
     pages = []
-    default_page_filename = "index.html"
 
     beaker_app: BeakerApp = app.extension_config.get("app", None)
     if beaker_app and beaker_app.asset_dir:
         if os.path.isdir(beaker_app.asset_dir):
             app.handlers.append((f"/assets/{beaker_app.slug}/(.*)", StaticFileHandler, {"path": beaker_app.asset_dir}))
 
-    route_file = Path(app.ui_path) / "routes.json"
-    if route_file.exists():
-        routes: dict[str, dict] = json.loads(route_file.read_text())
+    routes = {}
+    if beaker_app and beaker_app.pages:
+        for page_name, page in beaker_app.pages.items():
+            page_path = f"/{page_name}"
+            routes[page_path] = {
+                "path": page_path,
+                "name": page_name,
+            }
+            if page.get("default", False):
+                routes["/"] = {
+                    "path": "/",
+                    "name": "home",
+                }
+
     else:
-        # If no json file exists, ensure that at least 'home' exists
-        routes = {
-            "/": {
-                "path": "/",
-                "name": "home",
-            },
+        route_file = Path(app.ui_path) / "routes.json"
+        if route_file.exists():
+            routes: dict[str, dict] = json.loads(route_file.read_text())
+        else:
+            # If no json file exists, ensure that at least 'home' exists
+            routes = {
+                "/": {
+                    "path": "/",
+                    "name": "home",
+                },
+            }
+
+    if "/" not in routes:
+        routes["/"] = {
+            "path": "/",
+            "name": "home",
         }
 
     for path, route in routes.items():
@@ -537,11 +546,9 @@ def register_handlers(app: LabServerApp):
         path = path.strip('/')
         if path.startswith(('_', '.')):
             continue
-        if beaker_app:
+        if beaker_app and name != "home":
             if name in beaker_app.pages:
                 pages.append(path)
-                if getattr(beaker_app._pages[path], "default", False):
-                    default_page_filename = path
         else:
             pages.append(path)
     page_regex = rf"/({'|'.join(pages)})"
@@ -550,9 +557,8 @@ def register_handlers(app: LabServerApp):
     app.handlers.append(("/config/control", ConfigController))
     app.handlers.append(("/config", ConfigHandler))
     app.handlers.append(("/stats", StatsHandler))
-    app.handlers.append(("/appconfig.js", AppConfigHandler))
     app.handlers.append((r"/(favicon.ico|beaker.svg)$", StaticFileHandler, {"path": Path(app.ui_path)}))
     app.handlers.append((r"/summary", SummaryHandler))
     app.handlers.append((r"/export/(?P<format>\w+)", ExportAsHandler)),
     app.handlers.append((r"/((?:static|themes)/.*)", StaticFileHandler, {"path": Path(app.ui_path)})),
-    app.handlers.append((page_regex, PageHandler, {"path": app.ui_path, "default_filename": default_page_filename}))
+    app.handlers.append((page_regex, PageHandler, {"path": app.ui_path, "default_filename": "index.html"}))

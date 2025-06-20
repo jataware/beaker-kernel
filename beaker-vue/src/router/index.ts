@@ -1,46 +1,99 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter as vueCreateRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router';
 
-export interface Route {
-    name: string;
-    path: string;
-    component: any;
+export type Slug = string;
+
+export interface Page {
+  slug?: Slug;
+  title?: string;
+  default?: boolean;
+  stylesheet?: string | {[key: string]: string};
+  template_bundle?: {[key: string]: string};
+  role?: string;
 }
 
-export type Routes = { [key: string]: Route }
+export interface Route {
+    path: string;
+    component: any;
+    componentPath?: string;
+    role?: string;
+    alias?: RouteRecordRaw["alias"];
+}
 
-const routeMap: Routes = {
-    "/": {
-      "path": "/",
-      "name": "home",
-      "component": () => import('../pages/NotebookInterface.vue')
-    },
-    "/notebook": {
+export type Pages = { [key: Slug]: Page}
+export type Routes = { [key: Slug]: Route }
+
+const defaultRouteMap: Routes = {
+    "notebook": {
       "path": "/notebook",
-      "name": "notebook",
-      "component": () => import('../pages/NotebookInterface.vue')
+      "component": () => import('@/pages/NotebookInterface.vue'),
+      "role": "home",
     },
-    "/chat": {
+    "chat": {
       "path": "/chat",
-      "name": "chat",
-      "component": () => import('../pages/ChatInterface.vue')
+      "component": () => import('@/pages/ChatInterface.vue'),
+      "role": "alt",
     },
-    "/dev": {
+    "integrations": {
+      "path": "/integrations",
+      "component": () => import('@/pages/IntegrationsInterface.vue'),
+    },
+    "dev": {
       "path": "/dev",
-      "name": "dev",
-      "component": () => import('../pages/DevInterface.vue')
+      "component": () => import('@/pages/DevInterface.vue'),
     },
-    "/admin": {
+    "admin": {
       "path": "/admin",
-      "name": "admin",
-      "component": () => import('../pages/BeakerAdmin.vue')
+      "component": () => import('@/pages/BeakerAdmin.vue'),
     }
 }
 
-const routes = Object.values(routeMap);
+const reformatRoutes = (routeMap: Routes) => {
+  const hasHomeRouteDefined = Object.hasOwn(routeMap, "/");
+  return Object.entries(routeMap).map(([slug, routeObject]) => {
+    const result: RouteRecordRaw = {
+      path: routeObject.path,
+      name: slug,
+      component: routeObject.component,
+      meta: {
+        componentPath: routeObject.componentPath,
+        role: routeObject.role,
+      },
+    }
+    if (!hasHomeRouteDefined && routeObject.role === "home") {
+      result["alias"] = "/";
+    }
+    return result;
+  });
+}
 
-const router = createRouter({
-  history: createWebHistory(import.meta.env?.BASE_URL),
-  routes,
-});
+const convertPagesToRoutes = (pages: Pages): Routes => {
+  let pageRoutes = {};
+  Object.values(pages).map((pageDef) => {
+    if (Object.hasOwn(defaultRouteMap, pageDef.slug)) {
+      const routeDef = {...defaultRouteMap[pageDef.slug]};
+      if (routeDef.role) {
+        routeDef.role = (pageDef.default ? "home" : "alt");
+      }
+      pageRoutes[pageDef.slug] = routeDef;
+    }
+  })
+  return pageRoutes;
+}
 
-export default router;
+const createRouter = (config) => {
+  const routes = reformatRoutes(
+    (
+      config?.appConfig?.pages
+      ? convertPagesToRoutes(config.appConfig.pages)
+      : defaultRouteMap
+    )
+  );
+
+  return vueCreateRouter({
+    history: createWebHistory(import.meta.env?.BASE_URL),
+    routes,
+  });
+}
+
+export default createRouter;

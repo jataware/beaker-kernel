@@ -27,10 +27,17 @@ globalThis.window = <any>{
 };
 globalThis.location = globalThis.window.location;
 
-const router = (await import('./src/router'))?.default;
+const createRouter = (await import('./src/router'))?.default;
+const router = createRouter({});
 const routes = router.getRoutes();
 
-const output = Object.fromEntries(routes.map((route) => [route.path, {path: route.path, name: route.name, component: route.components?.default}]))
+const output = Object.fromEntries(routes.map((route) => [
+    route.path, {
+        name: route.name,
+        role: route.meta?.role,
+        component: route.meta?.componentPath,
+    }
+]));
 
 const routeJson = JSON.stringify(output, undefined, 2);
 
