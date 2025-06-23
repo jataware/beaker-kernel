@@ -4,6 +4,7 @@ import yaml
 from pathlib import Path
 from typing import Optional
 
+from archytas.tool_utils import tool
 from adhoc_api.tool import AdhocApi, ensure_name_slug_compatibility
 from adhoc_api.loader import load_yaml_api
 from adhoc_api.uaii import gpt_41, o3_mini, claude_37_sonnet, gemini_15_pro
