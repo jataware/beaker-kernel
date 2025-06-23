@@ -17,6 +17,12 @@ class DatasourceAttachment:
     is_empty_file: bool = field(default=False)
     # TODO: encoding?
 
+@dataclass 
+class DatasourceExample:
+    query: str
+    code: str
+    notes: typing.Optional[str]
+
 @dataclass
 class Datasource:
     slug: str
@@ -29,3 +35,6 @@ class Datasource:
     source: typing.Optional[str] = field(default=None)
     last_updated: typing.Optional[datetime|date] = field(default=None)
     attached_files: typing.Optional[list[DatasourceAttachment]] = field(default=None)
+    # currently o(n) example lookup as a list rather than k,v map with query as key.
+    # should be changed eventually, but left for backwards compatibility
+    examples: typing.Optional[list[DatasourceExample]] = field(default=None)

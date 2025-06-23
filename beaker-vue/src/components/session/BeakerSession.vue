@@ -221,8 +221,13 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
         debug: this.activeContext.info.debug,
         verbose: this.activeContext.info.verbose,
       });
-
     },
+
+    // to be usable from a pages/ToplevelInterface.vue page, since
+    // inject/provide goes NotebookInteface < BaseInterface < BeakerSession
+    getSession() {
+      return this.session;
+    }
   },
 
   beforeMount() {
