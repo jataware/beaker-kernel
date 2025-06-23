@@ -334,7 +334,7 @@ const iopubMessage = (msg) => {
         const showToast = beakerInterfaceRef.value.showToast;
         const session = beakerInterfaceRef.value.getSession();
         try {
-            handleAddExampleMessage(msg, datasources.value, session)
+            handleAddExampleMessage(msg, integrations.value, session)
             showToast({
                 title: 'Example Added',
                 detail: `The example has been successfully added.`,
@@ -356,7 +356,7 @@ const iopubMessage = (msg) => {
         const session = beakerInterfaceRef.value.getSession();
         const integration = msg.content.integration;
         try {
-            handleAddIntegrationMessage(msg, datasources.value, session)
+            handleAddIntegrationMessage(msg, integrations.value, session)
             showToast({
                 title: 'Integration Added',
                 detail: `The integration '${integration}' has been successfully added.`,
