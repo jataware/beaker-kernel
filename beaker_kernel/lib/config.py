@@ -284,6 +284,11 @@ boolean value which will enable/disable the tool based on the value.",
                 "default_model_name": "claude-3-5-sonnet-20241022",
                 "api_key": ""
             },
+            "bedrock": {
+                "import_path": "archytas.models.bedrock.BedrockModel",
+                "default_model_name": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "api_key": ""
+            },
             "gemini": {
                 "import_path": "archytas.models.gemini.GeminiModel",
                 "default_model_name": "gemini-1.5-pro",
