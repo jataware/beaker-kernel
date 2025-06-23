@@ -27,6 +27,7 @@ export default defineConfig({
       '/files': `${ProxyHost}/`,
       '/config': `${ProxyHost}/`,
       '/contexts': `${ProxyHost}/`,
+      '/assets': `${ProxyHost}/`,
     },
     fs: {
       allow: [".."]
@@ -37,6 +38,15 @@ export default defineConfig({
     vueJsx(),
     vueDevTools(),
     topLevelAwait(),
+    {
+      name: "sanitize-eval",
+      transform(src, id) {
+        // Custom inline plugin to replace 'eval()' calls with 'console.debug()'.
+        if (id.includes("@jupyterlab/coreutils/lib/pageconfig")) {
+          return src.replaceAll(/\beval\b/g, 'console.debug');
+        }
+      }
+    }
   ],
   resolve: {
     alias: {
@@ -87,8 +97,6 @@ export default defineConfig({
         // Custom warning suppression for known issues that are not a concern
         if (
           (warning.code === "MISSING_EXPORT" && warning.message.includes('json5') && warning.message.includes('@jupyterlab/settingregistry'))
-          // TODO: Leaving this in but commented out for now as we may need it in the future, but will try to remove the requirement on pageconfig.js completely.
-          // || ((warning.code === "EVAL" && warning.message.includes('@jupyterlab/coreutils/lib/pageconfig.js')))
         ) {
           return;
         }

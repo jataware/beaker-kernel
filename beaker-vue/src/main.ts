@@ -1,6 +1,7 @@
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
 
+import { URLExt, PageConfig } from '@jupyterlab/coreutils';
 import PrimeVue from 'primevue/config';
 import Tooltip from 'primevue/tooltip';
 import ConfirmationService from 'primevue/confirmationservice';
@@ -12,30 +13,24 @@ import { vAutoScroll } from './directives/autoscroll';
 import BeakerThemePlugin from './plugins/theme';
 import BeakerAppConfigPlugin from './plugins/appconfig';
 
-
-import App from './App.vue'
-import router from './router'
+import App from './App.vue';
+import createRouter from './router';
 import { DefaultTheme } from './themes';
-console.log(DefaultTheme);
-
 
 import 'primeicons/primeicons.css';
 import './index.scss';
 
-import { PageConfig, URLExt } from '@jupyterlab/coreutils';
-import { options } from 'marked';
 
 const baseUrl = PageConfig.getBaseUrl();
-
 const confUrl = URLExt.join(baseUrl, '/config') + `?q=${Date.now().toString()}`;
 const configResponse = await fetch(confUrl);
 const config = await configResponse.json();
 
-console.log({config, confUrl, baseUrl})
-const app = createApp(App, {config})
+const app = createApp(App, {config});
+const router = createRouter(config);
 
-app.use(createPinia())
-app.use(router)
+app.use(createPinia());
+app.use(router);
 app.use(PrimeVue, {
     theme: {
         preset: DefaultTheme,
@@ -52,11 +47,11 @@ app.use(PrimeVue, {
 app.use(ToastService);
 app.use(ConfirmationService);
 app.use(DialogService);
-app.use(BeakerAppConfigPlugin);
+app.use(BeakerAppConfigPlugin, config.appConfig);
 app.use(BeakerThemePlugin);
 app.directive('tooltip', Tooltip);
 app.directive('focustrap', FocusTrap);
 app.directive('keybindings', vKeybindings);
 app.directive('autoscroll', vAutoScroll);
 
-app.mount('#app')
+app.mount('#app');

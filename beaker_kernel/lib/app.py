@@ -246,6 +246,7 @@ PageDict = TypedDict("PageDict", {
     "default": NotRequired[bool],
     "stylesheet": NotRequired[str|BeakerAppAsset],
     "template_bundle": NotRequired[TemplateStringBundle|dict[str, str]|dict[str, TemplateString]],
+    "role": NotRequired[str],
 })
 
 
@@ -400,6 +401,22 @@ class BeakerApp:
     @property
     def templates(self) -> dict[str, str]:
         return self._template_bundle.render()
+
+    def as_dict(self) -> dict:
+        app_dict = {}
+        if self.pages:
+            app_dict["pages"] = {page_slug: page.asdict(app=self) for page_slug, page in self._pages.items()}
+        if self._template_bundle:
+            app_dict["templateStrings"] = self.templates
+        if self.default_context:
+            app_dict["default_context"] = (self.default_context if isinstance(self.default_context, Context) else Context(**self.default_context)).asdict()
+        if self._assets:
+            app_dict["assets"] = {asset.slug: asset.asdict(self) for asset in self._assets.values()}
+        if self.stylesheet:
+            app_dict["stylesheet"] = get_stylesheet_url(self)
+        if self.config:
+            app_dict["config"] = self.config.asdict()
+        return app_dict
 
     def to_javascript(self, page=None) -> str:
         output = [
