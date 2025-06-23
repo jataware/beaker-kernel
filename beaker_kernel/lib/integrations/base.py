@@ -2,8 +2,6 @@ import inspect
 from abc import ABC, abstractmethod
 
 
-
-
 class BaseIntegrationProvider(ABC):
 
     @abstractmethod
@@ -32,5 +30,11 @@ class BaseIntegrationProvider(ABC):
 
     @property
     def tools(self) -> list[callable]:
-        tools = inspect.getmembers(self, lambda member: callable(member) and getattr(member, '_is_tool', False))
+        tools = []
+        for member_name in dir(self):
+            if member_name == "tools":
+                continue
+            member = getattr(self, member_name)
+            if callable(member) and getattr(member, '_is_tool', False):
+                tools.append(member)
         return tools

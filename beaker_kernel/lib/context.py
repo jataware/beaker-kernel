@@ -56,9 +56,10 @@ class BeakerContext:
     SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
-    def __init__(self, beaker_kernel: "BeakerKernel", agent_cls: "BeakerAgent", config: Dict[str, Any]):
+    def __init__(self, beaker_kernel: "BeakerKernel", agent_cls: "BeakerAgent", config: Dict[str, Any],
+                 integrations: list[BaseIntegrationProvider] = None):
         self.intercepts = []
-        self.integrations = []
+        self.integrations = integrations if integrations is not None else []
         self.jinja_env = None
         self.templates = {}
         self.beaker_kernel = beaker_kernel
