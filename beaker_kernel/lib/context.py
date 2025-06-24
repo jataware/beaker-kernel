@@ -289,6 +289,12 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             agent_details = self.agent.get_info()
         else:
             agent_details = None
+
+        if self.integrations:
+            integrations = {
+                integration.display_name: integration.list_integrations()
+                for integration in self.integrations
+            }
         payload = {
             "language": self.subkernel.DISPLAY_NAME,
             "subkernel": self.subkernel.KERNEL_NAME,
@@ -298,14 +304,9 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "agent": agent_details,
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
+            "integrations": integrations
         }
 
-        if get_integration_method := getattr(self, "get_integrations", None):
-            integrations: list[Integration] = await ensure_async(get_integration_method())
-            payload["integrations"] = [
-                asdict(integration) if isinstance(integration, Integration) else integration
-                for integration in integrations
-            ]
         return payload
 
     async def get_subkernel_state(self):

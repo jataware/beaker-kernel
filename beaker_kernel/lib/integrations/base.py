@@ -3,6 +3,9 @@ from abc import ABC, abstractmethod
 
 
 class BaseIntegrationProvider(ABC):
+    display_name: str
+    def __init__(self, display_name: str):
+        self.display_name = display_name
 
     @abstractmethod
     def list_integrations(self):
