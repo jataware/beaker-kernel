@@ -40,10 +40,10 @@ class CodeAnalyzer:
         rule_map: dict[type[TrustRule], list[TrustRule]] = defaultdict(list)
         for rule in self.rules:
             rule_map[rule.__class__].append(rule)
-        for cls, rules in rule_map.items():
-            data = cls.preprocess_cells(cells, analyzer=self)
+        for rule_cls, rules in rule_map.items():
+            data = rule_cls.preprocess_cells(cells, analyzer=self)
             futures.append(
-                cls.check(data=data, rules=rules, analyzer=self)
+                rule_cls.check(cells, data, rules, self)
             )
         results = await asyncio.gather(*futures)
         annotations = [
@@ -51,8 +51,16 @@ class CodeAnalyzer:
             for annotation in result
         ]
 
-        cell_annotation_map: dict[str, list[AnalysisCodeCellLine]] = defaultdict(list)
-        for annotation in annotations:
-            cell_annotation_map[annotation[]]
+        # cell_annotation_map: dict[str, list[AnalysisCodeCellLine]] = defaultdict(list)
+        # for annotation in annotations:
+            # print(annotation)
+            # cell_annotation_map[annotation[]]
 
         return annotations
+
+# async def check_and_normalize(cls: type[TrustRule], cells, data, rules, analyzer):
+    # results = await cls.check(cells=cells, data=data, rules=rules, analyzer=analyzer)
+    # return results
+    # raw_result = await cls.check(data=data, rules=rules, analyzer=analyzer)
+    # normalized_result = cls.normalize_results(cells=cells, results=raw_result, analyzer=analyzer)
+    # return normalized_result

@@ -4,13 +4,14 @@ from abc import ABC, abstractmethod
 from tree_sitter import Tree, Node, Parser, Language
 from typing import TypeVar, Callable, Optional, TYPE_CHECKING
 
-from ..analyzer import AnRe
+from ..analysis_agent import AnalysisResult
 from ..analysis_types import AnalysisCodeCells, AnalysisCategory, AnalysisItem
 
 if TYPE_CHECKING:
     from ..analyzer import CodeAnalyzer
 
-T = TypeVar("T")
+InternalRepr = TypeVar("InternalRepr")
+
 class TrustRule(ABC):
     id: str
 
@@ -19,12 +20,12 @@ class TrustRule(ABC):
 
     @classmethod
     @abstractmethod
-    async def check(cls, data: T, rules: "list[TrustRule]", analyzer: "CodeAnalyzer") -> list[AnalysisResult]:
+    async def check(cls, cells: AnalysisCodeCells, data: InternalRepr, rules: "list[TrustRule]", analyzer: "CodeAnalyzer") -> list[AnalysisResult]:
         raise NotImplementedError()
 
     @classmethod
     @abstractmethod
-    def preprocess_cells(cls, cells: AnalysisCodeCells,  analyzer: "CodeAnalyzer") -> T:
+    def preprocess_cells(cls, cells: AnalysisCodeCells,  analyzer: "CodeAnalyzer") -> InternalRepr:
         raise NotImplementedError()
 
 
@@ -36,10 +37,12 @@ class ASTRule(TrustRule):
         self.filter = filter
 
     @classmethod
-    async def check(cls, data: Tree, rules: "list[ASTRule]", analyzer: "CodeAnalyzer") -> list[AnalysisResult]:
+    async def check(cls, cells: AnalysisCodeCells, data: Tree, rules: "list[ASTRule]", analyzer: "CodeAnalyzer") -> list[AnalysisResult]:
+        matches = []
         for rule in rules:
             print(f"Checking {rule.__class__.__name__} '{rule.id}'")
-            return rule.filter(data, analyzer)
+            matches.extend(rule.filter(cells, data, analyzer, rule))
+        return matches
 
     @classmethod
     def preprocess_cells(cls, cells: AnalysisCodeCells, analyzer) -> Tree:
@@ -70,7 +73,7 @@ instructions:
         return query
 
     @classmethod
-    async def check(cls, data: str, rules: "list[LLMRule]", analyzer: "CodeAnalyzer") -> list[AnalysisResult]:
+    async def check(cls, cells: AnalysisCodeCells, data: str, rules: "list[LLMRule]", analyzer: "CodeAnalyzer") -> list[AnalysisResult]:
         from ..analysis_agent import AnalysisResult, CodeAnalysisAgent
         from ...config import config
         model = config.get_model()
@@ -205,14 +208,83 @@ the user and for which reasonable alternatives exist.
 #     """
 # )
 
+#         """
+# (
+#  (comment)* @comment
+#  .
+#  (expression_statement
+#   (assignment
+#     left: (_) @left
+#     right: ((_)* @right
+#             (#any-of? @right
+#                 "string"
+#                 "integer"
+#                 "float"
+#             )
+#            )
+#   )
+#  )
+#  .
+#  (comment)* @comment
+# )
+#         """
 
-def literalCheckAstFilter(tree: Tree, analyzer: "CodeAnalyzer") -> list[Node]:
+def literalCheckAstFilter(cells: AnalysisCodeCells, tree: Tree, analyzer: "CodeAnalyzer", rule: ASTRule) -> list[tuple[ASTRule, Node]]:
+    language = analyzer.language
     print(f"Checking literal filter against {tree}")
-    return []
+    query = language.query(
+        """
+(
+ (comment)* @comment
+ .
+ (expression_statement
+  (assignment
+    left: (_) @left
+    right: ([
+        (string)
+        (integer)
+        (float)
+    ].) @right
+   ) @assignment
+ )
+ .
+ (comment)* @comment
+)
+        """
+    )
+    raw_matches = query.matches(tree.root_node)
 
+    results: list[AnalysisResult] = []
+    for _, match in raw_matches:
+        node: Node = match["right"][0]
+        start_line, start_pos = node.start_point
+        end_line, end_pos = node.end_point
+        cell_id, start_unfurled_line = cells.unfurl_line(start_line)
+        end_unfurled_line = start_unfurled_line if end_line == start_line else cells.unfurl_line(node)[1]
+
+        result = AnalysisResult(
+            cell_id=cell_id,
+            code_start_line=start_unfurled_line.line_num,
+            code_end_line=end_unfurled_line.line_num,
+            code_start_line_pos=start_pos,
+            code_end_line_pos=end_pos,
+            rule_id=rule.id,
+            issue_type="ast-literal",
+            extra_info="No extra info",
+        )
+        results.append(result)
+    return results
+
+
+# def literalCheckNormalizer(rule, match, cells):
+#     pass
+
+# def nodeHighlighterNormalizer(rule, node, cells):
+#     pass
 
 LiteralCheckAST = ASTRule(
     id="ast_literal",
-    filter=literalCheckAstFilter
-
+    filter=literalCheckAstFilter,
+    # normalizer=nodeHighlighterNormalizer,
+    # normalizer=literalCheckNormalizer,
 )

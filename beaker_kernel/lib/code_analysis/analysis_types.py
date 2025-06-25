@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TypeAlias, Optional, Literal, TypeVar, Generic, Callable, TypedDict
+from typing import TypeAlias, Optional, Literal, TypeVar, Generic, Callable, TypedDict, overload
 
 from pydantic import BaseModel
 
@@ -53,13 +53,14 @@ class AnalysisCodeCell:
             return self._lines
         offset = 0
         line_list: list[AnalysisCodeCellLine] = []
-        for line_num, content in enumerate(self.content.splitlines(), start=1):
-            line_len = len(content)
+        for line_num, line_content in enumerate(self.content.splitlines(keepends=True), start=0):
+            line_len = len(line_content)
             line_list.append(AnalysisCodeCellLine(
+                cell_id=self.cell_id,
                 start_pos=offset,
                 end_pos=offset + line_len,
                 line_num=line_num,
-                content=content,
+                content=line_content,
             ))
             offset += line_len
         self._lines = line_list
@@ -68,16 +69,28 @@ class AnalysisCodeCell:
 
 class AnalysisCodeCells(list[AnalysisCodeCell]):
     _line_ref: dict[tuple[str, int], AnalysisCodeCellLine] = None
+    _line_map: dict[int, tuple[int, int]]
+
+    def __init__(self, *args, **kwargs):
+        self._line_ref = {}
+        self._line_map = {}
+        super().__init__(*args, **kwargs)
+        offset = 0
+        for cell_idx, cell in enumerate(self):
+            cell_lines = cell.lines
+            for line in cell_lines:
+                combined_line_num = line.line_num + offset
+                self._line_ref[(cell.cell_id, line.line_num)] = line
+                self._line_map[combined_line_num] = (cell_idx, line.line_num)
+            offset += len(cell_lines)
 
     @property
     def lines(self) -> list[dict]:
-        self._line_ref = {}
         line_by_cell = []
         offset = 0
         for cell in self:
             cell_lines = cell.lines
             for line in cell_lines:
-                self._line_ref[(cell.cell_id, line.line_num)] = line
                 line_by_cell.append({
                     "cell_id": cell.cell_id,
                     "line_num": line.line_num + offset,
@@ -92,18 +105,20 @@ class AnalysisCodeCells(list[AnalysisCodeCell]):
         spacing = len(str(len(lines)))
         formatted_code = (
             "# {cell_id} / {line_num} : {content}\n" +
-            "\n".join((
-            f"{line['cell_id']} / {(line['line_num']):{spacing}} : {line['content']}" for line in lines
+            "".join((
+                f"{line['cell_id']} / {(line['line_num']):{spacing}} : {line['content']}" for line in lines
             ))
         )
         return formatted_code
 
     @property
     def raw_code(self) -> str:
-        return "\n".join((cell.content for cell in self))
+        return "".join((cell.content for cell in self))
 
-    def unfurl_line(self, codecell_id: str, line_num: int) -> AnalysisCodeCellLine | None:
-        if self._line_ref is None:
-            self.lines  # Prime cache
-        line = self._line_ref.get((codecell_id, line_num), None)
-        return line
+    def unfurl_line(self, line_num: int) -> AnalysisCodeCellLine | None:
+        code_cell_idx, code_cell_line = self._line_map.get(line_num, (None, None))
+        if code_cell_idx is None:
+            return None
+        code_cell = self[code_cell_idx]
+        line = self._line_ref.get((code_cell.cell_id, code_cell_line), None)
+        return code_cell.cell_id, line

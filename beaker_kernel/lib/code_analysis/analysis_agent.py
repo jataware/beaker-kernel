@@ -31,6 +31,16 @@ class AnalysisResult(BaseModel):
     cell_id: Optional[str] = Field(description=(
         "The ID of the cell the code is generated from, if available from the context."
     ))
+    code_start_line_pos: Optional[int] = Field(
+        default=None,
+        description=(
+            "Optional position in start line where analysis starts. If not provided, defaults to start of starting line."
+    ))
+    code_end_line_pos: Optional[int] = Field(
+        default=None,
+        description=(
+            "Optional position in end line where analysis ends. If not provided, defaults to end of ending line."
+    ))
 
 
 class CodeAnalysisAgent(ReActAgent):
