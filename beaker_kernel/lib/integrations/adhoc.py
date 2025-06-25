@@ -1,231 +1,119 @@
-from dataclasses import asdict
-import json
 import logging
 import os
-import yaml
-from yaml import SafeDumper, SafeLoader
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Optional, cast
+from string import Template
+from typing import Optional, Self
 
-from archytas.tool_utils import tool, AgentRef, LoopControllerRef, ReactContextRef
-from adhoc_api.tool import AdhocApi, ensure_name_slug_compatibility, APISpec
-from adhoc_api.loader import load_yaml_api, interpolate_strings, YAMLFileLoader
-from adhoc_api.uaii import gpt_41, o3_mini, claude_37_sonnet, gemini_15_pro
+import yaml
+from adhoc_api.tool import AdhocApi, APISpec
+from adhoc_api.uaii import claude_37_sonnet, gemini_15_pro, gpt_41, o3_mini
+from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
-from beaker_kernel.lib.types import Integration, IntegrationAttachment
+from beaker_kernel.lib.types import Integration, IntegrationAttachment, IntegrationExample
 
 from .base import BaseIntegrationProvider
 
-import re
-
 logger = logging.getLogger(__file__)
 
+@dataclass
+class TemplateSpecification:
+    name: str
+    slug: str
+    attachments: dict[str, str]
+    description: str
+    prompt: Template
+    examples: list[IntegrationExample]
+    location: os.PathLike # relative to adhoc root
 
-
-# API specs can either be interpolated and evaluated or left unevaluated with references to other files.
-# Prefer handling unevaluated files until at adhoc-api load time so that editing can work on tag directives
-# rather than fully loaded content interpolated into the body.
-
-# Beaker Integration             <-->   Raw, Uninterpolated Spec   <--> Interpolated API Spec
-# (store this one on the class)         (intermediary format)           (what adhoc uses)
-
-
-
-class RawYamlLoader(SafeLoader):
-    pass
-def ignore_tags(_loader, tag_suffix, node):
-    return tag_suffix + " " + node.value
-RawYamlLoader.add_multi_constructor("", ignore_tags)
-
-class APISpecDumper(SafeDumper):
-    pass
-
-class LoadYamlTag(yaml.YAMLObject):
-    yaml_tag = "!load_yaml"
-    def __init__(self, payload):
-        self.payload = payload
-    def __repr__(self):
-        return f"LoadYamlTag({self.payload})"
     @classmethod
-    def from_yaml(cls, _loader, node):
-        return LoadYamlTag(node.value)
-    @classmethod
-    def to_yaml(cls, dumper, data):
-        return dumper.represent_scalar(cls.yaml_tag, data.payload)
-APISpecDumper.add_multi_representer(LoadYamlTag, LoadYamlTag.to_yaml)
+    def from_dict(cls, location: os.PathLike, source: dict) -> Self:
+        """
+        Consumes a dict loaded from yaml to create a TemplateSpecification.
 
-class LoadTextTag(yaml.YAMLObject):
-    yaml_tag = "!load_txt"
-    def __init__(self, payload):
-        self.payload = payload
-    def __repr__(self):
-        return f"LoadTextTag({self.payload})"
-    @classmethod
-    def from_yaml(cls, _loader, node):
-        return LoadTextTag(node.value)
-    @classmethod
-    def to_yaml(cls, dumper, data):
-        return dumper.represent_scalar(cls.yaml_tag, data.payload)
-APISpecDumper.add_multi_representer(LoadTextTag, LoadTextTag.to_yaml)
-
-class FillTag(yaml.YAMLObject):
-    yaml_tag = "!fill"
-    def __init__(self, payload):
-        self.payload = payload
-    def __repr__(self):
-        return f"FillTag({self.payload})"
-    @classmethod
-    def from_yaml(cls, _loader, node):
-        return FillTag(node.value)
-    @classmethod
-    def to_yaml(cls, dumper, data):
-        return dumper.represent_scalar(cls.yaml_tag, data.payload, style="|")
-APISpecDumper.add_multi_representer(FillTag, FillTag.to_yaml)
-
-class AdhocYamlLoaderCustomPath(YAMLFileLoader):
-    def __init__(self, stream):
-        path = stream["path"]
-        stream = stream["data"]
-        super().__init__(stream)
-        self._yaml_dir = path
-
-def api_spec_from_integration(integration: Integration, data_root: os.PathLike) -> APISpec:
-    """
-    Converts a Beaker integration into a loaded adhoc_api spec.
-
-    Preloading adhoc_api yaml specs would dump the file contents in the body of the loaded
-    yaml versus keeping a reference for the purpose of frontend editing; this wraps evaluation
-    of unevaluated (raw) specs until necessary.
-    """
-    slug = integration.slug or integration.name.lower().replace(" ", "_")
-    integration_spec_represenation = {
-        "name": integration.name,
-        "slug": slug,
-        "cache_key": f"integration_{slug}",
-        "examples": LoadYamlTag("documentation/examples.yaml"),
-        "description": integration.description,
-        "documentation": FillTag(integration.source)
-    }
-    integration_root = integration.url or ""
-    if integration_root == "":
-        integration_root = integration.slug or integration.name.lower().replace(" ", "_")
-    elif integration_root.endswith("api.yaml"):
-        integration_root = integration_root[:-(len("api.yaml"))]
-    for attachment in integration.attached_files or []:
-        integration_spec_represenation |= {
-            attachment.name: LoadTextTag(f"documentation/{attachment.filepath}")
+        location: folder name (does not necessarily match slug/name)
+        source: deserialized yaml of the integration
+        """
+        prompt = Template(source.pop("prompt"))
+        modified_fields = {
+            "prompt": prompt,
+            "location": location,
+            # slug may not be present on old specs -- replace spaces with _ in name for a slug
+            "slug": source.pop("slug", str(source.get("name")).lower().replace(" ", "_"))
         }
-    # serialize into a compatible spec with laod directive tags so that filepaths get fully loaded
-    adhoc_compatible_spec = yaml.dump(integration_spec_represenation, Dumper=APISpecDumper)
-    return api_spec_from_raw_spec_str(adhoc_compatible_spec, integration_root, data_root) # type: ignore
+        return cls(**(source | modified_fields))
 
-def api_spec_from_raw_spec_str(raw_spec: str, api_yaml_root: Path, data_root: os.PathLike) -> dict:
-    # use adhoc_api's loader
-    raw_data = yaml.load(
-        {"data": raw_spec, "path": api_yaml_root}, # type: ignore
-        AdhocYamlLoaderCustomPath # noqa: S506 (inherits safeloader)
-    )
-    # handle the loader steps from string as source rather than filepath
-    loaded_spec: dict = interpolate_strings(raw_data, raw_data) # type: ignore
-    replace_dataset_paths(loaded_spec, data_root) # type: ignore
-    ensure_name_slug_compatibility(loaded_spec) # type: ignore
+    def render(self, overrides: dict[str, str] | None = None) -> APISpec:
+        """
+        Renders a template with included files given a relative root to start from.
+        Raises on nonexistent files and a failure to load.
 
-    valid_keys = APISpec.__annotations__.keys()
-    valid_spec = { key: loaded_spec[key] for key in valid_keys if key in loaded_spec }
-    return valid_spec # type: ignore
+        Overrides are template substitutions that will take precedence over existing
+        fields, such as dataset_root.
 
-def replace_dataset_paths(loaded_spec: APISpec, data_root: os.PathLike):
-    """
-    Operates in-place on a loaded APIspec. Replaces the uninterpolated dataset paths with the
-    correct dataset path in a parsed and evaluated APIspec.
-    """
-    # Replace {DATASET_FILES_BASE_PATH} with data_dir path; { and {{ to reduce mental overhead
-    loaded_spec['documentation'] = loaded_spec['documentation'].replace('{DATASET_FILES_BASE_PATH}', str(data_root))
-    loaded_spec['documentation'] = loaded_spec['documentation'].replace('{{DATASET_FILES_BASE_PATH}}', str(data_root))
-    if 'examples' in loaded_spec and isinstance(loaded_spec['examples'], list):
-        for example in loaded_spec['examples']:
-            if 'code' in example and isinstance(example['code'], str):
-                example['code'] = example['code'].replace('{{DATASET_FILES_BASE_PATH}}', str(data_root))
-                example['code'] = example['code'].replace('{DATASET_FILES_BASE_PATH}', str(data_root))
+        Attachments are loaded from `relative_root/attachments` as a starting path.
+        """
+        substitutions = {
+            attachment_key: (Path(self.location) / "attachments" / filepath).resolve().read_text()
+            for attachment_key, filepath in self.attachments.items()
+        }
+        substitutions |= (overrides or {})
+        return APISpec(
+            name=self.name,
+            slug=self.slug,
+            cache_key=f"beaker_{self.slug}",
+            description=self.description,
+            examples=[asdict(example) for example in self.examples], # type: ignore
+            documentation=self.prompt.substitute(substitutions)
+        )
 
-def create_integration_from_raw_spec(raw_spec_path: os.PathLike, raw_spec: dict) -> Integration:
-    """
-    Creates a Beaker integration from a raw, uninterpolated APIspec.
-    Needs to preserve lazy loading to not replace references to files with their contents.
-    """
-    attachments = []
-    # assume any key not one of the following is an attached file
-    for attachment_key in [
-        key for key in raw_spec.keys() if key not in [
-            "name",
-            "slug",
-            "description",
-            "cache_key",
-            "documentation",
-            "examples",
-            "cache_body",
-            "loaded_examples"
-        ]
-    ]:
-        if not isinstance(raw_spec[attachment_key], str):
-            logger.warning(
-                msg=f"warning: key {attachment_key} on spec {raw_spec['name']} is of type "
-                    f"{type(raw_spec[attachment_key])} and not str. ignoring and continuing"
-            )
-            continue
-        filepath_raw = re.sub(
-                r"!load_[a-zA-Z]+",
-                "",
-                raw_spec[attachment_key].strip()
-            ).strip().replace("documentation/", "")
-        attachments.append(IntegrationAttachment(
-            name=attachment_key,
-            filepath=filepath_raw,
-            content=None,
-            is_empty_file=False
-        ))
-    integration = Integration(
-        slug=raw_spec["slug"],
-        url=str(raw_spec_path),
-        name=raw_spec["name"],
-        description=raw_spec.get("description", ""),
-        source=raw_spec.get("documentation", "").replace("!fill", ""),
-        attached_files=attachments,
-        examples=raw_spec.get("loaded_examples", [])
-    )
-    return integration
-
+    def to_integration(self) -> Integration:
+        """
+        Converts a TemplateSpecification to a Beaker Integration, without rendering any part.
+        """
+        return Integration(
+            slug=self.slug,
+            name=self.name,
+            description=self.description,
+            datatype="api",
+            url=str(self.location),
+            source=self.prompt.template,
+            attached_files=[
+                IntegrationAttachment(
+                    name=attachment_key,
+                    filepath=filepath
+                ) for attachment_key, filepath in self.attachments.items()
+            ],
+            examples=self.examples
+        )
 
 
 class AdhocIntegrationProvider(BaseIntegrationProvider):
-    integrations: list[Integration]
+    specifications: list[TemplateSpecification]
 
     def __init__(self,
         display_name: str,
-        datafile_root: os.PathLike,
         adhoc_path: os.PathLike,
-        integrations: list[Integration],
+        specifications: list[TemplateSpecification],
         instructions: Optional[str]=None,
         **config_options,
     ):
         super().__init__(display_name)
-        self.datafile_root = datafile_root
         self.adhoc_path = adhoc_path
+        self.specifications = specifications
         self.instructions = instructions
-        self.integrations = integrations
-        self.adhoc_api = self.create_adhoc(**config_options)
 
-    def create_adhoc(self, **config_options) -> AdhocApi:
-        """
-        Create a new adhoc instance from the current integrations.
-        """
-        apis = [
-            api_spec_from_integration(integration, self.datafile_root)
-            for integration in self.integrations
-        ]
-        return AdhocApi(
-            apis=apis,
-            **config_options,
+        # only add the large files data directory when hydrating the templates
+        datafile_root = Path(self.adhoc_path) / "data"
+        substitutions = {
+            "DATASET_FILES_ROOT_DIR": str(datafile_root)
+        }
+        self.adhoc_api = AdhocApi(
+            apis=[
+                spec.render(substitutions)
+                for spec in self.specifications
+            ],
+            **config_options
         )
 
     @classmethod
@@ -235,56 +123,63 @@ class AdhocIntegrationProvider(BaseIntegrationProvider):
             raise RuntimeError(f"Unable to initialize ad-hoc integration as specified directory '{adhoc_path}' does not exist.")
 
         integration_root = adhoc_path / "datasources"
-        datafile_root = adhoc_path / "data"
         instruction_root = adhoc_path / "instructions"
         prompts_root = adhoc_path / "prompts"
 
-        raw_specs: list[tuple[os.PathLike, dict]] = [] # no interpolation
-
+        specifications: list[TemplateSpecification] = []
         for inner_directory in os.listdir(integration_root):
             integration_dir = integration_root / inner_directory
-            if integration_dir.is_dir():
-                integration_yaml = integration_dir / 'api.yaml'
-                if not integration_yaml.is_file():
-                    logger.warning(f"Ignoring malformed API: {integration_yaml}")
-                    continue
-                raw_contents = integration_yaml.read_text()
-                raw_spec = yaml.load(raw_contents, RawYamlLoader) # noqa: S506 - inherits safeloader
-                try:
-                    ensure_name_slug_compatibility(raw_spec)
-                    # add the loaded examples in too, since we want that tag parsed in order to get the file contents
-                    # but also the raw text (that points to the file we're loading here) as well
-                    loaded = api_spec_from_raw_spec_str(raw_contents, integration_dir, datafile_root)
-                    raw_spec['loaded_examples'] = loaded.get('examples', [])
-                    raw_specs.append((integration_dir / 'api.yaml', raw_spec))
-                except Exception as e:
-                    logger.error(f"Failed to load integration `{integration_yaml}` from raw yaml: {e}")
+            if not integration_dir.is_dir():
+                continue
 
-        integrations = [
-            create_integration_from_raw_spec(filepath, raw_spec)
-            for (filepath, raw_spec) in raw_specs
-        ]
+            integration_yaml = integration_dir / "api.yaml"
+            if not integration_yaml.is_file():
+                logger.warning(f"Ignoring malformed API: `{integration_yaml}` is not a file")
+                continue
+
+            spec_data = yaml.safe_load(integration_yaml.read_text())
+            # attach examples, since the path is fixed per-integration
+            examples_yaml = integration_dir / "examples.yaml"
+            if not examples_yaml.is_file():
+                logger.warning(
+                    msg=f"No examples.yaml found for `{integration_yaml}`. "
+                        f"Assuming no examples for the integration and still loading it."
+                )
+                spec_data["examples"] = []
+            else:
+                spec_data["examples"] = [
+                    IntegrationExample(**entry) for entry in yaml.safe_load(
+                        examples_yaml.read_text()
+                    )
+                ]
+            specifications.append(
+                TemplateSpecification.from_dict(
+                    location=integration_dir,
+                    source=spec_data
+                )
+            )
 
         instructions ="\n".join(
             file.read_text()
             for file in instruction_root.iterdir() if file.is_file()
         )
 
-        # uninterpolated specs
         instance = cls(
-            datafile_root=datafile_root,
             adhoc_path=adhoc_path,
-            integrations=integrations,
+            specifications=specifications,
             instructions=instructions,
             ** config_options
         )
         return instance
 
     def list_integrations(self):
-        return [asdict(integration) for integration in self.integrations]
+        return [asdict(specification.to_integration()) for specification in self.specifications]
 
     def get_integration(self, integration_id: str):
-        return asdict(next(i for i in self.integrations if i.slug == integration_id))
+        return asdict(
+            (next(i for i in self.specifications if i.slug == integration_id))
+                    .to_integration()
+        )
 
     def add_integration(self, **payload):
         pass

@@ -17,11 +17,11 @@ class IntegrationAttachment:
     is_empty_file: bool = field(default=False)
     # TODO: encoding?
 
-@dataclass 
+@dataclass
 class IntegrationExample:
     query: str
     code: str
-    notes: typing.Optional[str]
+    notes: str | None = None
 
 @dataclass
 class Integration:
