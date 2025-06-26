@@ -22,6 +22,7 @@ export type Integration = {
     url: string
 }
 
+export type IntegrationProviders = {[key in string]: Integration[]}
 
 export const handleAddExampleMessage = async (
     msg,

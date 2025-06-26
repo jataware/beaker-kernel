@@ -82,10 +82,8 @@
                 </SideMenuPanel>
                 <SideMenuPanel
                     id="integrations" label="Integrations" icon="pi pi-database"
-                    v-if="integrations.length > 0"
                 >
-                    <IntegrationPanel :integrations="integrations">
-                    </IntegrationPanel>
+                    <IntegrationPanel></IntegrationPanel>
                 </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
@@ -315,20 +313,6 @@ const iopubMessage = (msg) => {
     } else if (msg.header.msg_type === "chat_history") {
         chatHistory.value = msg.content;
         console.log(msg.content);
-    }
-    else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
-        var incomingIntegrations;
-        if (msg.header.msg_type === "context_setup_response") {
-            incomingIntegrations = msg.content.integrations;
-
-        }
-        else if (msg.header.msg_type === "context_info_response") {
-            incomingIntegrations = msg.content.info.integrations;
-        }
-        if (incomingIntegrations === undefined) {
-            incomingIntegrations = [];
-        }
-        integrations.value.splice(0, integrations.value.length, ...incomingIntegrations);
     }
     // else if (msg.header.msg_type === "add_example") {
     //     const showToast = beakerInterfaceRef.value.showToast;

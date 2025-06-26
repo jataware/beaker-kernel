@@ -30,6 +30,7 @@
                         icon="pi pi-plus"
                         label="Add New Integration"
                     />
+
                 </a>
             </div>
             <div
@@ -42,109 +43,132 @@
                     width: 100%;
             ">
                 <div>
-                    <i>{{ integrations.length }} integrations available:</i>
+                    <i>{{ allIntegrations.length }} integrations available:</i>
                 </div>
             </div>
         </div>
         <div class="integration-list">
             <div
-                class="integration-card"
-                v-for="(integration, index) in renderedIntegrations"
-                :key="integration?.name"
-                @mouseleave="hoveredIntegration = undefined"
-                @mouseenter="hoveredIntegration = index"
+                class="integration-provider"
+                v-for="(provider, name) in relevantProviders(integrationProviders)"
+                :key="name"
             >
-                <Card
-                    :pt = "{
-                        root: {
-                            style:
-                                'transition: background-color 150ms linear;' +
-                                (hoveredIntegration === index
-                                    ? 'background-color: var(--surface-100); cursor: pointer;'
-                                    : '')
-                        }
-                    }"
-                    @click="expandedIntegration = (expandedIntegration === index) ? undefined : index; "
+                <span>{{ name }}</span>
+                <div
+                    class="integration-card"
+                    v-for="integration in processIntegrations(provider)"
+                    :key="integration?.name"
+                    @mouseleave="hoveredIntegration = undefined"
+                    @mouseenter="hoveredIntegration = integration.slug"
                 >
-                    <template #title>
-                        <div class="integration-card-title">
-                            <span class="integration-card-title-text">
-                                {{ integration?.name }}
-                            </span>
+                    <Card
+                        :pt = "{
+                            root: {
+                                style:
+                                    'transition: background-color 150ms linear;' +
+                                    (hoveredIntegration === integration.slug
+                                        ? 'background-color: var(--surface-100); cursor: pointer;'
+                                        : '')
+                            }
+                        }"
+                        @click="expandedIntegration = (expandedIntegration === integration.slug)
+                            ? undefined
+                            : integration.slug;
+                        "
+                    >
+                        <template #title>
+                            <div class="integration-card-title">
+                                <span class="integration-card-title-text">
+                                    {{ integration?.name }}
+                                </span>
 
-                            <span v-if="expandedIntegration === index">
-                                <a
-                                    :href="`/integrations?selected=${integration?.slug}${sessionIdParam}`"
-                                    v-tooltip="'Edit Integration'"
-                                >
-                                    <Button
-                                        style="
-                                            width: fit-content;
-                                            height: 32px;
-                                            margin-right: 0.5rem;
-                                        "
-                                        icon="pi pi-pencil"
-                                        label="Edit"
-                                    />
-                                </a>
-                            </span>
-                        </div>
-                    </template>
-                    <template #content v-if="expandedIntegration === index">
-                        <div
-                            class="integration-main-content"
-                            style="overflow: hidden;"
-                            v-html="integration?.description ?? ''"
-                        >
-                        </div>
-                    </template>
-                </Card>
+                                <span v-if="expandedIntegration === integration.slug">
+                                    <a
+                                        :href="`/integrations?selected=${integration?.slug}${sessionIdParam}`"
+                                        v-tooltip="'Edit Integration'"
+                                    >
+                                        <Button
+                                            style="
+                                                width: fit-content;
+                                                height: 32px;
+                                                margin-right: 0.5rem;
+                                            "
+                                            icon="pi pi-pencil"
+                                            label="Edit"
+                                        />
+                                    </a>
+                                </span>
+                            </div>
+                        </template>
+                        <template #content v-if="expandedIntegration === integration.slug">
+                            <div
+                                class="integration-main-content"
+                                style="overflow: hidden;"
+                                v-html="integration?.description ?? ''"
+                            >
+                            </div>
+                        </template>
+                    </Card>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, inject } from "vue";
 import Button from "primevue/button";
 import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputText from "primevue/inputtext";
 import Card from "primevue/card";
 import { marked } from "marked";
+import { type BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import { type Integration, type IntegrationProviders } from "@/util/integration";
 
 const searchText = ref(undefined);
-const props = defineProps(["integrations"])
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionIdParam = urlParams.has("session") ? `&session=${urlParams.get("session")}` : "";
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
-const sortedIntegrations = computed(() =>
-    props?.integrations?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
+const integrationProviders = computed<IntegrationProviders>(() =>
+    beakerSession?.activeContext?.info?.integrations ?? {})
 
-const filteredSortedIntegrations = computed(() => sortedIntegrations?.value?.filter(
-    integration =>
+const sortIntegrations = (integrations: Integration[]) =>
+    integrations.toSorted((a, b) => a?.name.localeCompare(b?.name))
+
+const filterIntegrations = (integrations: Integration[]) =>
+    integrations.filter(integration =>
         (searchText?.value === undefined)
-        || integration?.name?.toLowerCase()?.includes(searchText?.value?.toLowerCase())
-))
+        || integration?.name?.toLowerCase()?.includes(searchText?.value?.toLowerCase()))
 
-const renderedIntegrations = computed(() =>
-    filteredSortedIntegrations?.value?.map(integration =>
-        ({...integration, description: marked.parse(integration?.description ?? "")})
-))
+const renderIntegrations = (integrations: Integration[]) =>
+    integrations.map(integration =>
+        ({...integration, description: marked.parse(integration?.description ?? "")}))
 
-const expandedIntegration = ref<number|undefined>(undefined);
-const hoveredIntegration = ref<number|undefined>(undefined);
+const processIntegrations = (integrations: Integration[]) =>
+    renderIntegrations(filterIntegrations(sortIntegrations(integrations)))
 
-const showTableOfContents = ref(false);
+const relevantProviders = (providers: IntegrationProviders): IntegrationProviders =>
+    Object.keys(providers)
+        .filter((name) => processIntegrations(providers[name]).length >= 1)
+        .reduce((result, key) => (result[key] = providers[key], result), {})
+
+const allIntegrations = computed(() =>
+    Object.keys(integrationProviders.value)
+        .flatMap((name) => integrationProviders.value[name]))
+
+const expandedIntegration = ref<string|undefined>(undefined);
+const hoveredIntegration = ref<string|undefined>(undefined);
 
 watch(searchText, () => {
-    // if one result, fully show it
-    if (filteredSortedIntegrations?.value?.length === 1) {
-        expandedIntegration.value = 0;
+    const filtered = filterIntegrations(allIntegrations.value);
+    if (filtered.length === 1) {
+        expandedIntegration.value = filtered[0].slug;
         return;
     }
-    expandedIntegration.value = undefined
+    expandedIntegration.value = undefined;
 })
 
 </script>
@@ -181,6 +205,13 @@ watch(searchText, () => {
     gap: 0.5rem;
     overflow: auto;
     padding: 0.2rem;
+}
+
+.integration-provider {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0rem;
 }
 
 .integration-card-title {
