@@ -67,7 +67,7 @@
                                 style:
                                     'transition: background-color 150ms linear;' +
                                     (hoveredIntegration === integration.slug
-                                        ? 'background-color: var(--surface-100); cursor: pointer;'
+                                        ? 'background-color: var(--p-surface-c); cursor: pointer;'
                                         : '')
                             }
                         }"
