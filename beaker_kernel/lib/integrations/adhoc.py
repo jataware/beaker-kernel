@@ -10,7 +10,7 @@ from adhoc_api.tool import AdhocApi, APISpec
 from adhoc_api.uaii import claude_37_sonnet, gemini_15_pro, gpt_41, o3_mini
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
-from beaker_kernel.lib.types import Integration, IntegrationAttachment, IntegrationExample
+from beaker_kernel.lib.types import Integration, IntegrationAttachment, IntegrationExample, IntegrationTypes
 
 from .base import BaseIntegrationProvider
 
@@ -25,6 +25,7 @@ class TemplateSpecification:
     prompt: Template
     examples: list[IntegrationExample]
     location: os.PathLike # relative to adhoc root
+    integration_type: IntegrationTypes
 
     @classmethod
     def from_dict(cls, location: os.PathLike, source: dict) -> Self:
@@ -38,6 +39,10 @@ class TemplateSpecification:
         modified_fields = {
             "prompt": prompt,
             "location": location,
+            # attachments is optional -- usually for datasets
+            "attachments": source.pop("attachments", {}),
+            # integration_type is optional
+            "integration_type": source.pop("integration_type", "api"),
             # slug may not be present on old specs -- replace spaces with _ in name for a slug
             "slug": source.pop("slug", str(source.get("name")).lower().replace(" ", "_"))
         }
