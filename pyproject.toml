@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "jupyter-client"]
+requires = ["hatch", "hatchling"]
 build-backend = "hatchling.build"
 
 [project]
