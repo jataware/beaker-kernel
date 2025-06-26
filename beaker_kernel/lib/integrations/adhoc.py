@@ -106,7 +106,7 @@ class AdhocIntegrationProvider(BaseIntegrationProvider):
         # only add the large files data directory when hydrating the templates
         datafile_root = Path(self.adhoc_path) / "data"
         substitutions = {
-            "DATASET_FILES_ROOT_DIR": str(datafile_root)
+            "DATASET_FILES_BASE_PATH": str(datafile_root)
         }
         self.adhoc_api = AdhocApi(
             apis=[
@@ -148,16 +148,22 @@ class AdhocIntegrationProvider(BaseIntegrationProvider):
                 spec_data["examples"] = []
             else:
                 spec_data["examples"] = [
-                    IntegrationExample(**entry) for entry in yaml.safe_load(
-                        examples_yaml.read_text()
-                    )
+                    IntegrationExample(**entry)
+                    for entry in
+                        yaml.safe_load(
+                            examples_yaml.read_text()
+                        ) or []
                 ]
-            specifications.append(
-                TemplateSpecification.from_dict(
-                    location=integration_dir,
-                    source=spec_data
+            try:
+                specifications.append(
+                    TemplateSpecification.from_dict(
+                        location=integration_dir,
+                        source=spec_data
+                    )
                 )
-            )
+            except Exception as e:
+                msg = f"Failed to create TemplateSpecification from yaml for `{integration_yaml}`: {e}"
+                logger.error(msg)
 
         instructions ="\n".join(
             file.read_text()
