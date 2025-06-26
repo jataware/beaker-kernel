@@ -290,9 +290,13 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         else:
             agent_details = None
 
+        integration_providers = {}
         if self.integrations:
-            integrations = {
-                integration.display_name: integration.list_integrations()
+            integration_providers = {
+                integration.display_name: {
+                    "mutable": integration.mutable,
+                    "integrations": integration.list_integrations()
+                }
                 for integration in self.integrations
             }
         payload = {
@@ -304,7 +308,7 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "agent": agent_details,
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
-            "integrations": integrations
+            "integration_providers": integration_providers
         }
 
         return payload

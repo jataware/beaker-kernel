@@ -8,12 +8,10 @@
         <div class="integration-main-content" v-else>
             <div class="integration-header">
                 <Select :options="
-                    allIntegrations.map((integration) => {
-                        return {
-                            label: integration.name,
-                            value: integration
-                        }
-                    })"
+                    sortedIntegrations.map(integration => ({
+                        label: integration.name,
+                        value: integration
+                    }))"
                     :option-label="(option) => option?.label ?? 'Select integration...'"
                     option-value="value"
                     placeholder="Select a integration..."
@@ -21,7 +19,8 @@
                         if (!confirmUnsavedChanges()) {
                             event.preventDefault;
                         } else {
-                            unsavedChanges = false;
+                            // treat a new selection as
+                            emit('onSave');
                             temporaryIntegration = undefined;
                         }
                     }"
@@ -54,7 +53,7 @@
                     v-if="selectedIntegration"
                     v-model="selectedIntegration.name"
                     :placeholder="selectedIntegration?.name ? 'Name' : 'No integration selected.'"
-                    @change="unsavedChanges = true;"
+                    @change="emit('onUnsavedChange')"
                 />
                 <InputText
                     v-else
@@ -72,7 +71,7 @@
                     <CodeEditor
                         v-if="selectedIntegration"
                         v-model="selectedIntegration.description"
-                        @change="setUnsavedChanges"
+                        @change="emit('onUnsavedChange')"
                         ref="descriptionEditor"
                     />
                     <CodeEditor
@@ -205,7 +204,7 @@
                     <CodeEditor
                         v-if="selectedIntegration"
                         v-model="selectedIntegration.source"
-                        @change="setUnsavedChanges"
+                        @change="emit('onUnsavedChange')"
                         ref="instructionEditor"
                     />
                     <CodeEditor
@@ -249,7 +248,7 @@
 <script setup lang="ts">
 
 import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
-import { type Integration } from '../../util/integration';
+import { type IntegrationProviders, type Integration } from '../../util/integration';
 import { BeakerSession } from 'beaker-kernel';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
@@ -270,22 +269,49 @@ import CodeEditor from './CodeEditor.vue';
 import SplitButton from 'primevue/splitbutton';
 const showToast = inject<any>('show_toast');
 
-const props = defineProps(["integrations", "selectedOnLoad"]);
-const selectedIntegration = defineModel<Integration>('selectedIntegration', {required: true});
-const unsavedChanges = defineModel<boolean>('unsavedChanges', {required: true});
+const props = defineProps<{
+    selectedOnLoad: string,
+    unsavedChanges: boolean
+}>();
+
+const session = inject<BeakerSession>('session');
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+
+const selectedIntegration = defineModel<Integration>({required: true});
+
 // buffer for changes not yet committed
-const temporaryIntegration = ref(undefined);
+const temporaryIntegration = ref<Integration>(undefined);
 
 const hasLoadedInitialSelection = ref(false);
 
-const sortedIntegrations = computed(() =>
-    props?.integrations?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
+const emit = defineEmits(['onUnsavedChange', 'onSave'])
 
-const allIntegrations = computed(() =>
-    [...sortedIntegrations?.value, ...(temporaryIntegration?.value ? [temporaryIntegration.value] : [])])
+const integrationProviders = computed<IntegrationProviders>(() =>
+    beakerSession?.activeContext?.info?.integration_providers ?? {})
 
-watch(props.integrations, (updatedIntegrations) => {
-    if (updatedIntegrations.length === 0) {
+const sortIntegrations = (integrations: Integration[]): Integration[] =>
+    integrations.toSorted((a, b) => a?.name.localeCompare(b?.name))
+
+const mutableIntegrations = (providers: IntegrationProviders | undefined): Integration[] =>
+    Object.keys(providers ?? {})
+        .filter((name) => providers[name].mutable)
+        .flatMap((name) => providers[name].integrations)
+
+const allIntegrations = computed<Integration[]>(() =>
+    [
+        ...mutableIntegrations(integrationProviders?.value),
+        ...(temporaryIntegration?.value
+            ? [temporaryIntegration.value]
+            : []
+        )
+    ]
+)
+
+const sortedIntegrations = computed<Integration[]>(() =>
+    sortIntegrations(allIntegrations.value))
+
+watch(integrationProviders, updatedProviders => {
+    if (Object.keys(updatedProviders).length === 0) {
         return;
     }
     if (hasLoadedInitialSelection.value) {
@@ -297,7 +323,7 @@ watch(props.integrations, (updatedIntegrations) => {
                 newIntegration();
                 return;
             }
-            for (const integration of updatedIntegrations) {
+            for (const integration of mutableIntegrations(updatedProviders)) {
                 if (integration?.slug === props?.selectedOnLoad) {
                     selectedIntegration.value = integration;
                     return;
@@ -322,9 +348,6 @@ watch(() => [selectedIntegration.value?.source], (current) => {
     }
 })
 
-const session = inject<BeakerSession>('session');
-const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-
 const emptyText = ref<string|undefined>(undefined);
 
 const fileInput = ref<HTMLInputElement|undefined>(undefined);
@@ -338,16 +361,15 @@ const unincludedFiles = computed(() =>
             RegExp(`{${file?.name}}`).test(selectedIntegration?.value?.source) ? false : file?.name)
         ?.filter((x) => x))
 
-const setUnsavedChanges = () => {unsavedChanges.value = true;};
 const confirmUnsavedChanges = () => {
-    if (unsavedChanges?.value) {
+    if (props.unsavedChanges) {
         return confirm("You currently have unsaved changes that would be lost with this change. Are you sure?")
     }
     return true;
 }
 
-watch(unsavedChanges, async (newValue, _) => {
-    if (newValue) {
+watch(props, async ({unsavedChanges}, _) => {
+    if (unsavedChanges) {
         onbeforeunload = () => true;
     } else {
         onbeforeunload = undefined;
@@ -371,7 +393,7 @@ const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
 
 const newIntegration = () => {
-    unsavedChanges.value = true;
+    emit("onUnsavedChange")
     selectedIntegration.value = {
         name: "New Integration",
         url: "",
@@ -385,7 +407,7 @@ const newIntegration = () => {
 }
 
 const save = async () => {
-    unsavedChanges.value = false;
+    emit("onSave");
     temporaryIntegration.value = undefined;
 
     if (selectedIntegration.value === undefined) {
@@ -399,9 +421,9 @@ const save = async () => {
         life: 4000
     });
 
-    session.executeAction('save_integration', {
-        ...selectedIntegration.value,
-    });
+    // session.executeAction('save_integration', {
+    //     ...selectedIntegration.value,
+    // });
 }
 
 const getIntegrationRoot = async (integration) => {
@@ -435,12 +457,12 @@ const onSelectFilesForUpload = async () => {
 }
 
 const uploadFile = async (files: FileList) => {
-    await session.executeAction('create_integration_folders_for_upload', {
-        integration: selectedIntegration.value
-    }).done;
+    // await session.executeAction('create_integration_folders_for_upload', {
+    //     integration: selectedIntegration.value
+    // }).done;
 
     const folderRoot = await getIntegrationRoot(selectedIntegration.value);
-    unsavedChanges.value = true;
+    emit('onUnsavedChange')
     const promises = Array.from(files).map(async (file) => {
         let path = `${folderRoot}/documentation/${file.name}`;
         if (fileTarget?.value !== undefined) {
@@ -527,6 +549,21 @@ const downloadFile = async (path) => {
             display: flex;
             flex-direction: row;
             gap: 0.5rem;
+            width: 100%;
+            max-width: 100%;
+            flex-shrink: 0;
+            > div.p-select {
+                flex: 1 1 auto;
+                width: 100px;
+                span.p-select-label {
+                    flex-shrink: 2;
+                    display: block;
+                    min-width: 0;
+                }
+            }
+            > div.p-splitbutton {
+                flex-shrink: 0;
+            }
         }
     }
     padding: 0 0.4rem;

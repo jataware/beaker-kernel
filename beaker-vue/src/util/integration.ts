@@ -1,28 +1,33 @@
 import { BeakerSession } from 'beaker-kernel';
 
-export type Example = {
-    query: string,
-    code: string,
+export class Example {
+    query: string
+    code: string
     notes?: string
 }
 
-export type AttachedFile = {
-    filepath: string,
+export class AttachedFile {
+    filepath: string
     name: string
-    content?: string,
+    content?: string
 }
 
-export type Integration = {
-    description: string,
-    source: string,
-    attached_files: AttachedFile[],
-    examples: Example[],
-    slug: string,
-    name: string,
+export class Integration {
+    description: string;
+    source: string;
+    attached_files: AttachedFile[];
+    examples: Example[]
+    slug: string
+    name: string
     url: string
 }
 
-export type IntegrationProviders = {[key in string]: Integration[]}
+export type IntegrationProviders = {
+    [key in string]: {
+        mutable: boolean
+        integrations: Integration[]
+    }
+}
 
 export const handleAddExampleMessage = async (
     msg,
@@ -54,7 +59,7 @@ export const handleAddExampleMessage = async (
             notes: content?.notes ?? ""
         }
     )
-    session.executeAction('add_example', target);
+    //session.executeAction('add_example', target);
 }
 
 export const handleAddIntegrationMessage = async (
@@ -99,6 +104,6 @@ Below is the OpenAPI schema for the desired service.
         url: ''
     }
     integrations.push(integration);
-    session.executeAction('save_integration', integration);
+    //session.executeAction('save_integration', integration);
 }
 

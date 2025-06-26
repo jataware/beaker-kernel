@@ -18,10 +18,11 @@
         <div class="integration-container">
             <div class="beaker-notebook">
                 <IntegrationEditor
-                    :integrations="integrations"
                     :selected-on-load="selectedOnLoad"
-                    v-model:selected-integration="selectedIntegration"
-                    v-model:unsaved-changes="unsavedChanges"
+                    v-model="selectedIntegration"
+                    @on-save="unsavedChanges = false"
+                    @on-unsaved-change="unsavedChanges = true"
+                    :unsaved-changes="unsavedChanges"
                 />
             </div>
         </div>
@@ -47,10 +48,8 @@
                 </SideMenuPanel>
                 <SideMenuPanel
                     id="integrations" label="Integrations" icon="pi pi-database"
-                    v-if="integrations.length > 0"
                 >
-                    <IntegrationPanel :integrations="integrations">
-                    </IntegrationPanel>
+                    <IntegrationPanel></IntegrationPanel>
                 </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
@@ -96,7 +95,7 @@
                     <ExamplesPanel
                         v-model="selectedIntegration"
                         :disabled="!selectedIntegration"
-                        @onchange="unsavedChanges = true"
+                        @on-unsaved-change="unsavedChanges = true"
                     />
                 </SideMenuPanel>
                 <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
@@ -130,6 +129,7 @@ import DebugPanel from '../components/panels/DebugPanel.vue'
 import IntegrationEditor from '../components/misc/IntegrationEditor.vue';
 import IntegrationPanel from '../components/panels/IntegrationPanel.vue';
 import ExamplesPanel from '../components/panels/ExamplesPanel.vue';
+import type { IntegrationProviders } from '@/util/integration';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -188,9 +188,20 @@ type FilePreview = {
 const previewedFile = ref<FilePreview>();
 
 onMounted(() => {
-    sideMenuRef.value.hidePanel()
-    rightSideMenuRef.value.hidePanel()
+    // sideMenuRef.value.hidePanel()
+    // rightSideMenuRef.value.hidePanel()
+    if (!hasOpenedPanelOnce.value) {
+        nextTick(() => sideMenuRef.value.selectPanel('integrations'));
+        nextTick(() => rightSideMenuRef.value.selectPanel('examples'));
+        (document.querySelector("div.sidemenu.right") as HTMLElement).style.width = '36vi';
+        (document.querySelector("div.sidemenu.left") as HTMLElement).style.width = '25vi';
+        hasOpenedPanelOnce.value = true;
+    }
 })
+
+const beakerSession = computed<BeakerSessionComponentType>(() => {
+    return beakerInterfaceRef?.value?.beakerSession;
+});
 
 const headerNav = computed((): NavOption[] => {
     const nav = [];
@@ -249,10 +260,6 @@ const headerNav = computed((): NavOption[] => {
     return nav;
 });
 
-const beakerSession = computed<BeakerSessionComponentType>(() => {
-    return beakerInterfaceRef?.value?.beakerSession;
-});
-
 // Ensure we always have at least one cell
 watch(
     () => beakerNotebookRef?.value?.notebook.cells,
@@ -277,30 +284,6 @@ const iopubMessage = (msg) => {
             body: msg.content.body,
             timestamp: msg.header.date,
         });
-    }
-    else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
-        var incomingIntegrations;
-        if (msg.header.msg_type === "context_setup_response") {
-            incomingIntegrations = msg.content.integrations;
-
-        }
-        else if (msg.header.msg_type === "context_info_response") {
-            incomingIntegrations = msg.content.info.integrations;
-        }
-        if (incomingIntegrations === undefined) {
-            incomingIntegrations = [];
-        }
-        integrations.value.splice(0, integrations.value.length, ...incomingIntegrations);
-
-        // rather than onMounted, we fire once we get the message that sets integrations, and hence
-        // creates/populates the panel
-        if (!hasOpenedPanelOnce.value) {
-            nextTick(() => sideMenuRef.value.selectPanel('integrations'));
-            nextTick(() => rightSideMenuRef.value.selectPanel('examples'));
-            (document.querySelector("div.sidemenu.right") as HTMLElement).style.width = '36vi';
-            (document.querySelector("div.sidemenu.left") as HTMLElement).style.width = '25vi';
-            hasOpenedPanelOnce.value = true;
-        }
     }
 };
 

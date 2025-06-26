@@ -12,12 +12,12 @@ from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, to
 
 from beaker_kernel.lib.types import Integration, IntegrationAttachment, IntegrationExample, IntegrationTypes
 
-from .base import BaseIntegrationProvider
+from .base import MutableBaseIntegrationProvider
 
 logger = logging.getLogger(__file__)
 
 @dataclass
-class TemplateSpecification:
+class AdhocSpecification:
     name: str
     slug: str
     attachments: dict[str, str]
@@ -30,21 +30,21 @@ class TemplateSpecification:
     @classmethod
     def from_dict(cls, location: os.PathLike, source: dict) -> Self:
         """
-        Consumes a dict loaded from yaml to create a TemplateSpecification.
+        Creates a AdhocSpecification from a dict.
 
         location: folder name (does not necessarily match slug/name)
         source: deserialized yaml of the integration
         """
-        prompt = Template(source.pop("prompt"))
+        prompt = Template(source.get("prompt", ""))
         modified_fields = {
             "prompt": prompt,
             "location": location,
             # attachments is optional -- usually for datasets
-            "attachments": source.pop("attachments", {}),
+            "attachments": source.get("attachments", {}),
             # integration_type is optional
-            "integration_type": source.pop("integration_type", "api"),
+            "integration_type": source.get("integration_type", "api"),
             # slug may not be present on old specs -- replace spaces with _ in name for a slug
-            "slug": source.pop("slug", str(source.get("name")).lower().replace(" ", "_"))
+            "slug": source.get("slug", str(source.get("name")).lower().replace(" ", "_"))
         }
         return cls(**(source | modified_fields))
 
@@ -74,7 +74,7 @@ class TemplateSpecification:
 
     def to_integration(self) -> Integration:
         """
-        Converts a TemplateSpecification to a Beaker Integration, without rendering any part.
+        Converts a AdhocSpecification to a Beaker Integration, without rendering any part.
         """
         return Integration(
             slug=self.slug,
@@ -93,13 +93,13 @@ class TemplateSpecification:
         )
 
 
-class AdhocIntegrationProvider(BaseIntegrationProvider):
-    specifications: list[TemplateSpecification]
+class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
+    specifications: list[AdhocSpecification]
 
     def __init__(self,
         display_name: str,
         adhoc_path: os.PathLike,
-        specifications: list[TemplateSpecification],
+        specifications: list[AdhocSpecification],
         instructions: Optional[str]=None,
         **config_options,
     ):
@@ -131,7 +131,7 @@ class AdhocIntegrationProvider(BaseIntegrationProvider):
         instruction_root = adhoc_path / "instructions"
         prompts_root = adhoc_path / "prompts"
 
-        specifications: list[TemplateSpecification] = []
+        specifications: list[AdhocSpecification] = []
         for inner_directory in os.listdir(integration_root):
             integration_dir = integration_root / inner_directory
             if not integration_dir.is_dir():
@@ -161,7 +161,7 @@ class AdhocIntegrationProvider(BaseIntegrationProvider):
                 ]
             try:
                 specifications.append(
-                    TemplateSpecification.from_dict(
+                    AdhocSpecification.from_dict(
                         location=integration_dir,
                         source=spec_data
                     )
@@ -195,6 +195,12 @@ class AdhocIntegrationProvider(BaseIntegrationProvider):
     def add_integration(self, **payload):
         pass
 
+    def remove_integration(self, **payload):
+        pass
+
+    def update_integration(self, **payload):
+        pass
+
     def list_resources(self, integration_id, resource_type=None):
         pass
 
@@ -202,6 +208,12 @@ class AdhocIntegrationProvider(BaseIntegrationProvider):
         pass
 
     def add_resource(self, integration_id, **payload):
+        pass
+
+    def remove_resource(self, integration_id, resource_id, **payload):
+        pass
+
+    def update_resource(self, integration_id, resource_id, **payload):
         pass
 
     @tool

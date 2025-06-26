@@ -56,7 +56,7 @@
                 <span>{{ name }}</span>
                 <div
                     class="integration-card"
-                    v-for="integration in processIntegrations(provider)"
+                    v-for="integration in processIntegrations(provider.integrations)"
                     :key="integration?.name"
                     @mouseleave="hoveredIntegration = undefined"
                     @mouseenter="hoveredIntegration = integration.slug"
@@ -88,6 +88,7 @@
                                         v-tooltip="'Edit Integration'"
                                     >
                                         <Button
+                                            v-if="provider.mutable"
                                             style="
                                                 width: fit-content;
                                                 height: 32px;
@@ -133,7 +134,7 @@ const sessionIdParam = urlParams.has("session") ? `&session=${urlParams.get("ses
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const integrationProviders = computed<IntegrationProviders>(() =>
-    beakerSession?.activeContext?.info?.integrations ?? {})
+    beakerSession?.activeContext?.info?.integration_providers ?? {})
 
 const sortIntegrations = (integrations: Integration[]) =>
     integrations.toSorted((a, b) => a?.name.localeCompare(b?.name))
@@ -152,12 +153,12 @@ const processIntegrations = (integrations: Integration[]) =>
 
 const relevantProviders = (providers: IntegrationProviders): IntegrationProviders =>
     Object.keys(providers)
-        .filter((name) => processIntegrations(providers[name]).length >= 1)
+        .filter((name) => processIntegrations(providers[name].integrations).length >= 1)
         .reduce((result, key) => (result[key] = providers[key], result), {})
 
-const allIntegrations = computed(() =>
+const allIntegrations = computed<Integration[]>(() =>
     Object.keys(integrationProviders.value)
-        .flatMap((name) => integrationProviders.value[name]))
+        .flatMap((name) => integrationProviders.value[name].integrations))
 
 const expandedIntegration = ref<string|undefined>(undefined);
 const hoveredIntegration = ref<string|undefined>(undefined);

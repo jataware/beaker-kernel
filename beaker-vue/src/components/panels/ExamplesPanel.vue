@@ -172,7 +172,7 @@ type ExamplePanelState =
     | { view: "tableOfContents" }
     | { view: "focused", focusedExample: number }
 
-const emit = defineEmits(['onchange'])
+const emit = defineEmits(['onUnsavedChange'])
 const props = defineProps<{
     disabled?: boolean
 }>()
@@ -228,14 +228,14 @@ const saveExample = (index) => {
     examples[index] = exampleChanges.value;
     exampleChanges.value = undefined;
     panelState.value = { view: 'tableOfContents' }
-    emit('onchange')
+    emit('onUnsavedChange')
 }
 
 const deleteExample = (index) => {
     let examples = selectedIntegration.value?.examples;
     examples.splice(index, 1);
     panelState.value = { view: 'tableOfContents' }
-    emit('onchange')
+    emit('onUnsavedChange')
 }
 
 </script>
