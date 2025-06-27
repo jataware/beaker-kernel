@@ -82,8 +82,10 @@
                 </SideMenuPanel>
                 <SideMenuPanel
                     id="integrations" label="Integrations" icon="pi pi-database"
+                    v-if="Object.keys(integrationProviders).length > 0"
                 >
-                    <IntegrationPanel></IntegrationPanel>
+                    <IntegrationPanel>
+                    </IntegrationPanel>
                 </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
@@ -176,7 +178,7 @@ import MediaPanel from '../components/panels/MediaPanel.vue';
 import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 import DebugPanel from '../components/panels/DebugPanel.vue'
-import { handleAddExampleMessage, handleAddIntegrationMessage } from '../util/integration';
+import { type IntegrationProviders } from '../util/integration';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -234,7 +236,6 @@ beakerApp.setPage("notebook");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
-const integrations = ref([]);
 
 type FilePreview = {
     url: string,
@@ -285,6 +286,9 @@ const headerNav = computed((): NavOption[] => {
 const beakerSession = computed<BeakerSessionComponentType>(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
+
+const integrationProviders = computed<IntegrationProviders>(() =>
+    beakerSession?.value.activeContext?.info?.integration_providers ?? {})
 
 // Ensure we always have at least one cell
 watch(
