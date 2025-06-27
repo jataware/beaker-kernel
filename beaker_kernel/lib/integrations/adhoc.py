@@ -96,42 +96,18 @@ class AdhocSpecification:
 class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
     specifications: list[AdhocSpecification]
 
-    def __init__(self,
-        display_name: str,
-        adhoc_path: os.PathLike,
-        specifications: list[AdhocSpecification],
-        instructions: Optional[str]=None,
-        **config_options,
-    ):
+    def __init__(self, adhoc_path: os.PathLike, display_name: str, **config_options):
         super().__init__(display_name)
-        self.adhoc_path = adhoc_path
-        self.specifications = specifications
-        self.instructions = instructions
+        self.adhoc_path = Path(adhoc_path)
+        if not self.adhoc_path.exists():
+            msg = f"Unable to initialize ad-hoc integration as specified directory '{adhoc_path}' does not exist."
+            raise RuntimeError(msg)
 
-        # only add the large files data directory when hydrating the templates
-        datafile_root = Path(self.adhoc_path) / "data"
-        substitutions = {
-            "DATASET_FILES_BASE_PATH": str(datafile_root)
-        }
-        self.adhoc_api = AdhocApi(
-            apis=[
-                spec.render(substitutions)
-                for spec in self.specifications
-            ],
-            **config_options
-        )
+        integration_root = self.adhoc_path / "datasources"
+        instruction_root = self.adhoc_path / "instructions"
+        prompts_root = self.adhoc_path / "prompts"
 
-    @classmethod
-    def from_file_structure(cls, adhoc_path: os.PathLike, **config_options):
-        adhoc_path = Path(adhoc_path)
-        if not adhoc_path.exists():
-            raise RuntimeError(f"Unable to initialize ad-hoc integration as specified directory '{adhoc_path}' does not exist.")
-
-        integration_root = adhoc_path / "datasources"
-        instruction_root = adhoc_path / "instructions"
-        prompts_root = adhoc_path / "prompts"
-
-        specifications: list[AdhocSpecification] = []
+        self.specifications: list[AdhocSpecification] = []
         for inner_directory in os.listdir(integration_root):
             integration_dir = integration_root / inner_directory
             if not integration_dir.is_dir():
@@ -160,7 +136,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                         ) or []
                 ]
             try:
-                specifications.append(
+                self.specifications.append(
                     AdhocSpecification.from_dict(
                         location=integration_dir,
                         source=spec_data
@@ -170,18 +146,22 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                 msg = f"Failed to create TemplateSpecification from yaml for `{integration_yaml}`: {e}"
                 logger.error(msg)
 
-        instructions ="\n".join(
+        self.instructions ="\n".join(
             file.read_text()
             for file in instruction_root.iterdir() if file.is_file()
         )
 
-        instance = cls(
-            adhoc_path=adhoc_path,
-            specifications=specifications,
-            instructions=instructions,
-            ** config_options
+        datafile_root = Path(self.adhoc_path) / "data"
+        substitutions = {
+            "DATASET_FILES_BASE_PATH": str(datafile_root)
+        }
+        self.adhoc_api = AdhocApi(
+            apis=[
+                spec.render(substitutions)
+                for spec in self.specifications
+            ],
+            **config_options
         )
-        return instance
 
     def list_integrations(self):
         return [asdict(specification.to_integration()) for specification in self.specifications]
