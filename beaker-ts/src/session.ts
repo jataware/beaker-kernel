@@ -37,7 +37,7 @@ export type BeakerKernelStatus = JupyterKernelStatus | 'connected' | 'connecting
 export class BeakerSession {
 
     constructor(options?: IBeakerSessionOptions) {
-        this._sessionId = uuidv4();
+        this._sessionId = options?.sessionId ?? uuidv4();
         this._sessionOptions = options;
         this._serverSettings = ServerConnection.makeSettings(options?.settings);
         this._services = new ServiceManager({
@@ -78,10 +78,10 @@ export class BeakerSession {
         this._sessionContext = new SessionContext({
             sessionManager: this._services.sessions,
             specsManager: this._services.kernelspecs,
-            name: options?.name || "name",
-            path: options?.sessionId || "",
+            name: options?.name,
+            path: options?.sessionId,
             kernelPreference: {
-                name: options?.kernelName || ""
+                name: options?.kernelName,
             },
         });
 

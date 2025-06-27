@@ -5,7 +5,6 @@
         :header-nav="headerNav"
         ref="beakerInterfaceRef"
         :connectionSettings="props.config"
-        sessionName="notebook_interface"
         defaultKernel="beaker_kernel"
         :sessionId="sessionId"
         :renderers="renderers"
@@ -83,10 +82,10 @@
                 </SideMenuPanel>
                 <SideMenuPanel
                     id="integrations" label="Integrations" icon="pi pi-database"
-                    v-if="datasources.length > 0"
+                    v-if="integrations.length > 0"
                 >
-                    <DatasourcePanel :datasources="datasources">
-                    </DatasourcePanel>
+                    <IntegrationPanel :integrations="integrations">
+                    </IntegrationPanel>
                 </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
@@ -165,7 +164,7 @@ import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
 import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import { ChatHistoryPanel, type IChatHistory } from '../components/panels/ChatHistoryPanel';
-import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
+import IntegrationPanel from '../components/panels/IntegrationPanel.vue';
 
 // context preview
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
@@ -237,7 +236,7 @@ beakerApp.setPage("notebook");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
-const datasources = ref([]);
+const integrations = ref([]);
 
 type FilePreview = {
     url: string,
@@ -318,24 +317,24 @@ const iopubMessage = (msg) => {
         console.log(msg.content);
     }
     else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
-        var incomingDatasources;
+        var incomingIntegrations;
         if (msg.header.msg_type === "context_setup_response") {
-            incomingDatasources = msg.content.datasources;
+            incomingIntegrations = msg.content.integrations;
 
         }
         else if (msg.header.msg_type === "context_info_response") {
-            incomingDatasources = msg.content.info.datasources;
+            incomingIntegrations = msg.content.info.integrations;
         }
-        if (incomingDatasources === undefined) {
-            incomingDatasources = [];
+        if (incomingIntegrations === undefined) {
+            incomingIntegrations = [];
         }
-        datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
+        integrations.value.splice(0, integrations.value.length, ...incomingIntegrations);
     }
     else if (msg.header.msg_type === "add_example") {
         const showToast = beakerInterfaceRef.value.showToast;
         const session = beakerInterfaceRef.value.getSession();
         try {
-            handleAddExampleMessage(msg, datasources.value, session)
+            handleAddExampleMessage(msg, integrations.value, session)
             showToast({
                 title: 'Example Added',
                 detail: `The example has been successfully added.`,
@@ -357,7 +356,7 @@ const iopubMessage = (msg) => {
         const session = beakerInterfaceRef.value.getSession();
         const integration = msg.content.integration;
         try {
-            handleAddIntegrationMessage(msg, datasources.value, session)
+            handleAddIntegrationMessage(msg, integrations.value, session)
             showToast({
                 title: 'Integration Added',
                 detail: `The integration '${integration}' has been successfully added.`,

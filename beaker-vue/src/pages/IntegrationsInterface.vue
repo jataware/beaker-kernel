@@ -15,12 +15,12 @@
         @any-msg="anyMessage"
         @session-status-changed="statusChanged"
     >
-        <div class="datasource-container">
+        <div class="integration-container">
             <div class="beaker-notebook">
                 <IntegrationEditor
-                    :integrations="datasources"
+                    :integrations="integrations"
                     :selected-on-load="selectedOnLoad"
-                    v-model:selected-integration="selectedDatasource"
+                    v-model:selected-integration="selectedIntegration"
                     v-model:unsaved-changes="unsavedChanges"
                 />
             </div>
@@ -47,10 +47,10 @@
                 </SideMenuPanel>
                 <SideMenuPanel
                     id="integrations" label="Integrations" icon="pi pi-database"
-                    v-if="datasources.length > 0"
+                    v-if="integrations.length > 0"
                 >
-                    <DatasourcePanel :datasources="datasources">
-                    </DatasourcePanel>
+                    <IntegrationPanel :integrations="integrations">
+                    </IntegrationPanel>
                 </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
@@ -94,8 +94,8 @@
                     no-overflow
                 >
                     <ExamplesPanel
-                        v-model="selectedDatasource"
-                        :disabled="!selectedDatasource"
+                        v-model="selectedIntegration"
+                        :disabled="!selectedIntegration"
                         @onchange="unsavedChanges = true"
                     />
                 </SideMenuPanel>
@@ -128,7 +128,7 @@ import type { IBeakerTheme } from '../plugins/theme';
 import DebugPanel from '../components/panels/DebugPanel.vue'
 
 import IntegrationEditor from '../components/misc/IntegrationEditor.vue';
-import DatasourcePanel from '../components/panels/DatasourcePanel.vue';
+import IntegrationPanel from '../components/panels/IntegrationPanel.vue';
 import ExamplesPanel from '../components/panels/ExamplesPanel.vue';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
@@ -174,11 +174,11 @@ beakerApp.setPage("integrations");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
-const datasources = ref([]);
+const integrations = ref([]);
 
 const hasOpenedPanelOnce = ref(false);
 
-const selectedDatasource = ref();
+const selectedIntegration = ref();
 const unsavedChanges = ref<boolean>(false);
 
 type FilePreview = {
@@ -279,20 +279,20 @@ const iopubMessage = (msg) => {
         });
     }
     else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
-        var incomingDatasources;
+        var incomingIntegrations;
         if (msg.header.msg_type === "context_setup_response") {
-            incomingDatasources = msg.content.datasources;
+            incomingIntegrations = msg.content.integrations;
 
         }
         else if (msg.header.msg_type === "context_info_response") {
-            incomingDatasources = msg.content.info.datasources;
+            incomingIntegrations = msg.content.info.integrations;
         }
-        if (incomingDatasources === undefined) {
-            incomingDatasources = [];
+        if (incomingIntegrations === undefined) {
+            incomingIntegrations = [];
         }
-        datasources.value.splice(0, datasources.value.length, ...incomingDatasources);
+        integrations.value.splice(0, integrations.value.length, ...incomingIntegrations);
 
-        // rather than onMounted, we fire once we get the message that sets datasources, and hence
+        // rather than onMounted, we fire once we get the message that sets integrations, and hence
         // creates/populates the panel
         if (!hasOpenedPanelOnce.value) {
             nextTick(() => sideMenuRef.value.selectPanel('integrations'));
@@ -332,7 +332,7 @@ const restartSession = async () => {
 
 <style lang="scss">
 
-.datasource-container {
+.integration-container {
     display:flex;
     height: 100%;
     max-width: 100%;

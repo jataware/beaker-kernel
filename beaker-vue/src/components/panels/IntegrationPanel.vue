@@ -1,6 +1,6 @@
 <template>
-    <div class="datasources-panel">
-        <div class="datasource-header">
+    <div class="integrations-panel">
+        <div class="integration-header">
             <InputGroup>
                 <InputGroupAddon>
                     <i class="pi pi-search"></i>
@@ -42,15 +42,15 @@
                     width: 100%;
             ">
                 <div>
-                    <i>{{ datasources.length }} integrations available:</i>
+                    <i>{{ integrations.length }} integrations available:</i>
                 </div>
             </div>
         </div>
-        <div class="datasource-list">
+        <div class="integration-list">
             <div
-                class="datasource-card"
-                v-for="(datasource, index) in renderedDatasources"
-                :key="datasource?.name"
+                class="integration-card"
+                v-for="(integration, index) in renderedIntegrations"
+                :key="integration?.name"
                 @mouseleave="hoveredIntegration = undefined"
                 @mouseenter="hoveredIntegration = index"
             >
@@ -67,14 +67,14 @@
                     @click="expandedIntegration = (expandedIntegration === index) ? undefined : index; "
                 >
                     <template #title>
-                        <div class="datasource-card-title">
-                            <span class="datasource-card-title-text">
-                                {{ datasource?.name }}
+                        <div class="integration-card-title">
+                            <span class="integration-card-title-text">
+                                {{ integration?.name }}
                             </span>
 
                             <span v-if="expandedIntegration === index">
                                 <a
-                                    :href="`/integrations?selected=${datasource?.slug}${sessionIdParam}`"
+                                    :href="`/integrations?selected=${integration?.slug}${sessionIdParam}`"
                                     v-tooltip="'Edit Integration'"
                                 >
                                     <Button
@@ -92,9 +92,9 @@
                     </template>
                     <template #content v-if="expandedIntegration === index">
                         <div
-                            class="datasource-main-content"
+                            class="integration-main-content"
                             style="overflow: hidden;"
-                            v-html="datasource?.description ?? ''"
+                            v-html="integration?.description ?? ''"
                         >
                         </div>
                     </template>
@@ -114,23 +114,23 @@ import Card from "primevue/card";
 import { marked } from "marked";
 
 const searchText = ref(undefined);
-const props = defineProps(["datasources"])
+const props = defineProps(["integrations"])
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionIdParam = urlParams.has("session") ? `&session=${urlParams.get("session")}` : "";
 
-const sortedDatasources = computed(() =>
-    props?.datasources?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
+const sortedIntegrations = computed(() =>
+    props?.integrations?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
 
-const filteredSortedDatasources = computed(() => sortedDatasources?.value?.filter(
-    datasource =>
+const filteredSortedIntegrations = computed(() => sortedIntegrations?.value?.filter(
+    integration =>
         (searchText?.value === undefined)
-        || datasource?.name?.toLowerCase()?.includes(searchText?.value?.toLowerCase())
+        || integration?.name?.toLowerCase()?.includes(searchText?.value?.toLowerCase())
 ))
 
-const renderedDatasources = computed(() =>
-    filteredSortedDatasources?.value?.map(datasource =>
-        ({...datasource, description: marked.parse(datasource?.description ?? "")})
+const renderedIntegrations = computed(() =>
+    filteredSortedIntegrations?.value?.map(integration =>
+        ({...integration, description: marked.parse(integration?.description ?? "")})
 ))
 
 const expandedIntegration = ref<number|undefined>(undefined);
@@ -140,7 +140,7 @@ const showTableOfContents = ref(false);
 
 watch(searchText, () => {
     // if one result, fully show it
-    if (filteredSortedDatasources?.value?.length === 1) {
+    if (filteredSortedIntegrations?.value?.length === 1) {
         expandedIntegration.value = 0;
         return;
     }
@@ -150,7 +150,7 @@ watch(searchText, () => {
 </script>
 
 <style lang="scss">
-.datasources-panel {
+.integrations-panel {
     width: 100%;
     height: 100%;
     display: flex;
@@ -169,13 +169,13 @@ watch(searchText, () => {
     }
 }
 
-.datasource-header {
+.integration-header {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
-.datasource-list {
+.integration-list {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -183,13 +183,13 @@ watch(searchText, () => {
     padding: 0.2rem;
 }
 
-.datasource-card-title {
+.integration-card-title {
     display: flex;
     flex-direction: row;
-    .datasource-show-more {
+    .integration-show-more {
         aspect-ratio: 1/1;
     }
-    .datasource-card-title-text {
+    .integration-card-title-text {
         flex: 1 1;
         font-size: 1rem;
         font-weight: 500;
@@ -204,7 +204,7 @@ watch(searchText, () => {
 }
 
 // for inner h1 being larger than header; rescale to make sensible whitespace
-.datasource-main-content {
+.integration-main-content {
     margin-top: 0.5rem;
     h1 { font-size: 1.25rem; margin-bottom: 1rem;   }
     h2 { font-size: 1.2rem;  margin-bottom: 0.8rem; }

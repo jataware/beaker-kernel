@@ -27,6 +27,7 @@ from beaker_kernel.lib.subkernel import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
 from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, recursiveOptionalUpdate, reset_config
 from beaker_kernel.service import admin_utils
+from .api.handlers import register_api_handlers
 
 logger = logging.getLogger(__name__)
 
@@ -553,6 +554,7 @@ def register_handlers(app: LabServerApp):
             pages.append(path)
     page_regex = rf"/({'|'.join(pages)})"
 
+    register_api_handlers(app)
     app.handlers.append(("/contexts", ContextHandler))
     app.handlers.append(("/config/control", ConfigController))
     app.handlers.append(("/config", ConfigHandler))

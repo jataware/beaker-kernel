@@ -2,10 +2,10 @@ import typing
 from dataclasses import dataclass, field, MISSING, asdict
 from datetime import datetime, date
 
-DatasourceTypes: typing.TypeAlias = typing.Literal["api", "database", "dataset"]
+IntegrationTypes: typing.TypeAlias = typing.Literal["api", "database", "dataset"]
 
 @dataclass
-class DatasourceAttachment:
+class IntegrationAttachment:
     # user facing name
     name: str
 
@@ -18,23 +18,23 @@ class DatasourceAttachment:
     # TODO: encoding?
 
 @dataclass 
-class DatasourceExample:
+class IntegrationExample:
     query: str
     code: str
     notes: typing.Optional[str]
 
 @dataclass
-class Datasource:
+class Integration:
     slug: str
     name: str
     description: str
 
-    datatype: DatasourceTypes = field(default="api")
+    datatype: IntegrationTypes = field(default="api")
     url: typing.Optional[str] = field(default=None)
     img_url: typing.Optional[str] = field(default=None)
     source: typing.Optional[str] = field(default=None)
     last_updated: typing.Optional[datetime|date] = field(default=None)
-    attached_files: typing.Optional[list[DatasourceAttachment]] = field(default=None)
+    attached_files: typing.Optional[list[IntegrationAttachment]] = field(default=None)
     # currently o(n) example lookup as a list rather than k,v map with query as key.
     # should be changed eventually, but left for backwards compatibility
-    examples: typing.Optional[list[DatasourceExample]] = field(default=None)
+    examples: typing.Optional[list[IntegrationExample]] = field(default=None)

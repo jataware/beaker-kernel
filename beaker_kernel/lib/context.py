@@ -16,7 +16,7 @@ from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError, ensure_async
 from beaker_kernel.lib.config import config as beaker_config
-from beaker_kernel.lib.types import Datasource
+from beaker_kernel.lib.types import Integration
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -296,11 +296,11 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "verbose": self.beaker_kernel.verbose,
         }
 
-        if get_datasource_method := getattr(self, "get_datasources", None):
-            datasources: list[Datasource] = await ensure_async(get_datasource_method())
-            payload["datasources"] = [
-                asdict(datasource) if isinstance(datasource, Datasource) else datasource
-                for datasource in datasources
+        if get_integration_method := getattr(self, "get_integrations", None):
+            integrations: list[Integration] = await ensure_async(get_integration_method())
+            payload["integrations"] = [
+                asdict(integration) if isinstance(integration, Integration) else integration
+                for integration in integrations
             ]
         return payload
 
