@@ -430,7 +430,7 @@ const save = async () => {
         showToast({
             title: 'Failed to save integration',
             detail: `${error}`,
-            severity: 'failure',
+            severity: 'danger',
             life: 4000
         });
     }
