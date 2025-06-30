@@ -526,12 +526,11 @@ const writeDatasource = async (datasource) => {
     const basepath = `${folderRoot}/${folderSlug.value}`
 
     const type = 'text/plain'
-    const content = btoa(formattedDatasource);
-    const format = 'base64';
+    const format = 'text';
     const fileObj: Partial<Contents.IModel> = {
         type,
         format,
-        content,
+        content: formattedDatasource,
     };
     let result;
     try {
