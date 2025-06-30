@@ -1,6 +1,6 @@
 {
   "name": "beaker-vue",
-  "version": "1.11.2",
+  "version": "1.11.3",
   "declaration": true,
   "scripts": {
     "dev": "vite",
@@ -41,7 +41,7 @@
     "@primevue/icons": "^4.3.4",
     "@primevue/themes": "^4.3.4",
     "ansi-html-community": "^0.0.8",
-    "beaker-kernel": "file:../beaker-ts",
+    "beaker-kernel": "^1.11.3",
     "buffer": "^6.0.3",
     "codemirror": "^6.0.1",
     "codemirror-lang-r": "^0.1.1",

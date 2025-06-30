@@ -392,16 +392,28 @@ const save = async () => {
         return;
     }
 
-    showToast({
-        title: 'Saved!',
-        detail: `The session will now reconnect and load the new definition.`,
-        severity: 'success',
-        life: 4000
-    });
-
-    session.executeAction('save_integration', {
-        ...selectedIntegration.value,
-    });
+    try {
+        const action = session.executeAction('save_integration', {
+            ...selectedIntegration.value,
+        });
+        const response = await action.done;
+        if (response.content?.status === "ok") {
+            showToast({
+                title: 'Saved!',
+                detail: `The session will now reconnect and load the new definition.`,
+                severity: 'success',
+                life: 4000
+            });
+        }
+    }
+    catch (error) {
+        showToast({
+            title: 'Failed to save integration',
+            detail: `${error}`,
+            severity: 'danger',
+            life: 4000
+        });
+    }
 }
 
 const getIntegrationRoot = async (integration) => {
