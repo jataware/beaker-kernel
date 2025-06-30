@@ -408,19 +408,32 @@ const save = async () => {
     unsavedChanges.value = false;
     temporaryDatasource.value = undefined;
 
-    showToast({
-        title: 'Saved!',
-        detail: `The session will now reconnect and load the new definition.`,
-        severity: 'success',
-        life: 4000
-    });
-    await createFoldersForDatasource();
-    await writeDatasource(selectedDatasource.value);
+    try {
+        await createFoldersForDatasource();
+        await writeDatasource(selectedDatasource.value);
 
-    session.executeAction('save_datasource', {
-        ...selectedDatasource.value,
-        slug: slugWrapper.value
-    });
+        const action = session.executeAction('save_datasource', {
+            ...selectedDatasource.value,
+            slug: slugWrapper.value
+        });
+        const response = await action.done;
+        if (response.content?.status === "ok") {
+            showToast({
+                title: 'Saved!',
+                detail: `The session will now reconnect and load the new definition.`,
+                severity: 'success',
+                life: 4000
+            });
+        }
+    }
+    catch (error) {
+        showToast({
+            title: 'Failed to save integration',
+            detail: `${error}`,
+            severity: 'failure',
+            life: 4000
+        });
+    }
 }
 
 const download = async (name) => {
