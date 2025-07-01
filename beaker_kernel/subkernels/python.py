@@ -250,3 +250,12 @@ del importlib, os, site, sys
             formatted_state["classes"][state_class] = payload
 
         return formatted_state
+
+    def get_treesitter_language(self):
+        try:
+            from tree_sitter import Language
+            from tree_sitter_python import language
+            return Language(language())
+        except ImportError as err:
+            logger.warning(f"Couldn't import treesitter library: {err}")
+            return None

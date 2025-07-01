@@ -16,13 +16,17 @@ from .utils import env_enabled, action, ExecutionTask
 from .jupyter_kernel_proxy import ProxyKernelClient
 from .config import config
 from .context import BeakerContext
-# from archytas.summarizers import llm_message_summarizer
+from .code_analysis.analysis_types import AnalysisCodeCells
 
 if TYPE_CHECKING:
     from langchain_core.messages import ToolMessage, AIMessage, BaseMessage, ToolCall
     from archytas.models.base import BaseArchytasModel
     from archytas.agent import Agent
     from archytas.chat_history import ChatHistory
+    try:
+        from tree_sitter import Language as TreeSitterLanguage
+    except ImportError:
+        from typing import Any as TreeSitterLanguage
 
 Checkpoint = dict[str, str]
 
@@ -275,6 +279,14 @@ class BeakerSubkernel(abc.ABC):
         self.jupyter_id = jupyter_id
         self.connected_kernel = ProxyKernelClient(subkernel_configuration, session_id=context.beaker_kernel.session_id)
         self.context = context
+
+
+    def get_treesitter_language(self) -> "TreeSitterLanguage":
+        raise NotImplementedError()
+
+    async def lint_code(self, cells: AnalysisCodeCells):
+        pass
+
 
     def cleanup(self):
         if self.jupyter_id is not None:
