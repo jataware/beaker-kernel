@@ -1,12 +1,12 @@
-import inspect
 from abc import ABC, abstractmethod
+from typing import Callable, ClassVar
 
 
 class BaseIntegrationProvider(ABC):
     display_name: str
-    mutable: bool
+    mutable: ClassVar[bool] = False
+
     def __init__(self, display_name: str):
-        self.mutable = False
         self.display_name = display_name
 
     @abstractmethod
@@ -26,7 +26,7 @@ class BaseIntegrationProvider(ABC):
         ...
 
     @property
-    def tools(self) -> list[callable]:
+    def tools(self) -> list[Callable]:
         tools = []
         for member_name in dir(self):
             if member_name == "tools":
@@ -38,9 +38,9 @@ class BaseIntegrationProvider(ABC):
 
 
 class MutableBaseIntegrationProvider(BaseIntegrationProvider):
+    mutable = True
     def __init__(self, display_name: str):
         super().__init__(display_name)
-        self.mutable = True
 
     @abstractmethod
     def add_integration(self, **payload):
