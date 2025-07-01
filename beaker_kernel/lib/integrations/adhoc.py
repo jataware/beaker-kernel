@@ -1,54 +1,107 @@
 import logging
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from string import Template
 from typing import Optional, Self
+from uuid import UUID, uuid4
 
 import yaml
 from adhoc_api.tool import AdhocApi, APISpec
-from adhoc_api.uaii import claude_37_sonnet, gemini_15_pro, gpt_41, o3_mini
+from adhoc_api.curation import Example
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
-from beaker_kernel.lib.types import Integration, IntegrationAttachment, IntegrationExample, IntegrationTypes
-
-from .base import MutableBaseIntegrationProvider
+from beaker_kernel.lib.integrations.base import MutableBaseIntegrationProvider
+from beaker_kernel.lib.types import ExampleResource, FileResource, Integration, IntegrationTypes, Resource
 
 logger = logging.getLogger(__file__)
+
+def string_formatter(dumper, data):
+    if isinstance(data, str) and len(data.splitlines()) > 1:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", str(data))
+yaml.representer.SafeRepresenter.add_representer(str, string_formatter)
+yaml.representer.SafeRepresenter.add_representer(UUID, string_formatter)
 
 @dataclass
 class AdhocSpecification:
     name: str
     slug: str
-    attachments: dict[str, str]
     description: str
-    prompt: Template
-    examples: list[IntegrationExample]
+    prompt: str
     location: os.PathLike # relative to adhoc root
     integration_type: IntegrationTypes
+    resources: dict[UUID, Resource]
 
     @classmethod
-    def from_dict(cls, location: os.PathLike, source: dict) -> Self:
+    def from_dict(cls, location: os.PathLike, source: dict, examples: Optional[list] = None) -> Self:
         """
         Creates a AdhocSpecification from a dict.
 
         location: folder name (does not necessarily match slug/name)
         source: deserialized yaml of the integration
         """
-        prompt = Template(source.get("prompt", ""))
-        modified_fields = {
-            "prompt": prompt,
-            "location": location,
-            # attachments is optional -- usually for datasets
-            "attachments": source.get("attachments", {}),
-            # integration_type is optional
-            "integration_type": source.get("integration_type", "api"),
-            # slug may not be present on old specs -- replace spaces with _ in name for a slug
-            "slug": source.get("slug", str(source.get("name")).lower().replace(" ", "_"))
-        }
-        return cls(**(source | modified_fields))
+        try:
+            name = source["name"]
+            description = source["description"]
+            prompt = source["prompt"]
+        except KeyError as e:
+            msg = "Missing required field on API"
+            raise KeyError(msg) from e
+        # slug may not be present on old specs -- replace spaces with _ in name for a slug
+        slug = source.get("slug", str(source.get("name")).lower().replace(" ", "_"))
 
-    def render(self, overrides: dict[str, str] | None = None) -> APISpec:
+        resources = {}
+        for resource_id, resource_value in source.get("resources", {}).items():
+            resources[UUID(resource_id)] = resource_value
+
+        # backwards compat
+        if examples is not None:
+            for example in examples:
+                resource = ExampleResource(**example, integration=slug)
+                resources[resource.resource_id] = resource
+        if attachments := source.get("attachments", None):
+            for filename, filepath in attachments.items():
+                resource = FileResource(name=filename, filepath=filepath, integration=slug)
+                resources[resource.resource_id] = resource
+
+        integration_type = source.get("integration_type", "api")
+        integration = cls(
+            name=name,
+            slug=slug,
+            description=description,
+            prompt=prompt,
+            location=location,
+            integration_type=integration_type,
+            resources=resources
+        )
+        logger.warning(integration)
+
+        return integration
+
+    def get_resources_by_type(self, resource_type: str) -> list:
+        return [
+            resource for resource in self.resources.values()
+            if resource.resource_type == resource_type
+        ]
+
+    def get_files(self) -> list[FileResource]:
+        return self.get_resources_by_type("file")
+
+    def get_examples(self) -> list[ExampleResource]:
+        return self.get_resources_by_type("example")
+
+    def get_adhoc_api_examples(self) -> list[Example]:
+        return [
+            {
+                "code": example.code,
+                "query": example.query,
+                "notes": example.notes or ""
+            }
+            for example in self.get_examples()
+        ]
+
+    def render(self, overrides: Optional[dict[str, str]] = None) -> APISpec:
         """
         Renders a template with included files given a relative root to start from.
         Raises on nonexistent files and a failure to load.
@@ -59,17 +112,21 @@ class AdhocSpecification:
         Attachments are loaded from `relative_root/attachments` as a starting path.
         """
         substitutions = {
-            attachment_key: (Path(self.location) / "attachments" / filepath).resolve().read_text()
-            for attachment_key, filepath in self.attachments.items()
+            attachment.name: (Path(self.location) / "attachments" / attachment.filepath)
+                .resolve()
+                .read_text()
+            for attachment in self.get_files()
+            if attachment.filepath is not None
         }
         substitutions |= (overrides or {})
+
         return APISpec(
             name=self.name,
             slug=self.slug,
             cache_key=f"beaker_{self.slug}",
             description=self.description,
-            examples=[asdict(example) for example in self.examples], # type: ignore
-            documentation=self.prompt.substitute(substitutions)
+            examples=self.get_adhoc_api_examples(),
+            documentation=Template(self.prompt).substitute(substitutions)
         )
 
     def to_integration(self) -> Integration:
@@ -82,15 +139,14 @@ class AdhocSpecification:
             description=self.description,
             datatype="api",
             url=str(self.location),
-            source=self.prompt.template,
-            attached_files=[
-                IntegrationAttachment(
-                    name=attachment_key,
-                    filepath=filepath
-                ) for attachment_key, filepath in self.attachments.items()
-            ],
-            examples=self.examples
+            source=self.prompt,
         )
+
+    def to_yaml(self) -> str:
+        integration = asdict(self)
+        integration.pop("location")
+        return yaml.safe_dump(integration)
+
 
 
 class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
@@ -121,25 +177,20 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             spec_data = yaml.safe_load(integration_yaml.read_text())
             # attach examples, since the path is fixed per-integration
             examples_yaml = integration_dir / "examples.yaml"
-            if not examples_yaml.is_file():
+            if examples_yaml.is_file():
+                examples = yaml.safe_load(examples_yaml.read_text())
+            else:
                 logger.warning(
                     msg=f"No examples.yaml found for `{integration_yaml}`. "
                         f"Assuming no examples for the integration and still loading it."
                 )
-                spec_data["examples"] = []
-            else:
-                spec_data["examples"] = [
-                    IntegrationExample(**entry)
-                    for entry in
-                        yaml.safe_load(
-                            examples_yaml.read_text()
-                        ) or []
-                ]
+                examples = None
             try:
                 self.specifications.append(
                     AdhocSpecification.from_dict(
                         location=integration_dir,
-                        source=spec_data
+                        source=spec_data,
+                        examples=examples
                     )
                 )
             except Exception as e:
@@ -163,13 +214,32 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             **config_options
         )
 
+        for spec in self.specifications:
+            (Path(spec.location) / "api2.yaml").write_text(spec.to_yaml())
+
+    def get_specification(self, specification_id: str) -> AdhocSpecification:
+        """
+        Look up a specification by slug and return it.
+        """
+        try:
+            return next(
+                spec for spec in self.specifications
+                if spec.slug == specification_id
+            )
+        except StopIteration as e:
+            msg = f"`{specification_id}` not found in specifications."
+            raise KeyError(msg) from e
+
     def list_integrations(self):
         return [asdict(specification.to_integration()) for specification in self.specifications]
 
-    def get_integration(self, integration_id: str):
+    def get_integration(self, integration_id: str) -> dict:
+        """
+        Returns the serializable dict representation of the given specification.
+        """
         return asdict(
             (next(i for i in self.specifications if i.slug == integration_id))
-                    .to_integration()
+            .to_integration()
         )
 
     def add_integration(self, **payload):
@@ -181,11 +251,18 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
     def update_integration(self, **payload):
         pass
 
-    def list_resources(self, integration_id, resource_type=None):
-        pass
+    def list_resources(self, integration_id, resource_type: Optional[str] = None):
+        specification = self.get_specification(integration_id)
+        if resource_type is not None:
+            resources = specification.get_resources_by_type(resource_type)
+        else:
+            resources = specification.resources.values()
+        return [asdict(resource) for resource in resources]
 
     def get_resource(self, integration_id, resource_id):
-        pass
+        if resource := self.get_specification(integration_id).resources.get(resource_id):
+            return asdict(resource)
+        return None
 
     def add_resource(self, integration_id, **payload):
         pass
