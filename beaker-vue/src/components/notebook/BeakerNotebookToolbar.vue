@@ -37,6 +37,13 @@
         </template>
         <template #end>
             <slot name="end">
+                <AnnotationButton
+                    :action="analyzeCells"
+                    v-tooltip.bottom="{value: 'Analyze Codecells', showDelay: 300}"
+                    size="small"
+                    :severity="props.defaultSeverity"
+                    text
+                />
                 <Button
                     @click="resetNotebook"
                     v-tooltip.bottom="{value: 'Reset notebook', showDelay: 300}"
@@ -121,6 +128,7 @@ import Popover from "primevue/popover";
 import Toolbar from "primevue/toolbar";
 import type { MenuItem } from "primevue/menuitem";
 
+import AnnotationButton from "../misc/buttons/AnnotationButton.vue"
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
 import { downloadFileDOM, getDateTimeString } from '../../util';
 
@@ -233,6 +241,16 @@ watch(props, (oldValue, newValue) => {
 
 const resetSaveAsFilename = () => {
     saveAsFilename.value = `Beaker-Notebook_${getDateTimeString()}.ipynb`;
+}
+
+
+const analyzeCells = async () => {
+    const payload = {
+        notebook_id: notebook.id,
+        cells: notebook.notebook.cells.map(cell => {return {cell_id: cell.id, content: cell.source}}),
+    };
+    const lintAction = session.executeAction("lint_code", payload)
+    await lintAction.done;
 }
 
 const resetNotebook = async () => {
