@@ -165,8 +165,6 @@ import { standardRendererFactories } from '@jupyterlab/rendermime';
 import { JupyterMimeRenderer, type IBeakerCell } from 'beaker-kernel';
 import type { NavOption } from '../components/misc/BeakerHeader.vue';
 
-import { handleAddExampleMessage, handleAddIntegrationMessage } from '../util/integration';
-
 import { inject, ref, computed, watch, provide } from 'vue';
 import { JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
@@ -370,7 +368,7 @@ const iopubMessage = (msg) => {
         const showToast = beakerInterfaceRef.value.showToast;
         const session = beakerInterfaceRef.value.getSession();
         try {
-            handleAddExampleMessage(msg, integrations.value, session)
+            // TODO: no handleAddExampleMessage
             showToast({
                 title: 'Example Added',
                 detail: `The example has been successfully added.`,
@@ -392,7 +390,7 @@ const iopubMessage = (msg) => {
         const session = beakerInterfaceRef.value.getSession();
         const integration = msg.content.integration;
         try {
-            handleAddIntegrationMessage(msg, integrations.value, session)
+            // TODO: no handleAddIntegrationMessage
             showToast({
                 title: 'Integration Added',
                 detail: `The integration '${integration}' has been successfully added.`,
