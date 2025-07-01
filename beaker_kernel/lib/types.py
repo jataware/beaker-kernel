@@ -7,10 +7,9 @@ IntegrationTypes: typing.TypeAlias = typing.Literal["api", "database", "dataset"
 
 @dataclass(kw_only=True)
 class Resource:
-    resource_type: typing.ClassVar[str]
-    # optional -- if not included on handwritten yaml, it will be generated
-
+    resource_type: str
     integration: typing.Optional[str] = None
+    # optional -- if not included on handwritten yaml, it will be generated
     resource_id: typing.Optional[UUID] = None
     def __post_init__(self):
         if self.resource_id is None:
@@ -18,7 +17,7 @@ class Resource:
 
 @dataclass(kw_only=True)
 class FileResource(Resource):
-    resource_type = "file"
+    resource_type: str = "file"
     # user facing name
     name: str
     # optional - None could be an unsaved new file held in memory but not on disk
@@ -27,7 +26,7 @@ class FileResource(Resource):
 
 @dataclass(kw_only=True)
 class ExampleResource(Resource):
-    resource_type = "example"
+    resource_type: str = "example"
     query: str
     code: str
     notes: typing.Optional[str] = field(default=None)

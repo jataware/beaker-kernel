@@ -7,8 +7,8 @@ from typing import Optional, Self
 from uuid import UUID, uuid4
 
 import yaml
-from adhoc_api.tool import AdhocApi, APISpec
 from adhoc_api.curation import Example
+from adhoc_api.tool import AdhocApi, APISpec
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
 from beaker_kernel.lib.integrations.base import MutableBaseIntegrationProvider
@@ -16,12 +16,16 @@ from beaker_kernel.lib.types import ExampleResource, FileResource, Integration, 
 
 logger = logging.getLogger(__file__)
 
+# this keeps the yaml output much more human readable for code examples and long prompts.
 def string_formatter(dumper, data):
-    if isinstance(data, str) and len(data.splitlines()) > 1:
-        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    max_line_length = 120
+    if len(data.splitlines()) == 1 and len(data) < max_line_length:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+def uuid_formatter(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:str", str(data))
 yaml.representer.SafeRepresenter.add_representer(str, string_formatter)
-yaml.representer.SafeRepresenter.add_representer(UUID, string_formatter)
+yaml.representer.SafeRepresenter.add_representer(UUID, uuid_formatter)
 
 @dataclass
 class AdhocSpecification:
@@ -34,7 +38,7 @@ class AdhocSpecification:
     resources: dict[UUID, Resource]
 
     @classmethod
-    def from_dict(cls, location: os.PathLike, source: dict, examples: Optional[list] = None) -> Self:
+    def from_dict(cls, location: os.PathLike, source: dict) -> Self:
         """
         Creates a AdhocSpecification from a dict.
 
@@ -51,19 +55,17 @@ class AdhocSpecification:
         # slug may not be present on old specs -- replace spaces with _ in name for a slug
         slug = source.get("slug", str(source.get("name")).lower().replace(" ", "_"))
 
+        # convert yaml dict resources to dataclass objects, parsing them
         resources = {}
         for resource_id, resource_value in source.get("resources", {}).items():
-            resources[UUID(resource_id)] = resource_value
-
-        # backwards compat
-        if examples is not None:
-            for example in examples:
-                resource = ExampleResource(**example, integration=slug)
-                resources[resource.resource_id] = resource
-        if attachments := source.get("attachments", None):
-            for filename, filepath in attachments.items():
-                resource = FileResource(name=filename, filepath=filepath, integration=slug)
-                resources[resource.resource_id] = resource
+            if (resource_type := resource_value.get("resource_type")) == "file" or resource_value.get("filepath") is not None:
+                resource = FileResource(**(resource_value | {"integration": slug}))
+            elif resource_type == "example" or resource_value.get("code") is not None:
+                resource = ExampleResource(**(resource_value | {"integration": slug}))
+            else:
+                msg = "Resources must be file or example for adhoc"
+                raise ValueError(msg)
+            resources[UUID(resource_id)] = resource
 
         integration_type = source.get("integration_type", "api")
         integration = cls(
@@ -75,8 +77,6 @@ class AdhocSpecification:
             integration_type=integration_type,
             resources=resources
         )
-        logger.warning(integration)
-
         return integration
 
     def get_resources_by_type(self, resource_type: str) -> list:
@@ -152,12 +152,30 @@ class AdhocSpecification:
 class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
     specifications: list[AdhocSpecification]
 
+    def write_all_specifications(self):
+        for spec in self.specifications:
+            (Path(spec.location) / "api.yaml").write_text(spec.to_yaml())
+
+    def build_adhoc(self):
+        datafile_root = Path(self.adhoc_path) / "data"
+        substitutions = {
+            "DATASET_FILES_BASE_PATH": str(datafile_root)
+        }
+        self.adhoc_api = AdhocApi(
+            apis=[
+                spec.render(substitutions)
+                for spec in self.specifications
+            ],
+            **self.adhoc_config_options
+        )
+
     def __init__(self, adhoc_path: os.PathLike, display_name: str, **config_options):
         super().__init__(display_name)
         self.adhoc_path = Path(adhoc_path)
         if not self.adhoc_path.exists():
             msg = f"Unable to initialize ad-hoc integration as specified directory '{adhoc_path}' does not exist."
             raise RuntimeError(msg)
+        self.adhoc_config_options = config_options
 
         integration_root = self.adhoc_path / "datasources"
         instruction_root = self.adhoc_path / "instructions"
@@ -175,22 +193,11 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                 continue
 
             spec_data = yaml.safe_load(integration_yaml.read_text())
-            # examples are kept for backwaeds compatibility
-            examples_yaml = integration_dir / "examples.yaml"
-            if examples_yaml.is_file():
-                examples = yaml.safe_load(examples_yaml.read_text())
-            else:
-                logger.warning(
-                    msg=f"No examples.yaml found for `{integration_yaml}`. "
-                        f"Assuming no examples for the integration and still loading it."
-                )
-                examples = None
             try:
                 self.specifications.append(
                     AdhocSpecification.from_dict(
                         location=integration_dir,
-                        source=spec_data,
-                        examples=examples
+                        source=spec_data
                     )
                 )
             except Exception as e:
@@ -201,21 +208,9 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             file.read_text()
             for file in instruction_root.iterdir() if file.is_file()
         )
-
-        datafile_root = Path(self.adhoc_path) / "data"
-        substitutions = {
-            "DATASET_FILES_BASE_PATH": str(datafile_root)
-        }
-        self.adhoc_api = AdhocApi(
-            apis=[
-                spec.render(substitutions)
-                for spec in self.specifications
-            ],
-            **config_options
-        )
-
-        for spec in self.specifications:
-            (Path(spec.location) / "api2.yaml").write_text(spec.to_yaml())
+        # todo: instructions
+        self.write_all_specifications()
+        self.build_adhoc()
 
     def get_specification(self, specification_id: str) -> AdhocSpecification:
         """
@@ -243,13 +238,25 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         )
 
     def add_integration(self, **payload):
-        pass
+        self.specifications.append(AdhocSpecification(
+            **payload,
+            location=self.adhoc_path / payload["slug"],
+            resources={}
+        ))
+        self.write_all_specifications()
+        self.build_adhoc()
 
     def remove_integration(self, **payload):
-        pass
+        self.specifications = [spec for spec in self.specifications if spec.slug != payload["slug"]]
+        self.write_all_specifications()
+        self.build_adhoc()
 
     def update_integration(self, **payload):
-        pass
+        specification = self.get_specification(payload["slug"])
+        self.specifications = [spec for spec in self.specifications if spec.slug != payload["slug"]]
+        self.specifications.append(AdhocSpecification(**asdict(specification) | payload))
+        self.write_all_specifications()
+        self.build_adhoc()
 
     def list_resources(self, integration_id, resource_type: Optional[str] = None):
         specification = self.get_specification(integration_id)
@@ -265,13 +272,35 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         return None
 
     def add_resource(self, integration_id, **payload):
-        pass
+        specification = self.get_specification(integration_id)
+        resource_type = payload["resource_type"]
+        if resource_type == "file":
+            resource = FileResource(**(payload | {"integration": integration_id}))
+        elif resource_type == "example":
+            resource = ExampleResource(**(payload | {"integration": integration_id}))
+        else:
+            msg = "Only examples and files are valid on an adhoc integration."
+            raise ValueError(msg)
+        if resource.resource_id is not None:
+            specification.resources[resource.resource_id] = resource
+        self.write_all_specifications()
 
     def remove_resource(self, integration_id, resource_id, **payload):
-        pass
+        specification = self.get_specification(integration_id)
+        specification.resources.pop(resource_id)
+        self.write_all_specifications()
 
     def update_resource(self, integration_id, resource_id, **payload):
-        pass
+        # should this only allow updating an id to a different resource type?
+        specification = self.get_specification(integration_id)
+        resource = specification.resources.pop(resource_id)
+        if resource.resource_type == "file":
+            resource = FileResource(**(asdict(resource) | payload | {"integration": integration_id}))
+        elif resource.resource_type == "example":
+            resource = ExampleResource(**(asdict(resource) | payload | {"integration": integration_id}))
+        else:
+            msg = "Only examples and files are valid on an adhoc integration."
+            raise ValueError(msg)
 
     @tool
     async def draft_integration_code(self, integration: str, goal: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
