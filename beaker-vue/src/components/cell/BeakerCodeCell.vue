@@ -17,6 +17,7 @@
                         :disabled="isBusy"
                         @change="handleCodeChange"
                         @click="clicked"
+                        :annotations="lintAnnotations"
                     />
                 </div>
                 <div class="code-output">
@@ -40,6 +41,11 @@
                         v-if="isBusy"
                         class="pi pi-spin pi-spinner busy-icon"
                     />
+                    <AnnotationButton
+                        :action="analyzeCell"
+                        v-tooltip.bottom="{value: 'Analyze this code.', showDelay: 300}"
+                        text
+                    />
                     <Button
                         v-if="hasRollback"
                         class="rollback-button"
@@ -61,6 +67,7 @@ import Button from 'primevue/button';
 import { findSelectableParent } from "../../util";
 import { BeakerSession } from "beaker-kernel";
 import CodeEditor from "../misc/CodeEditor.vue";
+import AnnotationButton from "../misc/buttons/AnnotationButton.vue";
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 import type { IBeakerTheme } from '../../plugins/theme';
@@ -78,6 +85,8 @@ const codeEditorRef = ref<InstanceType<typeof CodeEditor>>();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const notebook = inject<BeakerNotebookComponentType>("notebook");
 const instance = getCurrentInstance();
+
+const lintAnnotations = ref<{}[]>([]);
 
 const emit = defineEmits([
     'blur',
@@ -100,6 +109,30 @@ const rollback = () => cell.value.rollback(session);
 const isBusy = computed(() => {
     return cell.value?.busy;
 });
+
+interface LinterCodeCell {
+    [key: string]: string;
+    cell_id: string;
+    content: string;
+}
+interface LinterCodeCellPayload {
+    [key: string]: string|LinterCodeCell[];
+    notebook_id: string;
+    cells: LinterCodeCell[];
+}
+
+const analyzeCell = async () => {
+    const payload: LinterCodeCellPayload = {
+        notebook_id: notebook.id,
+        cells: [{
+            cell_id: cell.value.id,
+            content: cell.value.source,
+        }],
+    };
+    const lintAction = session.executeAction("lint_code", payload)
+    // Make sure to await completion so spinner does not disappear early.
+    await lintAction.done;
+};
 
 const badgeSeverity = computed(() => {
     const defaultValue = "secondary";
@@ -169,6 +202,7 @@ defineExpose({
     clear,
     cell,
     editor: codeEditorRef,
+    lintAnnotations,
 });
 
 onBeforeMount(() => {
@@ -236,10 +270,10 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin-left: 0.5rem;
 }
 
 .execution-count-badge {
-    margin-left: 0.5rem;
     font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
     font-size: 1rem;
     display: flex;

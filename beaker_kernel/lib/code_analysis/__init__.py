@@ -1,17 +1,19 @@
-from .analyzer import CodeAnalyzer
-from .analysis_types import AnalysisAnnotation, AnalysisCategory, AnalysisItem
-from .rules import TrustRule, ASTRule, LLMRule
-from .analysis_agent import CodeAnalysisAgent, AnalysisResult
-
+from .analyzer import AnalysisEngine
+from .analysis_types import AnalysisAnnotation, AnalysisCategory, AnalysisIssue
+from .rules import AnalysisRule, AnalysisASTRule, AnalysisLLMRule
+from .analysis_agent import AnalysisAgent, AnalysisResult
 
 __all__ = [
-    "CodeAnalyzer",
+    # Primary classes
+    "AnalysisEngine",
+    "AnalysisAgent",
+    "AnalysisRule",
+    "AnalysisASTRule",
+    "AnalysisLLMRule",
+
+    # Data types
     "AnalysisAnnotation",
     "AnalysisCategory",
-    "AnalysisItem",
-    "TrustRule",
-    "ASTRule",
-    "LLMRule",
-    "CodeAnalysisAgent",
+    "AnalysisIssue",
     "AnalysisResult",
 ]

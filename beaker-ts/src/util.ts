@@ -1,10 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import { JSONObject } from '@lumino/coreutils';
-import { KernelFutureHandler } from '@jupyterlab/services/lib/kernel/future';
+import { KernelFutureHandler, KernelShellFutureHandler } from '@jupyterlab/services/lib/kernel/future';
 import * as nbformat from '@jupyterlab/nbformat';
 import * as Kernel from '@jupyterlab/services/lib/kernel/kernel';
 import * as messages from '@jupyterlab/services/lib/kernel/messages';
-
 import { IBeakerShellMessage, BeakerCodeCell, IBeakerIOPubMessage, IBeakerCell, BeakerNotebook, BeakerNotebookContent, BeakerBaseCell } from './notebook';
 
 

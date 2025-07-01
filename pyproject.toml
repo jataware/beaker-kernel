@@ -44,7 +44,6 @@ dependencies = [
   "tree-sitter",
   "tree-sitter-python",
   "tree-sitter-julia",
-  # "tree-sitter-"
 ]
 
 [project.entry-points.hatch]

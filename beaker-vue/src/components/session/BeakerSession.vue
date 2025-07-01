@@ -23,6 +23,7 @@ export interface IBeakerCellComponent {
   execute: () => void,
   clear: () => void,
   editor?: typeof CodeEditor,
+  lintAnnotations?: {}[],
 }
 
 
@@ -42,6 +43,7 @@ export const toBeakerCellComponent = (vnode: VNode): IBeakerCellComponent => {
       execute: component.exposed.execute,
       clear: component.exposed.clear,
       editor: component.exposed.editor,
+      lintAnnotations: component.exposed.lintAnnotations,
     } as {
       enter: (position?: "start" | "end" | number)=>void,
       exit: ()=>void,

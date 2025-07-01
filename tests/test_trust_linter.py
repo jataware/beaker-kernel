@@ -6,8 +6,9 @@ from pathlib import Path
 import tree_sitter_python as tspython
 from tree_sitter import Language
 
-from beaker_kernel.lib.code_analysis.analyzer import CodeAnalyzer
-from beaker_kernel.lib.code_analysis.rules import assumptions, groundings, LiteralCheckAST
+from beaker_kernel.lib.code_analysis.analyzer import AnalysisEngine
+# from beaker_kernel.lib.code_analysis.rules.trust.categories import trust_assumptions_category, trust_grounding_category
+from beaker_kernel.lib.code_analysis.rules.trust.rules import all_rules, ast_rules, llm_rules
 from beaker_kernel.lib.code_analysis.analysis_types import AnalysisCodeCell, AnalysisCodeCells
 
 solar_flare_nb = AnalysisCodeCells([
@@ -226,11 +227,12 @@ required_ice_thickness
 ])
 
 
+
 async def test_multi_codecell():
     language = Language(tspython.language())
-    analyzer = CodeAnalyzer(rules=[assumptions, groundings, LiteralCheckAST], language=language)
-    # analyzer = CodeAnalyzer(rules=[LiteralCheckAST], language=language)
+    analyzer = AnalysisEngine(rules=all_rules, language=language)
+    # analyzer = AnalysisEngine(rules=[trust_assumptions_category, trust_grounding_category, TrustLiteralCheckRule], language=language)
+    # analyzer = AnalysisEngine(rules=[TrustLiteralCheckRule], language=language)
     result = await analyzer.analyze(hercules_nb)
-    print(result)
     assert result
-    # assert False
+    assert False

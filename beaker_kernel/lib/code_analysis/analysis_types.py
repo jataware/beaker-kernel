@@ -1,15 +1,7 @@
 from dataclasses import dataclass
 from typing import TypeAlias, Optional, Literal, TypeVar, Generic, Callable, TypedDict, overload
 
-from pydantic import BaseModel
-
-
-class AnalysisItem(BaseModel):
-    id: str
-    title: str
-    description: str
-    severity: Literal["major", "minor", "warning", "info", "hint"] = "info"
-    link: Optional[str] = None
+from pydantic import BaseModel, Field
 
 
 class AnalysisCategory(BaseModel):
@@ -17,17 +9,28 @@ class AnalysisCategory(BaseModel):
     display_label: str
     color: Optional[str] = None
     icon: Optional[str] = None
-    analysis_items: list[AnalysisItem]
+    # issues: "list[AnalysisIssue]"
 
 
-class AnalysisAnnotation:
-    analysis_category_id: str
-    analysis_item_id: str
+class AnalysisIssue(BaseModel):
+    id: str
+    title: str
+    description: str = Field(default="Description goes here")
+    prompt_description: Optional[str] = Field(default=None)
+    severity: Literal["major", "minor", "warning", "info", "hint"] = Field(default="info")
+    link: Optional[str] = Field(default=None)
+    category: Optional[AnalysisCategory] = Field(default=None)
+
+
+class AnalysisAnnotation(BaseModel):
+    cell_id: str
+    # category: AnalysisCategory
+    issue: AnalysisIssue
     start: int
     end: int
-    title_override: Optional[str]
-    message_override: Optional[str]
-    message_extra: Optional[str]
+    title_override: Optional[str] = None
+    message_override: Optional[str] = None
+    message_extra: Optional[str] = None
 AnalysisAnnotations: TypeAlias = list[AnalysisAnnotation]
 
 
@@ -52,8 +55,11 @@ class AnalysisCodeCell:
         if self._lines is not None:
             return self._lines
         offset = 0
+        lines = self.content.splitlines(keepends=True)
+        if len(lines) == 0:
+            lines = [""]
         line_list: list[AnalysisCodeCellLine] = []
-        for line_num, line_content in enumerate(self.content.splitlines(keepends=True), start=0):
+        for line_num, line_content in enumerate(lines, start=0):
             line_len = len(line_content)
             line_list.append(AnalysisCodeCellLine(
                 cell_id=self.cell_id,
@@ -65,6 +71,9 @@ class AnalysisCodeCell:
             offset += line_len
         self._lines = line_list
         return line_list
+
+    def absolute_position(self, line_num: int, line_offset: int=0) -> int:
+        return self.lines[line_num].start_pos + line_offset
 
 
 class AnalysisCodeCells(list[AnalysisCodeCell]):
@@ -91,10 +100,13 @@ class AnalysisCodeCells(list[AnalysisCodeCell]):
         for cell in self:
             cell_lines = cell.lines
             for line in cell_lines:
+                content = line.content
+                if content and not content.endswith("\n"):
+                    content = content + "\n"
                 line_by_cell.append({
                     "cell_id": cell.cell_id,
-                    "line_num": line.line_num + offset,
-                    "content": line.content,
+                    "line_num": line.line_num,
+                    "content": content,
                 })
             offset += len(cell_lines)
         return line_by_cell
@@ -106,16 +118,26 @@ class AnalysisCodeCells(list[AnalysisCodeCell]):
         formatted_code = (
             "# {cell_id} / {line_num} : {content}\n" +
             "".join((
-                f"{line['cell_id']} / {(line['line_num']):{spacing}} : {line['content']}" for line in lines
+                f"{line['cell_id']} / {(line['line_num']):{spacing}} : {line['content']}"
+                for line in lines
             ))
         )
         return formatted_code
 
     @property
     def raw_code(self) -> str:
-        return "".join((cell.content for cell in self))
+        parts = []
+        for cell in self:
+            content = cell.content
+            if not content.endswith("\n"):
+                content += "\n"
+            parts.append(content)
+        return "".join(parts)
 
-    def unfurl_line(self, line_num: int) -> AnalysisCodeCellLine | None:
+    def get_cell_line(self, cell_id: str, line_num: int) -> AnalysisCodeCellLine | None:
+        return self._line_ref.get((cell_id, line_num), None)
+
+    def resolve_line_position(self, line_num: int) -> AnalysisCodeCellLine | None:
         code_cell_idx, code_cell_line = self._line_map.get(line_num, (None, None))
         if code_cell_idx is None:
             return None
