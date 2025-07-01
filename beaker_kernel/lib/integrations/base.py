@@ -4,10 +4,12 @@ from typing import Callable, ClassVar
 
 class BaseIntegrationProvider(ABC):
     display_name: str
+    slug: str
     mutable: ClassVar[bool] = False
 
     def __init__(self, display_name: str):
         self.display_name = display_name
+        self.slug = self.display_name.lower().replace(" ", "_")
 
     @abstractmethod
     def list_integrations(self):

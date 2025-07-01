@@ -293,7 +293,8 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         integration_providers = {}
         if self.integrations:
             integration_providers = {
-                integration.display_name: {
+                integration.slug: {
+                    "display_name": integration.display_name,
                     "mutable": integration.mutable,
                     "integrations": integration.list_integrations()
                 }
