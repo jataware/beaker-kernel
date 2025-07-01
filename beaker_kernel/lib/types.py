@@ -1,27 +1,36 @@
 import typing
-from dataclasses import dataclass, field, MISSING, asdict
-from datetime import datetime, date
+from dataclasses import dataclass, field
+from datetime import date, datetime
+from uuid import UUID, uuid4
 
 IntegrationTypes: typing.TypeAlias = typing.Literal["api", "database", "dataset"]
 
-@dataclass
-class IntegrationAttachment:
+@dataclass(kw_only=True)
+class Resource:
+    resource_type: typing.ClassVar[str]
+    # optional -- if not included on handwritten yaml, it will be generated
+
+    integration: typing.Optional[str] = None
+    resource_id: typing.Optional[UUID] = None
+    def __post_init__(self):
+        if self.resource_id is None:
+            self.resource_id = uuid4()
+
+@dataclass(kw_only=True)
+class FileResource(Resource):
+    resource_type = "file"
     # user facing name
     name: str
-
     # optional - None could be an unsaved new file held in memory but not on disk
     filepath: typing.Optional[str] = field(default=None)
-    # if None - either zero-byte file or content to load at some point in the future
-    content: typing.Optional[bytes] = field(default=None)
-    # disambiguation for the above field
-    is_empty_file: bool = field(default=False)
     # TODO: encoding?
 
-@dataclass
-class IntegrationExample:
+@dataclass(kw_only=True)
+class ExampleResource(Resource):
+    resource_type = "example"
     query: str
     code: str
-    notes: str | None = None
+    notes: typing.Optional[str] = field(default=None)
 
 @dataclass
 class Integration:
@@ -34,7 +43,3 @@ class Integration:
     img_url: typing.Optional[str] = field(default=None)
     source: typing.Optional[str] = field(default=None)
     last_updated: typing.Optional[datetime|date] = field(default=None)
-    attached_files: typing.Optional[list[IntegrationAttachment]] = field(default=None)
-    # currently o(n) example lookup as a list rather than k,v map with query as key.
-    # should be changed eventually, but left for backwards compatibility
-    examples: typing.Optional[list[IntegrationExample]] = field(default=None)
