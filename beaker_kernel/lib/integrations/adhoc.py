@@ -175,7 +175,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                 continue
 
             spec_data = yaml.safe_load(integration_yaml.read_text())
-            # attach examples, since the path is fixed per-integration
+            # examples are kept for backwaeds compatibility
             examples_yaml = integration_dir / "examples.yaml"
             if examples_yaml.is_file():
                 examples = yaml.safe_load(examples_yaml.read_text())
