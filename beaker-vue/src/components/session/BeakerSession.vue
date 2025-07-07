@@ -56,7 +56,10 @@ export const toBeakerCellComponent = (vnode: VNode): IBeakerCellComponent => {
 export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComponent({
   props: {
       connectionSettings: Object,
-      sessionName: String,
+      sessionName: {
+        type: String,
+        required: false,
+      },
       sessionId: String,
       defaultKernel: String,
       renderers: (Object as any as PropType<IMimeRenderer<HTMLElement>[]>),
@@ -87,10 +90,11 @@ export const BeakerSessionComponent: DefineComponent<any, any, any> = defineComp
     const activeContext = ref();
     const notebookComponent = ref();
 
+    const sessionName = props.sessionName ?? props.sessionId;
     const rawSession: BeakerSession = new BeakerSession(
       {
         settings: props.connectionSettings,
-        name: props.sessionName,
+        name: sessionName,
         sessionId: props.sessionId,
         kernelName: props.defaultKernel,
         rendererOptions: {

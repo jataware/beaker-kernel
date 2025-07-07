@@ -138,6 +138,7 @@ class BeakerKernel(KernelProxyManager):
         self.server.intercept_message("control", "interrupt_request", self.interrupt)
         self.server.intercept_message("control", "shutdown_request", self.shutdown)
         self.server.intercept_message("shell", "notebook_state_response", self.notebook_state_response)
+        self.server.intercept_message("shell", "beaker_session_info_request", self.beaker_session_info)
 
     def register_magic_commands(self):
         for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_magic_prefix")):
@@ -713,6 +714,10 @@ class BeakerKernel(KernelProxyManager):
         )
         await self.send_chat_history(message.header)
         return True
+
+    @message_handler
+    async def beaker_session_info(self, message):
+        return await self.context.get_info()
 
     async def notebook_state_response(self, server, target_stream, data):
         async with handle_message(server, target_stream, data, send_status_updates=False, send_reply=False) as ctx:

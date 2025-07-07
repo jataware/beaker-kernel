@@ -1,5 +1,5 @@
 <template>
-    <div class="datasource-panel">
+    <div class="examples-panel">
         <div
             class="header-controls"
             v-if="panelState.view === 'tableOfContents'"
@@ -35,17 +35,17 @@
                     width: 100%;
                 "
             >
-                <i>{{ (selectedDatasource?.examples ?? []).length }} examples available:</i>
+                <i>{{ (selectedIntegration?.examples ?? []).length }} examples available:</i>
             </div>
         </div>
 
         <div
-            class="datasource-editor-list"
+            class="examples-editor-list"
             v-if="panelState.view === 'tableOfContents'"
         >
             <div
-                class="datasource-card"
-                v-for="(example, index) in (selectedDatasource?.examples ?? [])"
+                class="example-card"
+                v-for="(example, index) in (selectedIntegration?.examples ?? [])"
                 :key="index"
                 @mouseleave="hoveredExample = undefined"
                 @mouseenter="hoveredExample = index"
@@ -64,9 +64,9 @@
                     }"
                 >
                     <template #title>
-                        <div class="datasource-editor-card-title">
+                        <div class="example-editor-card-title">
                             <span
-                                class="datasource-editor-card-title-text"
+                                class="example-editor-card-title-text"
                             >
                                 {{ example?.query }}
                             </span>
@@ -84,8 +84,8 @@
             class="example-editor-focused"
             v-else-if="panelState.view === 'focused'"
         >
-            <div class="datasource-editor-button-container">
-                <div class="datasource-buttons-left">
+            <div class="example-editor-button-container">
+                <div class="example-buttons-left">
                     <Button
                         severity="warning"
                         icon="pi pi-arrow-left"
@@ -97,7 +97,7 @@
                         style="width: fit-content;"
                     />
                 </div>
-                <div class="datasource-buttons-right">
+                <div class="example-buttons-right">
                     <Button
                         icon="pi pi-trash"
                         severity="danger"
@@ -107,7 +107,7 @@
                 </div>
             </div>
             <div
-                class="datasource-editor-main-content"
+                class="example-editor-main-content"
                 style="flex-direction: column;"
             >
                 <Fieldset legend="Query">
@@ -139,8 +139,8 @@
                     </div>
                 </Fieldset>
             </div>
-            <div class="datasource-editor-button-container">
-                <div class="datasource-buttons-left">
+            <div class="example-editor-button-container">
+                <div class="example-buttons-left">
                     <Button
                         icon="pi pi-check-circle"
                         @click="saveExample(panelState.focusedExample)"
@@ -178,7 +178,7 @@ const props = defineProps<{
 }>()
 
 const panelState = ref<ExamplePanelState>({view: 'tableOfContents'})
-const selectedDatasource = defineModel<{examples?: Example[]}>()
+const selectedIntegration = defineModel<{examples?: Example[]}>()
 const exampleChanges = ref<Example>(undefined);
 const searchText = ref<string>();
 const hoveredExample = ref<number|undefined>(undefined)
@@ -197,11 +197,11 @@ const searchFilter = (target?: string, name?: string, desc?: string) => {
 }
 
 const newExample = () => {
-    let examples = selectedDatasource.value?.examples;
+    let examples = selectedIntegration.value?.examples;
 
     if (examples === undefined || examples === null) {
-        selectedDatasource.value.examples = [];
-        examples = selectedDatasource.value.examples;
+        selectedIntegration.value.examples = [];
+        examples = selectedIntegration.value.examples;
     }
 
     examples.unshift({
@@ -215,7 +215,7 @@ const newExample = () => {
 
 const editExample = (index) => {
     hoveredExample.value = undefined;
-    let examples = selectedDatasource.value?.examples;
+    let examples = selectedIntegration.value?.examples;
     exampleChanges.value = {
         notes: '',
         ...examples?.[index]
@@ -224,7 +224,7 @@ const editExample = (index) => {
 }
 
 const saveExample = (index) => {
-    let examples = selectedDatasource.value?.examples;
+    let examples = selectedIntegration.value?.examples;
     examples[index] = exampleChanges.value;
     exampleChanges.value = undefined;
     panelState.value = { view: 'tableOfContents' }
@@ -232,7 +232,7 @@ const saveExample = (index) => {
 }
 
 const deleteExample = (index) => {
-    let examples = selectedDatasource.value?.examples;
+    let examples = selectedIntegration.value?.examples;
     examples.splice(index, 1);
     panelState.value = { view: 'tableOfContents' }
     emit('onchange')
@@ -248,7 +248,7 @@ const deleteExample = (index) => {
     gap: 0.75rem;
 }
 
-.datasource-panel {
+.examples-panel {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -303,7 +303,7 @@ const deleteExample = (index) => {
     }
 }
 
-.datasource-editor-list {
+.examples-editor-list {
     display: flex;
     flex-direction: column;
     overflow: auto;
@@ -322,7 +322,7 @@ const deleteExample = (index) => {
         margin-top: 0.5rem;
         white-space: pre-wrap;
     }
-    .datasource-card > div {
+    .example-card > div {
         margin-bottom: 0.5rem;;
     }
 }
@@ -338,7 +338,7 @@ const deleteExample = (index) => {
     gap: 0.75rem;
     height: 100%;
 
-    .datasource-editor-button-container {
+    .example-editor-button-container {
         flex: 0 0;
         height: 2.4rem;
         padding: 0.2rem;
@@ -351,19 +351,19 @@ const deleteExample = (index) => {
             height: 32px;
             padding: 0 0.5rem;
         }
-        .datasource-buttons-left {
+        .example-buttons-left {
             button {
                 margin-right: 0.5rem;
             }
         }
-        .datasource-buttons-right {
+        .example-buttons-right {
             button {
                 margin-left: 0.5rem;
             }
         }
     }
 
-    .datasource-editor-main-content {
+    .example-editor-main-content {
         flex: 1 1;
         p, ul, li {
             margin-bottom: 0.8rem;
@@ -382,10 +382,10 @@ const deleteExample = (index) => {
     }
 }
 
-.datasource-editor-card-title {
+.example-editor-card-title {
     display: flex;
     flex-direction: row;
-    .datasource-editor-card-title-text {
+    .example-editor-card-title-text {
         flex: 1 1;
         font-size: 1rem;
         margin: auto;
