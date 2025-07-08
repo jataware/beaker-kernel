@@ -36,7 +36,7 @@ export interface CodeEditorProps {
     autofocus?: boolean,
     disabled?: boolean,
     readonly?: boolean,
-    annotations?: {}[],
+    annotations?: any[],
 }
 
 const props = withDefaults(defineProps<CodeEditorProps>(), {
