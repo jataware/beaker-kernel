@@ -7,7 +7,7 @@ IntegrationTypes: typing.TypeAlias = typing.Literal["api", "database", "dataset"
 
 @dataclass(kw_only=True)
 class Resource:
-    resource_type: str
+    resource_type: typing.ClassVar[str]
     integration: typing.Optional[str] = None
     # optional -- if not included on handwritten yaml, it will be generated
     resource_id: typing.Optional[UUID] = None
@@ -33,12 +33,18 @@ class ExampleResource(Resource):
 
 @dataclass
 class Integration:
-    slug: str
     name: str
     description: str
+    provider: str
 
+    # created if not present -- UUID! but must be easily json serializable
+    slug: typing.Optional[str] = field(default=None)
     datatype: IntegrationTypes = field(default="api")
     url: typing.Optional[str] = field(default=None)
     img_url: typing.Optional[str] = field(default=None)
     source: typing.Optional[str] = field(default=None)
     last_updated: typing.Optional[datetime|date] = field(default=None)
+
+    def __post_init__(self):
+        if self.slug is None:
+            self.slug = str(uuid4())

@@ -50,13 +50,10 @@
         <div class="integration-list">
             <div
                 class="integration-provider"
-                v-for="(provider, name) in relevantProviders(integrationProviders)"
-                :key="name"
             >
-                <span>{{ name }}</span>
                 <div
                     class="integration-card"
-                    v-for="integration in processIntegrations(provider.integrations)"
+                    v-for="integration in processIntegrations(Object.values(integrations))"
                     :key="integration?.name"
                     @mouseleave="hoveredIntegration = undefined"
                     @mouseenter="hoveredIntegration = integration.slug"
@@ -88,7 +85,7 @@
                                         v-tooltip="'Edit Integration'"
                                     >
                                         <Button
-                                            v-if="provider.mutable"
+                                            v-if="getIntegrationProviderType(integration) === 'adhoc'"
                                             style="
                                                 width: fit-content;
                                                 height: 32px;
@@ -105,7 +102,7 @@
                             <div
                                 class="integration-main-content"
                                 style="overflow: hidden;"
-                                v-html="integration?.description ?? ''"
+                                v-html="integration.description"
                             >
                             </div>
                         </template>
@@ -125,16 +122,16 @@ import InputText from "primevue/inputtext";
 import Card from "primevue/card";
 import { marked } from "marked";
 import { type BeakerSessionComponentType } from "../session/BeakerSession.vue";
-import { type Integration, type IntegrationProviders } from "@/util/integration";
+import { type IntegrationMap, type Integration, type IntegrationProviders, listIntegrations, getIntegrationProviderType } from "@/util/integration";
 
 const searchText = ref(undefined);
 
+const integrations = defineModel<IntegrationMap>()
+
 const urlParams = new URLSearchParams(window.location.search);
 const sessionIdParam = urlParams.has("session") ? `&session=${urlParams.get("session")}` : "";
-const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
-const integrationProviders = computed<IntegrationProviders>(() =>
-    beakerSession?.activeContext?.info?.integration_providers ?? {})
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const sortIntegrations = (integrations: Integration[]) =>
     integrations.toSorted((a, b) => a?.name.localeCompare(b?.name))
@@ -146,19 +143,17 @@ const filterIntegrations = (integrations: Integration[]) =>
 
 const renderIntegrations = (integrations: Integration[]) =>
     integrations.map(integration =>
-        ({...integration, description: marked.parse(integration?.description ?? "")}))
+        ({...integration, description: marked.parse(integration?.description ?? "") as string}))
 
 const processIntegrations = (integrations: Integration[]) =>
     renderIntegrations(filterIntegrations(sortIntegrations(integrations)))
 
-const relevantProviders = (providers: IntegrationProviders): IntegrationProviders =>
-    Object.keys(providers)
-        .filter((name) => processIntegrations(providers[name].integrations).length >= 1)
-        .reduce((result, key) => (result[key] = providers[key], result), {})
+// const relevantProviders = (providers: IntegrationProviders): IntegrationProviders =>
+//     Object.keys(providers)
+//         .filter((name) => processIntegrations(providers[name].integrations).length >= 1)
+//         .reduce((result, key) => (result[key] = providers[key], result), {})
 
-const allIntegrations = computed<Integration[]>(() =>
-    Object.keys(integrationProviders.value)
-        .flatMap((name) => integrationProviders.value[name].integrations))
+const allIntegrations = computed<Integration[]>(() => Object.values(integrations.value))
 
 const expandedIntegration = ref<string|undefined>(undefined);
 const hoveredIntegration = ref<string|undefined>(undefined);

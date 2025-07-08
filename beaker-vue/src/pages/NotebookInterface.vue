@@ -82,9 +82,11 @@
                 </SideMenuPanel>
                 <SideMenuPanel
                     id="integrations" label="Integrations" icon="pi pi-database"
-                    v-if="Object.keys(integrationProviders).length > 0"
+                    v-if="Object.keys(integrations).length > 0"
                 >
-                    <IntegrationPanel>
+                    <IntegrationPanel
+                        v-model="integrations"
+                    >
                     </IntegrationPanel>
                 </SideMenuPanel>
                 <SideMenuPanel
@@ -178,7 +180,7 @@ import MediaPanel from '../components/panels/MediaPanel.vue';
 import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 import DebugPanel from '../components/panels/DebugPanel.vue'
-import { type IntegrationProviders } from '../util/integration';
+import { listIntegrations, type IntegrationInterfaceState, type IntegrationMap } from '../util/integration';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -287,8 +289,10 @@ const beakerSession = computed<BeakerSessionComponentType>(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
 
-const integrationProviders = computed<IntegrationProviders>(() =>
-    beakerSession?.value.activeContext?.info?.integration_providers ?? {})
+const integrations = ref<IntegrationMap>({})
+watch(beakerSession, async () => {
+    integrations.value = await listIntegrations(sessionId);
+})
 
 // Ensure we always have at least one cell
 watch(

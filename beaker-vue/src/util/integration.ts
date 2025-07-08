@@ -1,24 +1,10 @@
 import { BeakerSession } from 'beaker-kernel';
 
-// todo -- removeold examples below
-
-export interface Example { // todo
-    query: string
-    code: string
-    notes?: string
-}
-
-export interface AttachedFile { // todo
-    filepath: string
-    name: string
-    content?: string
-}
-
-// todo remove old examples above
-
 export interface IntegrationResource {
-    type: string
-    integration?: string
+    // names must be coherent with python resource class
+    resource_type: string
+    integration: string
+    resource_id: string
 }
 
 export interface IntegrationExample extends IntegrationResource {
@@ -35,21 +21,22 @@ export interface IntegrationAttachedFile extends IntegrationResource {
     content?: string
 }
 
-export type IntegrationResources = {
+export type IntegrationResourceMap = {
     [id in string]: IntegrationResource
 }
 
 export interface Integration {
-    description: string;
+    description: string
     source: string;
     slug: string
     name: string
     url: string
-    resources?: IntegrationResources;
-    // remove below fields
-    attached_files: AttachedFile[]; // remove
-    examples: Example[]  // remove
+    provider: string
+    // important: resources are loaded via a second API call and may not exist or be filled on the object
+    resources?: IntegrationResourceMap;
 }
+
+export type IntegrationMap = {[key in string]: Integration};
 
 export type IntegrationProviders = {
     [key in string]: {
@@ -58,81 +45,68 @@ export type IntegrationProviders = {
     }
 }
 
-// export const handleAddExampleMessage = async (
-//     msg,
-//     integrations: Integration[],
-//     session: BeakerSession,
-// ) => {
-//     const content = msg?.content;
-//     if (content === undefined) {
-//         throw "Message content was undefined."
-//     }
+export interface IntegrationInterfaceState {
+    selected: string | undefined
+    integrations: IntegrationMap
+    unsavedChanges: boolean
+    selectedIntegrationResources: IntegrationResourceMap
+}
 
-//     const target = integrations?.find((integration) =>
-//         integration?.slug === content?.integration
-//         || integration?.name === content?.integration
-//     );
+export interface IntegrationAPIRouteDetails {
+    sessionId: string,
+    integrationId?: string,
+    resourceType?: string,
+    resourceId?: string,
+}
 
-//     if (target === undefined) {
-//         throw `Integration ${content?.integration} does not exist in integrations list.`
-//     }
+const toRoute = (details: IntegrationAPIRouteDetails) =>
+    [details.sessionId, details?.integrationId, details?.resourceType, details?.resourceId]
+    .filter((x) => x)
+    .join('/')
 
-//     if (target?.examples === undefined || target?.examples === null) {
-//         target.examples = []
-//     }
+async function integrationApiWrapper<T>(
+    method: "GET" | "POST",
+    route: IntegrationAPIRouteDetails,
+    body?: object
+): Promise<T> {
+    const path = `/beaker/integrations/${toRoute(route)}`
+    console.log(`api request: ${path}`)
+    const response = await fetch(path, {
+        method,
+        headers: {
+            "Content-Type": "application/json"
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) })
+    });
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+    const json = await response.json() as T;
+    return json
+}
 
-//     target.examples.push(
-//         {
-//             code: content?.code ?? "",
-//             query: content?.query ?? "",
-//             notes: content?.notes ?? ""
-//         }
-//     )
-//     //session.executeAction('add_example', target);
-// }
+export const getIntegrationProviderType = (integration: Integration) => integration.provider.split(":")[0]
 
-// export const handleAddIntegrationMessage = async (
-//     msg,
-//     integrations: Integration[],
-//     session: BeakerSession,
-// ) => {
-//     const content = msg?.content;
-//     if (content === undefined) {
-//         throw "Message content was undefined."
-//     }
+export const getIntegrationProviderSlug = (integration: Integration) => integration.provider.split(":")[1]
 
-//     const name = content.integration;
-//     const slug = name.toLowerCase().replaceAll(' ', '_');
-//     const description = content.description;
-//     const baseUrl = content.base_url;
-//     const schema = content.schema;
+export const listIntegrations = async (sessionId: string): Promise<IntegrationMap> => {
+    return (await integrationApiWrapper<{"integrations": IntegrationMap}>("GET", {sessionId})).integrations;
+}
 
-//     const target = integrations?.find((integration) =>
-//         integration?.name === content?.integration);
-//     if (target !== undefined) {
-//         throw `Integration ${content?.integration} already exists.`
-//     }
+export const postIntegration = async (sessionId: string, integrationId: string, body: object): Promise<IntegrationMap> => {
+    return await integrationApiWrapper<IntegrationMap>("POST", {sessionId, integrationId}, body);
+}
 
-//     const integration: Integration = {
-//         description,
-//         source: `
-// The base URL for the service is '${baseUrl}'
-// Below is the OpenAPI schema for the desired service.
+export const getResourcesForIntegration = async (sessionId: string, integrationId: string) => {
+    const routeDetails = {
+        sessionId,
+        integrationId,
+        resourceType: "all"
+    }
+    return (await integrationApiWrapper<{"resources": IntegrationResourceMap}>("GET", routeDetails)).resources;
+}
 
-// {schema}`,
-//         attached_files: [
-//             {
-//                 name: 'schema',
-//                 filepath: 'schema.yaml',
-//                 content: schema
-//             }
-//         ],
-//         examples: [],
-//         slug,
-//         name,
-//         url: ''
-//     }
-//     integrations.push(integration);
-//     //session.executeAction('save_integration', integration);
-// }
-
+export function filterByResourceType<T>(resources: IntegrationResourceMap | undefined, resource_type: string): {[key in string]: T} {
+    return Object.fromEntries(Object.entries(resources ?? {})
+        .filter(([_, resource]) => resource.resource_type === resource_type)) as {[key in string]: T};
+}

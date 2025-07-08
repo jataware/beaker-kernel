@@ -3,7 +3,7 @@ import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from string import Template
-from typing import Optional, Self
+from typing import ClassVar, Optional, Self
 from uuid import UUID, uuid4
 
 import yaml
@@ -52,8 +52,7 @@ class AdhocSpecification:
         except KeyError as e:
             msg = "Missing required field on API"
             raise KeyError(msg) from e
-        # slug may not be present on old specs -- replace spaces with _ in name for a slug
-        slug = source.get("slug", str(source.get("name")).lower().replace(" ", "_"))
+        slug = source.get("slug", str(uuid4()))
 
         # convert yaml dict resources to dataclass objects, parsing them
         resources = {}
@@ -122,14 +121,14 @@ class AdhocSpecification:
 
         return APISpec(
             name=self.name,
-            slug=self.slug,
+            slug=self.name.lower().replace(" ", "_"),
             cache_key=f"beaker_{self.slug}",
             description=self.description,
             examples=self.get_adhoc_api_examples(),
             documentation=Template(self.prompt).substitute(substitutions)
         )
 
-    def to_integration(self) -> Integration:
+    def to_integration(self, provider_type: str, provider: str) -> Integration:
         """
         Converts a AdhocSpecification to a Beaker Integration, without rendering any part.
         """
@@ -140,6 +139,7 @@ class AdhocSpecification:
             datatype="api",
             url=str(self.location),
             source=self.prompt,
+            provider=f"{provider_type}:{provider}"
         )
 
     def to_yaml(self) -> str:
@@ -151,6 +151,7 @@ class AdhocSpecification:
 
 class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
     specifications: list[AdhocSpecification]
+    provider_type = "adhoc"
 
     def write_all_specifications(self):
         for spec in self.specifications:
@@ -169,9 +170,15 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             **self.adhoc_config_options
         )
 
-    def __init__(self, adhoc_path: os.PathLike, display_name: str, **config_options):
+    def __init__(
+        self,
+        adhoc_path: os.PathLike,
+        display_name: str,
+        **config_options
+    ):
         super().__init__(display_name)
         self.adhoc_path = Path(adhoc_path)
+
         if not self.adhoc_path.exists():
             msg = f"Unable to initialize ad-hoc integration as specified directory '{adhoc_path}' does not exist."
             raise RuntimeError(msg)
@@ -226,7 +233,12 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             raise KeyError(msg) from e
 
     def list_integrations(self):
-        return [asdict(specification.to_integration()) for specification in self.specifications]
+        return [
+            asdict(specification.to_integration(
+                provider_type=self.provider_type, provider=self.slug
+            ))
+            for specification in self.specifications
+        ]
 
     def get_integration(self, integration_id: str) -> dict:
         """
@@ -234,7 +246,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         """
         return asdict(
             (next(i for i in self.specifications if i.slug == integration_id))
-            .to_integration()
+            .to_integration(provider_type=self.provider_type, provider=self.slug)
         )
 
     def add_integration(self, **payload):
@@ -244,19 +256,16 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             resources={}
         ))
         self.write_all_specifications()
-        self.build_adhoc()
 
     def remove_integration(self, **payload):
         self.specifications = [spec for spec in self.specifications if spec.slug != payload["slug"]]
         self.write_all_specifications()
-        self.build_adhoc()
 
     def update_integration(self, **payload):
         specification = self.get_specification(payload["slug"])
         self.specifications = [spec for spec in self.specifications if spec.slug != payload["slug"]]
         self.specifications.append(AdhocSpecification(**asdict(specification) | payload))
         self.write_all_specifications()
-        self.build_adhoc()
 
     def list_resources(self, integration_id, resource_type: Optional[str] = None):
         specification = self.get_specification(integration_id)
@@ -264,7 +273,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             resources = specification.get_resources_by_type(resource_type)
         else:
             resources = specification.resources.values()
-        return [asdict(resource) for resource in resources]
+        return {resource.resource_id: asdict(resource) for resource in resources}
 
     def get_resource(self, integration_id, resource_id):
         if resource := self.get_specification(integration_id).resources.get(resource_id):
@@ -285,7 +294,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             specification.resources[resource.resource_id] = resource
         self.write_all_specifications()
 
-    def remove_resource(self, integration_id, resource_id, **payload):
+    def remove_resource(self, integration_id, resource_id):
         specification = self.get_specification(integration_id)
         specification.resources.pop(resource_id)
         self.write_all_specifications()

@@ -6,6 +6,7 @@ import os.path
 import urllib.parse
 import requests
 import uuid
+import itertools
 from dataclasses import asdict
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable
@@ -284,22 +285,13 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             }
             for message_type, intercept_func, _ in self.intercepts
             if getattr(intercept_func, "_action", None) is not None
+            and getattr(intercept_func, "_scope", None) in ["external", "global"]
         }
         if self.agent:
             agent_details = self.agent.get_info()
         else:
             agent_details = None
 
-        integration_providers = {}
-        if self.integrations:
-            integration_providers = {
-                integration.slug: {
-                    "display_name": integration.display_name,
-                    "mutable": integration.mutable,
-                    "integrations": integration.list_integrations()
-                }
-                for integration in self.integrations
-            }
         payload = {
             "language": self.subkernel.DISPLAY_NAME,
             "subkernel": self.subkernel.KERNEL_NAME,
@@ -309,10 +301,84 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "agent": agent_details,
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
-            "integration_providers": integration_providers
         }
 
         return payload
+
+    async def list_providers(self):
+        if not self.integrations:
+            return {}
+        return {
+            provider.slug: {
+                "display_name": provider.display_name,
+                "mutable": provider.mutable,
+            }
+            for provider in self.integrations
+        }
+
+    async def list_integrations(self):
+        if not self.integrations:
+            return {}
+        # return as slug->integration mapping for faster search/lookup on receiver
+        return {
+            integration["slug"]: integration
+            for integration in itertools.chain(
+                *[provider.list_integrations() or [] for provider in self.integrations]
+            )
+        }
+
+    @action(scope="internal")
+    async def call_in_context(self, message):
+        content = message.content
+        args = content.get("args", [])
+        kwargs = content.get("kwargs", {})
+        target_text = content.get("target", "")
+        target_type, target_id = target_text.split(":", maxsplit=1) if ":" in target_text else (target_text, None)
+
+        logger.warning({
+            "target": f"{target_type}:{target_id}",
+            "args": args,
+            "function": content.get("function"),
+            "kwargs": kwargs
+        })
+
+        # context methods
+        if target_type == "context":
+            function = getattr(self, content.get("function"))
+            return await ensure_async(function(*args, **kwargs))
+        # calling directly on a provider itself
+        if target_type == "provider":
+            if target_id in self.integrations:
+                function = getattr(self.integrations[target_id], content.get("function"))
+                return await ensure_async(function(*args, **kwargs))
+            else:
+                msg = f"Provider not found in integrations. `{target_id}` not in {[i.slug for i in self.integrations]}"
+                raise ValueError(msg)
+        # mapping from an integration uuid to its parent provider, to call a method on that parent
+        if target_type == "integration":
+            all_integrations = list(itertools.chain(
+                *[provider.list_integrations() or [] for provider in self.integrations]
+            ))
+            try:
+                integration = next(
+                    integration for integration in all_integrations
+                    if integration.get("slug") == target_id
+                )
+            except StopIteration as e:
+                msg = f"Integration `{target_id}` not found in {[i.get('slug') for i in all_integrations]}"
+                raise KeyError from e
+            _provider_type, provider_slug = integration.get("provider", "").split(":", maxsplit=1)
+            try:
+                provider = next(
+                    provider for provider in self.integrations
+                    if provider.slug == provider_slug
+                )
+            except StopIteration as e:
+                msg = f"Provider not found: `{provider_slug}` in {[provider.slug for provider in self.integrations]}"
+                raise KeyError from e
+            function = getattr(provider, content.get("function"))
+            return await ensure_async(function(*args, **kwargs))
+        return {}
 
     async def get_subkernel_state(self):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
@@ -347,7 +413,6 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         )
         return state
     get_subkernel_state_action._default_payload = "{}"
-
 
     @action()
     async def get_agent_history(self, message):

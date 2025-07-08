@@ -18,11 +18,10 @@
         <div class="integration-container">
             <div class="beaker-notebook">
                 <IntegrationEditor
-                    :selected-on-load="selectedOnLoad"
-                    v-model="selectedIntegration"
-                    @on-save="unsavedChanges = false"
-                    @on-unsaved-change="unsavedChanges = true"
-                    :unsaved-changes="unsavedChanges"
+                    :selected-on-load="integrations.selected"
+                    v-model="integrations"
+                    @refresh="refresh"
+                    :session-id="sessionId"
                 />
             </div>
         </div>
@@ -49,7 +48,9 @@
                 <SideMenuPanel
                     id="integrations" label="Integrations" icon="pi pi-database"
                 >
-                    <IntegrationPanel></IntegrationPanel>
+                    <IntegrationPanel
+                        v-model="integrations.integrations"
+                    ></IntegrationPanel>
                 </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
@@ -92,11 +93,11 @@
                     icon="pi pi-list-check"
                     no-overflow
                 >
-                    <ExamplesPanel
-                        v-model="selectedIntegration"
-                        :disabled="!selectedIntegration"
-                        @on-unsaved-change="unsavedChanges = true"
-                    />
+                <ExamplesPanel
+                    v-model="integrations"
+                    :disabled="!integrations.selected"
+                    @refresh="refresh"
+                />
                 </SideMenuPanel>
                 <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
                     <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
@@ -128,8 +129,8 @@ import DebugPanel from '../components/panels/DebugPanel.vue'
 
 import IntegrationEditor from '../components/misc/IntegrationEditor.vue';
 import IntegrationPanel from '../components/panels/IntegrationPanel.vue';
+import { getResourcesForIntegration, listIntegrations, type IntegrationInterfaceState, type IntegrationResourceMap } from '@/util/integration';
 import ExamplesPanel from '../components/panels/ExamplesPanel.vue';
-import type { IntegrationProviders } from '@/util/integration';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -174,12 +175,8 @@ beakerApp.setPage("integrations");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
-const integrations = ref([]);
 
 const hasOpenedPanelOnce = ref(false);
-
-const selectedIntegration = ref();
-const unsavedChanges = ref<boolean>(false);
 
 type FilePreview = {
     url: string,
@@ -202,6 +199,23 @@ onMounted(() => {
 const beakerSession = computed<BeakerSessionComponentType>(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
+
+const integrations = ref<IntegrationInterfaceState>({
+    selected: selectedOnLoad,
+    integrations: {},
+    unsavedChanges: false,
+    selectedIntegrationResources: undefined
+})
+// handle all api calls in one place so child elements don't make unnecessary calls / fall out of sync
+const refresh = async () => {
+    integrations.value.integrations = await listIntegrations(sessionId);
+    if (integrations.value.selected !== undefined) {
+        // only get the resources view for a given selected integration, but keep it up to date
+        integrations.value.selectedIntegrationResources = await getResourcesForIntegration(sessionId, integrations.value.selected)
+    }
+}
+// on connection, send message with retries: see context.py:call_in_context()
+watch(beakerSession, async () => refresh());
 
 const headerNav = computed((): NavOption[] => {
     const nav = [];

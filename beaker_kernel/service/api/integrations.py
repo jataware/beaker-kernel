@@ -1,18 +1,21 @@
 import json
 import logging
 import os
+import typing
+import asyncio
 
 from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
-from jupyter_server.services.sessions.sessionmanager import SessionManager
 from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
+from jupyter_server.services.sessions.sessionmanager import SessionManager
 
-from beaker_kernel.lib.autodiscovery import autodiscover
+from beaker_kernel.lib.agent_tasks import summarize
 from beaker_kernel.lib.app import BeakerApp
+from beaker_kernel.lib.autodiscovery import autodiscover
+from beaker_kernel.lib.config import Choice, Config, Table, config, locate_config, recursiveOptionalUpdate, reset_config
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernel import BeakerSubkernel
-from beaker_kernel.lib.agent_tasks import summarize
-from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, recursiveOptionalUpdate, reset_config
+from beaker_kernel.lib.utils import ensure_async
 from beaker_kernel.service import admin_utils
 
 logger = logging.getLogger(__name__)
@@ -37,51 +40,51 @@ class ResourceHandler(ABC):
     KEY: str
 
     @abstractmethod
-    async def get(self, context_slug, integration_id, resource_id=None):
+    async def get(self, integration_id, resource_id=None):
         pass
 
     @abstractmethod
-    async def new(self, context_slug, integration_id, payload):
+    async def new(self, integration_id, payload):
         pass
 
     @abstractmethod
-    async def replace(self, context_slug, integration_id, resource_id, payload):
+    async def replace(self, integration_id, resource_id, payload):
         pass
 
     @abstractmethod
-    async def delete(self, context_slug, integration_id, resource_id):
+    async def delete(self, integration_id, resource_id):
         pass
 
 
 class FileResourceHandler(ResourceHandler):
     KEY="file"
 
-    async def get(self, context_slug, integration_id, resource_id=None):
+    async def get(self, integration_id, resource_id=None):
         pass
 
-    async def new(self, context_slug, integration_id, payload):
+    async def new(self, integration_id, payload):
         return await super().new(integration_id, payload)
 
-    async def replace(self, context_slug, integration_id, resource_id, payload):
+    async def replace(self, integration_id, resource_id, payload):
         return await super().replace(integration_id, resource_id, payload)
 
-    async def delete(self, context_slug, integration_id, resource_id):
+    async def delete(self, integration_id, resource_id):
         return await super().delete(integration_id, resource_id)
 
 
 class ExampleResourceHandler(ResourceHandler):
     KEY="example"
 
-    async def get(self, context_slug, integration_id, resource_id=None):
+    async def get(self,  integration_id, resource_id=None):
         pass
 
-    async def new(self, context_slug, integration_id, payload):
+    async def new(self, integration_id, payload):
         return await super().new(context_slug, integration_id, payload)
 
-    async def replace(self, context_slug, integration_id, resource_id, payload):
+    async def replace(self,  integration_id, resource_id, payload):
         return await super().replace(context_slug, integration_id, resource_id, payload)
 
-    async def delete(self, context_slug, integration_id, resource_id):
+    async def delete(self, integration_id, resource_id):
         return await super().delete(context_slug, integration_id, resource_id)
 
 
@@ -99,33 +102,58 @@ class BeakerAPIMixin:
     session_manager: SessionManager
     kernel_manager: AsyncMappingKernelManager
 
-    async def get_session_context_info(self, session_id: str):
-        try:
-            session = await self.session_manager.get_session(name=session_id)
-        except Exception as err:
-            return None
-        kernel = self.kernel_manager.get_kernel(session["kernel"]["id"])
+    async def call_in_context(
+        self,
+        session_id: str | None,
+        target: str,
+        function: str,
+        args: typing.Optional[list] = None,
+        kwargs: typing.Optional[dict] = None,
+    ):
+        if args is None:
+            args = []
+        if kwargs is None:
+            kwargs = {}
+
+        retries = 0
+        max_retries = 5
+        interval = 1
+        while True:
+            try:
+                session = await self.session_manager.get_session(name=session_id)
+                break
+            except Exception as err:
+                logger.warning(f"Failed to get session, retrying: {retries}/{max_retries} {err}")
+                await asyncio.sleep(interval)
+                retries += 1
+                if retries >= max_retries:
+                    logger.error(f"Failed after {max_retries} retries. Giving up")
+                    return None
+
+        if session is not None:
+            kernel = self.kernel_manager.get_kernel(session["kernel"]["id"])
         if not kernel:
             return None
 
-        if os.path.exists(kernel.connection_file):
-            with open(kernel.connection_file) as f:
-                session_info = json.load(f)
-        else:
-            return None
-        context_info = session_info["context"]
-        # context_cls = autodiscover("contexts").get(context_info["name"], None)
         client = kernel.client()
-        msg = client.session.send(
-            stream=client.shell_channel.socket,
-            msg_or_type="beaker_session_info_request",
-            content={},
-            track=True,
-            metadata=None,
-        )
-        result = await client.get_shell_msg(msg_id=msg["msg_id"])
-        return result.get("content", {}).get("result", None)
-
+        try:
+            content = {
+                "target": target,
+                "function": function,
+                "args": args,
+                "kwargs": kwargs
+            }
+            msg = client.session.send(
+                stream=client.shell_channel.socket,
+                msg_or_type="call_in_context_request",
+                content=content,
+                track=True,
+                metadata=None,
+            )
+            result = await client.get_shell_msg(timeout=5) # type: ignore
+        finally:
+            client.stop_channels()
+        return result["content"]["return"]
 
 # Integration Handler
 
@@ -133,39 +161,78 @@ class IntegrationHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
     """
     Handles fetching and adding integrations.
     """
+    def set_default_headers(self):
+        self.set_header("Content-Type", "application/json")
 
-    async def head(self):
-        pass
+    def stringify_serialization(self, obj):
+        return json.loads(json.dumps(obj, default=str))
+
+    async def head(self, session_id=None, integration_id=None):  # noqa: ARG002
+        integrations = await self.call_in_context(
+            session_id=session_id,
+            target="context",
+            function="list_integrations"
+        ) or {}
+        self.write({"integrations": list(integrations.keys())})
 
     async def get(self, session_id=None, integration_id=None):
-        session_info = await self.get_session_context_info(session_id=session_id)
-        context = session_info
-        self.log.warning(context)
+        integrations = await self.call_in_context(
+            session_id=session_id,
+            target="context",
+            function="list_integrations"
+        ) or {}
         if integration_id is None:
-            integration_list = context()
+            self.write({"integrations": self.stringify_serialization(integrations)})
         else:
-            # Return details of single integration
-            pass
+            self.write(self.stringify_serialization(integrations.get(
+                integration_id,
+                {"error": "Integration does not exist on context."}
+            )))
 
-    async def post(self, integration_id):
-        # Create new/replace integration
-        pass
+    async def post(self, session_id=None, integration_id=None):
+        provider_id = self.request.body # .pop("provider")
+        message = {
+            "target": f"provider:{provider_id}",
+            "function": "add_integration",
+            "args": [],
+            "kwargs": {} # request body but strip some stuff if needed
+        }
+        # result = call_in_context(message)
+        # if error result
 
 
-class IntegrationResourceHandler(ExtensionHandlerMixin, JupyterHandler):
+        # pass
+
+
+class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
     """
     Handles fetching and adding resources belonging to an integration.
     """
+    def set_default_headers(self):
+        self.set_header("Content-Type", "application/json")
 
-    async def head(self, session_id=None, context_slug=None, integration_id=None, resource_type=None, resource_id=None):
+    async def head(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
         pass
 
-    async def get(self, session_id=None, context_slug=None, integration_id=None, resource_type=None, resource_id=None):
-        resource_cls = ResourceMap.get(resource_type, None)
-        pass
+    async def get(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
+        # resource_cls = ResourceMap.get(resource_type, None)
+        function = "list_resources" if resource_id is None else "get_resource"
+        kwargs = {"integration_id": integration_id}
+        # route disambiguation -- resource_type all means passing "none" to message, since it's required in route
+        if resource_type is not None and resource_type != "all":
+            kwargs["resource_type"] = resource_type
+        if resource_id is not None:
+            kwargs["resource_id"] = resource_id
+        resources = await self.call_in_context(
+            session_id=session_id,
+            target=f"integration:{integration_id}",
+            function=function,
+            kwargs=kwargs
+        )
+        self.write({"resources": resources})
 
-    async def post(self, session_id=None, context_slug=None, integration_id=None, resource_type=None, resource_id=None):
-        resource_cls = ResourceMap.get(resource_type, None)
+    async def post(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
+        # resource_cls = ResourceMap.get(resource_type, None)
         pass
 
 

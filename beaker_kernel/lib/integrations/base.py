@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Callable, ClassVar
+from typing import Any, Callable, ClassVar, Optional
 
 
 class BaseIntegrationProvider(ABC):
     display_name: str
     slug: str
+    provider_type: ClassVar[str]
     mutable: ClassVar[bool] = False
 
     def __init__(self, display_name: str):

@@ -35,7 +35,7 @@
                     width: 100%;
                 "
             >
-                <i>{{ (selectedIntegration?.examples ?? []).length }} examples available:</i>
+                <i>{{ Object.keys(examples ?? {}).length }} examples available:</i>
             </div>
         </div>
 
@@ -45,19 +45,19 @@
         >
             <div
                 class="example-card"
-                v-for="(example, index) in (selectedIntegration?.examples ?? [])"
-                :key="index"
+                v-for="(example, id) in (examples ?? {})"
+                :key="id"
                 @mouseleave="hoveredExample = undefined"
-                @mouseenter="hoveredExample = index"
+                @mouseenter="hoveredExample = id"
             >
                 <Card
                     v-if="searchFilter(searchText, example?.query, example?.notes)"
-                    @click="editExample(index)"
+                    @click="editExample(id)"
                     :pt = "{
                         root: {
                             style:
                                 'transition: background-color 150ms linear;' +
-                                (hoveredExample === index
+                                (hoveredExample === id
                                     ? 'background-color: var(--surface-100); cursor: pointer;'
                                     : '')
                         }
@@ -72,7 +72,7 @@
                             </span>
                             <i
                                 class="pi pi-chevron-right example-arrow"
-                                :style="hoveredExample === index ? 'opacity: 1;' : 'opacity: 0;'"
+                                :style="hoveredExample === id ? 'opacity: 1;' : 'opacity: 0;'"
                             >
                             </i>
                         </div>
@@ -91,7 +91,6 @@
                         icon="pi pi-arrow-left"
                         @click="
                             panelState = {view: 'tableOfContents'}
-                            exampleChanges = undefined;
                         "
                         label="Cancel Editing"
                         style="width: fit-content;"
@@ -102,7 +101,7 @@
                         icon="pi pi-trash"
                         severity="danger"
                         label="Delete Example"
-                        @click="deleteExample(panelState.focusedExample)"
+                        @click="deleteExample(panelState.focusedExampleId)"
                     />
                 </div>
             </div>
@@ -114,8 +113,8 @@
                     <p>The query tells the specialist agent what task this example is for, e.g. "Fetch and display specific studies about a given topic.".</p>
                     <div>
                         <CodeEditor
-                            v-if="exampleChanges?.query !== undefined"
-                            v-model="exampleChanges.query"
+                            v-if="examples?.[panelState?.focusedExampleId]?.query !== undefined"
+                            v-model="examples[panelState.focusedExampleId].query"
                         />
                     </div>
                 </Fieldset>
@@ -123,8 +122,8 @@
                     <p>Providing a description helps the specialist agent know when and in what cases this examples is useful.</p>
                     <div>
                         <CodeEditor
-                            v-if="exampleChanges?.notes !== undefined"
-                            v-model="exampleChanges.notes"
+                            v-if="examples?.[panelState?.focusedExampleId]?.notes !== undefined"
+                            v-model="examples[panelState.focusedExampleId].notes"
                         />
                     </div>
                 </Fieldset>
@@ -132,8 +131,8 @@
                     <p>Code given for a specific example helps the specialist agent use a known-working approach to handle the user's request.</p>
                     <div>
                         <CodeEditor
-                            v-if="exampleChanges?.code !== undefined"
-                            v-model="exampleChanges.code"
+                            v-if="examples?.[panelState?.focusedExampleId]?.code !== undefined"
+                            v-model="examples[panelState.focusedExampleId].code"
                             language="python"
                         />
                     </div>
@@ -143,7 +142,7 @@
                 <div class="example-buttons-left">
                     <Button
                         icon="pi pi-check-circle"
-                        @click="saveExample(panelState.focusedExample)"
+                        @click="saveExample(panelState.focusedExampleId)"
                         label="Apply Changes"
                         style="width: fit-content;"
                         severity="success"
@@ -157,31 +156,35 @@
 
 <script setup lang="ts">
 
-import { ref, nextTick, defineEmits, defineModel, defineProps, computed } from 'vue';
+import { ref, defineEmits, defineModel, defineProps, computed } from 'vue';
 import Fieldset from 'primevue/fieldset';
 import Button from "primevue/button";
-import Divider from 'primevue/divider';
 import Card from 'primevue/card';
 import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputText from "primevue/inputtext";
 import CodeEditor from '../misc/CodeEditor.vue';
-import { type Example } from '../../util/integration'
+import { filterByResourceType, type IntegrationExample, type IntegrationInterfaceState } from '../../util/integration'
 
 type ExamplePanelState =
     | { view: "tableOfContents" }
-    | { view: "focused", focusedExample: number }
+    | { view: "focused", focusedExampleId: string }
 
-const emit = defineEmits(['onUnsavedChange'])
+const emit = defineEmits(['refresh'])
 const props = defineProps<{
     disabled?: boolean
 }>()
+const model = defineModel<IntegrationInterfaceState>();
 
 const panelState = ref<ExamplePanelState>({view: 'tableOfContents'})
-const selectedIntegration = defineModel<{examples?: Example[]}>()
-const exampleChanges = ref<Example>(undefined);
 const searchText = ref<string>();
-const hoveredExample = ref<number|undefined>(undefined)
+const hoveredExample = ref<string|undefined>(undefined)
+
+// read only slice
+const examples = computed<{[key in string]: IntegrationExample}>(() =>
+    filterByResourceType(model.value?.selectedIntegrationResources, "example"))
+
+const selectedExample = ref<IntegrationExample>()
 
 const searchFilter = (target?: string, name?: string, desc?: string) => {
     if (target === undefined) {
@@ -196,46 +199,46 @@ const searchFilter = (target?: string, name?: string, desc?: string) => {
         || descLower.includes(targetLower);
 }
 
-const newExample = () => {
-    let examples = selectedIntegration.value?.examples;
+const newExample = async () => {
+    // post
+    // let examples = selectedIntegration.value?.examples;
 
-    if (examples === undefined || examples === null) {
-        selectedIntegration.value.examples = [];
-        examples = selectedIntegration.value.examples;
-    }
+    // if (examples === undefined || examples === null) {
+    //     selectedIntegration.value.examples = [];
+    //     examples = selectedIntegration.value.examples;
+    // }
 
-    examples.unshift({
-        query: 'New Example',
-        notes: '',
-        code:  ''
-    })
-    exampleChanges.value = { ...examples[0] }
-    panelState.value = { view: 'focused', focusedExample: 0 }
+    // examples.unshift({
+    //     query: 'New Example',
+    //     notes: '',
+    //     code:  ''
+    // })
+    // exampleChanges.value = { ...examples[0] }
+    // panelState.value = { view: 'focused', focusedExample: 0 }
 }
 
-const editExample = (index) => {
+const editExample = (id) => {
     hoveredExample.value = undefined;
-    let examples = selectedIntegration.value?.examples;
-    exampleChanges.value = {
-        notes: '',
-        ...examples?.[index]
-    }
-    panelState.value = { view: 'focused', focusedExample: index }
+    panelState.value = {view: "focused", focusedExampleId: id}
 }
 
 const saveExample = (index) => {
-    let examples = selectedIntegration.value?.examples;
-    examples[index] = exampleChanges.value;
-    exampleChanges.value = undefined;
-    panelState.value = { view: 'tableOfContents' }
-    emit('onUnsavedChange')
+    // let examples = selectedIntegration.value?.examples;
+    // examples[index] = exampleChanges.value;
+    // exampleChanges.value = undefined;
+    // panelState.value = { view: 'tableOfContents' }
+    // emit('onUnsavedChange')
+
+    // post
 }
 
 const deleteExample = (index) => {
-    let examples = selectedIntegration.value?.examples;
-    examples.splice(index, 1);
-    panelState.value = { view: 'tableOfContents' }
-    emit('onUnsavedChange')
+    // post
+
+    // let examples = selectedIntegration.value?.examples;
+    // examples.splice(index, 1);
+    // panelState.value = { view: 'tableOfContents' }
+    // emit('onUnsavedChange')
 }
 
 </script>
