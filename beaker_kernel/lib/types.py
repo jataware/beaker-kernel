@@ -23,6 +23,7 @@ class FileResource(Resource):
     # optional - None could be an unsaved new file held in memory but not on disk
     filepath: typing.Optional[str] = field(default=None)
     # TODO: encoding?
+    content: typing.Optional[str] = field(default=None)
 
 @dataclass(kw_only=True)
 class ExampleResource(Resource):

@@ -80,9 +80,9 @@
                                 </span>
 
                                 <span v-if="expandedIntegration === integration.slug">
-                                    <a
-                                        :href="`/integrations?selected=${integration?.slug}${sessionIdParam}`"
-                                        v-tooltip="'Edit Integration'"
+                                    <RouterLink
+                                        :to="`/integrations?selected=${integration?.slug}${sessionIdParam}`"
+                                        aria-label="Edit {{ integration?.name }} "
                                     >
                                         <Button
                                             v-if="getIntegrationProviderType(integration) === 'adhoc'"
@@ -94,7 +94,7 @@
                                             icon="pi pi-pencil"
                                             label="Edit"
                                         />
-                                    </a>
+                                    </RouterLink>
                                 </span>
                             </div>
                         </template>
@@ -123,6 +123,7 @@ import Card from "primevue/card";
 import { marked } from "marked";
 import { type BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import { type IntegrationMap, type Integration, type IntegrationProviders, listIntegrations, getIntegrationProviderType } from "@/util/integration";
+import { RouterLink } from "vue-router";
 
 const searchText = ref(undefined);
 

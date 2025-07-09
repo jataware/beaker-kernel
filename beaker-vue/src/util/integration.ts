@@ -8,14 +8,14 @@ export interface IntegrationResource {
 }
 
 export interface IntegrationExample extends IntegrationResource {
-    type: "example";
+    resource_type: "example";
     query: string
     code: string
     notes?: string
 }
 
 export interface IntegrationAttachedFile extends IntegrationResource {
-    type: "file";
+    resource_type: "file";
     filepath: string
     name: string
     content?: string
@@ -49,7 +49,6 @@ export interface IntegrationInterfaceState {
     selected: string | undefined
     integrations: IntegrationMap
     unsavedChanges: boolean
-    selectedIntegrationResources: IntegrationResourceMap
 }
 
 export interface IntegrationAPIRouteDetails {
@@ -64,8 +63,13 @@ const toRoute = (details: IntegrationAPIRouteDetails) =>
     .filter((x) => x)
     .join('/')
 
+interface IntegrationPostReturn {
+    status: string,
+    results: object | string
+}
+
 async function integrationApiWrapper<T>(
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "DELETE",
     route: IntegrationAPIRouteDetails,
     body?: object
 ): Promise<T> {
@@ -82,6 +86,7 @@ async function integrationApiWrapper<T>(
       throw new Error(response.statusText);
     }
     const json = await response.json() as T;
+    console.log(json)
     return json
 }
 
@@ -104,6 +109,15 @@ export const getResourcesForIntegration = async (sessionId: string, integrationI
         resourceType: "all"
     }
     return (await integrationApiWrapper<{"resources": IntegrationResourceMap}>("GET", routeDetails)).resources;
+}
+
+export const postResource = async (args: {sessionId: string, integrationId: string, resourceId?: string, body: object}) => {
+    const {sessionId, integrationId, body, resourceId} = args;
+    return await integrationApiWrapper<IntegrationPostReturn>("POST", {sessionId, integrationId, resourceType: "new", resourceId}, body)
+}
+
+export const deleteResource = async (sessionId: string, integrationId: string, resourceId: string) => {
+    return await integrationApiWrapper<IntegrationPostReturn>("DELETE", {sessionId, integrationId, resourceType: "none", resourceId})
 }
 
 export function filterByResourceType<T>(resources: IntegrationResourceMap | undefined, resource_type: string): {[key in string]: T} {

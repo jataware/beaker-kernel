@@ -346,14 +346,22 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         if target_type == "context":
             function = getattr(self, content.get("function"))
             return await ensure_async(function(*args, **kwargs))
-        # calling directly on a provider itself
+        # calling directly on a provider itself -- `provider:adhoc:my_adhoc_provider`
         if target_type == "provider":
-            if target_id in self.integrations:
-                function = getattr(self.integrations[target_id], content.get("function"))
-                return await ensure_async(function(*args, **kwargs))
-            else:
-                msg = f"Provider not found in integrations. `{target_id}` not in {[i.slug for i in self.integrations]}"
+            if target_id is None:
+                msg = "Provider targets must specify desired provider: e.g. `provider:my_provider`"
                 raise ValueError(msg)
+            _provider_type, provider_slug = target_id.split(":", maxsplit=1)
+            try:
+                provider = next(
+                    provider for provider in self.integrations
+                    if provider.slug == provider_slug
+                )
+                function = getattr(provider, content.get("function"))
+                return await ensure_async(function(*args, **kwargs))
+            except StopIteration as e:
+                msg = f"Provider not found in integrations. `{provider_slug}` not in {[p.slug for p in self.integrations]}"
+                raise ValueError(msg) from e
         # mapping from an integration uuid to its parent provider, to call a method on that parent
         if target_type == "integration":
             all_integrations = list(itertools.chain(
@@ -364,18 +372,20 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
                     integration for integration in all_integrations
                     if integration.get("slug") == target_id
                 )
-            except StopIteration as e:
+            except StopIteration:
                 msg = f"Integration `{target_id}` not found in {[i.get('slug') for i in all_integrations]}"
-                raise KeyError from e
+                logger.info(msg)
+                return {}
             _provider_type, provider_slug = integration.get("provider", "").split(":", maxsplit=1)
             try:
                 provider = next(
                     provider for provider in self.integrations
                     if provider.slug == provider_slug
                 )
-            except StopIteration as e:
+            except StopIteration:
                 msg = f"Provider not found: `{provider_slug}` in {[provider.slug for provider in self.integrations]}"
-                raise KeyError from e
+                logger.info(msg)
+                return {}
             function = getattr(provider, content.get("function"))
             return await ensure_async(function(*args, **kwargs))
         return {}

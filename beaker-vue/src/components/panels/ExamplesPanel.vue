@@ -182,9 +182,7 @@ const hoveredExample = ref<string|undefined>(undefined)
 
 // read only slice
 const examples = computed<{[key in string]: IntegrationExample}>(() =>
-    filterByResourceType(model.value?.selectedIntegrationResources, "example"))
-
-const selectedExample = ref<IntegrationExample>()
+    filterByResourceType(model.value.integrations[model.value.selected]?.resources, "example"))
 
 const searchFilter = (target?: string, name?: string, desc?: string) => {
     if (target === undefined) {
@@ -200,6 +198,13 @@ const searchFilter = (target?: string, name?: string, desc?: string) => {
 }
 
 const newExample = async () => {
+    let resources = model.value.integrations[model.value.selected]?.resources;
+    if (resources === undefined || resources === null) {
+        model.value.integrations[model.value.selected].resources = {};
+        resources = model.value.integrations[model.value.selected].resources;
+    }
+
+    //resources[]
     // post
     // let examples = selectedIntegration.value?.examples;
 

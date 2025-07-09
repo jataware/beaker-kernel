@@ -204,14 +204,13 @@ const integrations = ref<IntegrationInterfaceState>({
     selected: selectedOnLoad,
     integrations: {},
     unsavedChanges: false,
-    selectedIntegrationResources: undefined
 })
 // handle all api calls in one place so child elements don't make unnecessary calls / fall out of sync
 const refresh = async () => {
     integrations.value.integrations = await listIntegrations(sessionId);
     if (integrations.value.selected !== undefined) {
         // only get the resources view for a given selected integration, but keep it up to date
-        integrations.value.selectedIntegrationResources = await getResourcesForIntegration(sessionId, integrations.value.selected)
+        integrations.value.integrations[integrations.value.selected].resources = await getResourcesForIntegration(sessionId, integrations.value.selected)
     }
 }
 // on connection, send message with retries: see context.py:call_in_context()

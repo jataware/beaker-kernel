@@ -18,6 +18,8 @@ from beaker_kernel.lib.subkernel import BeakerSubkernel
 from beaker_kernel.lib.utils import ensure_async
 from beaker_kernel.service import admin_utils
 
+import tornado
+
 logger = logging.getLogger(__name__)
 
 from abc import ABC, abstractmethod
@@ -102,6 +104,9 @@ class BeakerAPIMixin:
     session_manager: SessionManager
     kernel_manager: AsyncMappingKernelManager
 
+    def stringify_serialization(self, obj):
+        return json.loads(json.dumps(obj, default=str))
+
     async def call_in_context(
         self,
         session_id: str | None,
@@ -117,7 +122,7 @@ class BeakerAPIMixin:
 
         retries = 0
         max_retries = 5
-        interval = 1
+        interval = 3
         while True:
             try:
                 session = await self.session_manager.get_session(name=session_id)
@@ -164,9 +169,6 @@ class IntegrationHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
     def set_default_headers(self):
         self.set_header("Content-Type", "application/json")
 
-    def stringify_serialization(self, obj):
-        return json.loads(json.dumps(obj, default=str))
-
     async def head(self, session_id=None, integration_id=None):  # noqa: ARG002
         integrations = await self.call_in_context(
             session_id=session_id,
@@ -190,18 +192,20 @@ class IntegrationHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
             )))
 
     async def post(self, session_id=None, integration_id=None):
-        provider_id = self.request.body # .pop("provider")
-        message = {
-            "target": f"provider:{provider_id}",
-            "function": "add_integration",
-            "args": [],
-            "kwargs": {} # request body but strip some stuff if needed
-        }
-        # result = call_in_context(message)
-        # if error result
-
-
-        # pass
+        body = tornado.escape.json_decode(self.request.body)
+        provider_id = body.pop("provider")
+        if integration_id is not None:
+            body["integration_id"] = integration_id
+        try:
+            result = await self.call_in_context(
+                session_id=session_id,
+                target=f"provider:{provider_id}",
+                function="update_integration",
+                kwargs=body
+            )
+            self.write({"status": "success", "result": result})
+        except Exception as e:
+            self.write({"status": "failure", "result": str(e)})
 
 
 class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
@@ -229,14 +233,40 @@ class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterH
             function=function,
             kwargs=kwargs
         )
-        self.write({"resources": resources})
+        self.write({"resources": self.stringify_serialization(resources)})
 
     async def post(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
-        # resource_cls = ResourceMap.get(resource_type, None)
-        pass
+        function = "add_resource"
+        kwargs = {"integration_id": integration_id}
+        if resource_id is not None:
+            function = "update_resource"
+            kwargs["resource_id"] = resource_id
+        kwargs |= tornado.escape.json_decode(self.request.body)
+        try:
+            result = await self.call_in_context(
+                session_id=session_id,
+                target=f"integration:{integration_id}",
+                function=function,
+                kwargs=kwargs
+            )
+            self.write({"status": "success", "details": result})
+        except Exception as e:
+            self.write({"status": "failure", "details": str(e)})
 
+
+    async def delete(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
+        try:
+            await self.call_in_context(
+                session_id=session_id,
+                target=f"integration:{integration_id}",
+                function="remove_resource",
+                kwargs={"resource_id": resource_id, "integration_id": integration_id}
+            )
+            self.write({"status": "success", "details": ""})
+        except Exception as e:
+            self.write({"status": "failure", "details": str(e)})
 
 handlers = [
     (r'integrations/(?P<session_id>[\w\d-]+)/?(?P<integration_id>[\w\d-]+)?', IntegrationHandler),
-    (r'integrations/(?P<session_id>[\w\d-]+)/(?P<integration_id>[\w\d-]+)/(?P<resource_type>\w+)/?(?P<resource_id>\w+)?', IntegrationResourceHandler),
+    (r'integrations/(?P<session_id>[\w\d-]+)/(?P<integration_id>[\w\d-]+)/(?P<resource_type>\w+)/?(?P<resource_id>[\w\d-]+)?', IntegrationResourceHandler),
 ]

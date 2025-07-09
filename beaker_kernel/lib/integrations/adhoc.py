@@ -1,10 +1,12 @@
+import json
 import logging
 import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from string import Template
-from typing import ClassVar, Optional, Self
+from typing import ClassVar, Optional, Self, cast
 from uuid import UUID, uuid4
+import uuid
 
 import yaml
 from adhoc_api.curation import Example
@@ -55,16 +57,25 @@ class AdhocSpecification:
         slug = source.get("slug", str(uuid4()))
 
         # convert yaml dict resources to dataclass objects, parsing them
-        resources = {}
+        resources: dict[UUID, Resource] = {}
         for resource_id, resource_value in source.get("resources", {}).items():
             if (resource_type := resource_value.get("resource_type")) == "file" or resource_value.get("filepath") is not None:
                 resource = FileResource(**(resource_value | {"integration": slug}))
+                if resource.filepath is None:
+                    logger.warning("Resource filepath is None - ensure that it has a filepath. Using a default based on name")
+                    resource.filepath = resource.name.lower().replace(" ", "_")
+                # load file contents into integration so that we can write them when changes get populated
+                # by frontend.
+                resource.content = (Path(location) / "attachments" / resource.filepath).read_text()
             elif resource_type == "example" or resource_value.get("code") is not None:
                 resource = ExampleResource(**(resource_value | {"integration": slug}))
             else:
-                msg = "Resources must be file or example for adhoc"
+                msg = "Resources must be either of type file or example for adhoc."
                 raise ValueError(msg)
-            resources[UUID(resource_id)] = resource
+            # resource_id will USUALLY be str -- but the cast is important here for
+            # calling from_dict on asdict(dataclass) -- resources will be coerced to dicts
+            # but UUIDs will not be converted to strings
+            resources[UUID(str(resource_id))] = resource
 
         integration_type = source.get("integration_type", "api")
         integration = cls(
@@ -144,7 +155,13 @@ class AdhocSpecification:
 
     def to_yaml(self) -> str:
         integration = asdict(self)
+        # don't save relative path into file - this is computed at load time
         integration.pop("location")
+        # we write files separately outside to disk instead of inline in yaml
+        # pop the loaded field that's populated at load time
+        for resource in integration.get("resources", {}).values():
+            if resource.get("resource_type") == "file":
+                resource.pop("content")
         return yaml.safe_dump(integration)
 
 
@@ -156,6 +173,12 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
     def write_all_specifications(self):
         for spec in self.specifications:
             (Path(spec.location) / "api.yaml").write_text(spec.to_yaml())
+            # write file contents to their respective filepaths
+            for resource in spec.resources.values():
+                if resource.resource_type == "file":
+                    resource = cast(FileResource, resource)
+                    resource_path = Path(spec.location) / "attachments" / (resource.filepath or resource.name)
+                    resource_path.write_text(resource.content or "")
 
     def build_adhoc(self):
         datafile_root = Path(self.adhoc_path) / "data"
@@ -250,37 +273,72 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         )
 
     def add_integration(self, **payload):
+        logger.warning("add integration")
+        payload["prompt"] = payload.get("source", "")
         self.specifications.append(AdhocSpecification(
             **payload,
-            location=self.adhoc_path / payload["slug"],
+            location=self.adhoc_path / payload["name"].name.lower().replace(" ", "_"),
             resources={}
         ))
         self.write_all_specifications()
 
     def remove_integration(self, **payload):
+        logger.warning("remove integration")
         self.specifications = [spec for spec in self.specifications if spec.slug != payload["slug"]]
         self.write_all_specifications()
 
     def update_integration(self, **payload):
-        specification = self.get_specification(payload["slug"])
+        logger.warning("update integration")
+        try:
+            specification = self.get_specification(payload["slug"])
+        except StopIteration:
+            return self.add_integration(**payload)
         self.specifications = [spec for spec in self.specifications if spec.slug != payload["slug"]]
-        self.specifications.append(AdhocSpecification(**asdict(specification) | payload))
+        # we handle resources separately through other routes, so ignore it here.
+        # resources come in as untyped dicts from JS
+        payload.pop("resources")
+        payload["prompt"] = payload.get("source", specification.prompt)
+
+        updated_spec_dict = (
+            asdict(specification)
+            | {k: v for k, v in payload.items() if k in asdict(specification)}
+        )
+
+        # calling asdict will also call asdict on nested dataclasses like resources
+        # so we need to rebuild as if a fresh parse
+        updated_spec = AdhocSpecification.from_dict(
+            location=specification.location,
+            source=updated_spec_dict
+        )
+
+        self.specifications.append(updated_spec)
         self.write_all_specifications()
 
     def list_resources(self, integration_id, resource_type: Optional[str] = None):
+        logger.warning("list resource")
         specification = self.get_specification(integration_id)
         if resource_type is not None:
             resources = specification.get_resources_by_type(resource_type)
         else:
             resources = specification.resources.values()
-        return {resource.resource_id: asdict(resource) for resource in resources}
+
+        # stringify all fields from uuids
+        jsonified_resources = {}
+        for resource in resources:
+            resource_id = str(resource.resource_id)
+            jsonified_resources[resource_id] = asdict(resource)
+            jsonified_resources[resource_id]["integration"] = str(resource.integration)
+            jsonified_resources[resource_id]["resource_id"] = str(resource.resource_id)
+        return jsonified_resources
 
     def get_resource(self, integration_id, resource_id):
+        logger.warning("get resource")
         if resource := self.get_specification(integration_id).resources.get(resource_id):
             return asdict(resource)
         return None
 
     def add_resource(self, integration_id, **payload):
+        logger.warning("add resource")
         specification = self.get_specification(integration_id)
         resource_type = payload["resource_type"]
         if resource_type == "file":
@@ -295,21 +353,33 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         self.write_all_specifications()
 
     def remove_resource(self, integration_id, resource_id):
+        logger.warning("remove resource")
         specification = self.get_specification(integration_id)
-        specification.resources.pop(resource_id)
+        resource_uuid = UUID(resource_id)
+        if resource_uuid in specification.resources:
+            specification.resources.pop(resource_uuid)
         self.write_all_specifications()
 
     def update_resource(self, integration_id, resource_id, **payload):
+        logger.warning("update resource")
         # should this only allow updating an id to a different resource type?
         specification = self.get_specification(integration_id)
+        if UUID(resource_id) not in specification.resources:
+            return self.add_resource(integration_id, **payload)
         resource = specification.resources.pop(resource_id)
+        updated_resource_dict = (
+            asdict(resource)
+            | {k: v for k, v in payload.items() if k in asdict(resource)}
+            | {"integration": integration_id}
+        )
         if resource.resource_type == "file":
-            resource = FileResource(**(asdict(resource) | payload | {"integration": integration_id}))
+            resource = FileResource(**updated_resource_dict)
         elif resource.resource_type == "example":
-            resource = ExampleResource(**(asdict(resource) | payload | {"integration": integration_id}))
+            resource = ExampleResource(**updated_resource_dict)
         else:
             msg = "Only examples and files are valid on an adhoc integration."
             raise ValueError(msg)
+        specification.resources[resource.resource_id] = resource # type: ignore
 
     @tool
     async def draft_integration_code(self, integration: str, goal: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:

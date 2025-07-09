@@ -123,7 +123,7 @@
                             icon="pi pi-download"
                             v-tooltip="'Download'"
                             style="width: 32px; height: 32px"
-                            @click="download(file?.filepath)"
+                            @click="downloadFile(id)"
                         />
                         <Button
                             icon="pi pi-upload"
@@ -133,19 +133,14 @@
                         />
                     </template>
                     <template #center>
-                        <InputText v-model="file.name" type="text">
-
-                        </InputText>
-                        <Button icon="pi pi-file" outlined v-tooltip="file?.filepath">
-
-                        </Button>
+                        <InputText v-model="file.name" type="text"></InputText>
                     </template>
                     <template #end>
                         <Button
                             icon="pi pi-trash"
                             severity="danger"
                             style="width: 32px; height: 32px"
-                            @click=""
+                            @click="removeFile(id)"
                             v-tooltip="'Remove File'"
                         />
                     </template>
@@ -158,6 +153,21 @@
                     :disabled="!selectedIntegration"
                 />
             </Fieldset>
+
+            <div
+                style="display: flex;
+                flex-direction: column;
+                gap: 0.5rem"
+                v-if="unincludedFiles.length > 0"
+            >
+                <Tag
+                    icon="pi pi-exclamation-triangle"
+                    severity="warning"
+                    size="large"
+                >
+                    Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
+                </Tag>
+            </div>
 
             <Fieldset legend="Agent Instructions">
                 <p>
@@ -188,21 +198,7 @@
                         placeholder="No integration selected."
                     />
                 </div>
-
             </Fieldset>
-
-            <Divider v-if="unincludedFiles.length > 0"></Divider>
-
-            <div style="display: flex; flex-direction: column; gap: 0.5rem">
-                <Tag
-                    icon="pi pi-exclamation-triangle"
-                    severity="warning"
-                    size="large"
-                    v-if="unincludedFiles.length > 0"
-                >
-                    Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
-                </Tag>
-            </div>
         </div>
         <div style="flex: 1 0; margin: 0.2rem; display: flex; justify-content: flex-end;">
             <div v-if="model.unsavedChanges" style="flex-shrink: 0;">
@@ -222,7 +218,7 @@
 <script setup lang="ts">
 
 import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
-import { type IntegrationMap, type Integration, listIntegrations, getIntegrationProviderType, type IntegrationAttachedFile, type IntegrationResourceMap, type IntegrationInterfaceState, filterByResourceType } from '../../util/integration';
+import { type IntegrationMap, type Integration, getIntegrationProviderType, type IntegrationAttachedFile, type IntegrationResourceMap, type IntegrationInterfaceState, filterByResourceType, postIntegration, postResource, deleteResource } from '../../util/integration';
 import { BeakerSession } from 'beaker-kernel';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
@@ -243,6 +239,8 @@ import SplitButton from 'primevue/splitbutton';
 
 import { v4 as uuidv4 } from "uuid";
 
+import { useRoute } from 'vue-router';
+
 const showToast = inject<any>('show_toast');
 
 const props = defineProps<{
@@ -250,7 +248,6 @@ const props = defineProps<{
     sessionId: string,
 }>();
 
-const session = inject<BeakerSession>('session');
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const model = defineModel<IntegrationInterfaceState>()
@@ -271,11 +268,28 @@ const sortedIntegrations = computed<Integration[]>(() => sortIntegrations(adhocI
 const selectedIntegration = computed<Integration>(() => adhocIntegrations.value[model.value.selected])
 
 const attachedFiles = computed<{[key in string]: IntegrationAttachedFile}>(() =>
-    filterByResourceType<IntegrationAttachedFile>(model.value.selectedIntegrationResources, "file"))
+    filterByResourceType<IntegrationAttachedFile>(
+        model.value.integrations[model.value.selected]?.resources, "file")
+    )
+
+const uncommittedDeletedResources = ref([]);
 
 watch(() => model.value.selected, () => {
-    emit("refresh");
+    // always pull from backend when changing selected -- except for a brand new integration that won't have been committed yet
+    if (model?.value?.integrations[model?.value?.selected]?.name === "New Integration") {
+        return;
+    }
+    else {
+        uncommittedDeletedResources.value = [];
+        emit("refresh");
+    }
 })
+
+const route = useRoute();
+// in the case of non-remounting, where ?selected= is changed via other means, go with that
+watch(() => route, (newRoute) => {
+    model.value.selected = newRoute.query?.selected as string|undefined ?? model.value.selected;
+}, {immediate: true, deep: true})
 
 watch(model, ({integrations, unsavedChanges}) => {
     if (unsavedChanges) {
@@ -327,7 +341,10 @@ const uploadFormMultiple = ref<HTMLFormElement|undefined>(undefined);
 const unincludedFiles = computed<[string, IntegrationAttachedFile][]>(() => {
     let unincluded = [];
     for (const file of Object.values(attachedFiles.value)) {
-        if (RegExp("\\${" + file?.name + "}").test(selectedIntegration?.value?.source)) {
+        // [$] is an alternative to backslash escaping
+        // we want to match python's ${interpolation_key} -- where file.name is the interpolation key
+        const pattern = RegExp(`[$]{${file?.name}}`);
+        if (!pattern.test(selectedIntegration?.value?.source)) {
             unincluded.push(file.name);
         }
     }
@@ -339,6 +356,13 @@ const confirmUnsavedChanges = () => {
         return confirm("You currently have unsaved changes that would be lost with this change. Are you sure?")
     }
     return true;
+}
+
+const removeFile = async (id) => {
+    model.value.unsavedChanges = true;
+    delete selectedIntegration.value.resources[id];
+    // if exists remote -- if it's only a local unsaved change, the request here is a no-op
+    uncommittedDeletedResources.value.push(id);
 }
 
 const fileTarget = ref();
@@ -353,7 +377,6 @@ const openFileSelectionMultiple = () => {
     fileInputMultiple.value?.click();
 }
 
-const contentManager = new ContentsManager({});
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
 
@@ -370,33 +393,35 @@ const newIntegration = () => {
     model.value.integrations[uuid] = integration;
     model.value.selected = uuid;
     model.value.unsavedChanges = true;
-    model.value.selectedIntegrationResources = {};
 }
 
 const save = async () => {
-    emit("refresh");
     if (selectedIntegration?.value === undefined) {
         return;
     }
+
+    for (const [file_id, file] of Object.entries(attachedFiles.value)) {
+        console.log(await postResource({
+            sessionId: props.sessionId,
+            integrationId: model.value.selected,
+            resourceId: file_id,
+            body: file
+        }))
+    }
+    for (const id of uncommittedDeletedResources.value) {
+        await deleteResource(props.sessionId, model.value.selected, id);
+    }
+    await postIntegration(props.sessionId, model.value.selected, selectedIntegration.value);
+
     showToast({
         title: 'Saved!',
         detail: `The session will now reconnect and load the new definition.`,
         severity: 'success',
         life: 4000
     });
-}
+    emit("refresh");
 
-const getIntegrationRoot = async (integration) => {
-    const future = session.executeAction('get_integration_root', {
-        integration
-    })
-    return (await future.done).content?.return;
-}
-
-const download = async (name) => {
-    const folderRoot = await getIntegrationRoot(selectedIntegration.value);
-    const path = `${folderRoot}/documentation/${name}`;
-    await downloadFile(path);
+    model.value.unsavedChanges = false;
 }
 
 const onSelectFileForUpload = async () => {
@@ -407,30 +432,11 @@ const onSelectFileForUpload = async () => {
 const onSelectFilesForUpload = async () => {
     const fileList = uploadFormMultiple.value['uploadfilesMultiple']?.files;
     await uploadFile(fileList);
-    // for (const file of fileList) {
-    //     selectedIntegration?.value.attached_files.push({
-    //         name: file.name.split('.').slice(0, -1).join(''),
-    //         filepath: file.name
-    //     })
-    // }
-    // TODO: hit resource route
-
 }
 
 const uploadFile = async (files: FileList) => {
-    // await session.executeAction('create_integration_folders_for_upload', {
-    //     integration: selectedIntegration.value
-    // }).done;
-
-    const folderRoot = await getIntegrationRoot(selectedIntegration.value);
     model.value.unsavedChanges = true;
-
     const promises = Array.from(files).map(async (file) => {
-        let path = `${folderRoot}/documentation/${file.name}`;
-        if (fileTarget?.value !== undefined) {
-            path = `${folderRoot}/documentation/${fileTarget.value}`;
-        }
-
         const bytes = [];
         const reader = file.stream().getReader();
         var chunk = (await reader.read()).value;
@@ -438,63 +444,32 @@ const uploadFile = async (files: FileList) => {
             bytes.push(Array.from(chunk, (byte) => String.fromCharCode(byte)).join(""));
             chunk = (await reader.read()).value;
         }
-        const type = (file.type !== "" ? file.type : "application/octet-stream");
-        const content = btoa(bytes.join(""));
-        const format = 'base64';
-
-        const fileObj: Partial<Contents.IModel> = {
-            type,
-            format,
-            content,
-        };
-
-        let result;
-        try {
-            result = await contentManager.save(path, fileObj);
+        const uuid = uuidv4();
+        const fileResource: IntegrationAttachedFile = {
+            resource_type: "file",
+            resource_id: uuid,
+            integration: model.value.selected,
+            content: String(bytes),
+            filepath: file.name,
+            name: file.name.split('.')[0]
         }
-        catch(e) {
-            showToast({
-                title: 'Upload failed',
-                detail: `Unable to upload file "${path}": ${e}`,
-                severity: 'error',
-                life: 8000
-            });
-            return;
-        }
-
-        if (result && result.created && result.size) {
-            showToast({
-                title: 'Upload complete',
-                detail: `File "${result.path}" (${result.size} bytes) successfully uploaded.`,
-                severity: 'success',
-                life: 4000
-            });
-        }
-        else {
-            showToast({
-                title: 'Upload failed',
-                detail: `Unable to upload file "${path}".`,
-                severity: 'error',
-                life: 8000
-            });
-        }
+        selectedIntegration.value.resources[uuid] = fileResource;
     });
 
     await Promise.all(promises);
 }
 
-const downloadFile = async (path) => {
-    let url = await contentManager.getDownloadUrl(path);
-    // Ensure we are downloading. Add the download query param
-    if (!/download=/.test(url)) {
-        if (/\?/.test(url)) {
-            url = url + "&download=1"
-        }
-        else {
-            url = url + "?download=1"
-        }
-    }
-    window.location.href = url;
+const downloadFile = async (id) => {
+    const file: IntegrationAttachedFile = selectedIntegration.value.resources[id] as IntegrationAttachedFile
+    const blob = new Blob([file?.content], {type: "text/plain"})
+    const url = window.URL.createObjectURL(blob);
+    const temporaryElement  = document.createElement("a");
+    temporaryElement.href = url;
+    temporaryElement.download = file.filepath;
+    temporaryElement.click();
+
+    window.URL.revokeObjectURL(url)
+    temporaryElement.remove()
 };
 
 </script>
