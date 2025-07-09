@@ -48,6 +48,8 @@ class BeakerKernel(KernelProxyManager):
         "file_extension": ".txt",
     }
 
+    session_config: dict[str, str]
+    beaker_session: str
     jupyter_server: Optional[str]
     kernel_id: Optional[str]
     connection_file: Optional[str]
@@ -61,6 +63,8 @@ class BeakerKernel(KernelProxyManager):
     running_actions: dict[str, Awaitable]
 
     def __init__(self, session_config, kernel_id=None, connection_file=None):
+        self.session_config = session_config
+        self.beaker_session = session_config.get("beaker_session", None)
         self.jupyter_server = session_config.get("server", config.jupyter_server)
         self.kernel_id = kernel_id
         self.connection_file = connection_file
@@ -71,7 +75,7 @@ class BeakerKernel(KernelProxyManager):
         self.subkernel_execution_tracking = {}
         self.running_actions = {}
         context_args = session_config.get("context", {})
-        super().__init__(session_config, session_id=f"{kernel_id}_session")
+        super().__init__(session_config, session_id=(self.beaker_session or self.kernel_id))
         self.register_magic_commands()
         self.add_base_intercepts()
         self.context = None

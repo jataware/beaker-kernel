@@ -1,6 +1,6 @@
 import os
 
-from beaker_kernel.service.base import BaseBeakerServerApp, logger
+from beaker_kernel.service.base import BaseBeakerServerApp, logger, BeakerKernelMappingManager, BeakerKernelManager
 
 
 def _jupyter_server_extension_points():
