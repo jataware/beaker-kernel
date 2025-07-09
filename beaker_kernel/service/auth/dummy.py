@@ -18,7 +18,7 @@ class DummyIdentityProvider(BeakerIdentityProvider):
             display_name="Matthew Printz",
             roles=["admin"],
         )
-        logging.warning(f"User: {user}")
+        logging.debug(f"User: {user}")
         current_user.set(user)
         return user
 

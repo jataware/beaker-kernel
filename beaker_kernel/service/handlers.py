@@ -27,6 +27,7 @@ from beaker_kernel.lib.subkernel import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
 from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, recursiveOptionalUpdate, reset_config
 from beaker_kernel.service import admin_utils
+from beaker_kernel.service.auth import BeakerUser
 from .api.handlers import register_api_handlers
 
 logger = logging.getLogger(__name__)
@@ -60,11 +61,13 @@ def request_log_handler(handler: JupyterHandler):
     method = handler.request.method.upper()
     if method in SKIPPED_METHODS:
         return
+    user: BeakerUser = handler.current_user
     logger.info(
-        "%d %s %.2fms",
+        "%d %s %.2fms %s",
         handler.get_status(),
         handler._request_summary(),
         request_time,
+        f": {user.username}" if user else "",
     )
 
 
