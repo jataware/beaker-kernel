@@ -283,6 +283,9 @@ const route = useRoute();
 // in the case of non-remounting, where ?selected= is changed via other means, go with that
 watch(() => route, (newRoute) => {
     model.value.selected = newRoute.query?.selected as string|undefined ?? model.value.selected;
+    if (model.value.selected === "new") {
+        newIntegration();
+    }
 }, {immediate: true, deep: true})
 
 watch(model, ({integrations, unsavedChanges}) => {
@@ -300,11 +303,9 @@ watch(model, ({integrations, unsavedChanges}) => {
     }
     if (props?.selectedOnLoad) {
         nextTick(() => {
-            if (props?.selectedOnLoad === 'new') {
+            model.value.selected = props.selectedOnLoad;
+            if (model.value.selected === "new") {
                 newIntegration();
-            }
-            else {
-                model.value.selected = props.selectedOnLoad;
             }
         })
     }
@@ -416,6 +417,11 @@ const save = async () => {
     emit("refresh");
 
     model.value.unsavedChanges = false;
+
+    // if ?selected=new, assign it to the new uuid for clarity
+    const url = new URL(window.location.href);
+    url.searchParams.set('selected', model.value.selected);
+    window.history.pushState(null, '', url.toString());
 }
 
 const onSelectFileForUpload = async () => {

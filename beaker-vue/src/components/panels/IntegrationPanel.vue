@@ -24,14 +24,16 @@
                     gap: 0.5rem;
                     width: 100%;
             ">
-                <a :href="`/integrations?selected=new${sessionIdParam}`">
+                <RouterLink
+                    :to="`/integrations?selected=new${sessionIdParam}`"
+                    aria-label="Edit {{ integration?.name }} "
+                >
                     <Button
                         style="height: 32px"
                         icon="pi pi-plus"
                         label="Add New Integration"
                     />
-
-                </a>
+                </RouterLink>
             </div>
             <div
                 style="
