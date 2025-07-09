@@ -4,22 +4,74 @@ import os
 import shutil
 import signal
 import urllib.parse
+from typing import Optional
 
 from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
+from jupyter_server.services.contents.filemanager import AsyncFileContentsManager
+from jupyter_server.services.contents.largefilemanager import AsyncLargeFileManager
 from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
 from jupyter_server.services.sessions.sessionmanager import SessionManager
 from jupyter_server.serverapp import ServerApp
 from jupyterlab_server import LabServerApp
+from tornado.web import HTTPError
 
 from beaker_kernel.lib.app import BeakerApp
 from beaker_kernel.lib.config import config
 from beaker_kernel.lib.utils import import_dotted_class
+from beaker_kernel.service.auth import current_user, current_request, BeakerUser
+from beaker_kernel.service.auth.cognito import CognitoAuthorizer, CognitoHeadersIdentityProvider
 from beaker_kernel.service.handlers import register_handlers, SummaryHandler, request_log_handler, sanitize_env
+
 
 logger = logging.getLogger("beaker_server")
 HERE = os.path.dirname(__file__)
 
 version = "1.0.0"
+
+
+class BeakerContentsManager(AsyncLargeFileManager):
+    def _get_os_path(self, path):
+        user: BeakerUser = current_user.get()
+        if user:
+            path = os.path.join(user.home_dir, path)
+        return super()._get_os_path(path)
+
+
+class BeakerSessionManager(SessionManager):
+
+    def get_kernel_env(self, path, name = None):
+        # This only sets env variables for the Beaker Kernel, not subkernels.
+        try:
+            beaker_user = path.split(os.path.sep)[0]
+        except:
+            pass
+        env = {
+            **os.environ,
+            "JPY_SESSION_NAME": path,
+            "BEAKER_SESSION": str(name),
+        }
+        if beaker_user:
+            env.update({
+                "BEAKER_USER": beaker_user,
+                "LANGSMITH_BEAKER_USER": beaker_user,
+            })
+
+        return env
+
+    async def start_kernel_for_session(self, session_id, path, name, type, kernel_name):
+        if kernel_name == "beaker_kernel":
+            user: BeakerUser = current_user.get()
+            if user:
+                path = os.path.join(user.home_dir, path)
+                virtual_home_root = self.kernel_manager.root_dir
+                virtual_home_dir = os.path.join(virtual_home_root, user.home_dir)
+
+                subkernel_user = self.parent.subkernel_user
+                if not os.path.isdir(virtual_home_dir):
+                    os.makedirs(virtual_home_dir, exist_ok=True)
+                    shutil.chown(virtual_home_dir, user=subkernel_user, group=subkernel_user)
+                path = os.path.join(os.path.relpath(virtual_home_dir, self.kernel_manager.root_dir), name)
+        return await super().start_kernel_for_session(session_id, path, name, type, kernel_name)
 
 
 class BeakerKernelManager(AsyncIOLoopKernelManager):
@@ -37,6 +89,14 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
         return self.parent.parent
 
     def write_connection_file(self, **kwargs: object) -> None:
+        beaker_session_str: Optional[str] = kwargs.get("jupyter_session", None)
+        if beaker_session_str and os.path.sep in beaker_session_str:
+            user_dir, beaker_session = beaker_session_str.split(os.path.sep)
+            abs_user_dir = os.path.join(self.app.root_dir, user_dir)
+            kwargs.update({
+                "user_dir": abs_user_dir,
+                "beaker_session": beaker_session
+            })
         beaker_app: BeakerApp = self.beaker_config.get("app", None)
         default_context = beaker_app and beaker_app._default_context
         if default_context:
@@ -63,16 +123,16 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
 
         # Update user, env variables, and home directory based on type of kernel being started.
         if self.kernel_name == "beaker_kernel":
-            user = self.app.agent_user
+            kernel_user = self.app.agent_user
+            home_dir = os.path.expanduser(f"~{kernel_user}")
+            kw["cwd"] = self.app.working_dir
         else:
-            env = sanitize_env(env)
-            user = self.app.subkernel_user
+            kernel_user = self.app.subkernel_user
+            home_dir = kw.get("cwd")
 
-        home_dir = os.path.expanduser(f"~{user}")
-        env["USER"] = user
+        env["USER"] = kernel_user
         env["HOME"] = home_dir
-        kw["user"] = user
-        kw["cwd"] = self.app.working_dir
+        kw["user"] = kernel_user
 
         # Update keyword args that are passed to Popen()
         kw["env"] = env
@@ -91,7 +151,6 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
 
 
 class BeakerKernelMappingManager(AsyncMappingKernelManager):
-    # kernel_manager_class = BeakerKernelManager
     kernel_manager_class = "beaker_kernel.service.base.BeakerKernelManager"
     connection_dir = os.path.join(config.beaker_run_path, "kernelfiles")
 
@@ -107,6 +166,21 @@ class BeakerKernelMappingManager(AsyncMappingKernelManager):
     def beaker_config(self):
         return getattr(self.parent, 'beaker_config', None)
 
+    def cwd_for_path(self, path, **kwargs):
+        user: BeakerUser = current_user.get()
+        if user:
+            user_home = self.get_home_for_user(user)
+            return super().cwd_for_path(user_home, **kwargs)
+        else:
+            return super().cwd_for_path(path, **kwargs)
+
+    def get_home_for_user(self, user: BeakerUser) -> os.PathLike:
+        return user.home_dir
+
+    def _async_start_kernel(self, *, kernel_id = None, path = None, **kwargs):
+        return super()._async_start_kernel(kernel_id=kernel_id, path=path, **kwargs)
+    start_kernel = _async_start_kernel
+
 
 class BeakerServerApp(ServerApp):
     """
@@ -114,7 +188,9 @@ class BeakerServerApp(ServerApp):
     """
 
     kernel_manager_class = BeakerKernelMappingManager
+    session_manager_class = BeakerSessionManager
     reraise_server_extension_failures = True
+    contents_manager_class = BeakerContentsManager
 
     service_user: str
     agent_user: str
