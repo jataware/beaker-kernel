@@ -339,7 +339,7 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "target": f"{target_type}:{target_id}",
             "args": args,
             "function": content.get("function"),
-            "kwargs": kwargs
+            "kwargs_keys": kwargs.keys()
         })
 
         # context methods

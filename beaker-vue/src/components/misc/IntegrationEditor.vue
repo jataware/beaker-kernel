@@ -125,12 +125,6 @@
                             style="width: 32px; height: 32px"
                             @click="downloadFile(id)"
                         />
-                        <Button
-                            icon="pi pi-upload"
-                            v-tooltip="'Upload and replace'"
-                            style="width: 32px; height: 32px"
-                            @click="openFileSelection(file?.filepath)"
-                        />
                     </template>
                     <template #center>
                         <InputText v-model="file.name" type="text"></InputText>
@@ -388,7 +382,7 @@ const newIntegration = () => {
         slug: uuid,
         source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
         description: "This is the description that the agent will use to determine when this integration should be used.",
-        provider: "adhoc:frontend_editor"
+        provider: "adhoc:specialist_agents"
     }
     model.value.integrations[uuid] = integration;
     model.value.selected = uuid;
@@ -452,6 +446,10 @@ const uploadFile = async (files: FileList) => {
             content: String(bytes),
             filepath: file.name,
             name: file.name.split('.')[0]
+        }
+        // for new, unsaved integrations
+        if (selectedIntegration.value.resources === undefined || selectedIntegration.value.resources === null) {
+            selectedIntegration.value.resources = {};
         }
         selectedIntegration.value.resources[uuid] = fileResource;
     });
