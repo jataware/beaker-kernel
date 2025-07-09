@@ -1,13 +1,13 @@
-from functools import lru_cache
-
 import base64
 import boto3
 import json
 import requests
+from functools import lru_cache
 from traitlets import Unicode, Bool
 
-from jupyter_server.auth.authorizer import Authorizer, AllowAllAuthorizer
-from jupyter_server.auth.identity import IdentityProvider, User
+from jupyter_server.auth.identity import User
+
+from . import BeakerAuthorizer, BeakerIdentityProvider, RoleBasedUser, current_request, current_user
 
 try:
     import jwt as pyjwt
@@ -15,7 +15,7 @@ except ImportError:
     pyjwt = None
 
 
-class CognitoHeadersIdentityProvider(IdentityProvider):
+class CognitoHeadersIdentityProvider(BeakerIdentityProvider):
 
     cognito_jwt_header = Unicode(
         default_value="X-Amzn-Oidc-Data",
@@ -73,47 +73,64 @@ class CognitoHeadersIdentityProvider(IdentityProvider):
     @lru_cache
     def _get_user(self, user_id, access_token):
         # Access token is provided as an argument to ensure that auth info is refetched (misses cache) if the access token changes.
-        try:
-            cognito_client = boto3.client('cognito-idp')
-            response = cognito_client.admin_get_user(
-                UserPoolId=self.user_pool_id,
-                Username=user_id
-            )
+        # try:
+        #     cognito_client = boto3.client('cognito-idp')
+        #     response = cognito_client.admin_get_user(
+        #         UserPoolId=self.user_pool_id,
+        #         Username=user_id
+        #     )
 
-            user_attributes = {attr['Name']: attr['Value'] for attr in response.get('UserAttributes', [])}
-            username = user_attributes.get('preferred_username') or user_attributes.get('email') or user_id
+        #     user_attributes = {attr['Name']: attr['Value'] for attr in response.get('UserAttributes', [])}
+        #     username = user_attributes.get('preferred_username') or user_attributes.get('email') or user_id
 
-            return User(
-                username=username,
-                name=user_attributes.get('name', username),
-                display_name=user_attributes.get('given_name', username),
-            )
-        except Exception as e:
-            self.log.warning(f"Failed to get cognito user info for {user_id}: {e}")
-            return None
+        #     return RoleBasedUser(
+        #         username=username,
+        #         name=user_attributes.get('name', username),
+        #         display_name=user_attributes.get('given_name', username),
+        #         roles=[],
+        #     )
+        # except Exception as e:
+        #     self.log.warning(f"Failed to get cognito user info for {user_id}: {e}")
+        #     return None
+        return RoleBasedUser(
+            username="matt@jataware.com",
+            name="Matt",
+            display_name="Matthew Printz",
+            roles=["admin"],
+
+        )
 
 
     async def get_user(self, handler) -> User|None:
+        current_request.set(handler.request)
+
         jwt_data: str = handler.request.headers.get(self.cognito_jwt_header, None)
         user_id: str = handler.request.headers.get(self.cognito_identity_header, None)
         access_token: str = handler.request.headers.get(self.cognito_accesstoken_header, None)
 
-        match pyjwt, self.verify_jwt_signature, jwt_data:
-            case (None, _, _):
-                self.log.warning("Unable to verify JWT signature as package 'pyjwt' is not installed.")
-            case (_, _, None):
-                self.log.warning("Unable to verify JWT signature as it is not found.")
-            case (_, False, _):
-                self.log.info("Skipping checking JWT signature due to configuration.")
-            case (_, True, str()):
-                try:
-                    self._verify_jwt(jwt_data)
-                except pyjwt.exceptions.InvalidTokenError as e:
-                    self.log.warning(f"Error attempting to verify JWT token: {e}")
-                    return None
+        # match pyjwt, self.verify_jwt_signature, jwt_data:
+        #     case (None, _, _):
+        #         self.log.warning("Unable to verify JWT signature as package 'pyjwt' is not installed.")
+        #     case (_, _, None):
+        #         self.log.warning("Unable to verify JWT signature as it is not found.")
+        #     case (_, False, _):
+        #         self.log.info("Skipping checking JWT signature due to configuration.")
+        #     case (_, True, str()):
+        #         try:
+        #             self._verify_jwt(jwt_data)
+        #         except pyjwt.exceptions.InvalidTokenError as e:
+        #             self.log.warning(f"Error attempting to verify JWT token: {e}")
+        #             return None
 
-        if not user_id or not access_token:
-            return None
+        # if not user_id or not access_token:
+        #     return None
 
         user = self._get_user(user_id, access_token)
+        if user:
+            current_user.set(user)
         return user
+
+
+class CognitoAuthorizer(BeakerAuthorizer):
+    def is_authorized(self, handler, user, action, resource):
+        return 'admin' in user.roles

@@ -257,7 +257,7 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         url = urllib.parse.urljoin(self.beaker_kernel.jupyter_server, "/api/kernels")
         res = requests.post(
             url,
-            json={"name": language, "path": ""},
+            json={"name": language, "path": self.beaker_kernel.session_config.get("jupyter_session", "")},
             headers={"Authorization": f"token {config.jupyter_token}"},
         )
         kernel_info = res.json()
