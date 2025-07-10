@@ -1,7 +1,5 @@
 <template>
-  <main>
-    <RouterView :config="config"/>
-  </main>
+  <RouterView :config="config"/>
 </template>
 
 <script setup lang="ts">

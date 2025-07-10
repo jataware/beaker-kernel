@@ -4,7 +4,7 @@
         ref="beakerSession"
         @connection-failure="connectionFailure"
     >
-        <div id="app">
+        <div id="page">
             <header>
                 <slot name="header">
                     <BeakerHeader
@@ -392,7 +392,7 @@ defineExpose({
     flex-direction: column;
 }
 
-#app {
+#page {
     margin: 0;
     padding: 0;
     overflow: visible hidden;
@@ -424,6 +424,7 @@ main {
     background-color: var(--p-content-background);
     max-width: 100%;
     max-height: 100%;
+    overflow: hidden;
 
     &.maximized {
         --columns: 1fr minmax(30%, 100%) 1fr;
