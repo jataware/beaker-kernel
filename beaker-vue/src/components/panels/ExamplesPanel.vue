@@ -90,7 +90,8 @@
                         severity="warning"
                         icon="pi pi-arrow-left"
                         @click="
-                            panelState = {view: 'tableOfContents'}
+                            panelState = {view: 'tableOfContents'};
+                            $emit('refreshResourcesForSelectedIntegration');
                         "
                         label="Cancel Editing"
                         style="width: fit-content;"
@@ -101,7 +102,7 @@
                         icon="pi pi-trash"
                         severity="danger"
                         label="Delete Example"
-                        @click="deleteExample(panelState.focusedExampleId)"
+                        @click="deleteExample()"
                     />
                 </div>
             </div>
@@ -142,7 +143,7 @@
                 <div class="example-buttons-left">
                     <Button
                         icon="pi pi-check-circle"
-                        @click="saveExample(panelState.focusedExampleId)"
+                        @click="saveExample()"
                         label="Apply Changes"
                         style="width: fit-content;"
                         severity="success"
@@ -164,15 +165,17 @@ import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputText from "primevue/inputtext";
 import CodeEditor from '../misc/CodeEditor.vue';
-import { filterByResourceType, type IntegrationExample, type IntegrationInterfaceState } from '../../util/integration'
+import { deleteResource, filterByResourceType, postResource, type IntegrationExample, type IntegrationInterfaceState } from '../../util/integration'
+import { v4 as uuidv4 } from 'uuid';
 
 type ExamplePanelState =
     | { view: "tableOfContents" }
     | { view: "focused", focusedExampleId: string }
 
-const emit = defineEmits(['refresh'])
+const emit = defineEmits(['refresh', 'refreshResourcesForSelectedIntegration'])
 const props = defineProps<{
-    disabled?: boolean
+    disabled?: boolean,
+    sessionId: string,
 }>()
 const model = defineModel<IntegrationInterfaceState>();
 
@@ -180,7 +183,6 @@ const panelState = ref<ExamplePanelState>({view: 'tableOfContents'})
 const searchText = ref<string>();
 const hoveredExample = ref<string|undefined>(undefined)
 
-// read only slice
 const examples = computed<{[key in string]: IntegrationExample}>(() =>
     filterByResourceType(model.value.integrations[model.value.selected]?.resources, "example"))
 
@@ -204,22 +206,15 @@ const newExample = async () => {
         resources = model.value.integrations[model.value.selected].resources;
     }
 
-    //resources[]
-    // post
-    // let examples = selectedIntegration.value?.examples;
+    const uuid = uuidv4()
+    resources[uuid] = {
+        resource_type: "example",
+        query: "New Example",
+        code: "",
+        notes: ""
+    } as IntegrationExample
 
-    // if (examples === undefined || examples === null) {
-    //     selectedIntegration.value.examples = [];
-    //     examples = selectedIntegration.value.examples;
-    // }
-
-    // examples.unshift({
-    //     query: 'New Example',
-    //     notes: '',
-    //     code:  ''
-    // })
-    // exampleChanges.value = { ...examples[0] }
-    // panelState.value = { view: 'focused', focusedExample: 0 }
+    panelState.value = { view: 'focused', focusedExampleId: uuid }
 }
 
 const editExample = (id) => {
@@ -227,23 +222,30 @@ const editExample = (id) => {
     panelState.value = {view: "focused", focusedExampleId: id}
 }
 
-const saveExample = (index) => {
-    // let examples = selectedIntegration.value?.examples;
-    // examples[index] = exampleChanges.value;
-    // exampleChanges.value = undefined;
-    // panelState.value = { view: 'tableOfContents' }
-    // emit('onUnsavedChange')
-
-    // post
+const saveExample = async () => {
+    const resources = model.value.integrations[model.value.selected]?.resources;
+    if (panelState.value.view === 'tableOfContents') {
+        return
+    }
+    await postResource({
+        sessionId: props.sessionId,
+        integrationId: model.value.selected,
+        resourceId: panelState.value.focusedExampleId,
+        body: resources[panelState.value.focusedExampleId]
+    })
+    panelState.value = { view: 'tableOfContents' }
+    emit('refreshResourcesForSelectedIntegration')
 }
 
-const deleteExample = (index) => {
-    // post
-
-    // let examples = selectedIntegration.value?.examples;
-    // examples.splice(index, 1);
-    // panelState.value = { view: 'tableOfContents' }
-    // emit('onUnsavedChange')
+const deleteExample = async () => {
+    let resources = model.value.integrations[model.value.selected]?.resources;
+    if (panelState.value.view === "tableOfContents") {
+        return;
+    }
+    delete resources[panelState.value.focusedExampleId];
+    await deleteResource(props.sessionId, model.value.selected, panelState.value.focusedExampleId)
+    emit('refreshResourcesForSelectedIntegration')
+    panelState.value = {'view': 'tableOfContents'}
 }
 
 </script>

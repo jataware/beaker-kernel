@@ -49,6 +49,7 @@ export interface IntegrationInterfaceState {
     selected: string | undefined
     integrations: IntegrationMap
     unsavedChanges: boolean
+    finishedInitialLoad: boolean
 }
 
 export interface IntegrationAPIRouteDetails {
@@ -74,7 +75,7 @@ async function integrationApiWrapper<T>(
     body?: object
 ): Promise<T> {
     const path = `/beaker/integrations/${toRoute(route)}`
-    console.log(`api request: ${path}`)
+    console.log(`api request: ${method} ${path}`)
     const response = await fetch(path, {
         method,
         headers: {
@@ -86,7 +87,6 @@ async function integrationApiWrapper<T>(
       throw new Error(response.statusText);
     }
     const json = await response.json() as T;
-    console.log(json)
     return json
 }
 

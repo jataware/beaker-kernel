@@ -21,6 +21,7 @@
                     :selected-on-load="integrations.selected"
                     v-model="integrations"
                     @refresh="refresh"
+                    @refresh-resources-for-selected-integration="refreshSelectedIntegrationResources"
                     :session-id="sessionId"
                 />
             </div>
@@ -96,7 +97,9 @@
                 <ExamplesPanel
                     v-model="integrations"
                     :disabled="!integrations.selected"
+                    :session-id="sessionId"
                     @refresh="refresh"
+                    @refresh-resources-for-selected-integration="refreshSelectedIntegrationResources"
                 />
                 </SideMenuPanel>
                 <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
@@ -143,7 +146,7 @@ const previewVisible = ref<boolean>(false);
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "notebook_dev_session";
-const selectedOnLoad = urlParams.has("selected") ? urlParams.get("selected") : undefined;
+const selectedParam = urlParams.has("selected") ? urlParams.get("selected") : undefined;
 
 const props = defineProps([
     "config",
@@ -201,10 +204,24 @@ const beakerSession = computed<BeakerSessionComponentType>(() => {
 });
 
 const integrations = ref<IntegrationInterfaceState>({
-    selected: selectedOnLoad,
+    selected: selectedParam,
     integrations: {},
     unsavedChanges: false,
+    finishedInitialLoad: false,
 })
+
+const refreshSelectedIntegrationResources = async () => {
+    const selectedIntegration = integrations.value.integrations?.[integrations.value?.selected];
+    if (selectedIntegration === undefined) {
+        return;
+    }
+    // in the case of first-load opening a new, local-only integration, assume an empty resources object
+    if (selectedIntegration?.resources === undefined || selectedIntegration?.resources === null ) {
+        selectedIntegration.resources = {}
+    }
+    selectedIntegration.resources = await getResourcesForIntegration(sessionId, integrations.value.selected)
+}
+
 // handle all api calls in one place so child elements don't make unnecessary calls / fall out of sync
 const refresh = async () => {
     integrations.value.integrations = await listIntegrations(sessionId);
@@ -213,9 +230,11 @@ const refresh = async () => {
         && integrations.value.selected !== "new" // case where ?selected=new
     ) {
         // only get the resources view for a given selected integration, but keep it up to date
-        integrations.value.integrations[integrations.value.selected].resources = await getResourcesForIntegration(sessionId, integrations.value.selected)
+        await refreshSelectedIntegrationResources();
     }
+    integrations.value.finishedInitialLoad = true;
 }
+
 // on connection, send message with retries: see context.py:call_in_context()
 watch(beakerSession, async () => refresh());
 

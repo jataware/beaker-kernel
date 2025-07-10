@@ -213,13 +213,11 @@
 
 import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
 import { type IntegrationMap, type Integration, getIntegrationProviderType, type IntegrationAttachedFile, type IntegrationResourceMap, type IntegrationInterfaceState, filterByResourceType, postIntegration, postResource, deleteResource } from '../../util/integration';
-import { BeakerSession } from 'beaker-kernel';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 import Select from 'primevue/select';
 import Fieldset from 'primevue/fieldset';
 import Button from "primevue/button";
-import Divider from 'primevue/divider';
 import Toolbar from 'primevue/toolbar';
 import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
@@ -227,7 +225,6 @@ import Tag from 'primevue/tag';
 
 import * as cookie from 'cookie';
 
-import { ContentsManager, Contents } from '@jupyterlab/services';
 import CodeEditor from './CodeEditor.vue';
 import SplitButton from 'primevue/splitbutton';
 
@@ -238,7 +235,6 @@ import { useRoute } from 'vue-router';
 const showToast = inject<any>('show_toast');
 
 const props = defineProps<{
-    selectedOnLoad: string,
     sessionId: string,
 }>();
 
@@ -246,9 +242,7 @@ const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const model = defineModel<IntegrationInterfaceState>()
 
-const hasLoadedInitialSelection = ref(false);
-
-const emit = defineEmits(['refresh'])
+const emit = defineEmits(['refresh', 'refreshResourcesForSelectedIntegration'])
 
 const sortIntegrations = (integrations: IntegrationMap): Integration[] =>
     Object.values(integrations).toSorted((a, b) => a?.name.localeCompare(b?.name))
@@ -268,48 +262,82 @@ const attachedFiles = computed<{[key in string]: IntegrationAttachedFile}>(() =>
 
 const uncommittedDeletedResources = ref([]);
 
+const newIntegrationJustCreated = ref<boolean>(false);
+
+const updateSelectedParam = () => {
+    // keep URL in sync with focused integration after save
+    const url = new URL(window.location.href);
+    url.searchParams.set('selected', model.value.selected);
+    window.history.pushState(null, '', url.toString());
+}
+
 watch(() => model.value.selected, () => {
     // always pull from backend when changing selected -- except for a brand new integration that won't have been committed yet
-    if (model?.value?.integrations[model?.value?.selected]?.name === "New Integration") {
+    if (newIntegrationJustCreated.value) {
+        newIntegrationJustCreated.value = false;
         return;
     }
     else {
+        model.value.unsavedChanges = false;
         uncommittedDeletedResources.value = [];
         emit("refresh");
     }
 })
 
+const newIntegration = () => {
+    const uuid = uuidv4()
+    const integration: Integration = {
+        name: "New Integration",
+        url: "",
+        slug: uuid,
+        source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
+        description: "This is the description that the agent will use to determine when this integration should be used.",
+        provider: "adhoc:specialist_agents"
+    }
+    // assign temporary uuid
+    model.value.integrations[uuid] = integration;
+    model.value.selected = uuid;
+    model.value.unsavedChanges = true;
+    newIntegrationJustCreated.value = true;
+}
+
+const delayUntil = (condition, retryInterval) => {
+    const poll = resolve => {
+        if (condition()) {
+            resolve();
+        }
+        else {
+            setTimeout(() => poll(resolve), retryInterval)
+        }
+    }
+    return new Promise(poll);
+}
 const route = useRoute();
 // in the case of non-remounting, where ?selected= is changed via other means, go with that
 watch(() => route, (newRoute) => {
-    model.value.selected = newRoute.query?.selected as string|undefined ?? model.value.selected;
-    if (model.value.selected === "new") {
-        newIntegration();
+    if (newRoute.query?.selected === "new") {
+        // newIntegration sets model.value to a temp uuid - this handles non-pageload cases
+        if (model.value.finishedInitialLoad) {
+            newIntegration();
+        }
+        // when we're dealing with pageload, just wait until valid
+        else {
+            delayUntil(() => model.value.finishedInitialLoad, 100)
+                .then(() => newIntegration());
+        }
+    } else {
+        model.value.selected = newRoute.query?.selected as string|undefined ?? model.value.selected;
     }
+
 }, {immediate: true, deep: true})
 
-watch(model, ({integrations, unsavedChanges}) => {
+watch(model, ({unsavedChanges}) => {
     if (unsavedChanges) {
         onbeforeunload = () => true;
     } else {
         onbeforeunload = undefined;
     }
-
-    if (Object.keys(integrations).length === 0) {
-        return;
-    }
-    if (hasLoadedInitialSelection.value) {
-        return;
-    }
-    if (props?.selectedOnLoad) {
-        nextTick(() => {
-            model.value.selected = props.selectedOnLoad;
-            if (model.value.selected === "new") {
-                newIntegration();
-            }
-        })
-    }
-    hasLoadedInitialSelection.value = true;
+    console.log("fired -- if 'needs to make new could be here, that would be good'");
 })
 
 const descriptionEditor = ref();
@@ -362,11 +390,6 @@ const removeFile = async (id) => {
 
 const fileTarget = ref();
 
-const openFileSelection = (target) => {
-    fileTarget.value = target;
-    fileInput.value?.click();
-}
-
 const openFileSelectionMultiple = () => {
     fileTarget.value = undefined;
     fileInputMultiple.value?.click();
@@ -375,33 +398,18 @@ const openFileSelectionMultiple = () => {
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
 
-const newIntegration = () => {
-    const uuid = uuidv4()
-    const integration: Integration = {
-        name: "New Integration",
-        url: "",
-        slug: uuid,
-        source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
-        description: "This is the description that the agent will use to determine when this integration should be used.",
-        provider: "adhoc:specialist_agents"
-    }
-    model.value.integrations[uuid] = integration;
-    model.value.selected = uuid;
-    model.value.unsavedChanges = true;
-}
-
 const save = async () => {
     if (selectedIntegration?.value === undefined) {
         return;
     }
 
     for (const [file_id, file] of Object.entries(attachedFiles.value)) {
-        console.log(await postResource({
+        await postResource({
             sessionId: props.sessionId,
             integrationId: model.value.selected,
             resourceId: file_id,
             body: file
-        }))
+        })
     }
     for (const id of uncommittedDeletedResources.value) {
         await deleteResource(props.sessionId, model.value.selected, id);
@@ -419,9 +427,7 @@ const save = async () => {
     model.value.unsavedChanges = false;
 
     // if ?selected=new, assign it to the new uuid for clarity
-    const url = new URL(window.location.href);
-    url.searchParams.set('selected', model.value.selected);
-    window.history.pushState(null, '', url.toString());
+    updateSelectedParam();
 }
 
 const onSelectFileForUpload = async () => {
@@ -461,6 +467,17 @@ const uploadFile = async (files: FileList) => {
     });
 
     await Promise.all(promises);
+
+    // post the resource at upload time to avoid stale state between here and examples
+    for (const [file_id, file] of Object.entries(attachedFiles.value)) {
+        await postResource({
+            sessionId: props.sessionId,
+            integrationId: model.value.selected,
+            resourceId: file_id,
+            body: file
+        })
+    }
+    emit("refreshResourcesForSelectedIntegration")
 }
 
 const downloadFile = async (id) => {
