@@ -274,7 +274,6 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         )
 
     def add_integration(self, **payload):
-        logger.warning(f"add integration {payload}")
         payload["prompt"] = payload.get("source", "")
         try:
             payload.pop("resources")
@@ -294,13 +293,11 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         self.refresh_adhoc_specs()
 
     def remove_integration(self, **payload):
-        logger.warning("remove integration")
         self.specifications = [spec for spec in self.specifications if spec.slug != payload["slug"]]
         self.write_all_specifications()
         self.refresh_adhoc_specs()
 
     def update_integration(self, **payload):
-        logger.warning("update integration")
         try:
             specification = self.get_specification(payload["slug"])
         except StopIteration:
@@ -328,7 +325,6 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         self.refresh_adhoc_specs()
 
     def list_resources(self, integration_id, resource_type: Optional[str] = None):
-        logger.warning("list resource")
         specification = self.get_specification(integration_id)
         if resource_type is not None:
             resources = specification.get_resources_by_type(resource_type)
@@ -345,13 +341,11 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         return jsonified_resources
 
     def get_resource(self, integration_id, resource_id):
-        logger.warning("get resource")
         if resource := self.get_specification(integration_id).resources.get(resource_id):
             return asdict(resource)
         return None
 
     def add_resource(self, integration_id, **payload):
-        logger.warning("add resource")
         specification = self.get_specification(integration_id)
         resource_type = payload["resource_type"]
         if resource_type == "file":
@@ -367,7 +361,6 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         self.refresh_adhoc_specs()
 
     def remove_resource(self, integration_id, resource_id):
-        logger.warning("remove resource")
         specification = self.get_specification(integration_id)
         resource_uuid = UUID(resource_id)
         if resource_uuid in specification.resources:
@@ -376,12 +369,11 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         self.refresh_adhoc_specs()
 
     def update_resource(self, integration_id, resource_id, **payload):
-        logger.warning("update resource")
         # should this only allow updating an id to a different resource type?
         specification = self.get_specification(integration_id)
         if UUID(resource_id) not in specification.resources:
             return self.add_resource(integration_id, **payload)
-        resource = specification.resources.pop(resource_id)
+        resource = specification.resources.pop(UUID(resource_id))
         updated_resource_dict = (
             asdict(resource)
             | {k: v for k, v in payload.items() if k in asdict(resource)}
