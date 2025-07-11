@@ -38,66 +38,66 @@ def get_context(context_slug: str):
 
 # Resource Handlers
 
-class ResourceHandler(ABC):
-    KEY: str
+# class ResourceHandler(ABC):
+#     KEY: str
 
-    @abstractmethod
-    async def get(self, integration_id, resource_id=None):
-        pass
+#     @abstractmethod
+#     async def get(self, integration_id, resource_id=None):
+#         pass
 
-    @abstractmethod
-    async def new(self, integration_id, payload):
-        pass
+#     @abstractmethod
+#     async def new(self, integration_id, payload):
+#         pass
 
-    @abstractmethod
-    async def replace(self, integration_id, resource_id, payload):
-        pass
+#     @abstractmethod
+#     async def replace(self, integration_id, resource_id, payload):
+#         pass
 
-    @abstractmethod
-    async def delete(self, integration_id, resource_id):
-        pass
-
-
-class FileResourceHandler(ResourceHandler):
-    KEY="file"
-
-    async def get(self, integration_id, resource_id=None):
-        pass
-
-    async def new(self, integration_id, payload):
-        return await super().new(integration_id, payload)
-
-    async def replace(self, integration_id, resource_id, payload):
-        return await super().replace(integration_id, resource_id, payload)
-
-    async def delete(self, integration_id, resource_id):
-        return await super().delete(integration_id, resource_id)
+#     @abstractmethod
+#     async def delete(self, integration_id, resource_id):
+#         pass
 
 
-class ExampleResourceHandler(ResourceHandler):
-    KEY="example"
+# class FileResourceHandler(ResourceHandler):
+#     KEY="file"
 
-    async def get(self,  integration_id, resource_id=None):
-        pass
+#     async def get(self, integration_id, resource_id=None):
+#         pass
 
-    async def new(self, integration_id, payload):
-        return await super().new(context_slug, integration_id, payload)
+#     async def new(self, integration_id, payload):
+#         return await super().new(integration_id, payload)
 
-    async def replace(self,  integration_id, resource_id, payload):
-        return await super().replace(context_slug, integration_id, resource_id, payload)
+#     async def replace(self, integration_id, resource_id, payload):
+#         return await super().replace(integration_id, resource_id, payload)
 
-    async def delete(self, integration_id, resource_id):
-        return await super().delete(context_slug, integration_id, resource_id)
+#     async def delete(self, integration_id, resource_id):
+#         return await super().delete(integration_id, resource_id)
 
 
-Resources: list[ResourceHandler] = [
-    FileResourceHandler,
-    ExampleResourceHandler,
-]
+# class ExampleResourceHandler(ResourceHandler):
+#     KEY="example"
 
-ResourceMap = {
-    cls.KEY: cls for cls in Resources
-}
+#     async def get(self,  integration_id, resource_id=None):
+#         pass
+
+#     async def new(self, integration_id, payload):
+#         return await super().new(context_slug, integration_id, payload)
+
+#     async def replace(self,  integration_id, resource_id, payload):
+#         return await super().replace(context_slug, integration_id, resource_id, payload)
+
+#     async def delete(self, integration_id, resource_id):
+#         return await super().delete(context_slug, integration_id, resource_id)
+
+
+# Resources: list[ResourceHandler] = [
+#     FileResourceHandler,
+#     ExampleResourceHandler,
+# ]
+
+# ResourceMap = {
+#     cls.KEY: cls for cls in Resources
+# }
 
 
 class BeakerAPIMixin:
@@ -125,6 +125,8 @@ class BeakerAPIMixin:
         interval = 3
         while True:
             try:
+                # TODO: session manager ready future
+                # TODO: ensure it's defined
                 session = await self.session_manager.get_session(name=session_id)
                 break
             except Exception as err:

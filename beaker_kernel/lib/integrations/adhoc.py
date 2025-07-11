@@ -371,9 +371,9 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
     def update_resource(self, integration_id, resource_id, **payload):
         # should this only allow updating an id to a different resource type?
         specification = self.get_specification(integration_id)
-        if UUID(resource_id) not in specification.resources:
+        if (resource_uuid := UUID(resource_id)) not in specification.resources:
             return self.add_resource(integration_id, **payload)
-        resource = specification.resources.pop(UUID(resource_id))
+        resource = specification.resources.pop(resource_uuid)
         updated_resource_dict = (
             asdict(resource)
             | {k: v for k, v in payload.items() if k in asdict(resource)}
@@ -386,7 +386,9 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         else:
             msg = "Only examples and files are valid on an adhoc integration."
             raise ValueError(msg)
-        specification.resources[resource.resource_id] = resource # type: ignore
+        resource.resource_id = resource_uuid
+        logger.warning(f"update finished {type(resource.resource_id)} {resource.resource_id}")
+        specification.resources[resource_uuid] = resource # type: ignore
         self.write_all_specifications()
         self.refresh_adhoc_specs()
 

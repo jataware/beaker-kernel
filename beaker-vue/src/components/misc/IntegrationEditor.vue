@@ -402,6 +402,10 @@ const save = async () => {
     if (selectedIntegration?.value === undefined) {
         return;
     }
+    for (const id of uncommittedDeletedResources.value) {
+        await deleteResource(props.sessionId, model.value.selected, id);
+    }
+    uncommittedDeletedResources.value = [];
 
     for (const [file_id, file] of Object.entries(attachedFiles.value)) {
         await postResource({
@@ -410,9 +414,6 @@ const save = async () => {
             resourceId: file_id,
             body: file
         })
-    }
-    for (const id of uncommittedDeletedResources.value) {
-        await deleteResource(props.sessionId, model.value.selected, id);
     }
     await postIntegration(props.sessionId, model.value.selected, selectedIntegration.value);
 
