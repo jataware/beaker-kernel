@@ -267,6 +267,12 @@ class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterH
             self.write({"status": "success", "details": ""})
         except Exception as e:
             self.write({"status": "failure", "details": str(e)})
+# new integration -- POST /integrations/{session_id}/
+# update integration -- POST /integrations/{session_id}/{integration_id}
+# new resource -- POST /resources/{session_id}/{integration_id}
+# update resource -- POST /resources/{session_id}/{integration_id}/{resource_id}
+
+# POST /integrations/session/int_id/file
 
 handlers = [
     (r'integrations/(?P<session_id>[\w\d-]+)/?(?P<integration_id>[\w\d-]+)?', IntegrationHandler),

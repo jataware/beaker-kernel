@@ -30,19 +30,17 @@ yaml.representer.SafeRepresenter.add_representer(str, string_formatter)
 yaml.representer.SafeRepresenter.add_representer(UUID, uuid_formatter)
 
 @dataclass
-class AdhocSpecification:
-    name: str
-    slug: str
-    description: str
-    prompt: str
-    location: os.PathLike # relative to adhoc root
-    integration_type: IntegrationTypes
-    resources: dict[UUID, Resource]
+class AdhocSpecificationIntegration(Integration):
+
+    # prompt: str
+
+    location: Optional[os.PathLike] = None # relative to adhoc root
+    # resources: dict[UUID, Resource]
 
     @classmethod
     def from_dict(cls, location: os.PathLike, source: dict) -> Self:
         """
-        Creates a AdhocSpecification from a dict.
+        Creates a AdhocSpecificationIntegration from a dict.
 
         location: folder name (does not necessarily match slug/name)
         source: deserialized yaml of the integration
@@ -50,7 +48,7 @@ class AdhocSpecification:
         try:
             name = source["name"]
             description = source["description"]
-            prompt = source["prompt"]
+            source = source["source"]
         except KeyError as e:
             msg = "Missing required field on API"
             raise KeyError(msg) from e
@@ -79,14 +77,16 @@ class AdhocSpecification:
 
         integration_type = source.get("integration_type", "api")
         integration = cls(
+            provider="adhoc:specialist_agents",
             name=name,
             slug=slug,
             description=description,
-            prompt=prompt,
+            source=source,
             location=location,
-            integration_type=integration_type,
-            resources=resources
+            datatype=integration_type,
+            # resources=resources
         )
+        integration.add_resources(resource_list=resources.values())
         return integration
 
     def get_resources_by_type(self, resource_type: str) -> list:
@@ -136,12 +136,12 @@ class AdhocSpecification:
             cache_key=f"beaker_{self.slug}",
             description=self.description,
             examples=self.get_adhoc_api_examples(),
-            documentation=Template(self.prompt).substitute(substitutions)
+            documentation=Template(self.source).substitute(substitutions)
         )
 
     def to_integration(self, provider_type: str, provider: str) -> Integration:
         """
-        Converts a AdhocSpecification to a Beaker Integration, without rendering any part.
+        Converts a AdhocSpecificationIntegration to a Beaker Integration, without rendering any part.
         """
         return Integration(
             slug=self.slug,
@@ -149,7 +149,7 @@ class AdhocSpecification:
             description=self.description,
             datatype="api",
             url=str(self.location),
-            source=self.prompt,
+            source=self.source,
             provider=f"{provider_type}:{provider}"
         )
 
@@ -167,7 +167,7 @@ class AdhocSpecification:
 
 
 class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
-    specifications: list[AdhocSpecification]
+    specifications: list[AdhocSpecificationIntegration]
     provider_type = "adhoc"
 
     def write_all_specifications(self):
@@ -216,7 +216,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         instruction_root = self.adhoc_path / "instructions"
         prompts_root = self.adhoc_path / "prompts"
 
-        self.specifications: list[AdhocSpecification] = []
+        self.specifications: list[AdhocSpecificationIntegration] = []
         for inner_directory in os.listdir(integration_root):
             integration_dir = integration_root / inner_directory
             if not integration_dir.is_dir():
@@ -230,7 +230,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             spec_data = yaml.safe_load(integration_yaml.read_text())
             try:
                 self.specifications.append(
-                    AdhocSpecification.from_dict(
+                    AdhocSpecificationIntegration.from_dict(
                         location=integration_dir,
                         source=spec_data
                     )
@@ -239,15 +239,31 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                 msg = f"Failed to create TemplateSpecification from yaml for `{integration_yaml}`: {e}"
                 logger.error(msg)
 
-        self.instructions ="\n".join(
+        if instruction_root.is_dir():
+            instructions ="\n".join(
+                file.read_text()
+                for file in instruction_root.iterdir() if file.is_file()
+            )
+        else:
+            instructions = ""
+
+        prompts ="\n".join(
             file.read_text()
-            for file in instruction_root.iterdir() if file.is_file()
+            for file in prompts_root.iterdir() if file.is_file()
         )
+        prompts += "\n\n" + instructions
+
+        self.prompt_instructions = f"""\
+{prompts}
+
+Instructions:
+{instructions}
+"""
         # todo: instructions
         self.write_all_specifications()
         self.build_adhoc()
 
-    def get_specification(self, specification_id: str) -> AdhocSpecification:
+    def get_specification(self, specification_id: str) -> AdhocSpecificationIntegration:
         """
         Look up a specification by slug and return it.
         """
@@ -280,7 +296,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         except KeyError:
             pass
         integration_root = self.adhoc_path / "datasources"
-        self.specifications.append(AdhocSpecification(
+        self.specifications.append(AdhocSpecificationIntegration(
             name=payload["name"],
             slug=payload["slug"],
             description=payload["description"],
@@ -315,7 +331,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
 
         # calling asdict will also call asdict on nested dataclasses like resources
         # so we need to rebuild as if a fresh parse
-        updated_spec = AdhocSpecification.from_dict(
+        updated_spec = AdhocSpecificationIntegration.from_dict(
             location=specification.location,
             source=updated_spec_dict
         )

@@ -1,3 +1,4 @@
+import re
 import typing
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -37,6 +38,8 @@ class Integration:
     name: str
     description: str
     provider: str
+    resources: dict[str, Resource] = field(default_factory=lambda: {})
+    uuid: str = field(default_factory=lambda: str(uuid4()))
 
     # created if not present -- UUID! but must be easily json serializable
     slug: typing.Optional[str] = field(default=None)
@@ -46,6 +49,15 @@ class Integration:
     source: typing.Optional[str] = field(default=None)
     last_updated: typing.Optional[datetime|date] = field(default=None)
 
+    @classmethod
+    def slugify(cls, name: str):
+        slug = "_".join([cls.__name__.lower(), *re.split(r"\W", name.lower())])
+        return slug
+
     def __post_init__(self):
         if self.slug is None:
-            self.slug = str(uuid4())
+            self.slug = self.slugify(self.name)
+
+    def add_resources(self, resource_list: list[Resource]):
+        for resource in resource_list:
+            self.resources[resource.id] = resource
