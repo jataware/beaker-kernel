@@ -129,6 +129,7 @@ import { RouterLink } from "vue-router";
 
 const searchText = ref(undefined);
 
+// TODO: change to props
 const integrations = defineModel<IntegrationMap>()
 
 const urlParams = new URLSearchParams(window.location.search);

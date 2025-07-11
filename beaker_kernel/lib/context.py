@@ -193,6 +193,12 @@ field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", 
 part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
 loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
 """)
+        if self.integrations:
+            parts.append("Here are integrations that you have access to:")
+            integration_prompts = [
+                integration.prompt for integration in self.integrations
+            ]
+            parts.append("---".join(integration_prompts))
         content = "\n\n".join(parts)
         return content
 

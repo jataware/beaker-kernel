@@ -64,6 +64,7 @@ const toRoute = (details: IntegrationAPIRouteDetails) =>
     .filter((x) => x)
     .join('/')
 
+// return representation of new changed object/operation
 interface IntegrationPostReturn {
     status: string,
     results: object | string
