@@ -1,11 +1,15 @@
 import base64
 import boto3
+import boto3.exceptions
 import json
+import os
 import requests
 from functools import lru_cache
-from traitlets import Unicode, Bool
+from traitlets import Unicode, Bool, default
+from urllib.parse import urlencode
 
 from jupyter_server.auth.identity import User
+from jupyter_server.base.handlers import JupyterHandler
 
 from . import BeakerAuthorizer, BeakerIdentityProvider, RoleBasedUser, current_request, current_user
 
@@ -15,24 +19,104 @@ except ImportError:
     pyjwt = None
 
 
+class CognitoLogoutHandler(JupyterHandler):
+    def get(self, *args, **kwargs):
+        # Clear authentication cookies
+        # If no prefix is provided, remove all cookies
+        cookie_prefix = getattr(self.identity_provider, 'auth_cookie_prefix', '')
+        auth_cookies = [cookie_name for cookie_name in self.cookies if cookie_name.startswith(cookie_prefix)]
+        for cookie_name in auth_cookies:
+            self.clear_cookie(cookie_name)
+
+        # Fetch info needed for redirect
+        pool_info = self.identity_provider.user_pool_details
+        client_info = self.identity_provider.client_details
+        auth_domain = pool_info.get("Domain", None)
+        client_id = client_info.get("ClientId", None)
+
+        # Use first logout url defined
+        logout_url = next(iter(client_info.get("LogoutURLs", [])), None)
+        if auth_domain and client_id:
+            query_args = {"client_id": client_id}
+            if logout_url:
+                query_args["logout_uri"] = logout_url
+            location = f"https://{auth_domain}/logout?{urlencode(query_args)}"
+        else:
+            location = "/"
+
+        self.set_header("Location", location)
+        self.set_status(302)
+        self.finish()
+
+
+class LoggedOutHandler(JupyterHandler):
+    def get(self, *args, **kwargs):
+        self.write("""
+<html>
+<body>
+<h1>You have successfully logged out</h1>
+<a href="/">Click here to return to the application.</a>
+</body>
+</html>
+""")
+        self.finish()
+
+
 class CognitoHeadersIdentityProvider(BeakerIdentityProvider):
+
+    logout_handler_class = CognitoLogoutHandler
+
+    def get_handlers(self):
+        handlers = super().get_handlers()
+        handlers.append(
+            (r'/loggedout', LoggedOutHandler)
+        )
+        return handlers
+
+    def __init__(self, **kwargs):
+        self.cognito_client = boto3.client('cognito-idp')
+        try:
+            user_pool_details = self.cognito_client.describe_user_pool(
+                UserPoolId=self.user_pool_id
+            )
+            self.user_pool_details = user_pool_details.get("UserPool", None)
+        except boto3.exceptions.Boto3Error as err:
+            self.log(err)
+            self.user_pool_details = None
+        if self.cognito_client_id:
+            try:
+                client_details = self.cognito_client.describe_user_pool_client(
+                    UserPoolId=self.user_pool_id,
+                    ClientId=self.cognito_client_id,
+                )
+                self.client_details = client_details.get("UserPoolClient", None)
+            except boto3.exceptions.Boto3Error as err:
+                self.log.error(err)
+                self.client_details = None
+        super().__init__(**kwargs)
+
+    auth_cookie_prefix = Unicode(
+        default_value="AuthSessionCookie",
+        config=True,
+        help="Name/prefix for cookie used to track authenticated session. If blank, remove all cookies."
+    )
 
     cognito_jwt_header = Unicode(
         default_value="X-Amzn-Oidc-Data",
         config=True,
-        help="Header containing the cognito JWT encoded grants",
+        help="Name of header containing the cognito JWT encoded grants",
     )
 
     cognito_identity_header = Unicode(
         default_value="X-Amzn-Oidc-Identity",
         config=True,
-        help="Header containing the cognito user identity",
+        help="Name of header containing the cognito user identity",
     )
 
     cognito_accesstoken_header = Unicode(
         default_value="X-Amzn-Oidc-Accesstoken",
         config=True,
-        help="Header containing the cognito active access token",
+        help="Name of header containing the cognito active access token",
     )
 
     user_pool_id = Unicode(
@@ -41,12 +125,30 @@ class CognitoHeadersIdentityProvider(BeakerIdentityProvider):
         help="AWS Cognito User Pool ID",
     )
 
+    @default("user_pool_id")
+    def _default_user_pool_id(self):
+        return os.getenv("COGNITO_USER_POOL_ID")
+
+    cognito_client_id = Unicode(
+        config=True,
+        help="AWS Cognito client_id",
+    )
+
+    @default("cognito_client_id")
+    def _default_cognito_client_id(self):
+        return os.getenv("COGNITO_CLIENT_ID")
+
+
     verify_jwt_signature = Bool(
         default_value=True,
         config=True,
         help="Whether the jwt signature from cognito should be verified",
     )
 
+    @property
+    def login_available(self):
+        """Cognito login always happens prior to the identity provider, will happen automatically."""
+        return False
 
     @lru_cache
     def _get_elb_key(self, region: str, kid: str) -> str:
@@ -59,23 +161,19 @@ class CognitoHeadersIdentityProvider(BeakerIdentityProvider):
     def _verify_jwt(self, jwt_data: str):
         if pyjwt is not None:
             header, body = [json.loads(base64.b64decode(f).decode('utf-8')) for f in jwt_data.split('.')[0:2]]
-            self.log.warning(header)
-            self.log.warning(body)
             signer: str = header.get("signer")
             region = signer.split(':')[3]
             kid: str = header.get("kid")
             pubkey = self._get_elb_key(region, kid)
             payload = pyjwt.decode(jwt_data, key=pubkey, algorithms=["ES256", "RS256"])
-            self.log.warning(payload)
             return payload
 
 
     @lru_cache
-    def _get_user(self, user_id, access_token):
+    def _get_cognito_user(self, user_id, access_token):
         # Access token is provided as an argument to ensure that auth info is refetched (misses cache) if the access token changes.
         try:
-            cognito_client = boto3.client('cognito-idp')
-            response = cognito_client.admin_get_user(
+            response = self.cognito_client.admin_get_user(
                 UserPoolId=self.user_pool_id,
                 Username=user_id
             )
@@ -119,7 +217,7 @@ class CognitoHeadersIdentityProvider(BeakerIdentityProvider):
         if not user_id or not access_token:
             return None
 
-        user = self._get_user(user_id, access_token)
+        user = self._get_cognito_user(user_id, access_token)
         if user:
             current_user.set(user)
         return user
@@ -127,4 +225,9 @@ class CognitoHeadersIdentityProvider(BeakerIdentityProvider):
 
 class CognitoAuthorizer(BeakerAuthorizer):
     def is_authorized(self, handler, user, action, resource):
+        # TODO: More explicit rules
         return 'admin' in user.roles
+
+
+identity_provider = CognitoHeadersIdentityProvider
+authorizer = CognitoAuthorizer
