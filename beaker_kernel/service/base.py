@@ -1,4 +1,5 @@
 import getpass
+import importlib
 import logging
 import os
 import pwd
@@ -8,20 +9,18 @@ import urllib.parse
 from typing import Optional
 
 from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
-from jupyter_server.services.contents.filemanager import AsyncFileContentsManager
+from jupyter_server.auth import Authorizer, IdentityProvider
 from jupyter_server.services.contents.largefilemanager import AsyncLargeFileManager
 from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
 from jupyter_server.services.sessions.sessionmanager import SessionManager
 from jupyter_server.serverapp import ServerApp
 from jupyterlab_server import LabServerApp
-from tornado.web import HTTPError
 
 from beaker_kernel.lib.app import BeakerApp
 from beaker_kernel.lib.config import config
 from beaker_kernel.lib.utils import import_dotted_class
-from beaker_kernel.service.auth import current_user, current_request, BeakerUser
-from beaker_kernel.service.auth.cognito import CognitoAuthorizer, CognitoHeadersIdentityProvider
-from beaker_kernel.service.handlers import register_handlers, SummaryHandler, request_log_handler, sanitize_env
+from beaker_kernel.service.auth import current_user, BeakerUser
+from beaker_kernel.service.handlers import register_handlers, request_log_handler
 
 
 logger = logging.getLogger("beaker_server")
@@ -272,10 +271,33 @@ class BaseBeakerServerApp(LabServerApp):
 
     @classmethod
     def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
-        # Set Jupyter token from config
-        os.environ.setdefault("JUPYTER_TOKEN", config.jupyter_token)
+        # Update webserver app traits from app definition
         kwargs.update(cls.app_traits)
+
+        authorizer_class: Authorizer | None = None
+        identity_provider_class: IdentityProvider | None = None
+        try:
+            # Fetch from module if defined
+            auth_mod_str = os.environ.get("BEAKER_AUTH")
+            if auth_mod_str:
+                auth_mod = importlib.import_module(auth_mod_str)
+                authorizer_class = getattr(auth_mod, "authorizer", None)
+                identity_provider_class = getattr(auth_mod, "identity_provider", None)
+        except Exception as err:
+            pass
+
+        if "BEAKER_AUTH_AUTHORIZER" in os.environ:
+            authorizer_class = os.environ.get("BEAKER_AUTH_AUTHORIZER")
+        if "BEAKER_AUTH_IDENTITY_PROVIDER" in os.environ:
+            identity_provider_class = os.environ.get("BEAKER_AUTH_IDENTITY_PROVIDER")
+
+        if authorizer_class:
+            kwargs["authorizer_class"] = authorizer_class
+        if identity_provider_class:
+            kwargs["identity_provider_class"] = identity_provider_class
+
         app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
+
         # Log requests to console if configured
         if cls.log_requests:
             app.web_app.settings["log_function"] = request_log_handler
@@ -283,7 +305,8 @@ class BaseBeakerServerApp(LabServerApp):
 
     def initialize_handlers(self):
         """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""
-        self.handlers.append((r"/summary", SummaryHandler))
+        if self.serverapp.identity_provider:
+            self.handlers.extend(self.serverapp.identity_provider.get_handlers())
         register_handlers(self)
         super().initialize_handlers()
 
