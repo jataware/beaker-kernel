@@ -13,9 +13,9 @@ class DummyIdentityProvider(BeakerIdentityProvider):
     async def get_user(self, handler) -> User|None:
         current_request.set(handler.request)
         user = RoleBasedUser(
-            username="matt@jataware.com",
-            name="Matt",
-            display_name="Matthew Printz",
+            username="test@test-user.com",
+            name="testuser",
+            display_name="Test User",
             roles=["admin"],
         )
         logging.debug(f"User: {user}")
@@ -27,3 +27,7 @@ class DummyIdentityProvider(BeakerIdentityProvider):
 class DummyAuthorizer(BeakerAuthorizer):
     def is_authorized(self, handler, user, action, resource):
         return 'admin' in user.roles
+
+
+authorizer = DummyAuthorizer
+identity_provider = DummyIdentityProvider

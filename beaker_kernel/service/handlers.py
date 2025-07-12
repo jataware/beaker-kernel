@@ -1,5 +1,4 @@
 import asyncio
-import importlib
 import json
 import logging
 import os
@@ -7,10 +6,9 @@ import traceback
 import uuid
 import urllib.parse
 from typing import get_origin, get_args
-from dataclasses import is_dataclass, asdict
-from collections.abc import Mapping, Collection
+from dataclasses import is_dataclass
 from pathlib import Path
-from typing import get_origin, get_args, GenericAlias, Union, Generic, Generator, Optional
+from typing import get_origin, get_args
 from types import UnionType
 
 from jupyter_server.auth.decorator import authorized
@@ -18,19 +16,19 @@ from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
 from jupyterlab_server import LabServerApp
 from tornado import web, httputil
-from tornado.web import StaticFileHandler, RedirectHandler, RequestHandler, HTTPError
+from tornado.web import StaticFileHandler, RequestHandler, HTTPError
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.app import BeakerApp
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernel import BeakerSubkernel
-from beaker_kernel.lib.agent_tasks import summarize
 from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, recursiveOptionalUpdate, reset_config
 from beaker_kernel.service import admin_utils
 from beaker_kernel.service.auth import BeakerUser
 from .api.handlers import register_api_handlers
 
 logger = logging.getLogger(__name__)
+
 
 def sanitize_env(env: dict[str, str]) -> dict[str, str]:
     # Whitelist must match the env variable name exactly and is checked first.
@@ -411,13 +409,6 @@ class ExportAsHandler(JupyterHandler):
         self.finish(output)
 
 
-class SummaryHandler(ExtensionHandlerMixin, JupyterHandler):
-    async def post(self):
-        payload = json.loads(self.request.body)
-        summary = await summarize(**payload)
-        return self.write(summary)
-
-
 class StatsHandler(ExtensionHandlerMixin, JupyterHandler):
     """
     """
@@ -567,7 +558,6 @@ def register_handlers(app: LabServerApp):
     app.handlers.append(("/config", ConfigHandler))
     app.handlers.append(("/stats", StatsHandler))
     app.handlers.append((r"/(favicon.ico|beaker.svg)$", StaticFileHandler, {"path": Path(app.ui_path)}))
-    app.handlers.append((r"/summary", SummaryHandler))
     app.handlers.append((r"/export/(?P<format>\w+)", ExportAsHandler)),
     app.handlers.append((r"/((?:static|themes)/.*)", StaticFileHandler, {"path": Path(app.ui_path)})),
     app.handlers.append((page_regex, PageHandler, {"path": app.ui_path, "default_filename": "index.html"}))

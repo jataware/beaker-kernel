@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 def set_config_from_app(app: "BeakerNotebookApp"):
     os.environ.setdefault("JUPYTER_SERVER", app.connection_url)
-    os.environ.setdefault("JUPYTER_TOKEN", app.identity_provider.token)
 
 
 @click.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})

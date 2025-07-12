@@ -258,7 +258,9 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         res = requests.post(
             url,
             json={"name": language, "path": self.beaker_kernel.session_config.get("jupyter_session", "")},
-            headers={"Authorization": f"token {config.jupyter_token}"},
+            headers={
+                "X-AUTH-BEAKER": self.beaker_kernel.api_auth()
+            },
         )
         kernel_info = res.json()
         self.beaker_kernel.update_running_kernels()

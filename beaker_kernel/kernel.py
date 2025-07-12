@@ -153,6 +153,23 @@ class BeakerKernel(KernelProxyManager):
             "shell", "execute_request", self.handle_magic_word
         )
 
+    def api_auth(self) -> str:
+        import hashlib
+        import time
+
+        preamble = "beaker-kernel"
+        nonce = str(int(time.time()))
+        kernel_id = self.kernel_id
+        key = self.session_config.get("key")
+
+        logger.warning(self.session_config)
+
+        s = f"{kernel_id}{nonce}{key}".encode()
+        logger.warning(s)
+        hash_value = hashlib.md5(s).hexdigest()
+
+        return f"{preamble}:{kernel_id}:{nonce}:{hash_value}"
+
     async def handle_magic_word(self, server, target_stream, data):
         message = JupyterMessage.parse(data)
         cell_content: str = message.content.get("code", "").strip()
