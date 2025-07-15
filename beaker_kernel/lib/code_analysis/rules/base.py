@@ -87,9 +87,10 @@ instructions:
         from ...config import config
         rule_index = {rule.id: rule for rule in rules}
         model = config.get_model()
+        beaker_kernel = analyzer.context.beaker_kernel if getattr(analyzer, 'context', None) else None
         agent = AnalysisAgent(
             model=model,
-            beaker_kernel = analyzer.context.beaker_kernel,
+            beaker_kernel = beaker_kernel
         )
         agent.add_context(f"""\
 Code to run rules against:
