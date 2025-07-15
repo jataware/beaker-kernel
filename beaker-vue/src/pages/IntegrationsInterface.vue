@@ -18,11 +18,11 @@
         <div class="integration-container">
             <div class="beaker-notebook">
                 <IntegrationEditor
-                    :selected-on-load="integrations.selected"
                     v-model="integrations"
-                    @refresh="refresh"
-                    @refresh-resources-for-selected-integration="refreshSelectedIntegrationResources"
-                    :session-id="sessionId"
+                    :deleteResource="deleteResourceOnSelectedIntegration"
+                    :modifyResource="modifyResourceForSelectedIntegration"
+                    :modifyIntegration="modifySelectedIntegration"
+                    :fetchResources="fetchResourcesForSelectedIntegration"
                 />
             </div>
         </div>
@@ -96,10 +96,9 @@
                 >
                 <ExamplesPanel
                     v-model="integrations"
-                    :disabled="!integrations.selected"
-                    :session-id="sessionId"
-                    @refresh="refresh"
-                    @refresh-resources-for-selected-integration="refreshSelectedIntegrationResources"
+                    :disabled="!integrations.selected || integrations.selected === 'new'"
+                    :deleteResource="deleteResourceOnSelectedIntegration"
+                    :modifyResource="modifyResourceForSelectedIntegration"
                 />
                 </SideMenuPanel>
                 <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
@@ -132,7 +131,7 @@ import DebugPanel from '../components/panels/DebugPanel.vue'
 
 import IntegrationEditor from '../components/misc/IntegrationEditor.vue';
 import IntegrationPanel from '../components/panels/IntegrationPanel.vue';
-import { getResourcesForIntegration, listIntegrations, type IntegrationInterfaceState, type IntegrationResourceMap } from '@/util/integration';
+import { listResources, listIntegrations, type IntegrationInterfaceState, type IntegrationResourceMap, updateResource, addResource, updateIntegration, addIntegration, deleteResource } from '@/util/integration';
 import ExamplesPanel from '../components/panels/ExamplesPanel.vue';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
@@ -210,33 +209,67 @@ const integrations = ref<IntegrationInterfaceState>({
     finishedInitialLoad: false,
 })
 
-const refreshSelectedIntegrationResources = async () => {
+const fetchResourcesForSelectedIntegration = async () => {
     const selectedIntegration = integrations.value.integrations?.[integrations.value?.selected];
     if (selectedIntegration === undefined) {
         return;
     }
-    // in the case of first-load opening a new, local-only integration, assume an empty resources object
-    if (selectedIntegration?.resources === undefined || selectedIntegration?.resources === null ) {
-        selectedIntegration.resources = {}
+    if (integrations.value?.selected === "new") {
+        // in the case of first-load opening a new, local-only integration, assume an empty resources object
+        if (selectedIntegration?.resources === undefined || selectedIntegration?.resources === null ) {
+            selectedIntegration.resources = {};
+        }
+        return;
     }
-    selectedIntegration.resources = await getResourcesForIntegration(sessionId, integrations.value.selected)
+    selectedIntegration.resources = Object.fromEntries(
+        (await listResources(sessionId, integrations.value.selected))
+            ?.map(resource => [resource.resource_id, resource]) ?? []);
 }
 
-// handle all api calls in one place so child elements don't make unnecessary calls / fall out of sync
-const refresh = async () => {
+const fetchIntegrations = async () => {
     integrations.value.integrations = await listIntegrations(sessionId);
-    if (
-        integrations.value.selected !== undefined
-        && integrations.value.selected !== "new" // case where ?selected=new
-    ) {
-        // only get the resources view for a given selected integration, but keep it up to date
-        await refreshSelectedIntegrationResources();
-    }
     integrations.value.finishedInitialLoad = true;
 }
 
-// on connection, send message with retries: see context.py:call_in_context()
-watch(beakerSession, async () => refresh());
+const modifySelectedIntegration = async (body: object, integrationId?: string) => {
+    if (integrationId) {
+        integrations.value.integrations[integrationId] = await updateIntegration(
+            sessionId,
+            integrationId,
+            body
+        )
+    } else {
+        const newIntegration = await addIntegration(sessionId, body);
+        integrations.value.integrations[newIntegration.uuid] = newIntegration;
+        integrations.value.selected = newIntegration.uuid;
+    }
+}
+
+const modifyResourceForSelectedIntegration = async (body: object, resourceId?: string) => {
+    const selectedIntegration = integrations.value.integrations?.[integrations.value?.selected];
+    if (resourceId) {
+        selectedIntegration.resources[resourceId] = await updateResource(
+            sessionId,
+            integrations.value.selected,
+            resourceId,
+            body
+        );
+    } else {
+        const newResource = await addResource(
+            sessionId,
+            integrations.value.selected,
+            body
+        );
+        selectedIntegration.resources[newResource.resource_id] = newResource;
+    }
+}
+
+const deleteResourceOnSelectedIntegration = async (resourceId: string) => {
+    await deleteResource(sessionId, integrations.value.selected, resourceId)
+}
+
+// on connection, send message with retries: see integrations.py:call_in_context()
+watch(beakerSession, async () => fetchIntegrations());
 
 const headerNav = computed((): NavOption[] => {
     const nav = [];
@@ -250,7 +283,7 @@ const headerNav = computed((): NavOption[] => {
                 component: NotebookSvg,
                 componentStyle: {
                     fill: 'currentColor',
-                    stroke: 'currentColor',
+                    stroke: 'currenatColor',
                     height: '1rem',
                     width: '1rem',
                 },

@@ -180,7 +180,7 @@ import MediaPanel from '../components/panels/MediaPanel.vue';
 import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 import DebugPanel from '../components/panels/DebugPanel.vue'
-import { listIntegrations, type IntegrationInterfaceState, type IntegrationMap } from '../util/integration';
+import { listIntegrations, type IntegrationMap } from '../util/integration';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -322,49 +322,6 @@ const iopubMessage = (msg) => {
         chatHistory.value = msg.content;
         console.log(msg.content);
     }
-    // else if (msg.header.msg_type === "add_example") {
-    //     const showToast = beakerInterfaceRef.value.showToast;
-    //     const session = beakerInterfaceRef.value.getSession();
-    //     try {
-    //         handleAddExampleMessage(msg, datasources.value, session)
-    //         showToast({
-    //             title: 'Example Added',
-    //             detail: `The example has been successfully added.`,
-    //             severity: 'success',
-    //             life: 4000
-    //         });
-    //     }
-    //     catch (error) {
-    //         showToast({
-    //             title: 'Error',
-    //             detail: `Unable to add example: ${error}.`,
-    //             severity: 'error',
-    //             life: 8000
-    //         });
-    //     }
-    // }
-    // else if (msg.header.msg_type === "add_integration") {
-    //     const showToast = beakerInterfaceRef.value.showToast;
-    //     const session = beakerInterfaceRef.value.getSession();
-    //     const integration = msg.content.integration;
-    //     try {
-    //         handleAddIntegrationMessage(msg, datasources.value, session)
-    //         showToast({
-    //             title: 'Integration Added',
-    //             detail: `The integration '${integration}' has been successfully added.`,
-    //             severity: 'success',
-    //             life: 4000
-    //         });
-    //     }
-    //     catch (error) {
-    //         showToast({
-    //             title: 'Error',
-    //             detail: `Unable to add integration: ${error}.`,
-    //             severity: 'error',
-    //             life: 8000
-    //         });
-    //     }
-    // }
 };
 
 const anyMessage = (msg, direction) => {

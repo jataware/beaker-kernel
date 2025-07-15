@@ -2,7 +2,7 @@ import re
 import typing
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 IntegrationTypes: typing.TypeAlias = typing.Literal["api", "database", "dataset"]
 
@@ -11,10 +11,10 @@ class Resource:
     resource_type: typing.ClassVar[str]
     integration: typing.Optional[str] = None
     # optional -- if not included on handwritten yaml, it will be generated
-    resource_id: typing.Optional[UUID] = None
+    resource_id: typing.Optional[str] = None
     def __post_init__(self):
         if self.resource_id is None:
-            self.resource_id = uuid4()
+            self.resource_id = str(uuid4())
 
 @dataclass(kw_only=True)
 class FileResource(Resource):
@@ -60,4 +60,5 @@ class Integration:
 
     def add_resources(self, resource_list: list[Resource]):
         for resource in resource_list:
-            self.resources[resource.id] = resource
+            if resource.resource_id:
+                self.resources[resource.resource_id] = resource

@@ -171,7 +171,7 @@ class IntegrationHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
     def set_default_headers(self):
         self.set_header("Content-Type", "application/json")
 
-    async def head(self, session_id=None, integration_id=None):  # noqa: ARG002
+    async def head(self, session_id=None, integration_id=None):
         integrations = await self.call_in_context(
             session_id=session_id,
             target="context",
@@ -180,34 +180,44 @@ class IntegrationHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
         self.write({"integrations": list(integrations.keys())})
 
     async def get(self, session_id=None, integration_id=None):
-        integrations = await self.call_in_context(
-            session_id=session_id,
-            target="context",
-            function="list_integrations"
-        ) or {}
         if integration_id is None:
+            integrations = await self.call_in_context(
+                session_id=session_id,
+                target="context",
+                function="list_integrations"
+            ) or {}
             self.write({"integrations": self.stringify_serialization(integrations)})
         else:
-            self.write(self.stringify_serialization(integrations.get(
-                integration_id,
-                {"error": "Integration does not exist on context."}
-            )))
+            integration = await self.call_in_context(
+                session_id=session_id,
+                target=f"integration:{integration_id}",
+                function="get_integration",
+                kwargs={"integration_id": integration_id}
+            )
+            self.write(self.stringify_serialization(integration))
 
     async def post(self, session_id=None, integration_id=None):
         body = tornado.escape.json_decode(self.request.body)
-        provider_id = body.pop("provider")
-        if integration_id is not None:
-            body["integration_id"] = integration_id
         try:
-            result = await self.call_in_context(
-                session_id=session_id,
-                target=f"provider:{provider_id}",
-                function="update_integration",
-                kwargs=body
-            )
-            self.write({"status": "success", "result": result})
+            if integration_id is not None:
+                body["integration_id"] = integration_id
+                result = await self.call_in_context(
+                    session_id=session_id,
+                    target=f"integration:{integration_id}",
+                    function="update_integration",
+                    kwargs=body
+                ) or {}
+            else:
+                provider_id = body.pop("provider")
+                result = await self.call_in_context(
+                    session_id=session_id,
+                    target=f"provider:{provider_id}",
+                    function="add_integration",
+                    kwargs=body
+                ) or {}
+            self.write(self.stringify_serialization(result))
         except Exception as e:
-            self.write({"status": "failure", "result": str(e)})
+            raise tornado.web.HTTPError(status_code=400, log_message=str(e))
 
 
 class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
@@ -221,21 +231,30 @@ class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterH
         pass
 
     async def get(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
-        # resource_cls = ResourceMap.get(resource_type, None)
-        function = "list_resources" if resource_id is None else "get_resource"
-        kwargs = {"integration_id": integration_id}
-        # route disambiguation -- resource_type all means passing "none" to message, since it's required in route
-        if resource_type is not None and resource_type != "all":
-            kwargs["resource_type"] = resource_type
-        if resource_id is not None:
-            kwargs["resource_id"] = resource_id
-        resources = await self.call_in_context(
-            session_id=session_id,
-            target=f"integration:{integration_id}",
-            function=function,
-            kwargs=kwargs
-        )
-        self.write({"resources": self.stringify_serialization(resources)})
+        if resource_id is None:
+            base_kwargs = {"integration_id": integration_id}
+            result = await self.call_in_context(
+                session_id=session_id,
+                target=f"integration:{integration_id}",
+                function="list_resources",
+                kwargs=base_kwargs | (
+                    {"resource_type": resource_type}
+                    if resource_type is not None and resource_type != "all"
+                    else {}
+                )
+            )
+            self.write({"resources": self.stringify_serialization(result)})
+        else:
+            try:
+                result = await self.call_in_context(
+                    session_id=session_id,
+                    target=f"integration:{integration_id}",
+                    function="get_resource",
+                    kwargs={"integration_id": integration_id, "resource_id": resource_id}
+                )
+                self.write(self.stringify_serialization(result))
+            except Exception as e:
+                raise tornado.web.HTTPError(status_code=400, log_message=str(e))
 
     async def post(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
         function = "add_resource"
@@ -251,9 +270,10 @@ class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterH
                 function=function,
                 kwargs=kwargs
             )
-            self.write({"status": "success", "details": result})
+            logger.warning(f"result from int: {result} \n\n {self.stringify_serialization((result))}")
+            self.write(self.stringify_serialization(result))
         except Exception as e:
-            self.write({"status": "failure", "details": str(e)})
+            raise tornado.web.HTTPError(status_code=400, log_message=str(e))
 
 
     async def delete(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
@@ -264,15 +284,9 @@ class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterH
                 function="remove_resource",
                 kwargs={"resource_id": resource_id, "integration_id": integration_id}
             )
-            self.write({"status": "success", "details": ""})
+            self.write({})
         except Exception as e:
-            self.write({"status": "failure", "details": str(e)})
-# new integration -- POST /integrations/{session_id}/
-# update integration -- POST /integrations/{session_id}/{integration_id}
-# new resource -- POST /resources/{session_id}/{integration_id}
-# update resource -- POST /resources/{session_id}/{integration_id}/{resource_id}
-
-# POST /integrations/session/int_id/file
+            raise tornado.web.HTTPError(status_code=400, log_message=str(e))
 
 handlers = [
     (r'integrations/(?P<session_id>[\w\d-]+)/?(?P<integration_id>[\w\d-]+)?', IntegrationHandler),

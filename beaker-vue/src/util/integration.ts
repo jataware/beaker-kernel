@@ -1,5 +1,3 @@
-import { BeakerSession } from 'beaker-kernel';
-
 export interface IntegrationResource {
     // names must be coherent with python resource class
     resource_type: string
@@ -27,8 +25,9 @@ export type IntegrationResourceMap = {
 
 export interface Integration {
     description: string
-    source: string;
+    source: string
     slug: string
+    uuid: string
     name: string
     url: string
     provider: string
@@ -64,12 +63,6 @@ const toRoute = (details: IntegrationAPIRouteDetails) =>
     .filter((x) => x)
     .join('/')
 
-// return representation of new changed object/operation
-interface IntegrationPostReturn {
-    status: string,
-    results: object | string
-}
-
 async function integrationApiWrapper<T>(
     method: "GET" | "POST" | "DELETE",
     route: IntegrationAPIRouteDetails,
@@ -91,7 +84,7 @@ async function integrationApiWrapper<T>(
     return json
 }
 
-export const getIntegrationProviderType = (integration: Integration) => integration.provider.split(":")[0]
+export const getIntegrationProviderType = (integration: Integration) => integration.provider.split(":")[0];
 
 export const getIntegrationProviderSlug = (integration: Integration) => integration.provider.split(":")[1]
 
@@ -99,26 +92,33 @@ export const listIntegrations = async (sessionId: string): Promise<IntegrationMa
     return (await integrationApiWrapper<{"integrations": IntegrationMap}>("GET", {sessionId})).integrations;
 }
 
-export const postIntegration = async (sessionId: string, integrationId: string, body: object): Promise<IntegrationMap> => {
-    return await integrationApiWrapper<IntegrationMap>("POST", {sessionId, integrationId}, body);
+export const addIntegration = async (sessionId: string, body: object): Promise<Integration> => {
+    return await integrationApiWrapper<Integration>("POST", {sessionId}, body);
 }
 
-export const getResourcesForIntegration = async (sessionId: string, integrationId: string) => {
+export const updateIntegration = async (sessionId: string, integrationId: string, body: object): Promise<Integration> => {
+    return await integrationApiWrapper<Integration>("POST", {sessionId, integrationId}, body);
+}
+
+export const listResources = async (sessionId: string, integrationId: string) => {
     const routeDetails = {
         sessionId,
         integrationId,
         resourceType: "all"
     }
-    return (await integrationApiWrapper<{"resources": IntegrationResourceMap}>("GET", routeDetails)).resources;
+    return (await integrationApiWrapper<{resources: IntegrationResource[]}>("GET", routeDetails)).resources;
 }
 
-export const postResource = async (args: {sessionId: string, integrationId: string, resourceId?: string, body: object}) => {
-    const {sessionId, integrationId, body, resourceId} = args;
-    return await integrationApiWrapper<IntegrationPostReturn>("POST", {sessionId, integrationId, resourceType: "new", resourceId}, body)
+export const addResource = async (sessionId: string, integrationId: string, body: object) => {
+    return await integrationApiWrapper<IntegrationResource>("POST", {sessionId, integrationId, resourceType: "new"}, body)
+}
+
+export const updateResource = async (sessionId: string, integrationId: string, resourceId: string, body: object) => {
+    return await integrationApiWrapper<IntegrationResource>("POST", {sessionId, integrationId, resourceType: "new", resourceId}, body)
 }
 
 export const deleteResource = async (sessionId: string, integrationId: string, resourceId: string) => {
-    return await integrationApiWrapper<IntegrationPostReturn>("DELETE", {sessionId, integrationId, resourceType: "none", resourceId})
+    return await integrationApiWrapper<{}>("DELETE", {sessionId, integrationId, resourceType: "any", resourceId})
 }
 
 export function filterByResourceType<T>(resources: IntegrationResourceMap | undefined, resource_type: string): {[key in string]: T} {

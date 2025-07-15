@@ -10,7 +10,7 @@
                 <Select :options="
                     sortedIntegrations.map(integration => ({
                         label: integration.name,
-                        value: integration.slug
+                        value: integration.uuid
                     }))"
                     :option-label="(option) => option?.label ?? 'Select integration...'"
                     option-value="value"
@@ -139,6 +139,23 @@
                         />
                     </template>
                 </Toolbar>
+                <Toolbar v-for="file, index in uncommittedNewFileUploads" :key="file?.filepath">
+                    <template #start>
+                        <span>Pending Upload</span>
+                    </template>
+                    <template #center>
+                        <InputText v-model="file.name" type="text"></InputText>
+                    </template>
+                    <template #end>
+                        <Button
+                            icon="pi pi-trash"
+                            severity="danger"
+                            style="width: 32px; height: 32px"
+                            @click="uncommittedNewFileUploads.splice(index, 1)"
+                            v-tooltip="'Remove File'"
+                        />
+                    </template>
+                </Toolbar>
                 <Button
                     @click="openFileSelectionMultiple"
                     style="width: fit-content; height: 32px;"
@@ -212,7 +229,7 @@
 <script setup lang="ts">
 
 import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
-import { type IntegrationMap, type Integration, getIntegrationProviderType, type IntegrationAttachedFile, type IntegrationResourceMap, type IntegrationInterfaceState, filterByResourceType, postIntegration, postResource, deleteResource } from '../../util/integration';
+import { type IntegrationMap, type Integration, getIntegrationProviderType, type IntegrationAttachedFile, type IntegrationInterfaceState, filterByResourceType } from '../../util/integration';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 import Select from 'primevue/select';
@@ -228,21 +245,22 @@ import * as cookie from 'cookie';
 import CodeEditor from './CodeEditor.vue';
 import SplitButton from 'primevue/splitbutton';
 
-import { v4 as uuidv4 } from "uuid";
-
 import { useRoute } from 'vue-router';
 
 const showToast = inject<any>('show_toast');
 
+// these are props rather than events due to awaiting async finishes;
+// file uploads need to be done before the integration is changed.
 const props = defineProps<{
-    sessionId: string,
+    fetchResources: () => Promise<void>,
+    deleteResource: (resourceId: string) => Promise<void>,
+    modifyResource: (body: object, resourceId?: string) => Promise<void>,
+    modifyIntegration: (body: object, integrationId?: string) => Promise<void>,
 }>();
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const model = defineModel<IntegrationInterfaceState>()
-
-const emit = defineEmits(['refresh', 'refreshResourcesForSelectedIntegration'])
 
 const sortIntegrations = (integrations: IntegrationMap): Integration[] =>
     Object.values(integrations).toSorted((a, b) => a?.name.localeCompare(b?.name))
@@ -260,9 +278,10 @@ const attachedFiles = computed<{[key in string]: IntegrationAttachedFile}>(() =>
         model.value.integrations[model.value.selected]?.resources, "file")
     )
 
+// storing deletes until save
 const uncommittedDeletedResources = ref([]);
-
-const newIntegrationJustCreated = ref<boolean>(false);
+// storing new integration file uploads until pushed to
+const uncommittedNewFileUploads = ref<IntegrationAttachedFile[]>([]);
 
 const updateSelectedParam = () => {
     // keep URL in sync with focused integration after save
@@ -272,33 +291,25 @@ const updateSelectedParam = () => {
 }
 
 watch(() => model.value.selected, () => {
-    // always pull from backend when changing selected -- except for a brand new integration that won't have been committed yet
-    if (newIntegrationJustCreated.value) {
-        newIntegrationJustCreated.value = false;
-        return;
-    }
-    else {
-        model.value.unsavedChanges = false;
-        uncommittedDeletedResources.value = [];
-        emit("refresh");
-    }
+    model.value.unsavedChanges = false;
+    uncommittedNewFileUploads.value = [];
+    uncommittedDeletedResources.value = [];
+    props.fetchResources()
 })
 
 const newIntegration = () => {
-    const uuid = uuidv4()
     const integration: Integration = {
         name: "New Integration",
-        url: "",
-        slug: uuid,
         source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
         description: "This is the description that the agent will use to determine when this integration should be used.",
-        provider: "adhoc:specialist_agents"
+        provider: "adhoc:specialist_agents",
+        slug: "new_integration",
+        uuid: "new",
+        url: ""
     }
-    // assign temporary uuid
-    model.value.integrations[uuid] = integration;
-    model.value.selected = uuid;
+    model.value.integrations["new"] = integration;
+    model.value.selected = "new";
     model.value.unsavedChanges = true;
-    newIntegrationJustCreated.value = true;
 }
 
 const delayUntil = (condition, retryInterval) => {
@@ -337,7 +348,6 @@ watch(model, ({unsavedChanges}) => {
     } else {
         onbeforeunload = undefined;
     }
-    console.log("fired -- if 'needs to make new could be here, that would be good'");
 })
 
 const descriptionEditor = ref();
@@ -402,20 +412,29 @@ const save = async () => {
     if (selectedIntegration?.value === undefined) {
         return;
     }
+
     for (const id of uncommittedDeletedResources.value) {
-        await deleteResource(props.sessionId, model.value.selected, id);
+        await props.deleteResource(id);
     }
     uncommittedDeletedResources.value = [];
 
-    for (const [file_id, file] of Object.entries(attachedFiles.value)) {
-        await postResource({
-            sessionId: props.sessionId,
-            integrationId: model.value.selected,
-            resourceId: file_id,
-            body: file
-        })
+    // if local only, sync minimal details to get a uuid from the server, then update after files are pushed
+    if (model.value.selected === "new") {
+        const source = selectedIntegration.value.source;
+        const uncommittedUploads = [...uncommittedNewFileUploads.value];
+        // sets selected with new uuid
+        await props.modifyIntegration({...selectedIntegration.value, source: ""})
+        for (const file of uncommittedUploads) {
+            console.log("uploading each file")
+            await props.modifyResource(file);
+        }
+        selectedIntegration.value.source = source;
+    } else {
+        for (const [file_id, file] of Object.entries(attachedFiles.value)) {
+            await props.modifyResource(file, file_id);
+        }
     }
-    await postIntegration(props.sessionId, model.value.selected, selectedIntegration.value);
+    await props.modifyIntegration(selectedIntegration.value, model.value.selected);
 
     showToast({
         title: 'Saved!',
@@ -423,25 +442,26 @@ const save = async () => {
         severity: 'success',
         life: 4000
     });
-    emit("refresh");
+
+    // if exists
+    delete model.value.integrations["new"];
 
     model.value.unsavedChanges = false;
-
     // if ?selected=new, assign it to the new uuid for clarity
-    updateSelectedParam();
+    // updateSelectedParam();
 }
 
 const onSelectFileForUpload = async () => {
     const fileList = uploadForm.value['uploadfiles']?.files;
-    await uploadFile(fileList);
+    await uploadFiles(fileList);
 }
 
 const onSelectFilesForUpload = async () => {
     const fileList = uploadFormMultiple.value['uploadfilesMultiple']?.files;
-    await uploadFile(fileList);
+    await uploadFiles(fileList);
 }
 
-const uploadFile = async (files: FileList) => {
+const uploadFiles = async (files: FileList) => {
     model.value.unsavedChanges = true;
     const promises = Array.from(files).map(async (file) => {
         const bytes = [];
@@ -451,34 +471,21 @@ const uploadFile = async (files: FileList) => {
             bytes.push(Array.from(chunk, (byte) => String.fromCharCode(byte)).join(""));
             chunk = (await reader.read()).value;
         }
-        const uuid = uuidv4();
-        const fileResource: IntegrationAttachedFile = {
+        const fileResource = {
             resource_type: "file",
-            resource_id: uuid,
             integration: model.value.selected,
             content: String(bytes),
             filepath: file.name,
             name: file.name.split('.')[0]
         }
-        // for new, unsaved integrations
-        if (selectedIntegration.value.resources === undefined || selectedIntegration.value.resources === null) {
-            selectedIntegration.value.resources = {};
+        // keep local until save on new temporary integration
+        if (model.value.selected !== "new") {
+            await props.modifyResource(fileResource);
+        } else {
+            uncommittedNewFileUploads.value.push(fileResource as IntegrationAttachedFile);
         }
-        selectedIntegration.value.resources[uuid] = fileResource;
     });
-
     await Promise.all(promises);
-
-    // post the resource at upload time to avoid stale state between here and examples
-    for (const [file_id, file] of Object.entries(attachedFiles.value)) {
-        await postResource({
-            sessionId: props.sessionId,
-            integrationId: model.value.selected,
-            resourceId: file_id,
-            body: file
-        })
-    }
-    emit("refreshResourcesForSelectedIntegration")
 }
 
 const downloadFile = async (id) => {

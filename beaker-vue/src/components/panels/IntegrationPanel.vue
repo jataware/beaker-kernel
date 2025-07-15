@@ -58,21 +58,21 @@
                     v-for="integration in processIntegrations(Object.values(integrations))"
                     :key="integration?.name"
                     @mouseleave="hoveredIntegration = undefined"
-                    @mouseenter="hoveredIntegration = integration.slug"
+                    @mouseenter="hoveredIntegration = integration.uuid"
                 >
                     <Card
                         :pt = "{
                             root: {
                                 style:
                                     'transition: background-color 150ms linear;' +
-                                    (hoveredIntegration === integration.slug
+                                    (hoveredIntegration === integration.uuid
                                         ? 'background-color: var(--p-surface-c); cursor: pointer;'
                                         : '')
                             }
                         }"
-                        @click="expandedIntegration = (expandedIntegration === integration.slug)
+                        @click="expandedIntegration = (expandedIntegration === integration.uuid)
                             ? undefined
-                            : integration.slug;
+                            : integration.uuid;
                         "
                     >
                         <template #title>
@@ -81,9 +81,9 @@
                                     {{ integration?.name }}
                                 </span>
 
-                                <span v-if="expandedIntegration === integration.slug">
+                                <span v-if="expandedIntegration === integration.uuid">
                                     <RouterLink
-                                        :to="`/integrations?selected=${integration?.slug}${sessionIdParam}`"
+                                        :to="`/integrations?selected=${integration?.uuid}${sessionIdParam}`"
                                         aria-label="Edit {{ integration?.name }} "
                                     >
                                         <Button
@@ -100,7 +100,7 @@
                                 </span>
                             </div>
                         </template>
-                        <template #content v-if="expandedIntegration === integration.slug">
+                        <template #content v-if="expandedIntegration === integration.uuid">
                             <div
                                 class="integration-main-content"
                                 style="overflow: hidden;"

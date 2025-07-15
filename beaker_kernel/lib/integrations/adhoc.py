@@ -1,12 +1,10 @@
-import json
 import logging
 import os
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from string import Template
-from typing import ClassVar, Optional, Self, cast
-from uuid import UUID, uuid4
-import uuid
+from typing import Optional, Self, cast
+from uuid import uuid4
 
 import yaml
 from adhoc_api.curation import Example
@@ -14,7 +12,7 @@ from adhoc_api.tool import AdhocApi, APISpec
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
 from beaker_kernel.lib.integrations.base import MutableBaseIntegrationProvider
-from beaker_kernel.lib.types import ExampleResource, FileResource, Integration, IntegrationTypes, Resource
+from beaker_kernel.lib.types import ExampleResource, FileResource, Integration, Resource
 
 logger = logging.getLogger(__file__)
 
@@ -24,21 +22,14 @@ def string_formatter(dumper, data):
     if len(data.splitlines()) == 1 and len(data) < max_line_length:
         return dumper.represent_scalar("tag:yaml.org,2002:str", data)
     return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
-def uuid_formatter(dumper, data):
-    return dumper.represent_scalar("tag:yaml.org,2002:str", str(data))
 yaml.representer.SafeRepresenter.add_representer(str, string_formatter)
-yaml.representer.SafeRepresenter.add_representer(UUID, uuid_formatter)
 
 @dataclass
 class AdhocSpecificationIntegration(Integration):
-
-    # prompt: str
-
-    location: Optional[os.PathLike] = None # relative to adhoc root
-    # resources: dict[UUID, Resource]
+    location: Optional[os.PathLike] = None
 
     @classmethod
-    def from_dict(cls, location: os.PathLike, source: dict) -> Self:
+    def from_dict(cls, location: os.PathLike, provider: str, content: dict) -> Self:
         """
         Creates a AdhocSpecificationIntegration from a dict.
 
@@ -46,19 +37,21 @@ class AdhocSpecificationIntegration(Integration):
         source: deserialized yaml of the integration
         """
         try:
-            name = source["name"]
-            description = source["description"]
-            source = source["source"]
+            name = content["name"]
+            description = content["description"]
+            source = content["source"]
         except KeyError as e:
             msg = "Missing required field on API"
             raise KeyError(msg) from e
-        slug = source.get("slug", str(uuid4()))
+        # slug = content.get("slug", cls.slugify(name))
+        slug = cls.slugify(name)
+        uuid = content.get("uuid", str(uuid4()))
 
         # convert yaml dict resources to dataclass objects, parsing them
-        resources: dict[UUID, Resource] = {}
-        for resource_id, resource_value in source.get("resources", {}).items():
+        resources: dict[str, Resource] = {}
+        for resource_id, resource_value in content.get("resources", {}).items():
             if (resource_type := resource_value.get("resource_type")) == "file" or resource_value.get("filepath") is not None:
-                resource = FileResource(**(resource_value | {"integration": slug}))
+                resource = FileResource(**(resource_value | {"integration": uuid}))
                 if resource.filepath is None:
                     logger.warning("Resource filepath is None - ensure that it has a filepath. Using a default based on name")
                     resource.filepath = resource.name.lower().replace(" ", "_")
@@ -66,27 +59,23 @@ class AdhocSpecificationIntegration(Integration):
                 # by frontend.
                 resource.content = (Path(location) / "attachments" / resource.filepath).read_text()
             elif resource_type == "example" or resource_value.get("code") is not None:
-                resource = ExampleResource(**(resource_value | {"integration": slug}))
+                resource = ExampleResource(**(resource_value | {"integration": uuid}))
             else:
                 msg = "Resources must be either of type file or example for adhoc."
-                raise ValueError(msg)
-            # resource_id will USUALLY be str -- but the cast is important here for
-            # calling from_dict on asdict(dataclass) -- resources will be coerced to dicts
-            # but UUIDs will not be converted to strings
-            resources[UUID(str(resource_id))] = resource
+            resources[resource_id] = resource
 
-        integration_type = source.get("integration_type", "api")
+        datatype = content.get("datatype", "api")
         integration = cls(
-            provider="adhoc:specialist_agents",
+            provider=f"adhoc:{provider}",
             name=name,
             slug=slug,
+            uuid=uuid,
             description=description,
             source=source,
             location=location,
-            datatype=integration_type,
-            # resources=resources
+            datatype=datatype,
         )
-        integration.add_resources(resource_list=resources.values())
+        integration.add_resources(resource_list=list(resources.values()))
         return integration
 
     def get_resources_by_type(self, resource_type: str) -> list:
@@ -111,7 +100,7 @@ class AdhocSpecificationIntegration(Integration):
             for example in self.get_examples()
         ]
 
-    def render(self, overrides: Optional[dict[str, str]] = None) -> APISpec:
+    def render(self, overrides: Optional[dict[str, str]] = None) -> APISpec | None:
         """
         Renders a template with included files given a relative root to start from.
         Raises on nonexistent files and a failure to load.
@@ -121,6 +110,9 @@ class AdhocSpecificationIntegration(Integration):
 
         Attachments are loaded from `relative_root/attachments` as a starting path.
         """
+        if self.location is None or self.slug is None or self.source is None:
+            msg = "invalid specification: missing one of: location, slug, source."
+            raise ValueError(msg)
         substitutions = {
             attachment.name: (Path(self.location) / "attachments" / attachment.filepath)
                 .resolve()
@@ -129,29 +121,20 @@ class AdhocSpecificationIntegration(Integration):
             if attachment.filepath is not None
         }
         substitutions |= (overrides or {})
+        try:
+            documentation = Template(self.source).substitute(substitutions)
+            return APISpec(
+                name=self.name,
+                slug=self.slug,
+                cache_key=f"beaker_{self.slug}",
+                description=self.description,
+                examples=self.get_adhoc_api_examples(),
+                documentation=documentation
+            )
+        except KeyError as e:
+            logger.error(f"Failed to render: `${{{e}}}` referenced in {self.name} but does not exist. Continuing, but disabling.")
+            return None
 
-        return APISpec(
-            name=self.name,
-            slug=self.name.lower().replace(" ", "_"),
-            cache_key=f"beaker_{self.slug}",
-            description=self.description,
-            examples=self.get_adhoc_api_examples(),
-            documentation=Template(self.source).substitute(substitutions)
-        )
-
-    def to_integration(self, provider_type: str, provider: str) -> Integration:
-        """
-        Converts a AdhocSpecificationIntegration to a Beaker Integration, without rendering any part.
-        """
-        return Integration(
-            slug=self.slug,
-            name=self.name,
-            description=self.description,
-            datatype="api",
-            url=str(self.location),
-            source=self.source,
-            provider=f"{provider_type}:{provider}"
-        )
 
     def to_yaml(self) -> str:
         integration = asdict(self)
@@ -172,6 +155,9 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
 
     def write_all_specifications(self):
         for spec in self.specifications:
+            if spec.location is None:
+                msg = "invalid specification: location must not be none"
+                raise ValueError(msg)
             location = Path(spec.location)
             (location / "attachments").mkdir(parents=True, exist_ok=True)
             (location / "api.yaml").write_text(spec.to_yaml())
@@ -187,15 +173,15 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         substitutions = {
             "DATASET_FILES_BASE_PATH": str(datafile_root)
         }
+        # handling None cases in failed renders keeps them editable but not usable by the agent
+        rendered_apis = [spec.render(substitutions) for spec in self.specifications]
         self.adhoc_api = AdhocApi(
-            apis=[
-                spec.render(substitutions)
-                for spec in self.specifications
-            ],
+            apis=[api for api in rendered_apis if api is not None],
             **self.adhoc_config_options
         )
 
     def refresh_adhoc_specs(self):
+        # TODO: future way to not fully reinitialize to make it less slow.
         self.build_adhoc()
 
     def __init__(
@@ -232,7 +218,8 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                 self.specifications.append(
                     AdhocSpecificationIntegration.from_dict(
                         location=integration_dir,
-                        source=spec_data
+                        provider=self.slug,
+                        content=spec_data
                     )
                 )
             except Exception as e:
@@ -254,75 +241,72 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         prompts += "\n\n" + instructions
 
         self.prompt_instructions = f"""\
-{prompts}
-
 Instructions:
 {instructions}
 """
-        # todo: instructions
         self.write_all_specifications()
         self.build_adhoc()
 
-    def get_specification(self, specification_id: str) -> AdhocSpecificationIntegration:
+    @property
+    def prompt(self):
+        agent_details = {spec.slug: spec.description for spec in self.specifications}
+        delimiter = "```"
+        parts = [
+            f"{self.display_name}:",
+            "You have access to the following integrations to use with the `draft_integration_code` and `consult_integration_docs` tools,",
+            "as well as their descriptions for when and why you should use the given integration, delimited in three backticks.",
+            "Only use these integrations with the `draft_integration_code` and `consult_integration_docs` tools.",
+            "",
+            delimiter
+        ]
+        parts.extend([f"Integration: {slug}\nDescription: {desc}\n\n" for slug, desc in agent_details.items()])
+        parts.append(delimiter)
+        return "\n".join(parts)
+
+    def _get_specification(self, specification_id: str) -> AdhocSpecificationIntegration:
         """
         Look up a specification by slug and return it.
         """
-        return next(
-            spec for spec in self.specifications
-            if spec.slug == specification_id
-        )
-
-    def list_integrations(self):
-        return [
-            asdict(specification.to_integration(
-                provider_type=self.provider_type, provider=self.slug
-            ))
-            for specification in self.specifications
-        ]
-
-    def get_integration(self, integration_id: str) -> dict:
-        """
-        Returns the serializable dict representation of the given specification.
-        """
-        return asdict(
-            (next(i for i in self.specifications if i.slug == integration_id))
-            .to_integration(provider_type=self.provider_type, provider=self.slug)
-        )
-
-    def add_integration(self, **payload):
-        payload["prompt"] = payload.get("source", "")
         try:
-            payload.pop("resources")
-        except KeyError:
-            pass
-        integration_root = self.adhoc_path / "datasources"
-        self.specifications.append(AdhocSpecificationIntegration(
-            name=payload["name"],
-            slug=payload["slug"],
-            description=payload["description"],
-            prompt=payload["source"],
-            integration_type=payload.get("datatype", "api"),
-            location=integration_root / payload["name"].lower().replace(" ", "_"),
-            resources={}
-        ))
-        self.write_all_specifications()
-        self.refresh_adhoc_specs()
-
-    def remove_integration(self, **payload):
-        self.specifications = [spec for spec in self.specifications if spec.slug != payload["slug"]]
-        self.write_all_specifications()
-        self.refresh_adhoc_specs()
-
-    def update_integration(self, **payload):
-        try:
-            specification = self.get_specification(payload["slug"])
+            return next(
+                spec for spec in self.specifications
+                if spec.uuid == specification_id
+            )
         except StopIteration:
-            return self.add_integration(**payload)
-        self.specifications = [spec for spec in self.specifications if spec.slug != payload["slug"]]
+            raise KeyError(f"Integration id {specification_id} not found in {[spec.uuid for spec in self.specifications]}")
+
+    def list_integrations(self) -> list[Integration]:
+        return self.specifications # type: ignore
+
+    def get_integration(self, integration_id: str) -> Integration:
+        return self._get_specification(integration_id)
+
+    def add_integration(self, **payload) -> Integration:
+        for field in ["resources", "uuid", "slug", "url"]:
+            payload.pop(field, None)
+        integration_root = self.adhoc_path / "datasources"
+        new_specification = AdhocSpecificationIntegration.from_dict(
+            provider=self.slug,
+            location=integration_root / payload["name"].lower().replace(" ", "_"),
+            content=payload
+        )
+        self.specifications.append(new_specification)
+        self.write_all_specifications()
+        self.refresh_adhoc_specs()
+        return new_specification
+
+    def remove_integration(self, integration_id: str, **payload) -> None:
+        self.specifications = [spec for spec in self.specifications if spec.uuid != integration_id]
+        self.write_all_specifications()
+        self.refresh_adhoc_specs()
+
+    def update_integration(self, integration_id: str, **payload) -> Integration:
+        specification = self._get_specification(integration_id)
+        self.specifications = [spec for spec in self.specifications if spec.uuid != integration_id]
+
         # we handle resources separately through other routes, so ignore it here.
         # resources come in as untyped dicts from JS
-        payload.pop("resources")
-        payload["prompt"] = payload.get("source", specification.prompt)
+        payload.pop("resources", None)
 
         updated_spec_dict = (
             asdict(specification)
@@ -331,38 +315,32 @@ Instructions:
 
         # calling asdict will also call asdict on nested dataclasses like resources
         # so we need to rebuild as if a fresh parse
-        updated_spec = AdhocSpecificationIntegration.from_dict(
+        if specification.location is None:
+            msg = "invalid specification: location must not be none"
+            raise ValueError(msg)
+        updated_integration = AdhocSpecificationIntegration.from_dict(
             location=specification.location,
-            source=updated_spec_dict
+            provider=self.slug,
+            content=updated_spec_dict
         )
-
-        self.specifications.append(updated_spec)
+        self.specifications.append(updated_integration)
         self.write_all_specifications()
         self.refresh_adhoc_specs()
+        return updated_integration
 
-    def list_resources(self, integration_id, resource_type: Optional[str] = None):
-        specification = self.get_specification(integration_id)
-        if resource_type is not None:
-            resources = specification.get_resources_by_type(resource_type)
-        else:
-            resources = specification.resources.values()
+    def list_resources(self, integration_id: str, resource_type: Optional[str] = None) -> list[Resource]:
+        specification = self._get_specification(integration_id)
+        return (
+            specification.get_resources_by_type(resource_type)
+            if resource_type is not None
+            else list(specification.resources.values())
+        )
 
-        # stringify all fields from uuids
-        jsonified_resources = {}
-        for resource in resources:
-            resource_id = str(resource.resource_id)
-            jsonified_resources[resource_id] = asdict(resource)
-            jsonified_resources[resource_id]["integration"] = str(resource.integration)
-            jsonified_resources[resource_id]["resource_id"] = str(resource.resource_id)
-        return jsonified_resources
+    def get_resource(self, integration_id: str, resource_id: str) -> Resource:
+        return self._get_specification(integration_id).resources[resource_id]
 
-    def get_resource(self, integration_id, resource_id):
-        if resource := self.get_specification(integration_id).resources.get(resource_id):
-            return asdict(resource)
-        return None
-
-    def add_resource(self, integration_id, **payload):
-        specification = self.get_specification(integration_id)
+    def add_resource(self, integration_id, **payload) -> Resource:
+        specification = self._get_specification(integration_id)
         resource_type = payload["resource_type"]
         if resource_type == "file":
             resource = FileResource(**(payload | {"integration": integration_id}))
@@ -371,25 +349,25 @@ Instructions:
         else:
             msg = "Only examples and files are valid on an adhoc integration."
             raise ValueError(msg)
-        if resource.resource_id is not None:
-            specification.resources[resource.resource_id] = resource
+        if resource.resource_id is None:
+            raise ValueError("Resource must have resource ID to attach to integration.")
+        specification.resources[resource.resource_id] = resource
+        self.write_all_specifications()
+        self.refresh_adhoc_specs()
+        return resource
+
+    def remove_resource(self, integration_id: str, resource_id: str) -> None:
+        specification = self._get_specification(integration_id)
+        del specification.resources[resource_id]
         self.write_all_specifications()
         self.refresh_adhoc_specs()
 
-    def remove_resource(self, integration_id, resource_id):
-        specification = self.get_specification(integration_id)
-        resource_uuid = UUID(resource_id)
-        if resource_uuid in specification.resources:
-            specification.resources.pop(resource_uuid)
-        self.write_all_specifications()
-        self.refresh_adhoc_specs()
-
-    def update_resource(self, integration_id, resource_id, **payload):
+    def update_resource(self, integration_id: str, resource_id: str, **payload) -> Resource:
         # should this only allow updating an id to a different resource type?
-        specification = self.get_specification(integration_id)
-        if (resource_uuid := UUID(resource_id)) not in specification.resources:
-            return self.add_resource(integration_id, **payload)
-        resource = specification.resources.pop(resource_uuid)
+        specification = self._get_specification(integration_id)
+        if resource_id not in specification.resources:
+            raise KeyError(f"Resource {resource_id} not found in resources for {integration_id}: {specification.resources.keys()}")
+        resource = specification.resources.pop(resource_id)
         updated_resource_dict = (
             asdict(resource)
             | {k: v for k, v in payload.items() if k in asdict(resource)}
@@ -402,11 +380,48 @@ Instructions:
         else:
             msg = "Only examples and files are valid on an adhoc integration."
             raise ValueError(msg)
-        resource.resource_id = resource_uuid
-        logger.warning(f"update finished {type(resource.resource_id)} {resource.resource_id}")
-        specification.resources[resource_uuid] = resource # type: ignore
+        specification.resources[resource_id] = resource # type: ignore
         self.write_all_specifications()
         self.refresh_adhoc_specs()
+        return resource
+
+    @tool
+    async def add_example(self, integration: str, query: str, code: str, notes: str) -> str:
+        """
+        Adds an example based on the prior conversation. If the user wants to add a successful operation as an example,
+        you must determine the last used integration (if it is unclear, ask the user to clarify which integration) and
+        fill in the example details to save the working operation.
+
+        Args:
+            integration (str): The name of the integration to save the example to.
+            query (str): The task to performed by the user
+            code (str): The code ran by the specialist agent to fulfill that task
+            notes (str): Additional relevant details about what was happening and what the purpose of the task is and how it was solved
+
+        Returns:
+            str: Whether adding the example succeeded or failed
+        """
+        try:
+            integration_id = next(
+                specification.uuid for specification in self.specifications
+                if specification.slug == integration
+            )
+        except StopIteration:
+            logger.warning(f"add example: integration slug not found: {integration}")
+            return "Failed to look up integration by name."
+
+        try:
+            self.add_resource(
+                integration_id,
+                resource_type="example",
+                query=query,
+                code=code,
+                notes=notes
+            )
+        except Exception as e:
+            logger.warning(f"add example: failed to add resource: {e}")
+            return "Add resource tool failed."
+        return f"Example has been added to {integration}."
 
     @tool
     async def draft_integration_code(self, integration: str, goal: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
@@ -454,12 +469,12 @@ Returns:
             logger.error(str(e))
             return f"An error occurred while using the API. The error was: {str(e)}. Please try again with a different goal."
 
-    @tool()
+    @tool
     async def consult_integration_docs(self, integration: str, query: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
         """
 This tool is used to ask a question of an an external integration. It allows you to ask a question of an integration's documentation and get results in
 natural language, which may include code snippets or other information that you can then use to write code to interact with the API
-(e.g. using the `BiomeAgent__run_code` tool). You can also use this information to refine your goal when using the `draft_api_code` tool.
+(e.g. using the `run_code` tool). You can also use this information to refine your goal when using the `draft_api_code` tool.
 
 You can ask questions related to endpoints, payloads, etc. For example, you can ask "What are the endpoints for this integration?"
 or "What payload do I need to send to this integration?" or "How do I query for datasets by keyword?" etc, etc.

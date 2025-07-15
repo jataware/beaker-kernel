@@ -1,9 +1,11 @@
 import asyncio
+import dataclasses
 import inspect
 import json
 import logging
 import os.path
 import urllib.parse
+from attr import dataclass
 import requests
 import uuid
 import itertools
@@ -325,14 +327,18 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
     async def list_integrations(self):
         if not self.integrations:
             return {}
-        # return as slug->integration mapping for faster search/lookup on receiver
+        # return as uuid->integration mapping for faster search/lookup on receiver
         return {
-            integration["slug"]: integration
+            integration.uuid: asdict(integration)
             for integration in itertools.chain(
                 *[provider.list_integrations() or [] for provider in self.integrations]
             )
         }
 
+    def _call_message_result_wrapper_inner(self, object):
+        return asdict(object) if dataclasses.is_dataclass(object) else str(object) # type: ignore
+    def _call_message_result_wrapper(self, object):
+        return json.loads(json.dumps(object, default=self._call_message_result_wrapper_inner))
     @action(scope="internal")
     async def call_in_context(self, message):
         content = message.content
@@ -352,7 +358,8 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             # context methods
             case "context":
                 function = getattr(self, content.get("function"))
-                return await ensure_async(function(*args, **kwargs))
+                result = await ensure_async(function(*args, **kwargs))
+                result = self._call_message_result_wrapper(result)
             # calling directly on a provider itself -- `provider:adhoc:my_adhoc_provider`
             case "provider":
                 if target_id is None:
@@ -365,10 +372,11 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
                         if provider.slug == provider_slug
                     )
                     function = getattr(provider, content.get("function"))
-                    return await ensure_async(function(*args, **kwargs))
+                    result = await ensure_async(function(*args, **kwargs))
+                    result = self._call_message_result_wrapper(result)
                 except StopIteration as e:
                     msg = f"Provider not found in integrations. `{provider_slug}` not in {[p.slug for p in self.integrations]}"
-                    raise ValueError(msg) from e
+                    raise KeyError(msg) from e
             # mapping from an integration uuid to its parent provider, to call a method on that parent
             case "integration":
                 all_integrations = list(itertools.chain(
@@ -377,27 +385,26 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
                 try:
                     integration = next(
                         integration for integration in all_integrations
-                        if integration.get("slug") == target_id
+                        if integration.uuid == target_id
                     )
-                except StopIteration:
-                    msg = f"Integration `{target_id}` not found in {[i.get('slug') for i in all_integrations]}"
-                    logger.info(msg)
-                    return {}
-                _provider_type, provider_slug = integration.get("provider", "").split(":", maxsplit=1)
+                except StopIteration as e:
+                    msg = f"Integration `{target_id}` not found in {[i.slug for i in all_integrations]}"
+                    raise KeyError(msg) from e
+                _provider_type, provider_slug = integration.provider.split(":", maxsplit=1)
                 try:
                     provider = next(
                         provider for provider in self.integrations
                         if provider.slug == provider_slug
                     )
-                except StopIteration:
+                except StopIteration as e:
                     msg = f"Provider not found: `{provider_slug}` in {[provider.slug for provider in self.integrations]}"
-                    logger.info(msg)
-                    return {}
+                    raise KeyError(msg) from e
                 function = getattr(provider, content.get("function"))
-                return await ensure_async(function(*args, **kwargs))
+                result = await ensure_async(function(*args, **kwargs))
+                result = self._call_message_result_wrapper(result)
             case _:
                 raise NotImplementedError
-        return {}
+        return result
 
     async def get_subkernel_state(self):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE

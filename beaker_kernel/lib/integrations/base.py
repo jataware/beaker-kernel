@@ -57,7 +57,8 @@ class BaseIntegrationProvider(ABC):
     def tools(self) -> list[Callable]:
         tools = []
         for member_name in dir(self):
-            if member_name == "tools":
+            # dir evaluates prompt due to @property
+            if member_name == "tools" or member_name == "prompt":
                 continue
             member = getattr(self, member_name)
             if callable(member) and getattr(member, '_is_tool', False):
@@ -71,25 +72,25 @@ class MutableBaseIntegrationProvider(BaseIntegrationProvider):
         super().__init__(display_name)
 
     @abstractmethod
-    def add_integration(self, **payload):
+    def add_integration(self, **payload) -> Integration:
         ...
 
     @abstractmethod
-    def update_integration(self, **payload):
+    def update_integration(self, integration_id: str, **payload) -> Integration:
         ...
 
     @abstractmethod
-    def remove_integration(self, **payload):
+    def remove_integration(self, integration_id: str, **payload) -> None:
         ...
 
     @abstractmethod
-    def add_resource(self, integration_id, **payload):
+    def add_resource(self, integration_id: str, **payload) -> Resource:
         ...
 
     @abstractmethod
-    def update_resource(self, integration_id, resource_id, **payload):
+    def update_resource(self, integration_id: str, resource_id: str, **payload) -> Resource:
         ...
 
     @abstractmethod
-    def remove_resource(self, integration_id, resource_id, **payload):
+    def remove_resource(self, integration_id: str, resource_id: str, **payload) -> None:
         ...
