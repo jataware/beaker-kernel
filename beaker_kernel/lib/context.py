@@ -5,11 +5,9 @@ import logging
 import os.path
 import urllib.parse
 import requests
-import uuid
 from dataclasses import asdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable, TypedDict, TypeVar
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable, TypedDict, Literal, TypeAlias
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
@@ -375,12 +373,8 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         """
         from .code_analysis.analyzer import AnalysisEngine
         from .code_analysis.analysis_types import AnalysisCodeCell, AnalysisCodeCells, AnalysisAnnotations
-        # from .code_analysis.rules.trust import trust_assumptions_category, trust_grounding_category, TrustLiteralCheckRule
         from .code_analysis.rules.trust.rules import all_rules, ast_rules, llm_rules
-        import time
-        start = time.time()
 
-        from typing import Literal, TypeAlias
         Mode: TypeAlias = Literal["fast", "thorough"]
 
         message_content: LinterCodeCellsPayload = message.content
@@ -395,7 +389,7 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             rules = ast_rules
         elif mode == "thorough":
             rules = all_rules
-        analyzer = AnalysisEngine(rules=rules, language=language)
+        analyzer = AnalysisEngine(rules=rules, language=language, context=self)
         result_set: AnalysisAnnotations
         async for result_set in analyzer.analyze_iter(cells):
             content = [result.model_dump() for result in result_set]

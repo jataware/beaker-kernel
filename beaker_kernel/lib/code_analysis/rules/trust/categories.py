@@ -13,33 +13,20 @@ trust_grounding_category = AnalysisCategory(
     id="grounding",
     display_label="Ungrounded Information",
     color="#D6852C",
-    # issues=[
-    #     ungrounded_value,
-    #     ungrounded_fact,
-    #     ungrounded_methodology,
-    # ]
-    # icon="",
 )
 
 trust_assumptions_category = AnalysisCategory(
     id="assumptions",
     display_label="Assumptions in Code",
     color="#E24609",
-    # issues=[
-    #     assumption
-    # ]
-    # icon="",
 )
 
 literal_value_category=AnalysisCategory(
     id="literal",
     display_label="Literal values",
     color="#DDBB00",
-    # issues=[
-    #     literal_value_issue
-    # ]
-    # icon="",
 )
+
 
 # Issues
 

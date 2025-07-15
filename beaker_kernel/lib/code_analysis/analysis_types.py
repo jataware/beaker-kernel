@@ -9,7 +9,6 @@ class AnalysisCategory(BaseModel):
     display_label: str
     color: Optional[str] = None
     icon: Optional[str] = None
-    # issues: "list[AnalysisIssue]"
 
 
 class AnalysisIssue(BaseModel):
@@ -24,7 +23,6 @@ class AnalysisIssue(BaseModel):
 
 class AnalysisAnnotation(BaseModel):
     cell_id: str
-    # category: AnalysisCategory
     issue: AnalysisIssue
     start: int
     end: int

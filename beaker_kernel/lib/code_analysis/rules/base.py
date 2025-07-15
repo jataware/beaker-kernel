@@ -89,6 +89,7 @@ instructions:
         model = config.get_model()
         agent = AnalysisAgent(
             model=model,
+            beaker_kernel = analyzer.context.beaker_kernel,
         )
         agent.add_context(f"""\
 Code to run rules against:
@@ -111,7 +112,6 @@ Code to run rules against:
             # Allow result to pass through as returned.
             pass
 
-        # from .trust.categories import trust_assumptions_category, literal_value_issue
         results = []
         for annotation in raw_result:
             rule = rule_index.get(annotation.issue_type)

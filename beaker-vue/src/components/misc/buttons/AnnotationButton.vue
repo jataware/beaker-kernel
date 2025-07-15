@@ -1,23 +1,19 @@
 <template>
     <Button
         @click="handleAction"
-        icon="pi pi-search"
         size="small"
         :disabled="busy"
         :loading="busy"
-        :pt="{
-            loadingIcon: {
-                class: ['search-background']
-            }
-        }"
     >
+        <template #icon>
+            <span class="pi pi-search pi-exclamation-triangle"/>
+        </template>
     </Button>
 </template>
 
 <script lang="ts" setup>
 import { ref, defineProps, withDefaults } from "vue";
 import Button from "primevue/button";
-import ProgressSpinner from 'primevue/progressspinner';
 
 interface Props {
     action: () => Promise<any>;
@@ -44,9 +40,15 @@ const handleAction = async () => {
 </script>
 
 <style lang="scss">
-    .search-background {
+    span.pi.pi-search.pi-exclamation-triangle {
+        position: relative;
+
         &::after {
-            content: "X";
+            content: "\e922";
+            position: absolute;
+            top: 12.5%;
+            left: 12.5%;
+            font-size: 60%;
         }
     }
 </style>

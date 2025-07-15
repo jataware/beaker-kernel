@@ -3,35 +3,36 @@ from collections import defaultdict
 from typing import Optional
 from tree_sitter import Language, Tree
 
+from ..context import BeakerContext
 from .analysis_types import AnalysisAnnotation, AnalysisAnnotations, AnalysisCategory, AnalysisCodeCells, AnalysisCodeCellLine
 from .rules import AnalysisRule
 from .analysis_agent import AnalysisResult
 
 class AnalysisEngine:
-    # rules: list[TrustRule | AnalysisCategory]
     rules: dict[str, AnalysisRule | AnalysisCategory]
     language: Language
     ast_tree: Optional[Tree]
     _artifact_cache: dict
+    context: Optional[BeakerContext]
 
     def __init__(
             self,
             rules: Optional[list[AnalysisRule | AnalysisCategory]] = None,
             language: Optional[Language] = None,  # TODO: Should this just be subkernel with parser optionally defined there?
+            context: Optional[BeakerContext] = None,
         ):
         super().__init__()
         self._artifact_cache = {}
         self.language = language
         self.ast_tree = None
         self.rules = {}
+        self.context = context
         if rules:
             self.set_rules(rules)
 
     def set_rules(self, rules: list[AnalysisRule | AnalysisCategory]):
         self.rules.clear()
         for rule in rules:
-            # if isinstance(rule, AnalysisCategory):
-                # rule = TrustCategoryRule(annotation_type=rule)
             self.add_rule(rule)
 
     def add_rule(self, rule: AnalysisRule | AnalysisCategory):
@@ -59,20 +60,6 @@ class AnalysisEngine:
             annotation for result in results
             for annotation in result
         ]
-
-        # cell_annotation_map: dict[str, list[AnalysisCodeCellLine]] = defaultdict(list)
-        # raw_annotation: AnalysisResult
-        # for raw_annotation in raw_annotations:
-        #     rule = self.rules.get(raw_annotation.rule_id, None)
-        #     annotation = AnalysisAnnotation(
-        #         analysis_category_id="foo",
-        #         analysis_item_id="bar",
-        #         start=raw_annotation.get
-
-
-        #     )
-        #     # cell_annotation_map[annotation[]]
-
         return raw_annotations
 
     async def analyze_iter(self, cells: AnalysisCodeCells):
