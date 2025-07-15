@@ -48,9 +48,14 @@ def trust_literal_check_filter(cells: AnalysisCodeCells, tree: Tree, analyzer: "
         (string)
         (integer)
         (float)
-        (list
-            ([(string) (integer) (float)])
-        )
+        [
+            (list
+                ([(string) (integer) (float)])
+            )
+            (tuple
+                ([(string) (integer) (float)])
+            )
+        ]
     ].) @right
    ) @assignment
  )
@@ -64,7 +69,7 @@ def trust_literal_check_filter(cells: AnalysisCodeCells, tree: Tree, analyzer: "
     results: list[AnalysisAnnotation] = []
     for _, match in raw_matches:
         match_node = match["right"][0]
-        if match_node.type == "list":
+        if match_node.type in ["list", "tuple"]:
             nodes = [node for node in match_node.named_children if node.type in ('string', 'integer', 'float')]
         else:
             nodes = [match_node]

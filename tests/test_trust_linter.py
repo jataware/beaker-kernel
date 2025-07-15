@@ -74,6 +74,7 @@ async def test_list_literals():
 oncogene_mutations = ["EGFR", "KRAS", "TP53", "STK11"]
 other_mutations = [class(foo), oncogene_mutations,]
 mixed_mutations = [class(foo), "KRAS", 11, None, 4.13]
+tuple_mutations = ("STK11", 8.2, 5, None)
 
 tb_mutation = "FDRR"
 
@@ -99,15 +100,21 @@ evaluate(oncogene_mutations)
 
     results = await analyzer.analyze(AnalysisCodeCells([cell]))
 
-    assert len(results) == 8
+    assert len(results) == 11
     expected_values = [
         '"EGFR"',
         '"KRAS"',
         '"TP53"',
         '"STK11"',
+
         '"KRAS"',
         '11',
         '4.13',
+
+        '"STK11"',
+        '8.2',
+        '5',
+
         '"FDRR"',
     ]
     # Extract code portions from results to compare against expected values
