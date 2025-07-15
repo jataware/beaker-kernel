@@ -123,12 +123,21 @@ class AdhocSpecificationIntegration(Integration):
         substitutions |= (overrides or {})
         try:
             documentation = Template(self.source).substitute(substitutions)
+            # add dataset path to examples
+            examples = [
+                Example(
+                    code=Template(example["code"]).substitute(substitutions),
+                    query=example["query"],
+                    notes=example.get("notes", "")
+                )
+                for example in self.get_adhoc_api_examples()
+            ]
             return APISpec(
                 name=self.name,
                 slug=self.slug,
                 cache_key=f"beaker_{self.slug}",
                 description=self.description,
-                examples=self.get_adhoc_api_examples(),
+                examples=examples,
                 documentation=documentation
             )
         except KeyError as e:

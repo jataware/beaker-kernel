@@ -323,6 +323,7 @@ const delayUntil = (condition, retryInterval) => {
     }
     return new Promise(poll);
 }
+
 const route = useRoute();
 // in the case of non-remounting, where ?selected= is changed via other means, go with that
 watch(() => route, (newRoute) => {
@@ -339,7 +340,6 @@ watch(() => route, (newRoute) => {
     } else {
         model.value.selected = newRoute.query?.selected as string|undefined ?? model.value.selected;
     }
-
 }, {immediate: true, deep: true})
 
 watch(model, ({unsavedChanges}) => {
