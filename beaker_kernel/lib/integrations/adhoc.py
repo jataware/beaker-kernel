@@ -3,7 +3,8 @@ import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from string import Template
-from typing import Optional, Self, cast
+from typing import Optional, cast
+from typing_extensions import Self
 from uuid import uuid4
 
 import yaml
@@ -235,24 +236,12 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                 msg = f"Failed to create TemplateSpecification from yaml for `{integration_yaml}`: {e}"
                 logger.error(msg)
 
-        if instruction_root.is_dir():
-            instructions ="\n".join(
-                file.read_text()
-                for file in instruction_root.iterdir() if file.is_file()
-            )
-        else:
-            instructions = ""
-
         prompts ="\n".join(
             file.read_text()
             for file in prompts_root.iterdir() if file.is_file()
         )
-        prompts += "\n\n" + instructions
 
-        self.prompt_instructions = f"""\
-Instructions:
-{instructions}
-"""
+        self.prompt_instructions = f"{prompts}"
         self.write_all_specifications()
         self.build_adhoc()
 

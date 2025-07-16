@@ -22,7 +22,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "archytas>=1.4.0",
+  "archytas>=1.5.0",
   "adhoc-api",
   "jupyterlab~=4.0",
   "jupyterlab-server>=2.22.1,<3",
