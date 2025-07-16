@@ -1,11 +1,9 @@
 import getpass
 import logging
 import os
-import pwd
 import shutil
 import signal
 import urllib.parse
-from typing import Optional, Any
 
 from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
 from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
@@ -116,9 +114,6 @@ class BeakerServerApp(ServerApp):
     """
 
     kernel_manager_class = BeakerKernelMappingManager
-    # TODO: Fix user determination and root dir
-    # root_dir = kernel_manager_class.root_dir
-    # root_dir = os.path.expanduser(f'~{os.environ.get("BEAKER_SUBKERNEL_USER", subkernel_user)}')
     reraise_server_extension_failures = True
 
     service_user: str
@@ -138,12 +133,11 @@ class BeakerServerApp(ServerApp):
         else:
             self.agent_user = os.environ.get("BEAKER_AGENT_USER", self.service_user)
             self.subkernel_user = os.environ.get("BEAKER_SUBKERNEL_USER", self.service_user)
-            self.working_dir = os.curdir
+            self.working_dir = os.getcwd()
 
     @property
     def _default_root_dir(self):
-        logger.warning("Default root: " + str(self.kernel_manager.working_dir or super()._default_root_dir()))
-        return self.kernel_manager.working_dir or super()._default_root_dir()
+        return self.working_dir or super()._default_root_dir()
 
     def stop(self, from_signal = False):
         print("Shutting down Beaker server...")
@@ -169,7 +163,6 @@ class BeakerServerApp(ServerApp):
         # Always return urls without tokens
         return super()._get_urlparts(path, False)
 
-from traitlets import Dict
 
 class BaseBeakerServerApp(LabServerApp):
     name = "beaker_kernel"

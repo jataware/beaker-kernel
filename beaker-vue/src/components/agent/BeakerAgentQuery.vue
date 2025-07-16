@@ -1,10 +1,10 @@
 <template>
-    <Card class="agent-input-card">
-        <template #title>
+    <div id="agent-input">
+        <div id="agent-prompt">
             How can the agent help?
-        </template>
+        </div>
 
-        <template #content>
+        <div id="agent-inner-input">
             <div class="query-input-container">
                 <ContainedTextArea
                     @submit="handleQuery"
@@ -21,8 +21,8 @@
                     :foo="$tmpl"
                 />
             </div>
-        </template>
-    </Card>
+        </div>
+    </div>
 </template>
 
 
@@ -79,10 +79,14 @@ const handleQuery = (e: any) => {
 
 
 <style lang="scss">
-.agent-input-card {
-    .p-card-body .p-card-content {
-        padding: 0.75rem 0;
-    }
+#agent-input {
+    padding: 0.5rem 0.75rem;
+    background: var(--p-toolbar-background);
+    border: 1px solid var(--p-toolbar-border-color);
+}
+
+#agent-prompt {
+    margin-bottom: 0.5rem;
 }
 
 .query-input-container {

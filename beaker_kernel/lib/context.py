@@ -11,8 +11,7 @@ import uuid
 import itertools
 from dataclasses import asdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable, TypedDict, Literal, TypeAlias
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
@@ -37,6 +36,13 @@ logger = logging.getLogger(__name__)
 
 TOOL_TOGGLE_PREFIX = "TOOL_ENABLED_"
 
+class LinterCodeCellPayload(TypedDict):
+    cell_id: str
+    content: str
+
+class LinterCodeCellsPayload(TypedDict):
+    notebook_id: str
+    cells: list[LinterCodeCellPayload]
 
 class BeakerContext:
     beaker_kernel: "BeakerKernel"
@@ -463,6 +469,35 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         return await self.preview()
 
 
+    @action(default_payload=LinterCodeCellsPayload(notebook_id='nb1', cells=[LinterCodeCellPayload(cell_id='cell1', content='import os\nos.exit(0)')]))
+    async def lint_code(self, message):
+        """
+        """
+        from .code_analysis.analyzer import AnalysisEngine
+        from .code_analysis.analysis_types import AnalysisCodeCell, AnalysisCodeCells, AnalysisAnnotations
+        from .code_analysis.rules.trust.rules import all_rules, ast_rules, llm_rules
+
+        Mode: TypeAlias = Literal["fast", "thorough"]
+
+        message_content: LinterCodeCellsPayload = message.content
+        notebook_id = message_content.get("notebook_id", "foo")
+        mode: Mode = message_content.get("mode", "thorough")
+        cells = AnalysisCodeCells([
+            AnalysisCodeCell(notebook_id=notebook_id, **cell) for cell in message_content["cells"]
+        ])
+
+        language = self.subkernel.get_treesitter_language()
+        if mode == "fast":
+            rules = ast_rules
+        elif mode == "thorough":
+            rules = all_rules
+        analyzer = AnalysisEngine(rules=rules, language=language, context=self)
+        result_set: AnalysisAnnotations
+        async for result_set in analyzer.analyze_iter(cells):
+            content = [result.model_dump() for result in result_set]
+            self.send_response("iopub", "lint_code_result", content=content)
+
+
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):
         return self.beaker_kernel.send_response(stream, msg_or_type, content, channel, parent_header, parent_identities)
 
@@ -732,61 +767,6 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             logger.error("Unable to parse result.")
             logger.debug("Subkernel: %s\nResult:\n%s", self.subkernel.connected_kernel, result)
         return result
-
-    # async def get_integration_root(self, message):
-    #     raise NotImplementedError
-
-    # @action(action_name="get_integration_root")
-    # async def get_integration_root_action(self, message):
-    #     """
-    #     Integration handling action for getting the root folder of an integration
-    #     in the canonicalized jupyter path. Not implemented by default but should be
-    #     overridden by any context using integration support.
-    #     """
-    #     return await self.get_integration_root(message)
-
-    # async def create_integration_folders_for_upload(self, message):
-    #     raise NotImplementedError
-
-    # @action(action_name="create_integration_folders_for_upload")
-    # async def create_integration_folders_for_upload_action(self, message):
-    #     """
-    #     Integration handling action for creating folders in the backend storage
-    #     to support uploading additional datasets and files. Distinct from
-    #     writing the integration for the case in which a temporary/unsaved buffer
-    #     needs to have file uploads.
-
-    #     Not implemented by default but should be overridden
-    #     by any context using integration support.
-    #     """
-    #     return await self.create_integration_folders_for_upload(message)
-
-    async def add_example(self, message):
-        raise NotImplementedError
-
-    @action(action_name="add_example")
-    async def add_example_action(self, message):
-        """
-        Integration handling action for adding an example to a given integration.
-
-        Not implemented by default but should be overridden
-        by any context using integration support.
-        """
-        return await self.add_example(message)
-
-    async def save_integration(self, message):
-        raise NotImplementedError
-
-    @action(action_name="save_integration")
-    async def save_integration_action(self, message):
-        """
-        Integration handling action for one-shot creation of a new integration
-        from a schema URI (either a URL or a local filepath) and a base URL.
-
-        Not implemented by default but should be overridden
-        by any context using integration support.
-        """
-        return await self.save_integration(message)
 
 # Provided for backwards compatibility
 BaseContext = BeakerContext

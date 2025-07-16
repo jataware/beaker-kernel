@@ -34,6 +34,12 @@ class ExampleResource(Resource):
     notes: typing.Optional[str] = field(default=None)
 
 @dataclass
+class IntegrationExample:
+    query: str
+    code: str
+    notes: typing.Optional[str]
+
+@dataclass
 class Integration:
     name: str
     description: str

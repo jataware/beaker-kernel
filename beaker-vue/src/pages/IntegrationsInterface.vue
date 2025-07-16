@@ -180,6 +180,9 @@ const kernelStateInfo = ref();
 
 const hasOpenedPanelOnce = ref(false);
 
+const selectedIntegration = ref();
+const unsavedChanges = ref<boolean>(false);
+
 type FilePreview = {
     url: string,
     mimetype?: string
