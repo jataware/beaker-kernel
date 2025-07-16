@@ -161,6 +161,7 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
 class BeakerKernelMappingManager(AsyncMappingKernelManager):
     kernel_manager_class = "beaker_kernel.service.base.BeakerKernelManager"
     connection_dir = os.path.join(config.beaker_run_path, "kernelfiles")
+    cull_idle_timeout = 3600  # Cull idle sessions after 1 hour
 
     def __init__(self, **kwargs):
         # Ensure connection dir exists and is readable
@@ -189,6 +190,13 @@ class BeakerKernelMappingManager(AsyncMappingKernelManager):
         return super()._async_start_kernel(kernel_id=kernel_id, path=path, **kwargs)
     start_kernel = _async_start_kernel
 
+    async def cull_kernel_if_idle(self, kernel_id):
+        """Cull a kernel if it is idle."""
+        kernel = self._kernels.get(kernel_id, None)
+        if getattr(kernel, "kernel_name", None) != "beaker_kernel":
+            return
+        result = await super().cull_kernel_if_idle(kernel_id)
+        return result
 
 class BeakerServerApp(ServerApp):
     """

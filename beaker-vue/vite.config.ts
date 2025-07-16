@@ -21,13 +21,32 @@ export default defineConfig({
         target: `${ProxyHost}/`,
         ws: true,
         xfwd: true,
-        rewriteWsOrigin: true,
+        rewriteWsOrigin: false,
       },
-      '/appconfig.js': `${ProxyHost}/`,
-      '/files': `${ProxyHost}/`,
-      '/config': `${ProxyHost}/`,
-      '/contexts': `${ProxyHost}/`,
-      '/assets': `${ProxyHost}/`,
+      '/appconfig.js': {
+        target: `${ProxyHost}/`,
+        xfwd: true,
+      },
+      '/stats': {
+        target: `${ProxyHost}/`,
+        xfwd: true,
+      },
+      '/files': {
+        target: `${ProxyHost}/`,
+        xfwd: true,
+      },
+      '/config': {
+        target: `${ProxyHost}/`,
+        xfwd: true,
+      },
+      '/contexts': {
+        target: `${ProxyHost}/`,
+        xfwd: true,
+      },
+      '/assets': {
+        target: `${ProxyHost}/`,
+        xfwd: true,
+      },
     },
     fs: {
       allow: [".."]
