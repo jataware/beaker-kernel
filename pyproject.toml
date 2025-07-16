@@ -41,6 +41,9 @@ dependencies = [
   "numpy",
   "scipy",
   "openpyxl",
+  "tree-sitter",
+  "tree-sitter-python",
+  "tree-sitter-julia",
 ]
 
 [project.entry-points.hatch]
@@ -129,9 +132,10 @@ path = "beaker_kernel/__about__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
+  "bump-my-version",
   "coverage[toml]>=6.5",
   "pytest",
-  "bump-my-version",
+  "pytest-asyncio",
 ]
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
@@ -252,3 +256,14 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
 ]
+
+[tool.hatch.envs.hatch-test]
+extra-dependencies = [
+  "pytest",
+  "pytest-asyncio",
+  "rich",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

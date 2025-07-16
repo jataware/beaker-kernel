@@ -5,11 +5,9 @@ import logging
 import os.path
 import urllib.parse
 import requests
-import uuid
 from dataclasses import asdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable, TypedDict, Literal, TypeAlias
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
@@ -33,6 +31,13 @@ logger = logging.getLogger(__name__)
 
 TOOL_TOGGLE_PREFIX = "TOOL_ENABLED_"
 
+class LinterCodeCellPayload(TypedDict):
+    cell_id: str
+    content: str
+
+class LinterCodeCellsPayload(TypedDict):
+    notebook_id: str
+    cells: list[LinterCodeCellPayload]
 
 class BeakerContext:
     beaker_kernel: "BeakerKernel"
@@ -360,6 +365,35 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         Returns the current preview payload if enabled, otherwise None.
         """
         return await self.preview()
+
+
+    @action(default_payload=LinterCodeCellsPayload(notebook_id='nb1', cells=[LinterCodeCellPayload(cell_id='cell1', content='import os\nos.exit(0)')]))
+    async def lint_code(self, message):
+        """
+        """
+        from .code_analysis.analyzer import AnalysisEngine
+        from .code_analysis.analysis_types import AnalysisCodeCell, AnalysisCodeCells, AnalysisAnnotations
+        from .code_analysis.rules.trust.rules import all_rules, ast_rules, llm_rules
+
+        Mode: TypeAlias = Literal["fast", "thorough"]
+
+        message_content: LinterCodeCellsPayload = message.content
+        notebook_id = message_content.get("notebook_id", "foo")
+        mode: Mode = message_content.get("mode", "thorough")
+        cells = AnalysisCodeCells([
+            AnalysisCodeCell(notebook_id=notebook_id, **cell) for cell in message_content["cells"]
+        ])
+
+        language = self.subkernel.get_treesitter_language()
+        if mode == "fast":
+            rules = ast_rules
+        elif mode == "thorough":
+            rules = all_rules
+        analyzer = AnalysisEngine(rules=rules, language=language, context=self)
+        result_set: AnalysisAnnotations
+        async for result_set in analyzer.analyze_iter(cells):
+            content = [result.model_dump() for result in result_set]
+            self.send_response("iopub", "lint_code_result", content=content)
 
 
     def send_response(self, stream, msg_or_type, content=None, channel=None, parent_header={}, parent_identities=None):

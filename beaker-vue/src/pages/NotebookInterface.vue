@@ -373,6 +373,13 @@ const iopubMessage = (msg) => {
             });
         }
     }
+    else if (msg.header.msg_type === "lint_code_result") {
+        msg.content.forEach((result) => {
+            const cell = beakerSession.value.findNotebookCellById(result.cell_id);
+            cell.lintAnnotations.push(result);
+        })
+
+    }
 };
 
 const anyMessage = (msg, direction) => {
