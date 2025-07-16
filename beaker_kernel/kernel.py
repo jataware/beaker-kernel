@@ -162,11 +162,8 @@ class BeakerKernel(KernelProxyManager):
         kernel_id = self.kernel_id
         key = self.session_config.get("key")
 
-        logger.warning(self.session_config)
-
-        s = f"{kernel_id}{nonce}{key}".encode()
-        logger.warning(s)
-        hash_value = hashlib.md5(s).hexdigest()
+        hash_source = f"{kernel_id}{nonce}{key}".encode()
+        hash_value = hashlib.md5(hash_source).hexdigest()
 
         return f"{preamble}:{kernel_id}:{nonce}:{hash_value}"
 
