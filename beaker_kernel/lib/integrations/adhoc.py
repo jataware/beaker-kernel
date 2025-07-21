@@ -3,17 +3,20 @@ import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from string import Template
-from typing import Optional, cast
+from typing import Optional, cast, Literal, TYPE_CHECKING
 from typing_extensions import Self
 from uuid import uuid4
 
 import yaml
-from adhoc_api.curation import Example
-from adhoc_api.tool import AdhocApi, APISpec
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
 from beaker_kernel.lib.integrations.base import MutableBaseIntegrationProvider
 from beaker_kernel.lib.types import ExampleResource, FileResource, Integration, Resource
+
+if TYPE_CHECKING:
+    from adhoc_api.curation import Example
+    from adhoc_api.tool import APISpec
+
 
 logger = logging.getLogger(__file__)
 
@@ -24,6 +27,7 @@ def string_formatter(dumper, data):
         return dumper.represent_scalar("tag:yaml.org,2002:str", data)
     return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
 yaml.representer.SafeRepresenter.add_representer(str, string_formatter)
+
 
 @dataclass
 class AdhocSpecificationIntegration(Integration):
@@ -91,7 +95,7 @@ class AdhocSpecificationIntegration(Integration):
     def get_examples(self) -> list[ExampleResource]:
         return self.get_resources_by_type("example")
 
-    def get_adhoc_api_examples(self) -> list[Example]:
+    def get_adhoc_api_examples(self) -> "list[Example]":
         return [
             {
                 "code": example.code,
@@ -101,7 +105,7 @@ class AdhocSpecificationIntegration(Integration):
             for example in self.get_examples()
         ]
 
-    def render(self, overrides: Optional[dict[str, str]] = None) -> APISpec | None:
+    def render(self, overrides: Optional[dict[str, str]] = None) -> "APISpec | None":
         """
         Renders a template with included files given a relative root to start from.
         Raises on nonexistent files and a failure to load.
@@ -111,6 +115,10 @@ class AdhocSpecificationIntegration(Integration):
 
         Attachments are loaded from `relative_root/attachments` as a starting path.
         """
+
+        from adhoc_api.curation import Example
+        from adhoc_api.tool import APISpec
+
         if self.location is None or self.slug is None or self.source is None:
             msg = "invalid specification: missing one of: location, slug, source."
             raise ValueError(msg)
@@ -179,6 +187,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                     resource_path.write_text(resource.content or "")
 
     def build_adhoc(self):
+        from adhoc_api.tool import AdhocApi
         datafile_root = Path(self.adhoc_path) / "data"
         substitutions = {
             "DATASET_FILES_BASE_PATH": str(datafile_root)
