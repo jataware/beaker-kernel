@@ -1,6 +1,7 @@
 import getpass
 import logging
 import os
+import pwd
 import shutil
 import signal
 import urllib.parse
@@ -68,10 +69,16 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
             env = sanitize_env(env)
             user = self.app.subkernel_user
 
+        user_info = pwd.getpwnam(user)
         home_dir = os.path.expanduser(f"~{user}")
-        env["USER"] = user
-        env["HOME"] = home_dir
-        kw["user"] = user
+        group_list = os.getgrouplist(user, user_info.pw_gid)
+        if user_info.pw_uid != os.getuid():
+            env["USER"] = user
+            kw["user"] = user
+            env["HOME"] = home_dir
+        if os.getuid() == 0 or os.geteuid() == 0:
+            kw["group"] = user_info.pw_gid
+            kw["extra_groups"] = group_list[1:]
         kw["cwd"] = self.app.working_dir
 
         # Update keyword args that are passed to Popen()
