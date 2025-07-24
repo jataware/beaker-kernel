@@ -450,45 +450,33 @@ defineExpose({
 
     &:hover {
         cursor: col-resize;
+        background-color: var(--p-surface-e);
     }
 }
 
 .sidemenu-gutter-handle {
     display: flex;
     position: absolute;
-    right: -6px;
-    width: 14px;
-    z-index: 100;
-    height: 3rem;
-    background-color: var(--p-surface-f);
-    justify-content: space-around;
-    align-items: center;
-    overflow: clip;
-    border: 1px outset var(--p-surface-g);
-
-    &:before {
-        filter: blur(0.75px);
-        color: var(--p-surface-b);
-        writing-mode: sideways-lr;
-        letter-spacing: -1px;
-        content: "▮▮▮▮▮▮";
-        position: relative;
-        left: -6px;
-        font-size: 20px;
-    }
+    width: 6px;
+    left: -1px;
+    z-index: 50;
+    height: 40px;
+    background-color: var(--p-primary-500);
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    filter: saturate(1.1);
 }
 
 button.menu-button {
     background-color: transparent;
-    color: var(--p-primary-300);
     border-color: transparent;
     aspect-ratio: 1;
     width: 100%;
-    padding: .75rem .5rem;
+    padding: .5rem .25rem;
 
-    // Increase size of icon if no text
+    // increase size of icon if no text
     &.p-button-icon-only .p-button-icon{
-        font-size: 1.75rem;
+        font-size: 1.25rem;
     }
 
     &:focus {
@@ -515,10 +503,10 @@ button.menu-button {
         border-radius: 0;
     }
     &.line.right {
-        border-width: 0 5px 0 0;
+        border-width: 0 6px 0 0;
     }
     &.line.left {
-        border-width: 0 0 0 5px;
+        border-width: 0 0 0 6px;
     }
     &.full.selected {
         background-color: var(--p-primary-color);
