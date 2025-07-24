@@ -646,6 +646,7 @@ const notebookKeyBindings = {
 .beaker-notebook {
     flex: 2 0 calc(50vw - 2px);
     border: 2px solid var(--p-surface-border);
+    border-bottom: none;
     border-radius: 0;
     border-top: 0;
     max-width: 100%;

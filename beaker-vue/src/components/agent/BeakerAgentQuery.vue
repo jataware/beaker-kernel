@@ -80,13 +80,16 @@ const handleQuery = (e: any) => {
 
 <style lang="scss">
 #agent-input {
-    padding: 0.5rem 0.75rem;
-    background: var(--p-toolbar-background);
-    border: 1px solid var(--p-toolbar-border-color);
+    padding: 0.25rem 0.75rem 0.5rem 0.75rem;
+    border-top: 1px solid var(--p-surface-border);
 }
 
 #agent-prompt {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+    opacity: 0.8;
+    filter: saturate(0.7);
+    font-size: 1.1rem;
+    margin-left: 1px;
 }
 
 .query-input-container {
