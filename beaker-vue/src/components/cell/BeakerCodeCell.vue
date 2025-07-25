@@ -18,6 +18,7 @@
                         @change="handleCodeChange"
                         @click="clicked"
                         :annotations="lintAnnotations"
+                        :annotation-provider="'decoration'"
                     />
                 </div>
                 <div class="code-output">

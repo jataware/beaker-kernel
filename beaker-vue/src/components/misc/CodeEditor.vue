@@ -17,7 +17,7 @@ import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import type { LanguageSupport } from "@codemirror/language";
 import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion } from "@codemirror/autocomplete";
-import { Diagnostic, linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint";
+import { AnnotationProviderFactory, type AnnotationData } from "../../util/annotations";
 import type { IBeakerTheme } from '../../plugins/theme';
 import { type BeakerLanguage, LanguageRegistry, getCompletions } from "../../util/autocomplete";
 import { BeakerSession } from 'beaker-kernel';
@@ -36,6 +36,7 @@ export interface CodeEditorProps {
     disabled?: boolean,
     readonly?: boolean,
     annotations?: any[],
+    annotationProvider?: string, // Choose annotation approach: "linter", "decoration", etc.
 }
 
 const props = withDefaults(defineProps<CodeEditorProps>(), {
@@ -43,6 +44,7 @@ const props = withDefaults(defineProps<CodeEditorProps>(), {
     autofocus: false,
     disabled: false,
     annotations: () => [],
+    annotationProvider: "decoration", // Default to new decoration approach
 });
 
 const model = ref<string>(props.modelValue);
@@ -163,49 +165,22 @@ const extensions = computed(() => {
         )
     }
 
-    if(props.annotations?.length) {
-        const linterAnnotations = linter((view) => {
-            return props.annotations.map(annotation => {
-                const category_id = annotation.issue.category?.id ?? "default"
-                if (annotation.issue?.category && !annotationCategories.value.has(annotation.issue.category.id)) {
-                    annotationCategories.value.set(annotation.issue.category.id, annotation.issue.category);
-                }
-                const className = `category-${category_id} icon-${annotation.issue.category?.icon ?? "default"}`;
-                const diagnostic = {
-                    from: annotation.start,
-                    to: annotation.end,
-                    severity: annotation.issue.severity,
-                    message: annotation.title_override ?? annotation.issue.title,
-                    markClass: className,
-                    source: category_id,
-                    // color: annotation.issue.category?.color,
-                    // icon: annotation.issue.category?.icon ?? undefined,
-                    renderMessage() {
-                        const el = document.createElement('div');
-                        const description = annotation.message_override || annotation.issue.description;
-                        const extraMessage = annotation.message_extra ? `<p>${annotation.message_extra}</p>` : '';
-                        el.innerHTML = `<h4 style="margin: 0.2rem 0">${annotation.title_override || annotation.issue.title}</h4>`;
-                        el.innerHTML += `<p>${description}</p>`;
-                        if(extraMessage) {
-                            el.innerHTML += `<p>${extraMessage}</p>`;
-                        }
-                        return el;
-                    },
-                }
-                if (annotation.link) {
-                    diagnostic["actions"] = [{
-                        name: "Learn More",
-                        apply: () => window.open(annotation.link, '_blank')
-                    }]
-                }
-                return diagnostic;
-            });
-        });
-        enabledExtensions.push(linterAnnotations);
-        enabledExtensions.push(lintGutter({
-            hoverTime: 200,
-        }));
+    if (props.annotations?.length) {
+        console.log("Code Editor annotations", props.annotations);
+        
+        try {
+            const provider = AnnotationProviderFactory.create(props.annotationProvider || "decoration");
+            const annotationExtensions = provider.createExtensions(props.annotations as AnnotationData[]);
+            enabledExtensions.push(...annotationExtensions);
+        } catch (error) {
+            console.warn(`Failed to create annotation provider '${props.annotationProvider}':`, error);
+            // Fallback to linter if decoration fails
+            const fallbackProvider = AnnotationProviderFactory.create("linter");
+            const annotationExtensions = fallbackProvider.createExtensions(props.annotations as AnnotationData[]);
+            enabledExtensions.push(...annotationExtensions);
+        }
     }
+
     return enabledExtensions;
 });
 
@@ -364,6 +339,17 @@ li.cm-diagnostic {
 
     &.category-grounding.category-literal {
         background-color: rgba(#00FF00, 0.1);
+    }
+}
+
+// global override styles for decoration-based annotations
+.annotation-tooltip {
+    h4 {
+        margin: 0.2rem 0;
+    }
+    p {
+        margin: 0.5em 0;
+        // line-height: 1.4;
     }
 }
 
