@@ -316,6 +316,8 @@ defineExpose({
     background-color: var(--p-surface-0) !important;
 
     padding: 1rem !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
 
     // and override for dark theme/mode
     [data-theme="dark"] & {
@@ -325,9 +327,6 @@ defineExpose({
 
 // style tooltips
 .cm-tooltip.cm-tooltip-lint {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 
     ul {
         margin: 0;
