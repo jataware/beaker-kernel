@@ -234,8 +234,14 @@ defineExpose({
         }
     }
 
-.cm-diagnostic {
-    white-space: normal;
+li.cm-diagnostic {
+    // default: white-space: pre-wrap;
+    white-space: pre-line !important;
+
+    p {
+        margin: 0.5em 0;
+        line-height: 2;
+    }
 }
 
 // for gutter markers
