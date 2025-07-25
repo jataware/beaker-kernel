@@ -36,7 +36,7 @@ const props = defineProps([
     display: flex;
     flex: 1;
     flex-direction: column;
-    z-index: 3;
+    z-index: 45;
     overflow: auto;
 }
 
