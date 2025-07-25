@@ -313,7 +313,7 @@ defineExpose({
     max-width: 60vw;
     overflow-y: auto;
     // white on light mode looks better than default gray
-    background-color: white !important;
+    background-color: var(--p-surface-0) !important;
 
     padding: 1rem !important;
 
