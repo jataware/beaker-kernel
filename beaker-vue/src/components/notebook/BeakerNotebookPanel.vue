@@ -157,6 +157,8 @@ defineExpose({
     width: 100%;
     height: 100%;
 
+    z-index: 50;
+
     // Separators between cells
     > .beaker-cell {
         padding-top: 2px;

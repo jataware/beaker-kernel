@@ -17,8 +17,7 @@ import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import type { LanguageSupport } from "@codemirror/language";
 import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion } from "@codemirror/autocomplete";
-import { linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint";
-import type { Diagnostic } from "@codemirror/lint";
+import { Diagnostic, linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint";
 import type { IBeakerTheme } from '../../plugins/theme';
 import { type BeakerLanguage, LanguageRegistry, getCompletions } from "../../util/autocomplete";
 import { BeakerSession } from 'beaker-kernel';
@@ -235,8 +234,14 @@ defineExpose({
         }
     }
 
-.cm-diagnostic {
-    white-space: normal;
+li.cm-diagnostic {
+    // default: white-space: pre-wrap;
+    white-space: pre-line !important;
+
+    p {
+        margin: 0.5em 0;
+        line-height: 2;
+    }
 }
 
 // for gutter markers
@@ -303,19 +308,31 @@ defineExpose({
     }
 }
 
+//  z-index > 99 is higher than the sidemenu drag handle, etc
 .cm-tooltip-hover {
-    position: absolute !important;
-    z-index: 9999 !important;
-    max-width: 60vw;
+    z-index: 99 !important;
 }
 
-// Make tooltips look better
+// decent max-size for long sentences, longer vertical
+// content will scroll instead of overflowing out of the container
+.cm-tooltip {
+    max-width: 60vw;
+    overflow-y: auto;
+    // white on light mode looks better than default gray
+    background-color: var(--p-surface-0) !important;
+
+    padding: 1rem !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+
+    // and override for dark theme/mode
+    [data-theme="dark"] & {
+        background-color: var(--p-surface-b) !important;
+    }
+}
+
+// style tooltips
 .cm-tooltip.cm-tooltip-lint {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 4px 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 
     ul {
         margin: 0;
