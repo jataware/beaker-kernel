@@ -211,11 +211,11 @@ defineExpose({
 
 li.cm-diagnostic {
     // default: white-space: pre-wrap;
-    white-space: pre-line !important;
+    white-space: normal !important;
 
     p {
         margin: 0.5em 0;
-        line-height: 2;
+        // line-height: 2;
     }
 }
 
@@ -291,14 +291,18 @@ li.cm-diagnostic {
 // decent max-size for long sentences, longer vertical
 // content will scroll instead of overflowing out of the container
 .cm-tooltip {
-    max-width: 60vw;
-    overflow-y: auto;
-    // white on light mode looks better than default gray
-    background-color: var(--p-surface-0) !important;
+    max-width: 60vw; 
+    background: transparent !important;
+    border: none !important;
+}
 
+.cm-tooltip > .cm-tooltip-section, .cm-tooltip.cm-tooltip-lint {
     padding: 1rem !important;
     border-radius: 4px !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+    overflow-y: auto;
+
+    background-color: var(--p-surface-0) !important;
 
     // and override for dark theme/mode
     [data-theme="dark"] & {
@@ -306,8 +310,9 @@ li.cm-diagnostic {
     }
 }
 
-// style tooltips
-.cm-tooltip.cm-tooltip-lint {
+.cm-tooltip > .cm-tooltip-section {
+    margin-right: 1rem;
+    max-width: 100%;
 
     ul {
         margin: 0;

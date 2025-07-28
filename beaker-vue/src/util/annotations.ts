@@ -1,7 +1,8 @@
 import type { Extension } from "@codemirror/state";
-import { EditorView, Decoration, type DecorationSet, hoverTooltip } from "@codemirror/view";
+import { EditorView, Decoration, type DecorationSet, hoverTooltip, gutter, GutterMarker } from "@codemirror/view";
 import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
-import { StateField, StateEffect } from "@codemirror/state";
+import { StateField, StateEffect, RangeSet } from "@codemirror/state";
+
 
 export interface AnnotationData {
     cell_id: string;
@@ -30,6 +31,15 @@ export interface AnnotationData {
 export interface AnnotationProvider {
     name: string;
     createExtensions(annotations: AnnotationData[]): Extension[];
+}
+
+function getSeverityColor(severity: string): string {
+    switch (severity) {
+        case 'error': return '#e74c3c';
+        case 'warning': return '#f39c12';
+        case 'info': return '#3498db';
+        default: return '#95a5a6';
+    }
 }
 
 export class LinterAnnotationProvider implements AnnotationProvider {
@@ -82,11 +92,74 @@ export class LinterAnnotationProvider implements AnnotationProvider {
     }
 }
 
+
 export class DecorationAnnotationProvider implements AnnotationProvider {
     name = "decoration";
 
     createExtensions(annotations: AnnotationData[]): Extension[] {
         if (!annotations?.length) return [];
+
+        const getAnnotationsByLine = (annotations: AnnotationData[], doc: any) => {
+            const lineAnnotations = new Map<number, AnnotationData[]>();
+            
+            annotations.forEach(annotation => {
+                const line = doc.lineAt(annotation.start);
+                const lineNumber = line.number;
+                
+                if (!lineAnnotations.has(lineNumber)) {
+                    lineAnnotations.set(lineNumber, []);
+                }
+                lineAnnotations.get(lineNumber)!.push(annotation);
+            });
+            
+            return lineAnnotations;
+        };
+
+        const getUniqueSeverities = (annotations: AnnotationData[]): string[] => {
+            const severities = new Set(annotations.map(a => a.issue.severity));
+            const ordered = ['error', 'warning', 'info'].filter(s => severities.has(s));
+            return ordered;
+        };
+
+        class SeverityGutterMarker extends GutterMarker {
+            constructor(private severities: string[]) {
+                super();
+            }
+
+            eq(other: SeverityGutterMarker) {
+                return this.severities.length === other.severities.length &&
+                       this.severities.every((s, i) => s === other.severities[i]);
+            }
+
+            toDOM() {
+                const container = document.createElement('div');
+                container.className = 'annotation-gutter-markers';
+                container.style.cssText = `
+                    display: flex;
+                    justify-content: flex-end;
+                    padding-right: -1px;
+                    padding-top: 1px;
+                    height: 1.6rem;
+               `;
+
+                this.severities.forEach((severity, index) => {
+                    const line = document.createElement('div');
+                    line.className = `annotation-gutter-line severity-${severity}`;
+                    line.style.cssText = `
+                        width: 5px;
+                        height: 1.3rem;
+                        align-self: flex-start;
+                        border-radius: 1px;
+                        background-color: ${this.getSeverityColor(severity)};
+                    `;
+                    container.appendChild(line);
+                });
+
+                return container;
+            }
+
+            public getSeverityColor = getSeverityColor;
+        }
 
         const buildDecorations = (annotations: AnnotationData[]): DecorationSet => {
             const decorations = annotations.map(annotation => {
@@ -99,7 +172,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
                         'data-annotation-id': annotation.issue.id,
                         'data-category': category_id,
                         'data-severity': annotation.issue.severity,
-                        'title': annotation.title_override ?? annotation.issue.title
+                        // 'title': annotation.title_override ?? annotation.issue.title
                     }
                 }).range(annotation.start, annotation.end);
             });
@@ -125,6 +198,31 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
             provide: f => EditorView.decorations.from(f)
         });
 
+        const gutterMarkerField = StateField.define<RangeSet<GutterMarker>>({
+            create(state) {
+                const lineAnnotations = getAnnotationsByLine(annotations, state.doc);
+                const markers = [];
+
+                for (const [lineNumber, lineAnns] of lineAnnotations) {
+                    const severities = getUniqueSeverities(lineAnns);
+                    if (severities.length > 0) {
+                        const line = state.doc.line(lineNumber);
+                        markers.push(new SeverityGutterMarker(severities).range(line.from));
+                    }
+                }
+
+                return RangeSet.of(markers, true);
+            },
+            update(markers, tr) {
+                return markers.map(tr.changes);
+            }
+        });
+
+        const annotationGutter = gutter({
+            class: "annotation-gutter",
+            markers: view => view.state.field(gutterMarkerField)
+        });
+
         const decorationTheme = EditorView.theme({
             '.annotation-mark': {
                 textDecoration: 'underline wavy',
@@ -147,30 +245,43 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
             '.annotation-mark.category-grounding.category-literal': {
                 backgroundColor: 'rgba(0, 255, 0, 0.1)',
                 textDecorationColor: 'rgba(0, 255, 0, 0.5)'
+            },
+            '.annotation-gutter': {
+                width: '1.2em',
+                display: 'flex',
+                alignItems: 'center'
+            },
+            '.annotation-gutter-markers': {
+                width: '100%',
+                height: '100%'
             }
         });
 
         const annotationTooltip = hoverTooltip((view, pos, side) => {
-            console.log('Hover tooltip triggered at position:', pos);
+            console.log('hover tooltip triggered at pos:', pos);
             
             const decorations = view.state.field(decorationField);
-            let foundAnnotation: AnnotationData | null = null;
+            let foundAnnotations: AnnotationData[] = [];
 
             decorations.between(pos, pos, (from, to, value) => {
+                console.log('decoration between', from, to, value);
                 const annotationId = value.spec.attributes?.['data-annotation-id'];
+                console.log('annotation ID from decoration:', annotationId);
                 
                 if (annotationId) {
-                    foundAnnotation = annotations.find(a => a.issue.id === annotationId) || null;
-                    console.log('Found annotation:', foundAnnotation);
+                    const annotation = annotations.find(a => a.issue.id === annotationId);
+                    if (annotation) {
+                        foundAnnotations.push(annotation);
+                    }
                 }
             });
 
-            if (!foundAnnotation) {
-                console.log('No annotation found at position');
+            if (foundAnnotations.length === 0) {
+                console.log('no annotations found position');
                 return null;
             }
 
-            console.log('Creating tooltip for annotation:', foundAnnotation);
+            console.log('creating tooltip for annotations:', foundAnnotations);
 
             return {
                 pos,
@@ -179,33 +290,48 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
                     const dom = document.createElement('div');
                     dom.className = 'annotation-tooltip';
                     
-                    const description = foundAnnotation!.message_override || foundAnnotation!.issue.description;
-                    const extraMessage = foundAnnotation!.message_extra ? `<p>${foundAnnotation!.message_extra}</p>` : '';
-                    
-                    dom.innerHTML = `
-                        <h4 style="margin: 0.2rem 0; color: var(--p-text-color)">${foundAnnotation!.title_override || foundAnnotation!.issue.title}</h4>
-                        <p style="color: var(--p-text-color)">${description}</p>
-                        ${extraMessage}
-                    `;
+                    foundAnnotations.forEach((annotation, index) => {
+                        if (index > 0) {
+                            const separator = document.createElement('hr');
+                            separator.style.cssText = 'margin: 1rem 0; border: none; border-top: 1px solid var(--p-surface-border);';
+                            dom.appendChild(separator);
+                        }
 
-                    if (foundAnnotation!.link) {
-                        const link = document.createElement('a');
-                        link.href = foundAnnotation!.link;
-                        link.target = '_blank';
-                        link.textContent = 'Learn More';
-                        link.style.cssText = 'display: inline-block; margin-top: 0.5rem; color: var(--p-primary-color);';
-                        dom.appendChild(link);
-                    }
+                        const section = document.createElement('div');
+                        const description = annotation.message_override || annotation.issue.description;
+                        const extraMessage = annotation.message_extra ? `<p>${annotation.message_extra}</p>` : '';
+                        
+                        section.innerHTML = `
+                            <h4 style="margin: 0.2rem 0; color: var(--p-text-color)">
+                            <span style="color: ${getSeverityColor(annotation.issue.severity)}">${annotation.issue.severity}</span> ${annotation.title_override || annotation.issue.title}
+                            </h4>
+                            <p style="color: var(--p-text-color)">${description}</p>
+                            ${extraMessage}
+                        `;
 
-                    console.log('Created tooltip DOM:', dom);
+                        if (annotation.link) {
+                            const link = document.createElement('a');
+                            link.href = annotation.link;
+                            link.target = '_blank';
+                            link.textContent = 'Learn More';
+                            link.style.cssText = 'display: inline-block; margin-top: 0.5rem; color: var(--p-primary-color);';
+                            section.appendChild(link);
+                        }
+
+                        dom.appendChild(section);
+                    });
+
+                    console.log('created tooltip DOM:', dom);
                     return { dom };
                 }
             };
         });
 
-        return [decorationField, decorationTheme, annotationTooltip];
+        return [decorationField, gutterMarkerField, annotationGutter, decorationTheme, annotationTooltip];
     }
 }
+
+
 
 export class AnnotationProviderFactory {
     private static providers = new Map<string, () => AnnotationProvider>([
