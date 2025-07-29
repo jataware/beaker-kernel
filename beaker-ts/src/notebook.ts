@@ -594,7 +594,7 @@ margin-left: 4rem;
 
         // make markdown cell from current buffer of lines from the agent output and flush it
         // so that the current contents are all written before a code cell or other type is written
-        const pushNewAgentMarkdownCell = () => {
+        const pushNewAgentMarkdownCell = (additionalTags?: object) => {
             markdownLinesBuffer.push(closeAgentSection);
             const renderedMarkdown = markdownLinesBuffer.join("\n");
             markdownLinesBuffer = [openAgentSection];
@@ -606,7 +606,7 @@ margin-left: 4rem;
                         cell_type: "markdown",
                         id: uuidv4(),
                         source: renderedMarkdown,
-                        metadata: { skipWhenLoading: true },
+                        metadata: { skipWhenLoading: true, beakerQueryCellChild: true, ...(additionalTags ?? {}) },
                     }
                 ));
             }
@@ -616,7 +616,8 @@ margin-left: 4rem;
                         cell_type: "markdown",
                         id: this.id,
                         source: renderedMarkdown,
-                        metadata: { ...parentMetadata, parentQueryCell: true },
+                        // contains all parent metadata
+                        metadata: { ...parentMetadata, parentQueryCell: true, beakerQueryCellChild: true, ...(additionalTags ?? {}) },
                     }
                 ));
                 parentCellPushed = true;
@@ -635,7 +636,6 @@ margin-left: 4rem;
             }
             else if (event.type === "code_cell") {
                 pushNewAgentMarkdownCell();
-                console.log({parent: this, msgContent: event.content, children: this.children});
                 const childCell = this.children.find(child => child.id === event.content.cell_id);
                 if (childCell === undefined) {
                     throw `Failed to find child cell ${event.content.cell_id} in children`
@@ -643,6 +643,7 @@ margin-left: 4rem;
                 // tag children the same way as before, warning copied from prior method
                 // TODO: Is this modifying the cells in memory, if so, is this causing problems?
                 childCell.metadata.beaker_child_of = this?.id;
+                childCell.metadata.beakerQueryCellChild = true;
                 cells.push(childCell);
             }
             else if (event.type === "response") {
@@ -650,13 +651,13 @@ margin-left: 4rem;
                     const lines = event.content.split("\n")
                         .map(line => (/^\s*$/.test(line) ? "" : `${line}`))
                         // add an extra ## to shrink agent markdown output headers under notebook "agent" header
-                        .map(line => /^#+\s+/.test(line) ? `##${line}` : line);
+                        .map(line => /^#+\s+/.test(line) ? `###${line}` : line);
                     markdownLinesBuffer.push(`\n${lines.join("\n")}`);
                 }
                 else {
                     markdownLinesBuffer.push(`\n${event.content}`);
                 }
-                pushNewAgentMarkdownCell();
+                pushNewAgentMarkdownCell({finalResponse: true});
             }
         });
         if (cells[0]?.cell_type !== "markdown") {

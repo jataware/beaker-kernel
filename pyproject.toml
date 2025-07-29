@@ -44,6 +44,7 @@ dependencies = [
   "tree-sitter",
   "tree-sitter-python",
   "tree-sitter-julia",
+  "beaker-publication-notebook-export @ {root:uri}/beaker_kernel/exporters/beaker-publication-notebook-export"
 ]
 
 [project.entry-points.hatch]

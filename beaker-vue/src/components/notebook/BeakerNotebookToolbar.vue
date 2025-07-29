@@ -108,6 +108,43 @@
             </slot>
         </template>
     </Toolbar>
+    <Dialog v-model:visible="publicationExportVisible" modal header="Customize Publication Export" :style="{ width: '25rem' }">
+        <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 1rem">
+            <label for="notebookname" style="font-weight: 600; flex-shrink: 0;">Notebook Name</label>
+            <InputGroup>
+                <InputText id="notebookname" style="display: flex; margin: auto" autocomplete="off" v-model="saveAsFilename"/>
+                <InputGroupAddon>.ipynb</InputGroupAddon>
+            </InputGroup>
+        </div>
+        <Divider></Divider>
+        <div style="display: flex; flex-direction: column; width: fit-content; gap: 1rem">
+            <div style="display: flex; justify-content: space-between;">
+                <label for="hidecode" style="font-weight: 600; margin-right: 2rem;">Collapse Code Cells</label>
+                <ToggleSwitch inputId="hidecode" style="margin: auto 0 auto auto;" v-model="publicationExportOptions.collapseCodeCells"/>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <label for="hidecharts" style="font-weight: 600; margin-right: 2rem;">Collapse Outputs</label>
+                <ToggleSwitch inputId="hidecharts" style="margin: auto 0 auto auto;" v-model="publicationExportOptions.collapseOutputs"/>
+            </div>
+        </div>
+        <Divider></Divider>
+
+        <div v-if="publicationExportRunning">
+            <ProgressSpinner></ProgressSpinner>
+            <span>Exporting...</span>
+            <Divider></Divider>
+        </div>
+
+
+        <div style="display: flex; justify-content: end; gap: 1rem;">
+            <Button type="button" label="Cancel" severity="secondary" @click="publicationExportVisible = false"></Button>
+            <Button type="button" label="Export Notebook" @click="
+                publicationExportRunning = true;
+                handleExport('publication', 'application/json', publicationExportOptions)"
+            ></Button>
+        </div>
+
+    </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -127,6 +164,7 @@ import InputText from "primevue/inputtext";
 import Popover from "primevue/popover";
 import Toolbar from "primevue/toolbar";
 import type { MenuItem } from "primevue/menuitem";
+import { ProgressSpinner, Dialog, InputGroupAddon, Divider, ToggleSwitch } from "primevue";
 
 import AnnotationButton from "../misc/buttons/AnnotationButton.vue"
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
@@ -136,6 +174,21 @@ const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
 const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
 const showOverlay = inject<(contents: string, header?: string) => void>('show_overlay');
+
+const publicationExportVisible = ref<boolean>(false);
+const publicationExportRunning = ref<boolean>(false)
+
+watch(publicationExportVisible, () => {
+    if (!saveAsFilename.value) {
+        resetSaveAsFilename();
+    }
+})
+
+watch (publicationExportRunning, value => {
+    if (!value) {
+        publicationExportVisible.value = false;
+    }
+})
 
 const addCellMenuItems = computed(() => {
     return Object.entries(cellMapping).map(([name, obj]) => {
@@ -179,7 +232,16 @@ const exportAsTypes = ref<MenuItem[]>([
     }
 ]);
 
-const exportAction = (format: string, mimetype: string) => {
+const publicationExportOptions = ref<{
+    collapseCodeCells: boolean,
+    collapseOutputs: boolean,
+}>({
+    collapseCodeCells: false,
+    collapseOutputs: false,
+});
+
+const handleExport = (format: string, mimetype: string, options?: object) => {
+    publicationExportRunning.value = true;
     const url = URLExt.join(PageConfig.getBaseUrl(), 'export', format);
     if (!saveAsFilename.value) {
         resetSaveAsFilename();
@@ -191,6 +253,7 @@ const exportAction = (format: string, mimetype: string) => {
             "body": JSON.stringify({
                 name: saveAsFilename.value,
                 content: notebook.notebook.toIPynb(),
+                options: options ?? {}
             }),
             "headers": {
                 "Content-Type": "application/json;charset=UTF-8"
@@ -208,7 +271,19 @@ const exportAction = (format: string, mimetype: string) => {
             const errorInfo = await result.json();
             showOverlay(errorInfo, "Error converting notebook");
         }
-    }).catch((reason) => console.error(reason));
+    }).catch((reason) => console.error(reason))
+      .finally(() => publicationExportRunning.value = false);
+}
+
+const exportAction = (format: string, mimetype: string) => {
+    console.log("exporting!")
+    if (format === "publication") {
+        publicationExportVisible.value = true;
+    }
+    else {
+        handleExport(format, mimetype);
+    }
+
 }
 
 const refreshExportTypes = async () => {
