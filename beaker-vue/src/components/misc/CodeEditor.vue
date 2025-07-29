@@ -26,6 +26,8 @@ const session: BeakerSession = inject('session');
 
 declare type DisplayMode = "light" | "dark";
 
+type AnnotationProvider = "linter" | "decoration";
+
 export interface CodeEditorProps {
     displayMode?: DisplayMode,
     language?: string,
@@ -36,7 +38,7 @@ export interface CodeEditorProps {
     disabled?: boolean,
     readonly?: boolean,
     annotations?: any[],
-    annotationProvider?: string, // Choose annotation approach: "linter", "decoration", etc.
+    annotationProvider?: AnnotationProvider,
 }
 
 const props = withDefaults(defineProps<CodeEditorProps>(), {
@@ -44,7 +46,7 @@ const props = withDefaults(defineProps<CodeEditorProps>(), {
     autofocus: false,
     disabled: false,
     annotations: () => [],
-    annotationProvider: "decoration", // Default to new decoration approach
+    annotationProvider: "linter",
 });
 
 const model = ref<string>(props.modelValue);
@@ -166,8 +168,6 @@ const extensions = computed(() => {
     }
 
     if (props.annotations?.length) {
-        console.log("Code Editor annotations", props.annotations);
-        
         try {
             const provider = AnnotationProviderFactory.create(props.annotationProvider || "decoration");
             const annotationExtensions = provider.createExtensions(props.annotations as AnnotationData[]);

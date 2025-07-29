@@ -4,6 +4,19 @@ import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
 import { StateField, StateEffect, RangeSet } from "@codemirror/state";
 
 
+// copied Severity from codemirror-lint, which does not export it
+type LintSeverity = "hint" | "info" | "warning" | "error";
+
+type BeakerLintSeverity = "minor" | "warning" | "info";
+
+function mapBeakerSeverityToLintSeverity(severity: BeakerLintSeverity): LintSeverity {
+    switch (severity) {
+        case 'minor': return 'hint';
+        case 'warning': return 'warning';
+        case 'info': return 'info';
+    }
+}
+
 export interface AnnotationData {
     cell_id: string;
     issue: {
@@ -11,7 +24,7 @@ export interface AnnotationData {
         title: string;
         description: string;
         prompt_description?: string | null;
-        severity: "minor" | "warning" | "info";
+        severity: BeakerLintSeverity;
         link?: string | null;
         category?: {
             id: string;
@@ -33,9 +46,11 @@ export interface AnnotationProvider {
     createExtensions(annotations: AnnotationData[]): Extension[];
 }
 
-function getSeverityColor(severity: string): string {
+/**
+ * For Decoration Provider. Maps a severity to a color.
+ */
+function getSeverityColor(severity: BeakerLintSeverity): string {
     switch (severity) {
-        case 'error': return '#e74c3c';
         case 'minor': return '#f39c12';
         case 'warning': return '#f39c12';
         case 'info': return '#3498db';
@@ -56,7 +71,7 @@ export class LinterAnnotationProvider implements AnnotationProvider {
                 const diagnostic: Diagnostic = {
                     from: annotation.start,
                     to: annotation.end,
-                    severity: annotation.issue.severity,
+                    severity: mapBeakerSeverityToLintSeverity(annotation.issue.severity),
                     message: annotation.title_override ?? annotation.issue.title,
                     markClass: className,
                     source: category_id,
@@ -118,7 +133,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
 
         const getUniqueSeverities = (annotations: AnnotationData[]): string[] => {
             const severities = new Set(annotations.map(a => a.issue.severity));
-            const ordered = ['minor', 'warning', 'info', 'error'].filter(s => severities.has(s));
+            const ordered = ['minor', 'warning', 'info'].filter(s => severities.has(s as BeakerLintSeverity));
             return ordered;
         };
 
@@ -151,7 +166,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
                         height: 1.3rem;
                         align-self: flex-start;
                         border-radius: 1px;
-                        background-color: ${this.getSeverityColor(severity)};
+                        background-color: ${this.getSeverityColor(severity as BeakerLintSeverity)};
                     `;
                     container.appendChild(line);
                 });
@@ -259,15 +274,11 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
         });
 
         const annotationTooltip = hoverTooltip((view, pos, side) => {
-            console.log('hover tooltip triggered at pos:', pos);
-            
             const decorations = view.state.field(decorationField);
             let foundAnnotations: AnnotationData[] = [];
 
             decorations.between(pos, pos, (from, to, value) => {
-                console.log('decoration between', from, to, value);
                 const annotationId = value.spec.attributes?.['data-annotation-id'];
-                console.log('annotation ID from decoration:', annotationId);
                 
                 if (annotationId) {
                     const annotation = annotations.find(a => a.issue.id === annotationId);
@@ -278,11 +289,8 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
             });
 
             if (foundAnnotations.length === 0) {
-                console.log('no annotations found position');
                 return null;
             }
-
-            console.log('creating tooltip for annotations:', foundAnnotations);
 
             return {
                 pos,
@@ -304,7 +312,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
                         
                         section.innerHTML = `
                             <h4 style="margin: 0.2rem 0; color: var(--p-text-color)">
-                            <span style="color: ${getSeverityColor(annotation.issue.severity)}">${annotation.issue.severity}</span> ${annotation.title_override || annotation.issue.title}
+                            <span style="color: ${getSeverityColor(annotation.issue.severity as BeakerLintSeverity)}">${annotation.issue.severity}</span> ${annotation.title_override || annotation.issue.title}
                             </h4>
                             <p style="color: var(--p-text-color)">${description}</p>
                             ${extraMessage}
@@ -322,7 +330,6 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
                         dom.appendChild(section);
                     });
 
-                    console.log('created tooltip DOM:', dom);
                     return { dom };
                 }
             };
