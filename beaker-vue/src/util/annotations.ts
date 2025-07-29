@@ -11,7 +11,7 @@ export interface AnnotationData {
         title: string;
         description: string;
         prompt_description?: string | null;
-        severity: "error" | "warning" | "info";
+        severity: "minor" | "warning" | "info";
         link?: string | null;
         category?: {
             id: string;
@@ -36,6 +36,7 @@ export interface AnnotationProvider {
 function getSeverityColor(severity: string): string {
     switch (severity) {
         case 'error': return '#e74c3c';
+        case 'minor': return '#f39c12';
         case 'warning': return '#f39c12';
         case 'info': return '#3498db';
         default: return '#95a5a6';
@@ -117,7 +118,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
 
         const getUniqueSeverities = (annotations: AnnotationData[]): string[] => {
             const severities = new Set(annotations.map(a => a.issue.severity));
-            const ordered = ['error', 'warning', 'info'].filter(s => severities.has(s));
+            const ordered = ['minor', 'warning', 'info', 'error'].filter(s => severities.has(s));
             return ordered;
         };
 
