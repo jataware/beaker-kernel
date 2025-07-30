@@ -63,7 +63,7 @@ def tool(func: Callable = None, *, name: str = None, description: str = None) ->
             
             # Log tool invocation
             if kernel:
-                kernel.log("react_tool", {"tool": tool_name, "input": kwargs or args})
+                kernel.log("agent_react_tool", {"tool": tool_name, "input": kwargs or args})
             
             try:
                 # Execute the tool
@@ -86,7 +86,7 @@ def tool(func: Callable = None, *, name: str = None, description: str = None) ->
                 
                 # Log result
                 if kernel:
-                    kernel.log("react_tool_output", {
+                    kernel.log("agent_react_tool_output", {
                         "tool": tool_name,
                         "input": kwargs or args,
                         "output": result
@@ -99,7 +99,7 @@ def tool(func: Callable = None, *, name: str = None, description: str = None) ->
                 logger.error(error_msg)
                 
                 if kernel:
-                    kernel.log("react_tool_output", {
+                    kernel.log("agent_react_tool_output", {
                         "tool": tool_name,
                         "input": kwargs or args,
                         "output": error_msg
@@ -135,13 +135,13 @@ class BeakerTool(BaseTool):
         
         kernel = get_beaker_kernel()
         if kernel:
-            kernel.log("react_tool", {"tool": self.name, "input": kwargs or args})
+            kernel.log("agent_react_tool", {"tool": self.name, "input": kwargs or args})
         
         try:
             result = self.execute(*args, **kwargs)
             
             if kernel:
-                kernel.log("react_tool_output", {
+                kernel.log("agent_react_tool_output", {
                     "tool": self.name,
                     "input": kwargs or args,
                     "output": result
@@ -154,7 +154,7 @@ class BeakerTool(BaseTool):
             logger.error(error_msg)
             
             if kernel:
-                kernel.log("react_tool_output", {
+                kernel.log("agent_react_tool_output", {
                     "tool": self.name,
                     "input": kwargs or args,
                     "output": error_msg
@@ -168,7 +168,7 @@ class BeakerTool(BaseTool):
         
         kernel = get_beaker_kernel()
         if kernel:
-            kernel.log("react_tool", {"tool": self.name, "input": kwargs or args})
+            kernel.log("agent_react_tool", {"tool": self.name, "input": kwargs or args})
         
         try:
             if hasattr(self, 'aexecute'):
@@ -177,7 +177,7 @@ class BeakerTool(BaseTool):
                 result = self.execute(*args, **kwargs)
             
             if kernel:
-                kernel.log("react_tool_output", {
+                kernel.log("agent_react_tool_output", {
                     "tool": self.name,
                     "input": kwargs or args,
                     "output": result
@@ -190,7 +190,7 @@ class BeakerTool(BaseTool):
             logger.error(error_msg)
             
             if kernel:
-                kernel.log("react_tool_output", {
+                kernel.log("agent_react_tool_output", {
                     "tool": self.name,
                     "input": kwargs or args,
                     "output": error_msg
