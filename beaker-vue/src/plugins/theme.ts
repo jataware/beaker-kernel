@@ -58,6 +58,13 @@ export const BeakerThemePlugin: Plugin = {
             else {
                 appElement.classList.add('beaker-dark');
             }
+
+            // add data-theme attribute to the app element
+            // so that CSS can easily style based on theme
+            const appDiv = document.getElementById('app');
+            if (appDiv) {
+                appDiv.setAttribute('data-theme', theme.mode);
+            }
         };
 
         const toggleDarkMode = () => {
