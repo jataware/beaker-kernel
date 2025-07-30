@@ -28,7 +28,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, inject, computed, watch, onMounted, onUnmounted, reactive } from "vue";
+import { ref, inject, computed, watch } from "vue";
 import SelectButton from "primevue/selectbutton";
 import { BeakerSession } from "beaker-kernel";
 import type { BeakerRenderOutput } from "../../renderers";
