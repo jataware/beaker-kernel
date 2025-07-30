@@ -273,26 +273,18 @@ class BeakerKernel(KernelProxyManager):
                     self.send_response("iopub", "kernel_state_info", state_payload, parent_header=parent_header)
 
     async def send_chat_history(self, parent_header=None):
-        # Check if agent has chat history (new LangGraph agents do, legacy ones might not)
-        if hasattr(self.context.agent, 'chat_history') and self.context.agent.chat_history:
-            chat_history = self.context.agent.chat_history
-            
-            # Handle new BeakerChatHistory (LangGraph agents)
-            if hasattr(chat_history, 'to_outbound_format'):
-                try:
-                    from dataclasses import asdict
-                    model = getattr(self.context.agent, 'model', None)
-                    outbound_history = chat_history.to_outbound_format(model)
-                    output_dict = asdict(outbound_history)
-                    
-                    self.send_response("iopub", "chat_history", output_dict, parent_header=parent_header)
-                    logger.debug(f"Sent chat history: {len(outbound_history.records)} records, {outbound_history.total_token_count} tokens")
-                    return
-                except Exception as e:
-                    logger.error(f"Error sending LangGraph chat history: {e}")
-                    return
-            
-            # No legacy support needed - all agents now use BeakerChatHistory
+        # All agents now use BeakerChatHistory with to_outbound_format method
+        if self.context.agent.chat_history:
+            try:
+                from dataclasses import asdict
+                model = getattr(self.context.agent, 'model', None)
+                outbound_history = self.context.agent.chat_history.to_outbound_format(model)
+                output_dict = asdict(outbound_history)
+                
+                self.send_response("iopub", "chat_history", output_dict, parent_header=parent_header)
+                logger.debug(f"Sent chat history: {len(outbound_history.records)} records, {outbound_history.total_token_count} tokens")
+            except Exception as e:
+                logger.error(f"Error sending chat history: {e}")
 
     async def update_connection_file(self, **kwargs):
         try:
@@ -511,7 +503,7 @@ class BeakerKernel(KernelProxyManager):
 
     @message_handler
     async def llm_request(self, message: JupyterMessage):
-        # Legacy authentication error handling - replaced by ValueError in new implementation
+        # Handle LLM requests from frontend
         content: dict = message.content
         request = content.get("request", None)
         if not request:
