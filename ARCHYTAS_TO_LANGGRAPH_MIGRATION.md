@@ -175,25 +175,23 @@ import_path = "langchain_anthropic.ChatAnthropic"
 
 ### 5. BeakerChatHistory System
 
-#### File: `beaker_kernel/lib/chat_history.py` (Custom Implementation)
-The `BeakerChatHistory` is a purpose-built chat history system designed specifically for Beaker's requirements.
+#### File: `beaker_kernel/lib/chat_history.py` (Custom Implementation with Ported Archytas Summarization)
+The `BeakerChatHistory` is a purpose-built chat history system designed specifically for Beaker's requirements, featuring **directly ported Archytas auto-summarization logic**.
 
 **Core Features**:
 - **Model-aware Context Windows**: Automatic detection of context limits per model type
-- **Auto-summarization**: Intelligent conversation summarization at 80% of context window
+- **Ported Archytas Auto-summarization**: LLM-powered summarization using exact Archytas prompts and logic
 - **UI Integration**: Perfect compatibility with Beaker's chat history panel
 - **Token Management**: Accurate token counting and usage tracking
 - **Message Threading**: Support for ReAct loop IDs and message relationships
 
-**Why Custom vs LangGraph Built-in Memory?**
-
-| Aspect | LangGraph Built-in | BeakerChatHistory |
-|------------|------------------------|----------------------|
-| **UI Integration** | Generic format, requires adaptation | Native Beaker format with `OutboundChatHistory` |
-| **Token Calculations** | Basic counting | Model-specific context windows + overhead estimates |
-| **Auto-summarization** | Basic context management | Custom logic preserving last 3 exchanges |
-| **Frontend Compatibility** | Requires compatibility layer | Direct integration with existing UI components |
-| **Performance** | General-purpose | Optimized for Beaker's specific workflows |
+**Auto-Summarization Implementation**:
+The summarization system directly ports Archytas's `default_history_summarizer()` function with identical:
+- **Prompt Templates**: Exact system and user prompts from Archytas Jinja templates
+- **Message Formatting**: Same UUID-based message structure (`msg_00000001` format)
+- **Tool Call Handling**: Preserves tool usage context in summaries
+- **Output Format**: Same `[SUMMARIZED CONVERSATION]: Below is a summary of X messages:` structure
+- **LLM Invocation**: Direct model calls matching Archytas behavior
 
 **Implementation Details**:
 ```python
@@ -203,22 +201,38 @@ class BeakerChatHistory:
         self.max_tokens = max_tokens or get_model_context_window(model)
         self.summarization_threshold = summarization_threshold
         
-    def get_model_context_window(model) -> int:
-        """Model-specific context window detection"""
-        if 'claude-3' in model_name: return 200000
-        elif 'gpt-4' in model_name: return 128000
-        elif 'gemini-1.5' in model_name: return 1000000
-        # ... additional model support
+    async def _create_summary(self, messages: List[BaseMessage]) -> str:
+        """
+        Create LLM-powered summary using ported Archytas logic.
+        Based on archytas.summarizers.default_history_summarizer()
+        """
+        # Exact Archytas system prompt
+        system_prompt = """You are an intelligent agent capable of reviewing conversations..."""
         
-    def to_outbound_format(self, model=None) -> OutboundChatHistory:
-        """Convert to exact format expected by Beaker's frontend"""
-        return OutboundChatHistory(
-            records=self.get_serializable_records(),
-            total_token_count=self.total_tokens,
-            message_token_count=self.message_tokens,
-            # ... all required UI fields
-        )
+        # Archytas-style message formatting with UUIDs
+        for i, msg in enumerate(messages):
+            msg_uuid = f"msg_{i+1:08x}"
+            user_prompt_parts.append(f"```{msg_type} {msg_uuid} content")
+            # ... exact Archytas formatting
+        
+        # Direct model invocation like Archytas
+        response = await model.ainvoke([SystemMessage(content=system_prompt), 
+                                       HumanMessage(content=user_prompt)])
+        
+        # Archytas-style output formatting
+        return f"Below is a summary of {message_count} messages:\n\n```summary\n{summary_text}\n```"
 ```
+
+**Why Custom vs LangGraph Built-in Memory?**
+
+| Aspect | LangGraph Built-in | BeakerChatHistory |
+|------------|------------------------|----------------------|
+| **UI Integration** | Generic format, requires adaptation | Native Beaker format with `OutboundChatHistory` |
+| **Token Calculations** | Basic counting | Model-specific context windows + overhead estimates |
+| **Auto-summarization** | Basic context management | **Ported Archytas LLM-powered summarization** |
+| **Frontend Compatibility** | Requires compatibility layer | Direct integration with existing UI components |
+| **Performance** | General-purpose | Optimized for Beaker's specific workflows |
+| **Feature Parity** | Limited | **Complete Archytas summarization compatibility** |
 
 **Context Window Detection**:
 ```python
