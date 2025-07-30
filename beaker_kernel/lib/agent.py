@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class BeakerAgent:
     """Base agent class for Beaker contexts."""
 
-    def __init__(self, context: "BeakerContext" = None, tools: List[BaseTool] = None, **kwargs):
+    def __init__(self, context: "BeakerContext" = None, tools: List[BaseTool] = None, summarization_strategy: str = "llm", **kwargs):
         self.context = context
         
         # Set up global kernel reference for tools
@@ -34,8 +34,8 @@ class BeakerAgent:
         # Get model first
         self.model = config.get_model() or DefaultModel({})
         
-        # Initialize chat history with model information for proper context window detection
-        self.chat_history = BeakerChatHistory(model=self.model)
+        # Initialize chat history with model information and configurable summarization
+        self.chat_history = BeakerChatHistory(model=self.model, summarization_strategy=summarization_strategy)
         
         # Prepare tools - include ask_user by default
         all_tools = [self.ask_user] + (tools or [])
@@ -69,10 +69,20 @@ class BeakerAgent:
             user_message = HumanMessage(content=query)
             loop_id = self.chat_history.add_message(user_message)
             
+            # Get all messages for LangGraph (filter out empty ones)
+            all_messages = []
+            for msg in self.chat_history.messages:
+                content = getattr(msg, 'content', '')
+                if content and content.strip():
+                    all_messages.append(msg)
+                else:
+                    logger.warning(f"Skipping message with empty content: {type(msg).__name__}")
+            
+            logger.debug(f"Executing LangGraph with {len(all_messages)} messages")
+            
             # Execute within proper parent message context
             async def execute_with_context():
-                messages = [user_message]
-                state = {"messages": messages}
+                state = {"messages": all_messages}
                 if react_context:
                     # Add any additional context to the state
                     for key, value in react_context.items():
@@ -87,15 +97,17 @@ class BeakerAgent:
             else:
                 result = await execute_with_context()
             
-            # Process all messages from the result and add to chat history
+            # Extract response content and add to chat history
             response_content = "No response generated"
             if "messages" in result and result["messages"]:
-                for msg in result["messages"][1:]:  # Skip the first message (user input)
-                    if isinstance(msg, AIMessage):
-                        response_content = msg.content
-                        self.chat_history.add_message(msg, loop_id)
-                    elif isinstance(msg, ToolMessage):
-                        self.chat_history.add_message(msg, loop_id)
+                # Get the last message which should be the AI response
+                last_message = result["messages"][-1]
+                if isinstance(last_message, AIMessage):
+                    response_content = last_message.content
+                    # Only add to history if it's not already there (avoid duplicates)
+                    if last_message not in self.chat_history.messages:
+                        self.chat_history.add_message(last_message, loop_id)
+                        logger.debug(f"Added AI response to chat history: {len(last_message.content)} chars")
             
             return response_content
             

@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional
 from uuid import uuid4
 
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage
+from .summarization import get_summarizer, ChatHistorySummarizer
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ def get_model_context_window(model) -> int:
 class BeakerChatHistory:
     """Chat history manager for LangGraph agents."""
     
-    def __init__(self, max_tokens: int = None, summarization_threshold: float = 0.8, model=None):
+    def __init__(self, max_tokens: int = None, summarization_threshold: float = 0.05, model=None, summarization_strategy: str = "archytas"):
         self.messages: List[BaseMessage] = []
         self.records: List[MessageRecord] = []
         # Use model-specific context window if available
@@ -119,14 +120,23 @@ class BeakerChatHistory:
         self.summarized_count = 0
         self.system_message = SystemMessage(HumanMessage(content="You are a helpful assistant."))
         
+        # Pluggable summarization strategy
+        self.summarizer = get_summarizer(summarization_strategy)
+        
     def estimate_tokens(self, text: str) -> int:
         """Simple token estimation (roughly 4 chars per token)."""
         return max(1, len(str(text)) // 4)
     
     def add_message(self, message: BaseMessage, react_loop_id: Optional[str] = None) -> str:
         """Add a message to chat history."""
+        # Validate message content
+        content = getattr(message, 'content', '')
+        if not content or not str(content).strip():
+            logger.warning(f"Skipping message with empty content: {type(message).__name__}")
+            return str(uuid4())  # Return dummy ID but don't store the message
+        
         record_id = str(uuid4())
-        token_count = self.estimate_tokens(message.content if hasattr(message, 'content') else str(message))
+        token_count = self.estimate_tokens(content)
         
         record = MessageRecord(
             uuid=record_id,
@@ -175,8 +185,8 @@ class BeakerChatHistory:
                 logger.info("No messages to summarize")
                 return
             
-            # Create a summary message using LLM
-            summary_content = await self._create_summary(messages_to_summarize)
+            # Create a summary message using pluggable summarizer
+            summary_content = await self.summarizer.summarize(messages_to_summarize)
             summary_message = AIMessage(content=f"[SUMMARIZED CONVERSATION]: {summary_content}")
             
             # Replace old messages with summary
@@ -211,100 +221,6 @@ class BeakerChatHistory:
         except Exception as e:
             logger.error(f"Error during auto-summarization: {e}")
     
-    async def _create_summary(self, messages: List[BaseMessage]) -> str:
-        """
-        Create LLM-powered summary using ported Archytas logic.
-        Based on archytas.summarizers.default_history_summarizer()
-        """
-        try:
-            if not messages:
-                return "Empty conversation"
-            
-            # Port the exact Archytas Jinja template approach
-            system_prompt = """You are an intelligent agent capable of reviewing conversations with an LLM by analyzing the system message, human messages, AI responses, and tool usage and generating a detailed but terse summary of the conversation that can then be used by other agents to continue long conversations that may exceed the context window."""
-            
-            # Build the user prompt with Archytas-style message formatting
-            user_prompt_parts = [
-                "Please summarize all of the following messages into a single block of text that will replace the messages in future calls to the LLM. Please include all details needed to preserve fidelity with the original meaning, while being as short as reasonably possible so that the context window remains available for future conversation. Try to generate one sentence per message, but you can combine messages or use multiple sentences as needed due to light or heavy information load, respectively.",
-                "",
-                "While summarizing, please include each message UUID along with a brief summary of the message(s). Messages can be grouped for narrative sake, but try to keep each group to be 5 messages or less and be sure to include the UUIDs of each message in the group.",
-                "",
-                "If higher fidelity recall of the summarized messages are needed in the future, they original message content can be retrieved using the UUID. However, be sure to focus the summaries on semantic understanding for conversation over searching and retrieval.",
-                "",
-                "### START OF MESSAGES ###"
-            ]
-            
-            # Format messages in Archytas style
-            for i, msg in enumerate(messages):
-                # Generate a UUID for each message (simplified)
-                msg_uuid = f"msg_{i+1:08x}"
-                content = msg.content if hasattr(msg, 'content') else str(msg)
-                msg_type = type(msg).__name__
-                
-                user_prompt_parts.append(f"```{msg_type} {msg_uuid} content")
-                user_prompt_parts.append(content.strip())
-                user_prompt_parts.append("```")
-                user_prompt_parts.append("")
-                
-                # Handle tool calls like Archytas
-                if isinstance(msg, AIMessage) and hasattr(msg, 'tool_calls') and msg.tool_calls:
-                    for tool_call in msg.tool_calls:
-                        user_prompt_parts.append(f"```{msg_type} {msg_uuid} tool_call")
-                        user_prompt_parts.append(f"tool_name: {tool_call.get('name', 'unknown')}")
-                        user_prompt_parts.append(f"args: {tool_call.get('args', {})}")
-                        user_prompt_parts.append(f"tool_call_id: {tool_call.get('id', 'unknown')}")
-                        user_prompt_parts.append("```")
-                        user_prompt_parts.append("")
-            
-            user_prompt_parts.append("### END OF MESSAGES ###")
-            user_prompt = "\n".join(user_prompt_parts)
-            
-            # Get the current agent's model
-            from beaker_kernel.lib.utils import get_beaker_kernel
-            kernel = get_beaker_kernel()
-            if kernel and hasattr(kernel.context, 'agent') and hasattr(kernel.context.agent, 'model'):
-                model = kernel.context.agent.model
-                
-                # Create messages exactly like Archytas does
-                from langchain_core.messages import SystemMessage, HumanMessage as LCHumanMessage
-                summary_messages = [
-                    SystemMessage(content=system_prompt),
-                    LCHumanMessage(content=user_prompt)
-                ]
-                
-                try:
-                    # Call the model directly like Archytas
-                    response = await model.ainvoke(summary_messages)
-                    summary_text = response.content if hasattr(response, 'content') else str(response)
-                    
-                    # Format like Archytas: include message count and summary
-                    message_count = len(messages)
-                    return f"Below is a summary of {message_count} messages:\n\n```summary\n{summary_text}\n```"
-                    
-                except Exception as e:
-                    logger.warning(f"LLM summarization failed: {e}")
-            
-            # Fallback to extractive summary
-            return self._extractive_summary_fallback(messages)
-            
-        except Exception as e:
-            logger.error(f"Error creating summary: {e}")
-            return self._extractive_summary_fallback(messages)
-    
-    def _extractive_summary_fallback(self, messages: List[BaseMessage]) -> str:
-        """Fallback extractive summary if LLM summarization fails."""
-        summary_parts = []
-        
-        for msg in messages:
-            content = msg.content if hasattr(msg, 'content') else str(msg)
-            if isinstance(msg, HumanMessage):
-                summary_parts.append(f"User asked: {content[:100]}...")
-            elif isinstance(msg, AIMessage):
-                summary_parts.append(f"Assistant responded: {content[:100]}...")
-            elif isinstance(msg, ToolMessage):
-                summary_parts.append(f"Tool executed: {content[:50]}...")
-        
-        return " | ".join(summary_parts[-10:])  # Keep last 10 key points
     
     async def get_records(self, auto_update_context: bool = True) -> List[MessageRecord]:
         """Get all message records."""
