@@ -446,7 +446,7 @@ defineExpose({
     flex-direction: row;
     align-items: center;
     background-color: var(--p-surface-border);
-    z-index: 30;
+    z-index: 40;
 
     &:hover {
         cursor: col-resize;
@@ -458,7 +458,7 @@ defineExpose({
     position: absolute;
     right: -6px;
     width: 14px;
-    z-index: 31;
+    z-index: 100;
     height: 3rem;
     background-color: var(--p-surface-f);
     justify-content: space-around;
