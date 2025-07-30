@@ -7,19 +7,20 @@
                   :options="sortedMimetypes"
               />
         </div>
-        <div class="mime-payload" ref="mimePayloadRef">
+        <div class="mime-payload">
             <component
                 v-if="renderedBundle[selectedMimeType]?.component"
                 :is="renderedBundle[selectedMimeType].component"
                 v-bind="renderedBundle[selectedMimeType].bindMapping"
                 :class="`rendered-output ${selectedMimeType.replace('/', '-')}`"
+                @click="handleImageClick"
             />
         </div>
 
         <ImageZoom
-            :isVisible="zoomState.isVisible"
-            :imageSrc="zoomState.imageSrc"
-            :imageAlt="zoomState.imageAlt"
+            :isVisible="zoomVisible"
+            :imageSrc="zoomImageSrc"
+            :imageAlt="zoomImageAlt"
             @close="closeImageZoom"
         />
     </div>
@@ -39,13 +40,9 @@ const props = defineProps([
 ]);
 
 const session = inject<BeakerSession>('session');
-const mimePayloadRef = ref<HTMLElement>();
-
-const zoomState = reactive({
-    isVisible: false,
-    imageSrc: '',
-    imageAlt: ''
-});
+const zoomVisible = ref(false);
+const zoomImageSrc = ref('');
+const zoomImageAlt = ref('');
 
 const renderedBundle = computed<{[key: string]: BeakerRenderOutput}>(
     () => {
@@ -79,37 +76,17 @@ const handleImageClick = (event: MouseEvent) => {
         event.stopPropagation();
 
         const img = target as HTMLImageElement;
-        zoomState.imageSrc = img.src;
-        zoomState.imageAlt = img.alt || 'Zoomed image';
-        zoomState.isVisible = true;
+        zoomImageSrc.value = img.src;
+        zoomImageAlt.value = img.alt || 'Zoomed image';
+        zoomVisible.value = true;
     }
 };
 
 const closeImageZoom = () => {
-    zoomState.isVisible = false;
-    zoomState.imageSrc = '';
-    zoomState.imageAlt = '';
+    zoomVisible.value = false;
+    zoomImageSrc.value = '';
+    zoomImageAlt.value = '';
 };
-
-onMounted(() => {
-    if (mimePayloadRef.value) {
-        mimePayloadRef.value.addEventListener('click', handleImageClick);
-    }
-});
-onUnmounted(() => {
-    if (mimePayloadRef.value) {
-        mimePayloadRef.value.removeEventListener('click', handleImageClick);
-    }
-});
-// re-add event listener when the mime type changes
-watch(selectedMimeType, () => {
-    setTimeout(() => {
-        if (mimePayloadRef.value) {
-            mimePayloadRef.value.removeEventListener('click', handleImageClick);
-            mimePayloadRef.value.addEventListener('click', handleImageClick);
-        }
-    }, 100);
-});
 
 </script>
 
