@@ -273,11 +273,35 @@ class BeakerKernel(KernelProxyManager):
                     self.send_response("iopub", "kernel_state_info", state_payload, parent_header=parent_header)
 
     async def send_chat_history(self, parent_header=None):
-        if self.context.agent.chat_history:
-            from archytas.chat_history import OutboundChatHistory, OutboundModel, SummaryRecord, MessageRecord
-            from dataclasses import asdict
+        # Check if agent has chat history (new LangGraph agents do, legacy ones might not)
+        if hasattr(self.context.agent, 'chat_history') and self.context.agent.chat_history:
             chat_history = self.context.agent.chat_history
-            model = self.context.agent.model
+            
+            # Handle new BeakerChatHistory (LangGraph agents)
+            if hasattr(chat_history, 'to_outbound_format'):
+                try:
+                    from dataclasses import asdict
+                    model = getattr(self.context.agent, 'model', None)
+                    outbound_history = chat_history.to_outbound_format(model)
+                    output_dict = asdict(outbound_history)
+                    
+                    self.send_response("iopub", "chat_history", output_dict, parent_header=parent_header)
+                    logger.debug(f"Sent chat history: {len(outbound_history.records)} records, {outbound_history.total_token_count} tokens")
+                    return
+                except Exception as e:
+                    logger.error(f"Error sending LangGraph chat history: {e}")
+                    return
+            
+            # Legacy Archytas chat history support
+            try:
+                from archytas.chat_history import OutboundChatHistory, OutboundModel, SummaryRecord, MessageRecord
+            except ImportError:
+                # Archytas not available, skip legacy chat history
+                logger.debug("Archytas not available, skipping legacy chat history")
+                return
+                
+            from dataclasses import asdict
+            model = getattr(self.context.agent, 'model', None)
             records = await chat_history.records(auto_update_context=False)
             output = OutboundChatHistory(
                 records=[{
@@ -524,7 +548,7 @@ class BeakerKernel(KernelProxyManager):
 
     @message_handler
     async def llm_request(self, message: JupyterMessage):
-        from archytas.exceptions import AuthenticationError
+        # Legacy authentication error handling - replaced by ValueError in new implementation
         content: dict = message.content
         request = content.get("request", None)
         if not request:
@@ -548,7 +572,7 @@ class BeakerKernel(KernelProxyManager):
                 task = asyncio.create_task(self.context.agent.react_async(request, react_context={"message": message}))
                 self.running_actions[request_key] = task
                 result = await task
-            except AuthenticationError as err:
+            except ValueError as err:  # Updated from AuthenticationError
                 self.send_response(
                     stream="iopub",
                     msg_or_type="llm_auth_failure",

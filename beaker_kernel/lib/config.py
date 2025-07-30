@@ -19,24 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 def get_providers() -> dict[str, str]:
-    import archytas.models
-    from archytas.models.base import BaseArchytasModel
-    base_class = BaseArchytasModel
-    result = {}
-    for resource in importlib.resources.files(archytas.models).iterdir():
-        if resource.is_file() and resource.name.endswith('.py'):
-            name = resource.name.split('.', 1)[0]
-            mod_name = f'archytas.models.{name}'
-            mod = importlib.import_module(mod_name, 'archytas.models')
-            items = inspect.getmembers(
-                mod,
-                lambda item:
-                    isinstance(item, type) and \
-                    issubclass(item, base_class) and \
-                    item is not base_class
-            )
-            result.update({item[0]: f"{item[1].__module__}.{item[1].__name__}" for item in items})
-    return result
+    """Get available LangChain model providers."""
+    return {
+        "OpenAIModel": "langchain_openai.ChatOpenAI",
+        "AnthropicModel": "langchain_anthropic.ChatAnthropic", 
+        "BedrockModel": "langchain_aws.ChatBedrock",
+        "GeminiModel": "langchain_google_genai.ChatGoogleGenerativeAI",
+        "GroqModel": "langchain_groq.ChatGroq",
+        "OllamaModel": "langchain_ollama.ChatOllama",
+    }
 
 
 CONFIG_FILE_SEARCH_LOCATIONS = [  # (path, filename, check_parent_paths, default)
@@ -176,7 +167,7 @@ class Choice(Generic[C]):
 class LLM_Service_Provider:
     import_path: str = configfield(
         description="Dot-separated import path to the LLM Service Provider class.",
-        default="archytas.models.openai.OpenAIModel",
+        default="langchain_openai.ChatOpenAI",
         options=get_providers,
         save_default_value=True,
     )
@@ -197,6 +188,35 @@ class LLM_Service_Provider:
         save_default_value=True,
         min=0,
         max=100,
+    )
+    # Additional fields for cloud providers
+    region: str = configfield(
+        description="Region for cloud providers (AWS, Azure, etc.)",
+        default="",
+        save_default_value=True,
+    )
+    endpoint: str = configfield(
+        description="Custom endpoint URL for cloud providers",
+        default="",
+        save_default_value=True,
+    )
+    aws_access_key: str = configfield(
+        description="AWS access key for Bedrock",
+        default="",
+        sensitive=True,
+        save_default_value=True,
+    )
+    aws_secret_key: str = configfield(
+        description="AWS secret key for Bedrock",
+        default="",
+        sensitive=True,
+        save_default_value=True,
+    )
+    aws_session_token: str = configfield(
+        description="AWS session token for Bedrock",
+        default="",
+        sensitive=True,
+        save_default_value=True,
     )
 
     @classmethod
@@ -219,7 +239,7 @@ class ConfigClass:
         save_default_value=False,
     )
     provider: Choice[Literal["providers"]] = configfield(
-        description="LLM model provider to use. Maps to archytas model classes.",
+        description="LLM model provider to use. Maps to LangChain model classes.",
         env_var="LLM_SERVICE_PROVIDER",
         default_factory=lambda: "openai",
         save_default_value=True,
@@ -275,32 +295,32 @@ boolean value which will enable/disable the tool based on the value.",
         save_default_value=True,
         default_factory=lambda: {
             "openai": {
-                "import_path": "archytas.models.openai.OpenAIModel",
+                "import_path": "langchain_openai.ChatOpenAI",
                 "default_model_name": "gpt-4o-mini",
                 "api_key": ""
             },
             "anthropic": {
-                "import_path": "archytas.models.anthropic.AnthropicModel",
+                "import_path": "langchain_anthropic.ChatAnthropic",
                 "default_model_name": "claude-3-5-sonnet-20241022",
                 "api_key": ""
             },
             "bedrock": {
-                "import_path": "archytas.models.bedrock.BedrockModel",
+                "import_path": "langchain_aws.ChatBedrock",
                 "default_model_name": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
                 "api_key": ""
             },
             "gemini": {
-                "import_path": "archytas.models.gemini.GeminiModel",
+                "import_path": "langchain_google_genai.ChatGoogleGenerativeAI",
                 "default_model_name": "gemini-1.5-pro",
                 "api_key": ""
             },
             "groq": {
-                "import_path": "archytas.models.groq.GroqModel",
+                "import_path": "langchain_groq.ChatGroq",
                 "default_model_name": "llama3-8b-8192",
                 "api_key": ""
             },
             "ollama": {
-                "import_path": "archytas.models.ollama.OllamaModel",
+                "import_path": "langchain_ollama.ChatOllama",
                 "default_model_name": "mistral-nemo",
                 "api_key": ""
             },
@@ -308,7 +328,7 @@ boolean value which will enable/disable the tool based on the value.",
     )
 
     model_provider_import_path: str = configfield(
-        "Dotted import path to archytas provider model. (Overrides value for selected provider)",
+        "Dotted import path to LangChain provider model. (Overrides value for selected provider)",
         "LLM_PROVIDER_IMPORT_PATH",
         default="",
         sensitive=False,
@@ -432,7 +452,7 @@ class Config(ConfigClass):
         raise AttributeError
 
     def get_model(self, provider_id=None, model_config=None, **config_overrides):
-        from archytas.exceptions import AuthenticationError
+        """Get a LangChain model instance."""
         config_obj: dict | None = None
 
         if provider_id:
@@ -468,16 +488,50 @@ class Config(ConfigClass):
             config_obj["model_name"] = config_obj["default_model_name"]
 
         module_name, cls_name = config_obj.pop("import_path").rsplit('.', 1)
-        module = importlib.import_module(module_name)
-
-        cls = getattr(module, cls_name, None)
-        if cls and isinstance(cls, type):
-            try:
-                return cls(config_obj)
-            except AuthenticationError:
-                return DefaultModel({})
-        else:
-            raise ImportError(f"Unable to load model identified by '{module_name}.{cls_name}'. Please make sure it is properly installed.")
+        
+        try:
+            module = importlib.import_module(module_name)
+            cls = getattr(module, cls_name, None)
+            
+            if cls and isinstance(cls, type):
+                # Map config to LangChain parameter names
+                langchain_config = {}
+                if "model_name" in config_obj:
+                    langchain_config["model"] = config_obj["model_name"]
+                if "api_key" in config_obj and config_obj["api_key"]:
+                    langchain_config["api_key"] = config_obj["api_key"]
+                
+                # Add cloud provider specific fields
+                if "region" in config_obj and config_obj["region"]:
+                    langchain_config["region"] = config_obj["region"]
+                if "endpoint" in config_obj and config_obj["endpoint"]:
+                    # Map endpoint based on provider type
+                    if "azure" in module_name.lower():
+                        langchain_config["azure_endpoint"] = config_obj["endpoint"]
+                    else:
+                        langchain_config["endpoint_url"] = config_obj["endpoint"]
+                
+                # AWS credentials for Bedrock
+                if "aws_access_key" in config_obj and config_obj["aws_access_key"]:
+                    langchain_config["aws_access_key_id"] = config_obj["aws_access_key"]
+                if "aws_secret_key" in config_obj and config_obj["aws_secret_key"]:
+                    langchain_config["aws_secret_access_key"] = config_obj["aws_secret_key"]
+                if "aws_session_token" in config_obj and config_obj["aws_session_token"]:
+                    langchain_config["aws_session_token"] = config_obj["aws_session_token"]
+                
+                try:
+                    logger.debug(f"Creating model {module_name}.{cls_name} with config: {langchain_config}")
+                    return cls(**langchain_config)
+                except Exception as e:
+                    logger.warning(f"Failed to create model {module_name}.{cls_name}: {e}")
+                    logger.debug(f"Available parameters for {cls_name}: {inspect.signature(cls.__init__)}")
+                    return DefaultModel({})
+            else:
+                raise ImportError(f"Unable to load model class '{cls_name}' from '{module_name}'")
+                
+        except ImportError as e:
+            logger.warning(f"Unable to import model '{module_name}.{cls_name}': {e}")
+            return DefaultModel({})
 
 config = Config()
 

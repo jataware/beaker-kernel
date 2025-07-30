@@ -1,123 +1,167 @@
+"""
+Beaker agent implementation.
+
+Modern agent system built with LangGraph for robust conversation management.
+"""
+
+import asyncio
 import logging
 import typing
+from typing import Any, Dict, List, Optional
 
-from archytas.react import ReActAgent
-from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.tools import BaseTool
+from langgraph.prebuilt import create_react_agent
 
 from beaker_kernel.lib.config import config
-from beaker_kernel.lib.utils import set_tool_execution_context, DefaultModel
+from beaker_kernel.lib.utils import DefaultModel, get_beaker_kernel, set_beaker_kernel
+from beaker_kernel.lib.chat_history import BeakerChatHistory
 
 if typing.TYPE_CHECKING:
-    from .context import BeakerContext
+    from beaker_kernel.lib.context import BeakerContext
 
 logger = logging.getLogger(__name__)
 
 
-class BeakerAgent(ReActAgent):
+class BeakerAgent:
+    """Base agent class for Beaker contexts."""
 
-    context: "BeakerContext"
-
-    def __init__(
-        self,
-        context: "BeakerContext" = None,
-        tools: list = None,
-        **kwargs,
-    ):
+    def __init__(self, context: "BeakerContext" = None, tools: List[BaseTool] = None, **kwargs):
         self.context = context
-        model = config.get_model()
-        if model is None:
-            model = DefaultModel({})
-
-        self.context.beaker_kernel.debug("init-agent", {
-            "debug": self.context.beaker_kernel.debug_enabled,
-            "verbose": self.context.beaker_kernel.verbose,
-        })
-        super().__init__(
-            model=model,
-            api_key=config.llm_service_token,
-            tools=tools,
-            verbose=self.context.beaker_kernel.verbose,
-            spinner=None,
-            rich_print=False,
-            allow_ask_user=False,
-            thought_handler=context.beaker_kernel.handle_thoughts,
+        
+        # Set up global kernel reference for tools
+        if context and hasattr(context, 'beaker_kernel'):
+            set_beaker_kernel(context.beaker_kernel)
+        
+        # Get model first
+        self.model = config.get_model() or DefaultModel({})
+        
+        # Initialize chat history with model information for proper context window detection
+        self.chat_history = BeakerChatHistory(model=self.model)
+        
+        # Prepare tools - include ask_user by default
+        all_tools = [self.ask_user] + (tools or [])
+        self._tools = all_tools
+        
+        # Create LangGraph agent
+        self._langgraph_app = create_react_agent(
+            model=self.model,
+            tools=self._tools,
             **kwargs
         )
-        # Update tools so that the execution contexts are properly tracked
-        for tool in self.tools.values():
-            set_tool_execution_context(tool)
+        
+        if context:
+            context.beaker_kernel.debug("init-langgraph-agent", {
+                "tools_count": len(self._tools),
+                "model_type": type(self.model).__name__,
+                "chat_history_enabled": True,
+            })
 
     async def react_async(self, query: str, react_context: dict = None) -> str:
-        return await super().react_async(query, react_context)
+        """Execute the agent with a query."""
+        try:
+            # Set up parent message context for tool execution  
+            from beaker_kernel.lib.utils import parent_message_context
+            
+            parent_message = None
+            if react_context and "message" in react_context:
+                parent_message = react_context["message"]
+            
+            # Add user message to chat history
+            user_message = HumanMessage(content=query)
+            loop_id = self.chat_history.add_message(user_message)
+            
+            # Execute within proper parent message context
+            async def execute_with_context():
+                messages = [user_message]
+                state = {"messages": messages}
+                if react_context:
+                    # Add any additional context to the state
+                    for key, value in react_context.items():
+                        if key != "message":  # Don't override messages
+                            state[key] = value
+                    
+                return await self._langgraph_app.ainvoke(state)
+            
+            if parent_message:
+                with parent_message_context(parent_message):
+                    result = await execute_with_context()
+            else:
+                result = await execute_with_context()
+            
+            # Process all messages from the result and add to chat history
+            response_content = "No response generated"
+            if "messages" in result and result["messages"]:
+                for msg in result["messages"][1:]:  # Skip the first message (user input)
+                    if isinstance(msg, AIMessage):
+                        response_content = msg.content
+                        self.chat_history.add_message(msg, loop_id)
+                    elif isinstance(msg, ToolMessage):
+                        self.chat_history.add_message(msg, loop_id)
+            
+            return response_content
+            
+        except Exception as e:
+            logger.error(f"Error in react_async: {e}")
+            # Add error message to chat history
+            error_message = AIMessage(content=f"Error: {str(e)}")
+            self.chat_history.add_message(error_message)
+            raise
 
     async def execute(self, *args, **kwargs) -> str:
-        return await super().execute(*args, **kwargs)
+        """Execute wrapper for compatibility."""
+        query = args[0] if args else kwargs.get('query', '')
+        return await self.react_async(query, kwargs)
 
     async def oneshot(self, prompt: str, query: str) -> str:
-        return await super().oneshot(prompt, query)
+        """Execute with system prompt."""
+        full_query = f"System: {prompt}\\n\\nUser: {query}"
+        return await self.react_async(full_query)
 
     def get_info(self):
-        """
-        Returns info about the agent for communication with the kernel.
-        """
-
-        info = {
-            "name": self.__class__.__name__,
-            "tools": {tool_name.split('.')[-1]: tool_func.__doc__.strip() for tool_name, tool_func in self.tools.items()},
-            "agent_prompt": self.__class__.__doc__.strip(),
+        """Return agent info for kernel communication."""
+        tool_info = {
+            tool.name: tool.description 
+            for tool in self._tools
+            if hasattr(tool, 'name') and hasattr(tool, 'description')
         }
-        return info
+        return {
+            "name": self.__class__.__name__,
+            "tools": tool_info,
+            "framework": "LangGraph",
+        }
 
     def log(self, event_type: str, content: typing.Any = None) -> None:
-        self.context.beaker_kernel.log(
-            event_type=f"agent_{event_type}",
-            content=content
-        )
-        # a case where an upstream overridden logger passes in a plain string
-        # will have a harmless formatting error in the default archytas logger
-        try:
-            return super().log(event_type=event_type, content=content)
-        except TypeError:
-            pass
+        """Log through Beaker kernel."""
+        if self.context:
+            self.context.beaker_kernel.log(f"agent_{event_type}", content)
 
     def debug(self, event_type: str, content: typing.Any = None) -> None:
-        self.context.beaker_kernel.debug(
-            event_type=f"agent_{event_type}",
-            content=content
-        )
-        # see log notes above
-        try:
-            return super().debug(event_type=event_type, content=content)
-        except TypeError:
-            pass
+        """Debug through Beaker kernel.""" 
+        if self.context:
+            self.context.beaker_kernel.debug(f"agent_{event_type}", content)
 
-    def display_observation(self, observation):
-        content = {
-            "observation": observation
-        }
-        parent_header = {}
-        self.context.send_response(
-            stream="iopub",
-            msg_or_type="llm_observation",
-            content=content,
-            parent_header=parent_header,
-        )
-        return super().display_observation(observation)
+    async def ask_user(self, query: str) -> str:
+        """Send query to user and return response."""
+        if self.context:
+            return await self.context.beaker_kernel.prompt_user(query, parent_message=None)
+        return "No context available to ask user"
 
-    @tool()
-    async def ask_user(
-        self, query: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef,
-    ) -> str:
-        """
-        Sends a query to the user and returns their response
+    # Compatibility methods for BeakerContext
+    def disable(self, *tool_names):
+        """Disable tools by name."""
+        if not tool_names:
+            return
+        # Mark tools as disabled
+        for tool_name in tool_names:
+            for tool in self._tools:
+                if hasattr(tool, 'name') and tool.name == tool_name:
+                    setattr(tool, '_disabled', True)
 
-        Args:
-            query (str): A fully grammatically correct question for the user.
+    async def all_messages(self):
+        """Return all messages (compatibility method)."""
+        return []
 
-        Returns:
-            str: The user's response to the query.
-        """
-        return await self.context.beaker_kernel.prompt_user(query, parent_message=react_context.get("message", None))
-
-# Provided for backwards compatibility
-BaseAgent = BeakerAgent
+    def set_auto_context(self, default_content: str, content_updater=None, auto_update: bool = True):
+        """Set auto context (compatibility method)."""
+        pass
