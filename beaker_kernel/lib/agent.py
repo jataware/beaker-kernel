@@ -1,7 +1,5 @@
 """
 Beaker agent implementation.
-
-Modern agent system built with LangGraph for robust conversation management.
 """
 
 import asyncio
