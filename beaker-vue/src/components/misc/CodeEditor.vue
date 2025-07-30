@@ -174,7 +174,7 @@ const extensions = computed(() => {
             enabledExtensions.push(...annotationExtensions);
         } catch (error) {
             console.warn(`Failed to create annotation provider '${props.annotationProvider}':`, error);
-            // Fallback to linter if decoration fails
+            // fallback to linter
             const fallbackProvider = AnnotationProviderFactory.create("linter");
             const annotationExtensions = fallbackProvider.createExtensions(props.annotations as AnnotationData[]);
             enabledExtensions.push(...annotationExtensions);
@@ -210,12 +210,10 @@ defineExpose({
     }
 
 li.cm-diagnostic {
-    // default: white-space: pre-wrap;
     white-space: normal !important;
 
     p {
         margin: 0.5em 0;
-        // line-height: 2;
     }
 }
 
@@ -296,6 +294,14 @@ li.cm-diagnostic {
     border: none !important;
 }
 
+/**
+All these styles cm-tooltip styles are exactly defined to have the tooltip-wrapper 
+have a margin-right, so that it doesn't render exactly all the way to the right of the page 
+(which would happen sometimes and look odd).
+Moved the tooltip border/color to the inner element to allow CodeMirror to calc the 
+tooltip size without any weird re-layout animation. It is a bit specific so be careful when changing.
+ */
+
 .cm-tooltip > .cm-tooltip-section, .cm-tooltip.cm-tooltip-lint {
     padding: 1rem !important;
     border-radius: 4px !important;
@@ -309,7 +315,6 @@ li.cm-diagnostic {
         background-color: var(--p-surface-b) !important;
     }
 }
-
 .cm-tooltip > .cm-tooltip-section {
     margin-right: 1rem;
     max-width: 100%;
@@ -347,14 +352,13 @@ li.cm-diagnostic {
     }
 }
 
-// global override styles for decoration-based annotations
+// some override styles for decoration-based annotations (to match linter styles above)
 .annotation-tooltip {
     h4 {
         margin: 0.2rem 0;
     }
     p {
         margin: 0.5em 0;
-        // line-height: 1.4;
     }
 }
 

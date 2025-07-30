@@ -188,7 +188,6 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
                         'data-annotation-id': annotation.issue.id,
                         'data-category': category_id,
                         'data-severity': annotation.issue.severity,
-                        // 'title': annotation.title_override ?? annotation.issue.title
                     }
                 }).range(annotation.start, annotation.end);
             });
