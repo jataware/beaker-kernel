@@ -215,7 +215,6 @@ const rebundleError = (errorOutput) => {
 
 .stream {
     white-space: pre-wrap;
-    word-break: break-word;
 }
 
 .stderr {
