@@ -292,44 +292,7 @@ class BeakerKernel(KernelProxyManager):
                     logger.error(f"Error sending LangGraph chat history: {e}")
                     return
             
-            # Legacy Archytas chat history support
-            try:
-                from archytas.chat_history import OutboundChatHistory, OutboundModel, SummaryRecord, MessageRecord
-            except ImportError:
-                # Archytas not available, skip legacy chat history
-                logger.debug("Archytas not available, skipping legacy chat history")
-                return
-                
-            from dataclasses import asdict
-            model = getattr(self.context.agent, 'model', None)
-            records = await chat_history.records(auto_update_context=False)
-            output = OutboundChatHistory(
-                records=[{
-                    "message": {
-                        "text": record.message.text(),
-                        "raw_content": record.message.content,
-                        **record.message.model_dump(),
-                    },
-                    "uuid": record.uuid,
-                    "token_count": record.token_count,
-                    "metadata": record.metadata,
-                    "react_loop_id": record.react_loop_id,
-                } for record in records],
-                system_message=chat_history.system_message.message.text(),
-                tool_token_usage_estimate=chat_history.tool_token_estimate,
-                model=OutboundModel(
-                    provider=model.__class__.__name__,
-                    model_name=model.model_name,
-                    context_window=model.contextsize()
-                ),
-                message_token_count=sum(record.token_count for record in records if isinstance(record, MessageRecord) and record.token_count),
-                summary_token_count=sum(record.token_count for record in records if isinstance(record, SummaryRecord) and record.token_count),
-                overhead_token_count=chat_history.token_overhead,
-                summarization_threshold=model.summarization_threshold,
-                token_estimate=chat_history._token_estimate or await chat_history.token_estimate(model),
-            )
-            output_dict = asdict(output)
-            self.send_response("iopub", "chat_history", output_dict, parent_header=parent_header)
+            # No legacy support needed - all agents now use BeakerChatHistory
 
     async def update_connection_file(self, **kwargs):
         try:
