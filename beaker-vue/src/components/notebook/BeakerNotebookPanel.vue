@@ -151,13 +151,12 @@ defineExpose({
 .cell-container {
     position: relative;
     flex: 1;
-    // background-color: var(--p-surface-b);
     z-index: 3;
     overflow: auto;
     width: 100%;
     height: 100%;
 
-    // Separators between cells
+    // separators between cells
     > .beaker-cell {
         padding-top: 2px;
         border-collapse: separate;

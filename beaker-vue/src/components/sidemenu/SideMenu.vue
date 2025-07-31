@@ -138,8 +138,6 @@ const panelsByPosition = computed(() => {
     return result;
 });
 
-const isStatic = computed(() => (props.staticSize || (expanded.value && panelWidth.value === null)))
-
 const containerStyle = computed(() => {
     if (expanded.value) {
         let width: string;
@@ -423,7 +421,7 @@ defineExpose({
     background-color: var(--p-surface-b);
     display: flex;
     flex-direction: column;
-    min-width: 4rem;
+    min-width: 3.5rem;
 
     > div {
         display: flex;
@@ -459,12 +457,34 @@ defineExpose({
     position: absolute;
     width: 6px;
     left: -1px;
+    top: 50%;
+    transform: translateY(-50%);
     z-index: 50;
     height: 40px;
     background-color: var(--p-primary-500);
     border-radius: 2px;
     transition: all 0.2s ease;
     filter: saturate(1.1);
+
+    &::before {
+        content: '';
+        position: absolute;
+        width: 12px;
+        height: 46px;
+        left: -3px;
+        top: -3px;
+        background: transparent;
+        z-index: -1;
+    }
+
+    // expand handle when hovering over the larger area
+    &:hover {
+        width: 12px;
+        height: 46px;
+        left: -4px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
 }
 
 button.menu-button {
@@ -472,11 +492,9 @@ button.menu-button {
     border-color: transparent;
     aspect-ratio: 1;
     width: 100%;
-    padding: .5rem .25rem;
 
-    // increase size of icon if no text
     &.p-button-icon-only .p-button-icon{
-        font-size: 1.25rem;
+        font-size: 1.15rem;
     }
 
     &:focus {
@@ -495,10 +513,8 @@ button.menu-button {
         &:hover {
             background-color: var(--p-surface-c);
             border-color: var(--p-surface-d);
-
         }
     }
-
     &.line {
         border-radius: 0;
     }
@@ -508,14 +524,24 @@ button.menu-button {
     &.line.left {
         border-width: 0 0 0 6px;
     }
-    &.full.selected {
-        background-color: var(--p-primary-color);
-        color: var(--p-surface-b);
-    }
+    &.full {
+        border-radius: 0;
+        border-color: transparent;
 
+        &.selected {
+            background-color: var(--p-primary-600);
+            border-radius: 0;
+            border-color: transparent;
+            color: var(--p-surface-b);
+        }
+        &:hover {
+            border: none;
+            border-color: transparent;
+            box-shadow: none;
+        }
+    }
     &.selected {
         border-color: var(--p-primary-color);
-        color: var(--p-primary-color);
     }
 
     &.shadow:hover {

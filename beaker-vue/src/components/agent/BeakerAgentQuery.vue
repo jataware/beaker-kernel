@@ -80,8 +80,9 @@ const handleQuery = (e: any) => {
 
 <style lang="scss">
 #agent-input {
-    padding: 0.25rem 0.75rem 0.5rem 0.75rem;
-    border-top: 1px solid var(--p-surface-border);
+    padding: 0.5rem 0.75rem;
+    background: var(--p-toolbar-background);
+    border: 1px solid var(--p-toolbar-border-color);
 }
 
 #agent-prompt {
