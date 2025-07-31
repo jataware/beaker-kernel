@@ -61,7 +61,7 @@
                         }"
                     >
                         <template #header>
-                            <span class="flex align-items-center gap-2 w-full">
+                            <span class="query-header-content">
                                 <span :class="eventIconMap[event.type]">
                                     <ThinkingIcon v-if="event.type === 'thought'" class="thought-icon"/>
                                 </span>
@@ -97,7 +97,7 @@
             </div>
         </div>
         <div class="thinking-indicator" v-if="cell.status === 'busy'">
-            <span class="thought-icon"><ThinkingIcon/></span> Thinking <span class="thinking-animation"></span>
+            <span class="thought-icon" style="margin-right: 0.25rem;"><ThinkingIcon/></span> Thinking <span class="thinking-animation"></span>
         </div>
         <div
             class="input-request"
@@ -524,7 +524,7 @@ a.query-tab-headeraction > span > span.pi {
     display: inline-block;
     height: 1rem;
     margin: auto;
-    margin-right: 0.5rem;
+
     svg {
         fill: currentColor;
         stroke: currentColor;
@@ -561,6 +561,12 @@ a.query-tab-headeraction > span > span.pi {
   to {
     right: -4em;
   }
+}
+
+.query-header-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 </style>

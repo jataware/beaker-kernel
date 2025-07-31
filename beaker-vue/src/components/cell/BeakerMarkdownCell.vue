@@ -138,8 +138,10 @@ export default {
 
 .markdown-cell {
     padding-right: 2rem;
-    // padding-left: 1rem;
-    // min-height: 80%;
+
+    img {
+        max-width: 100%;
+    }
 }
 
 .markdown-edit-cell-grid {

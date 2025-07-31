@@ -13,8 +13,16 @@
                 :is="renderedBundle[selectedMimeType].component"
                 v-bind="renderedBundle[selectedMimeType].bindMapping"
                 :class="`rendered-output ${selectedMimeType.replace('/', '-')}`"
+                @click="handleImageClick"
             />
         </div>
+
+        <ImageZoom
+            :isVisible="zoomVisible"
+            :imageSrc="zoomImageSrc"
+            :imageAlt="zoomImageAlt"
+            @close="closeImageZoom"
+        />
     </div>
 
 </template>
@@ -24,6 +32,7 @@ import { ref, inject, computed, watch } from "vue";
 import SelectButton from "primevue/selectbutton";
 import { BeakerSession } from "beaker-kernel";
 import type { BeakerRenderOutput } from "../../renderers";
+import ImageZoom from "./ImageZoom.vue";
 
 const props = defineProps([
     "mimeBundle",
@@ -31,6 +40,9 @@ const props = defineProps([
 ]);
 
 const session = inject<BeakerSession>('session');
+const zoomVisible = ref(false);
+const zoomImageSrc = ref('');
+const zoomImageAlt = ref('');
 
 const renderedBundle = computed<{[key: string]: BeakerRenderOutput}>(
     () => {
@@ -54,6 +66,27 @@ const selectedMimeType = ref<string>(sortedMimetypes.value[0]);
 watch(sortedMimetypes, (newSortedTypes, _) => {
     selectedMimeType.value = newSortedTypes[0];
 })
+
+// click-to-zoom for img tags
+const handleImageClick = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+
+    if (target.tagName.toLowerCase() === 'img') {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const img = target as HTMLImageElement;
+        zoomImageSrc.value = img.src;
+        zoomImageAlt.value = img.alt || 'Zoomed image';
+        zoomVisible.value = true;
+    }
+};
+
+const closeImageZoom = () => {
+    zoomVisible.value = false;
+    zoomImageSrc.value = '';
+    zoomImageAlt.value = '';
+};
 
 </script>
 
@@ -106,6 +139,25 @@ watch(sortedMimetypes, (newSortedTypes, _) => {
         }
     }
     overflow-x: auto;
+
+    &.image-png,
+    &.image-jpeg,
+    &.image-jpg,
+    &.image-gif,
+    &.image-svg {
+        img {
+            border-radius: 0.25rem;
+            max-width: 100%;
+            cursor: pointer;
+            transition: box-shadow 0.6s ease;
+            padding: 1px;
+
+            &:hover {
+                box-sizing: border-box;
+                box-shadow: inset 0 0 0 1px var(--p-surface-500);
+            }
+        }
+    }
 }
 
 .mime-payload {
