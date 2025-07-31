@@ -17,7 +17,7 @@
             <div
                 class="image-zoom-content"
                 ref="imageContainer"
-                @wheel="handleWheel"
+                @wheel.prevent="handleWheelZoom"
                 @mousedown="startPan"
                 @mousemove="handlePan"
                 @mouseup="stopPan"
@@ -29,7 +29,7 @@
                     :alt="imageAlt"
                     :style="{
                         transform: `scale(${zoomLevel}) translate(${panX}px, ${panY}px)`,
-                        cursor: isPanning ? 'grabbing' : (zoomLevel > 1 ? 'grab' : 'default')
+                        cursor: isPanning ? 'grabbing' : 'grab'
                     }"
                     @load="handleImageLoad"
                 />
@@ -85,6 +85,7 @@ const emit = defineEmits<{
 }>();
 
 const zoomLevel = ref(1);
+const fitZoomLevel = ref(1);
 const panX = ref(0);
 const panY = ref(0);
 const isPanning = ref(false);
@@ -93,6 +94,29 @@ const lastPanY = ref(0);
 
 const imageContainer = ref<HTMLElement>();
 const zoomedImage = ref<HTMLImageElement>();
+
+// calculates the zoom level that fits the entire image
+const calculateFitZoom = () => {
+    if (!zoomedImage.value || !imageContainer.value) return;
+
+    const img = zoomedImage.value;
+    const container = imageContainer.value;
+
+    const imageWidth = img.naturalWidth;
+    const imageHeight = img.naturalHeight;
+
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+
+    const scaleX = containerWidth / imageWidth;
+    const scaleY = containerHeight / imageHeight;
+
+    // don't zoom beyond 100% initially
+    const fitZoom = Math.min(scaleX, scaleY, 1);
+
+    fitZoomLevel.value = fitZoom;
+    zoomLevel.value = fitZoom;
+};
 
 const closeZoom = () => {
     emit('close');
@@ -106,35 +130,33 @@ const zoomIn = () => {
 };
 
 const zoomOut = () => {
-    if (zoomLevel.value > 0.25) {
-        zoomLevel.value = Math.max(zoomLevel.value * 0.8, 0.25);
+    const minZoom = Math.min(0.25, fitZoomLevel.value);
+    if (zoomLevel.value > minZoom) {
+        zoomLevel.value = Math.max(zoomLevel.value * 0.8, minZoom);
     }
 };
 
 const resetZoom = () => {
-    zoomLevel.value = 1;
+    zoomLevel.value = fitZoomLevel.value;
     panX.value = 0;
     panY.value = 0;
 };
 
-const handleWheel = (event: WheelEvent) => {
-    event.preventDefault();
+const handleWheelZoom = (event: WheelEvent) => {
     const delta = event.deltaY > 0 ? 0.9 : 1.1;
     const newZoom = Math.max(0.25, Math.min(4, zoomLevel.value * delta));
     zoomLevel.value = newZoom;
 };
 
 const startPan = (event: MouseEvent) => {
-    if (zoomLevel.value > 1) {
-        isPanning.value = true;
-        lastPanX.value = event.clientX;
-        lastPanY.value = event.clientY;
-        event.preventDefault();
-    }
+    isPanning.value = true;
+    lastPanX.value = event.clientX;
+    lastPanY.value = event.clientY;
+    event.preventDefault();
 };
 
 const handlePan = (event: MouseEvent) => {
-    if (isPanning.value && zoomLevel.value > 1) {
+    if (isPanning.value) {
         const deltaX = event.clientX - lastPanX.value;
         const deltaY = event.clientY - lastPanY.value;
 
@@ -152,18 +174,26 @@ const stopPan = () => {
 
 const handleImageLoad = () => {
     nextTick(() => {
+        calculateFitZoom();
         const overlay = document.querySelector('.image-zoom-overlay') as HTMLElement;
         overlay?.focus();
     });
 };
 
 watch(() => props.imageSrc, () => {
+    // zoomLevel recalculated in handleImageLoad
+    fitZoomLevel.value = 1;
     resetZoom();
 });
 
 watch(() => props.isVisible, (visible) => {
     if (!visible) {
         resetZoom();
+    } else {
+        // recalculate fit zoom when becoming visible, container size changed
+        nextTick(() => {
+            calculateFitZoom();
+        });
     }
 });
 </script>
@@ -248,9 +278,7 @@ watch(() => props.isVisible, (visible) => {
     user-select: none;
 
     img {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
+        object-fit: none;
         transition: transform 0.1s ease-out;
         transform-origin: center;
     }
