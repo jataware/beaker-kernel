@@ -44,7 +44,6 @@ dependencies = [
   "tree-sitter",
   "tree-sitter-python",
   "tree-sitter-julia",
-  "beaker-publication-notebook-export @ {root:uri}/beaker_kernel/exporters/beaker-publication-notebook-export"
 ]
 
 [project.entry-points.hatch]
@@ -269,3 +268,6 @@ extra-dependencies = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[project.entry-points."nbconvert.exporters"]
+publication = "beaker_kernel.lib.exporters.publication:PublicationExporter"

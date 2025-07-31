@@ -208,7 +208,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         super({ ...content});
         Object.assign(this, content)
         if (Array.isArray(this.source)) {
-            this.source = this.source.join("\n");
+            this.source = this.source.join("");
         }
     }
 
@@ -296,14 +296,42 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
     attachments?: nbformat.IAttachments;
 
     constructor(content: Partial<nbformat.ICell>) {
-        super({...content});
+        // loading markdown cells that go back and forth can have extra tags we strip off.
+        // Notebook JSON is invalid: Additional properties are not allowed ('execution_count', 'outputs' were unexpected)
+        if (content?.execution_count) {
+            delete content.execution_count;
+        }
+        if (content?.outputs) {
+            delete content.outputs;
+        }
+        super({ ...content});
         Object.assign(this, content)
+        if (Array.isArray(this.source)) {
+            this.source = this.source.join("");
+        }
     }
+
 
     public execute(session: BeakerSession): IBeakerFuture | null {
         // TODO: Replace this with code to render markdown.
         return null;
     };
+
+    public toIPynb(): nbformat.IBaseCell|nbformat.IBaseCell[] {
+        const output: JSONObject = {};
+        for (const key of Object.keys(this)) {
+            if (BeakerBaseCell.IPYNB_KEYS.includes(key)) {
+                output[key] = this[key];
+            }
+        }
+        if (output?.execution_count) {
+            delete output.execution_count;
+        }
+        if (output?.outputs) {
+            delete output.outputs;
+        }
+        return output as nbformat.IBaseCell;
+    }
 }
 
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
@@ -570,7 +598,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
             prompt: this.source,
             events: this.events,
         };
-        const openAgentSection = `### Agent:
+        const openIndentSection = `
 <div style="
 display: flex;
 width: 100%;
@@ -582,22 +610,26 @@ padding: 0.2rem;
 margin: 0.2rem;
 margin-left: 4rem;
 ">
-
 `
-        const closeAgentSection = `</div></div>`
+        const closeIndentSection = `</div></div>`
 
+        // add first User: tagged section identical to how the agent ones are.
         let markdownLinesBuffer = [
-            `# ${this.source}\n`,
-            openAgentSection
+            `### User:\n`,
+            openIndentSection,
+            `${this.source}\n`
         ]
         let cells: nbformat.IBaseCell[] = [];
 
         // make markdown cell from current buffer of lines from the agent output and flush it
         // so that the current contents are all written before a code cell or other type is written
         const pushNewAgentMarkdownCell = (additionalTags?: object) => {
-            markdownLinesBuffer.push(closeAgentSection);
+            markdownLinesBuffer.push(closeIndentSection);
             const renderedMarkdown = markdownLinesBuffer.join("\n");
-            markdownLinesBuffer = [openAgentSection];
+            markdownLinesBuffer = [
+                "### Agent:",
+                openIndentSection
+            ];
 
             if (parentCellPushed) {
                 // redundant information to parent, so ignore loading
@@ -623,6 +655,8 @@ margin-left: 4rem;
                 parentCellPushed = true;
             };
         }
+        // push user cell before the first agent thought
+        pushNewAgentMarkdownCell();
 
         this.events.forEach(event => {
             if (event.type === "thought") {

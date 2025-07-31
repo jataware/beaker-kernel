@@ -1,8 +1,9 @@
-from nbformat import NotebookNode
+from nbformat import NotebookNode, from_dict
 from traitlets.config import default
 from nbconvert.exporters.notebook import NotebookExporter
 from nbconvert.preprocessors import Preprocessor
 from archytas.models.base import BaseArchytasModel
+from uuid import uuid4
 
 from typing import TypedDict
 
@@ -16,10 +17,48 @@ class PublicationPreprocessor(Preprocessor):
         self.model: BaseArchytasModel | None = None
         self.options: dict | None = None
         super().__init__(**kwargs)
+    def add_title_and_abstract(self, nb: NotebookNode):
+        if self.model is None:
+            raise ValueError("Failed to retrieve model")
+        full_text = "\n\n".join([cell.source for cell in nb.cells])
+        title = self.model.invoke([f"""
+            You will be provided with the contents of a Jupyter Notebook session involving an
+            agent and a human working on a notebook together. Read the contents and return a title that adequately
+            comprises what the goal of the notebook in a succinct and concise way, fit for a title in a header.
+
+            Do not format the text at all, please only return plain text.
+            Only return the abstract text, not anything summarizing actions that you have done.
+            Do not mention stripping formatting or HTML tags.
+
+            {full_text}
+        """]).content
+        abstract = self.model.invoke([f"""
+            You will be provided with the contents of a Jupyter Notebook session involving an
+            agent and a human working on a notebook together. Read the contents and return an abstract.
+            The abstract should be a concise, multiline description and summary
+            of what happened, and how it was done.
+
+            Important: Keep this summary concise, but accurately describe important info.
+
+            Do not format the text at all, please only return plain text.
+            Only return the abstract text, not anything summarizing actions that you have done.
+            Do not mention stripping formatting or HTML tags.
+
+            {full_text}
+        """]).content
+        new_cell = from_dict({
+            "id": str(uuid4()),
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": f"# {title}\n\n{abstract}"
+        })
+        nb.cells = [new_cell] + nb.cells
+        return nb.cells
     def preprocess(self, nb: NotebookNode, resources: dict):
         for index, cell in enumerate(nb.cells):
             nb.cells[index], resources = self.preprocess_cell(cell, resources, index)
         nb.cells = [cell for cell in nb.cells if not cell.metadata.get("omitted", False)]
+        nb.cells = self.add_title_and_abstract(nb)
         return nb, resources
     def preprocess_cell(self, cell: NotebookNode, resources: dict, index: int):
         if self.model is None:
@@ -33,13 +72,16 @@ class PublicationPreprocessor(Preprocessor):
                     Rather than say "The agent performed this action", say "This action was performed" in passive voice.
                     Do not say I. Preferably, do not talk about an agent at all.
 
-                    Start with a heading in markdown (h1 or h2) in this block.
+                    Only return the rewritten text, not anything that you have done.
+                    Do not mention stripping formatting or HTML tags.
+
+                    Start with an h2 (##) heading in markdown in this block.
 
                     {cell.source}"""])
             elif cell.metadata.get("parentQueryCell"):
                 message = self.model.invoke([f"""
                     Here is a user query to run code on the user's behalf.
-                    Please preserve the formatting as a markdown header.
+                    Please preserve the formatting as a markdown h4 (####) header.
                     Please rewrite this to be a present participle statement about what is going to be done.
                     Examples:
                     IN: "can you plot a sine wave?"
@@ -50,8 +92,11 @@ class PublicationPreprocessor(Preprocessor):
                     ```python
                     # numpy code to create a table
                     ```"
-                    OUT: "# Creating a table of random data with Numpy"
+                    OUT: "#### Creating a table of random data with Numpy"
                     as if filling out a table of contents.
+
+                    Only return the rewritten text, not anything that you have done.
+                    Do not mention stripping formatting or HTML tags.
 
                     Do not include anything but the header here.
                     Instead of code blocks, leave only the header.
@@ -66,6 +111,9 @@ class PublicationPreprocessor(Preprocessor):
                     Rather than say "The agent performed this action", say "This action was performed" in passive voice.
                     Do not say I. Preferably, do not talk about an agent at all.
 
+                    Only return the rewritten text, not anything that you have done.
+                    Do not mention stripping formatting or HTML tags.
+
                     This is an intermediate step, so please keep it terse.
                     Avoid starting statements with interjections like "Perfect!" or "Excellent!" and remove these if present.
 
@@ -77,7 +125,8 @@ class PublicationPreprocessor(Preprocessor):
                     cell.metadata["collapsed"] = True
                     cell.metadata["jupyter"] = cell.metadata.get("jupyter", {}) | {"source_hidden": True}
                 if self.options.get("collapseOutputs"):
-                    cell.metadata["jupyter"] = cell.metadata.get("jupyter", {}) | {"outputs_hidden": True}
+                    if "display_data" not in [output.output_type for output in cell.outputs]:
+                        cell.metadata["jupyter"] = cell.metadata.get("jupyter", {}) | {"outputs_hidden": True}
                 if self.options.get("cleanAgentErrors"):
                     if "error" in [output.output_type for output in cell.outputs]:
                         cell.metadata["omitted"] = True

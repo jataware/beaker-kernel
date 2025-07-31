@@ -108,23 +108,46 @@
             </slot>
         </template>
     </Toolbar>
-    <Dialog v-model:visible="publicationExportVisible" modal header="Customize Publication Export" :style="{ width: '25rem' }">
-        <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 1rem">
-            <label for="notebookname" style="font-weight: 600; flex-shrink: 0;">Notebook Name</label>
+    <Dialog
+        v-model:visible="publicationExportVisible"
+        modal
+        header="Customize Publication Export"
+        class="publication-dialog"
+    >
+        <p>
+            Publication export uses an AI agent to do a pass over the notebook for clarity,
+            making agent interactions feel more like a publish-ready notebook. This may take up to
+            several minutes for longer notebooks.
+        </p>
+        <div class="publication-name">
+            <label for="notebookname">Notebook Name</label>
             <InputGroup>
                 <InputText id="notebookname" style="display: flex; margin: auto" autocomplete="off" v-model="saveAsFilename"/>
                 <InputGroupAddon>.ipynb</InputGroupAddon>
             </InputGroup>
         </div>
         <Divider></Divider>
-        <div style="display: flex; flex-direction: column; width: fit-content; gap: 1rem">
-            <div style="display: flex; justify-content: space-between;">
-                <label for="hidecode" style="font-weight: 600; margin-right: 2rem;">Collapse Code Cells</label>
-                <ToggleSwitch inputId="hidecode" style="margin: auto 0 auto auto;" v-model="publicationExportOptions.collapseCodeCells"/>
+
+        <div class="publication-options">
+            <div
+                v-tooltip="`Enable options for streamlining and cleaning the publication export's layout.`"
+            >
+                <label for="streamline">Streamline</label>
+                <ToggleSwitch inputId="streamline" v-model="streamlineEnabled"/>
             </div>
-            <div style="display: flex; justify-content: space-between;">
-                <label for="hidecharts" style="font-weight: 600; margin-right: 2rem;">Collapse Outputs</label>
-                <ToggleSwitch inputId="hidecharts" style="margin: auto 0 auto auto;" v-model="publicationExportOptions.collapseOutputs"/>
+            <div
+                v-if="streamlineEnabled"
+                v-tooltip="`Collapse code cells by default, which may be expanded using the toggle button on the left-hand side of the Jupyter pane.`"
+            >
+                <label for="hidecode">Collapse Code Cells</label>
+                <ToggleSwitch inputId="hidecode" v-model="publicationExportOptions.collapseCodeCells"/>
+            </div>
+            <div
+                v-if="streamlineEnabled"
+                v-tooltip="`Collapse outputs by default (excluding plots and figures), which may be expanded using the toggle button on the left-hand side of the Jupyter pane.`"
+            >
+                <label for="hidecharts">Collapse Outputs</label>
+                <ToggleSwitch inputId="hidecharts" v-model="publicationExportOptions.collapseOutputs"/>
             </div>
         </div>
         <Divider></Divider>
@@ -136,7 +159,7 @@
         </div>
 
 
-        <div style="display: flex; justify-content: end; gap: 1rem;">
+        <div class="publication-buttons">
             <Button type="button" label="Cancel" severity="secondary" @click="publicationExportVisible = false"></Button>
             <Button type="button" label="Export Notebook" @click="
                 publicationExportRunning = true;
@@ -232,6 +255,15 @@ const exportAsTypes = ref<MenuItem[]>([
     }
 ]);
 
+const streamlineEnabled = ref<boolean>(false);
+watch(streamlineEnabled, value => {
+    if (!value) {
+        publicationExportOptions.value = {
+            collapseCodeCells: false,
+            collapseOutputs: false,
+        };
+    }
+})
 const publicationExportOptions = ref<{
     collapseCodeCells: boolean,
     collapseOutputs: boolean,
@@ -296,11 +328,12 @@ const refreshExportTypes = async () => {
         return true
     }).map(([format, formatInfo]) => {
         const mimetype = formatInfo.output_mimetype;
+        const label = format === "publication" ? "✨ publication" : format;
         return {
-            label: format,
+            label,
             tooltip: mimetype,
             command: () => {exportAction(format, mimetype)},
-        }
+        };
     });
 };
 
@@ -401,6 +434,41 @@ function downloadNotebook() {
         }
     }
 
+}
+
+.publication-dialog {
+    width: 40rem;
+    label {
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    .publication-name {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 1rem;
+    }
+    .publication-options {
+        display: flex;
+        flex-direction: column;
+        width: fit-content;
+        gap: 1rem;
+        > div {
+            display: flex;
+            justify-content: space-between;
+            label {
+                margin-right: 2rem;
+            }
+            .p-toggleswitch {
+                margin: auto 0 auto auto;
+            }
+        }
+    }
+    .publication-buttons {
+        display: flex;
+        justify-content: end;
+        gap: 1rem;
+    }
 }
 
 .saveas-overlay {
