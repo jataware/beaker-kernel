@@ -86,7 +86,11 @@ const handleQuery = (e: any) => {
 }
 
 #agent-prompt {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+    opacity: 0.8;
+    filter: saturate(0.7);
+    font-size: 1.1rem;
+    margin-left: 1px;
 }
 
 .query-input-container {
