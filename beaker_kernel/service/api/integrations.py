@@ -157,7 +157,7 @@ class BeakerAPIMixin:
                 track=True,
                 metadata=None,
             )
-            result = await client.get_shell_msg(timeout=5) # type: ignore
+            result = await client.get_shell_msg(timeout=50) # type: ignore
         finally:
             client.stop_channels()
         return result["content"]["return"]

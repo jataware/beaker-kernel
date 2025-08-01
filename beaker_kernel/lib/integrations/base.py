@@ -1,25 +1,31 @@
+import os
 from abc import ABC, abstractmethod
-from typing import Any, Callable, ClassVar, Optional
+from typing import Any, Callable, ClassVar, Optional, Generator
+from pathlib import Path
 
 from ..types import Integration, Resource
+from ..autodiscovery import find_resource_dirs
 
 class BaseIntegrationProvider(ABC):
 
     provider_type: ClassVar[str]
     mutable: ClassVar[bool] = False
+    slug: ClassVar[str]
 
     display_name: str
-    slug: str
     prompt_instructions: Optional[str]
 
     def __init__(self, display_name: str):
         self.display_name = display_name
-        self.slug = self.display_name.lower().replace(" ", "_")
         self.prompt_instructions = None
+
+    @classmethod
+    def get_cls_data(cls) -> dict[str, os.PathLike]:
+        return {}
 
     @property
     def prompt(self):
-        integration_doc = self.__doc__ or "Foo"
+        integration_doc = self.__doc__ or ""
         parts = [
             f"Integration Name: {self.display_name}",
             "Integration description:",
@@ -36,6 +42,40 @@ class BaseIntegrationProvider(ABC):
         for integration in integrations:
             parts.append(str(integration))
         return "\n".join(parts)
+
+    def iter_data(self, data_types: Optional[list[str] | str]=None) -> Generator[Path, None, None]:
+        seen: set[tuple[str, str]] = set()
+        if data_types is None:
+            data_types = self.get_cls_data().keys()
+        elif isinstance(data_types, str):
+            data_types = [data_types]
+        for data_path_base in self.data_basedirs:
+            for data_type in data_types:
+                type_path = Path(data_path_base) / data_type
+                # Skip if generated path is not a directory
+                if not type_path.is_dir():
+                    continue
+                for data_result in type_path.iterdir():
+                    # Skip if seen a file of type and name already
+                    key = (data_type, data_result.name)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    yield data_result
+
+    @property
+    def data_basedirs(self):
+        data_dirs = []
+        for data_dir in find_resource_dirs("data"):
+            base_dir = os.path.join(data_dir, self.slug)
+            if os.path.isdir(base_dir):
+                data_dirs.append(base_dir)
+        if os.path.isdir("./integrations"):
+            data_dirs.append("./integrations")
+        # Reverse dirs so we go from most specific to user to most general (global installs, etc)
+        # This allows user to overwrite defaults
+        data_dirs.reverse()
+        return data_dirs
 
     @abstractmethod
     def list_integrations(self) -> list[Integration]:

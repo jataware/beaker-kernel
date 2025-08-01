@@ -3,17 +3,20 @@ import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from string import Template
-from typing import Optional, cast
+from typing import Optional, cast, Literal, TYPE_CHECKING, ClassVar, Generator
 from typing_extensions import Self
 from uuid import uuid4
 
 import yaml
-from adhoc_api.curation import Example
-from adhoc_api.tool import AdhocApi, APISpec
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
 
 from beaker_kernel.lib.integrations.base import MutableBaseIntegrationProvider
 from beaker_kernel.lib.types import ExampleResource, FileResource, Integration, Resource
+
+if TYPE_CHECKING:
+    from adhoc_api.curation import Example
+    from adhoc_api.tool import APISpec
+
 
 logger = logging.getLogger(__file__)
 
@@ -24,6 +27,7 @@ def string_formatter(dumper, data):
         return dumper.represent_scalar("tag:yaml.org,2002:str", data)
     return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
 yaml.representer.SafeRepresenter.add_representer(str, string_formatter)
+
 
 @dataclass
 class AdhocSpecificationIntegration(Integration):
@@ -91,7 +95,7 @@ class AdhocSpecificationIntegration(Integration):
     def get_examples(self) -> list[ExampleResource]:
         return self.get_resources_by_type("example")
 
-    def get_adhoc_api_examples(self) -> list[Example]:
+    def get_adhoc_api_examples(self) -> "list[Example]":
         return [
             {
                 "code": example.code,
@@ -101,7 +105,7 @@ class AdhocSpecificationIntegration(Integration):
             for example in self.get_examples()
         ]
 
-    def render(self, overrides: Optional[dict[str, str]] = None) -> APISpec | None:
+    def render(self, overrides: Optional[dict[str, str]] = None) -> "APISpec | None":
         """
         Renders a template with included files given a relative root to start from.
         Raises on nonexistent files and a failure to load.
@@ -111,6 +115,10 @@ class AdhocSpecificationIntegration(Integration):
 
         Attachments are loaded from `relative_root/attachments` as a starting path.
         """
+
+        from adhoc_api.curation import Example
+        from adhoc_api.tool import APISpec
+
         if self.location is None or self.slug is None or self.source is None:
             msg = "invalid specification: missing one of: location, slug, source."
             raise ValueError(msg)
@@ -158,13 +166,75 @@ class AdhocSpecificationIntegration(Integration):
         return yaml.safe_dump(integration)
 
 
-
 class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
-    specifications: list[AdhocSpecificationIntegration]
-    provider_type = "adhoc"
+    SPECIFICATION_BUILD_PATH: ClassVar[os.PathLike] = "adhoc_data/specifications"
+    DATAFILE_BUILD_PATH: ClassVar[os.PathLike] = "adhoc_data/data"
+    PROMPT_BUILD_PATH: ClassVar[os.PathLike] = "adhoc_data/prompts"
 
-    def write_all_specifications(self):
-        for spec in self.specifications:
+    specifications: dict[str, AdhocSpecificationIntegration]
+    provider_type: ClassVar[str] = "adhoc"
+
+    def __init__(
+        self,
+        display_name: str,
+        **config_options
+    ):
+        super().__init__(display_name)
+        self.adhoc_config_options = config_options
+
+        # prompts_root = self.adhoc_path / "prompts"
+        self.specifications = self.specification_map.values()
+
+        prompts ="\n".join(
+            file.read_text()
+            for file in self.iter_data("prompts") if file.is_file()
+        )
+
+        self.prompt_instructions = f"{prompts}"
+        self.build_adhoc()
+
+    @classmethod
+    def get_cls_data(cls):
+        return {
+            "specifications": cls.SPECIFICATION_BUILD_PATH,
+            "data": cls.DATAFILE_BUILD_PATH,
+            "prompts": cls.PROMPT_BUILD_PATH,
+        }
+
+    @property
+    def specification_map(self) -> dict[str, AdhocSpecificationIntegration]:
+        specs: dict[str, AdhocSpecificationIntegration] = {}
+        for spec_dir in self.iter_data("specifications"):
+            if not spec_dir.is_dir():
+                continue
+
+            specification_yaml = spec_dir / "api.yaml"
+            if not specification_yaml.is_file():
+                logger.warning(f"Ignoring malformed API: `{specification_yaml}` is not a file")
+                continue
+
+            try:
+                spec_data: dict = yaml.safe_load(specification_yaml.read_text())
+                spec_uuid = spec_data.get("uuid", None)
+                if spec_uuid is None or spec_uuid in specs:
+                    continue
+                spec = AdhocSpecificationIntegration.from_dict(
+                    location=spec_dir,
+                    provider=self.slug,
+                    content=spec_data
+                )
+                specs[spec_uuid] = spec
+            except Exception as e:
+                msg = f"Failed to create TemplateSpecification from yaml for `{spec_dir}`: {e}"
+                logger.error(msg)
+        return specs
+
+    def update_specification_file(
+        self,
+        spec: Optional[AdhocSpecificationIntegration]=None,
+        action: Literal["update", "add", "remove"] = "update",
+    ):
+        if action in ["add", "update"]:
             if spec.location is None:
                 msg = "invalid specification: location must not be none"
                 raise ValueError(msg)
@@ -177,72 +247,26 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                     resource = cast(FileResource, resource)
                     resource_path = Path(spec.location) / "attachments" / (resource.filepath or resource.name)
                     resource_path.write_text(resource.content or "")
+        elif action == "remove":
+            # Determine if better to hard delete files or soft-delete by renaming&skipping or similar.
+            pass
 
     def build_adhoc(self):
-        datafile_root = Path(self.adhoc_path) / "data"
-        substitutions = {
-            "DATASET_FILES_BASE_PATH": str(datafile_root)
-        }
+        from adhoc_api.tool import AdhocApi
+        # datafile_root = Path(self.adhoc_path) / "data"
+        # substitutions = {
+        #     "DATASET_FILES_BASE_PATH": str(datafile_root)
+        # }
+        substitutions = {}
         # handling None cases in failed renders keeps them editable but not usable by the agent
         rendered_apis = [spec.render(substitutions) for spec in self.specifications]
-        self.adhoc_api = AdhocApi(
-            apis=[api for api in rendered_apis if api is not None],
-            **self.adhoc_config_options
-        )
+        # self.adhoc_api = AdhocApi(
+        #     apis=[api for api in rendered_apis if api is not None],
+        #     **self.adhoc_config_options
+        # )
 
     def refresh_adhoc_specs(self):
         # TODO: future way to not fully reinitialize to make it less slow.
-        self.build_adhoc()
-
-    def __init__(
-        self,
-        adhoc_path: os.PathLike,
-        display_name: str,
-        **config_options
-    ):
-        super().__init__(display_name)
-        self.adhoc_path = Path(adhoc_path)
-
-        if not self.adhoc_path.exists():
-            msg = f"Unable to initialize ad-hoc integration as specified directory '{adhoc_path}' does not exist."
-            raise RuntimeError(msg)
-        self.adhoc_config_options = config_options
-
-        integration_root = self.adhoc_path / "datasources"
-        instruction_root = self.adhoc_path / "instructions"
-        prompts_root = self.adhoc_path / "prompts"
-
-        self.specifications: list[AdhocSpecificationIntegration] = []
-        for inner_directory in os.listdir(integration_root):
-            integration_dir = integration_root / inner_directory
-            if not integration_dir.is_dir():
-                continue
-
-            integration_yaml = integration_dir / "api.yaml"
-            if not integration_yaml.is_file():
-                logger.warning(f"Ignoring malformed API: `{integration_yaml}` is not a file")
-                continue
-
-            spec_data = yaml.safe_load(integration_yaml.read_text())
-            try:
-                self.specifications.append(
-                    AdhocSpecificationIntegration.from_dict(
-                        location=integration_dir,
-                        provider=self.slug,
-                        content=spec_data
-                    )
-                )
-            except Exception as e:
-                msg = f"Failed to create TemplateSpecification from yaml for `{integration_yaml}`: {e}"
-                logger.error(msg)
-
-        prompts ="\n".join(
-            file.read_text()
-            for file in prompts_root.iterdir() if file.is_file()
-        )
-
-        self.prompt_instructions = f"{prompts}"
-        self.write_all_specifications()
         self.build_adhoc()
 
     @property
@@ -289,13 +313,13 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             content=payload
         )
         self.specifications.append(new_specification)
-        self.write_all_specifications()
+        # self.write_all_specifications()
         self.refresh_adhoc_specs()
         return new_specification
 
     def remove_integration(self, integration_id: str, **payload) -> None:
         self.specifications = [spec for spec in self.specifications if spec.uuid != integration_id]
-        self.write_all_specifications()
+        # self.write_all_specifications()
         self.refresh_adhoc_specs()
 
     def update_integration(self, integration_id: str, **payload) -> Integration:
@@ -322,7 +346,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             content=updated_spec_dict
         )
         self.specifications.append(updated_integration)
-        self.write_all_specifications()
+        # self.write_all_specifications()
         self.refresh_adhoc_specs()
         return updated_integration
 
@@ -350,14 +374,14 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         if resource.resource_id is None:
             raise ValueError("Resource must have resource ID to attach to integration.")
         specification.resources[resource.resource_id] = resource
-        self.write_all_specifications()
+        # self.write_all_specifications()
         self.refresh_adhoc_specs()
         return resource
 
     def remove_resource(self, integration_id: str, resource_id: str) -> None:
         specification = self._get_specification(integration_id)
         del specification.resources[resource_id]
-        self.write_all_specifications()
+        # self.write_all_specifications()
         self.refresh_adhoc_specs()
 
     def update_resource(self, integration_id: str, resource_id: str, **payload) -> Resource:
@@ -379,7 +403,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             msg = "Only examples and files are valid on an adhoc integration."
             raise ValueError(msg)
         specification.resources[resource_id] = resource # type: ignore
-        self.write_all_specifications()
+        # self.write_all_specifications()
         self.refresh_adhoc_specs()
         return resource
 
