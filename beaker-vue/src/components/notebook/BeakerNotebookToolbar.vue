@@ -108,6 +108,66 @@
             </slot>
         </template>
     </Toolbar>
+    <Dialog
+        v-model:visible="publicationExportVisible"
+        modal
+        header="Customize Publication Export"
+        class="publication-dialog"
+    >
+        <p>
+            Publication export uses an AI agent to do a pass over the notebook for clarity,
+            making agent interactions feel more like a publish-ready notebook. This may take up to
+            several minutes for longer notebooks.
+        </p>
+        <div class="publication-name">
+            <label for="notebookname">Notebook Name</label>
+            <InputGroup>
+                <InputText id="notebookname" style="display: flex; margin: auto" autocomplete="off" v-model="saveAsFilename"/>
+                <InputGroupAddon>.ipynb</InputGroupAddon>
+            </InputGroup>
+        </div>
+        <Divider></Divider>
+
+        <div class="publication-options">
+            <div
+                v-tooltip="`Enable options for streamlining and cleaning the publication export's layout.`"
+            >
+                <label for="streamline">Streamline</label>
+                <ToggleSwitch inputId="streamline" v-model="streamlineEnabled"/>
+            </div>
+            <div
+                v-if="streamlineEnabled"
+                v-tooltip="`Collapse code cells by default, which may be expanded using the toggle button on the left-hand side of the Jupyter pane.`"
+            >
+                <label for="hidecode">Collapse Code Cells</label>
+                <ToggleSwitch inputId="hidecode" v-model="publicationExportOptions.collapseCodeCells"/>
+            </div>
+            <div
+                v-if="streamlineEnabled"
+                v-tooltip="`Collapse outputs by default (excluding plots and figures), which may be expanded using the toggle button on the left-hand side of the Jupyter pane.`"
+            >
+                <label for="hidecharts">Collapse Outputs</label>
+                <ToggleSwitch inputId="hidecharts" v-model="publicationExportOptions.collapseOutputs"/>
+            </div>
+        </div>
+        <Divider></Divider>
+
+        <div v-if="publicationExportRunning">
+            <ProgressSpinner></ProgressSpinner>
+            <span>Exporting...</span>
+            <Divider></Divider>
+        </div>
+
+
+        <div class="publication-buttons">
+            <Button type="button" label="Cancel" severity="secondary" @click="publicationExportVisible = false"></Button>
+            <Button type="button" label="Export Notebook" @click="
+                publicationExportRunning = true;
+                handleExport('publication', 'application/json', publicationExportOptions)"
+            ></Button>
+        </div>
+
+    </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -127,6 +187,7 @@ import InputText from "primevue/inputtext";
 import Popover from "primevue/popover";
 import Toolbar from "primevue/toolbar";
 import type { MenuItem } from "primevue/menuitem";
+import { ProgressSpinner, Dialog, InputGroupAddon, Divider, ToggleSwitch } from "primevue";
 
 import AnnotationButton from "../misc/buttons/AnnotationButton.vue"
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
@@ -136,6 +197,21 @@ const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
 const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
 const showOverlay = inject<(contents: string, header?: string) => void>('show_overlay');
+
+const publicationExportVisible = ref<boolean>(false);
+const publicationExportRunning = ref<boolean>(false)
+
+watch(publicationExportVisible, () => {
+    if (!saveAsFilename.value) {
+        resetSaveAsFilename();
+    }
+})
+
+watch (publicationExportRunning, value => {
+    if (!value) {
+        publicationExportVisible.value = false;
+    }
+})
 
 const addCellMenuItems = computed(() => {
     return Object.entries(cellMapping).map(([name, obj]) => {
@@ -179,7 +255,25 @@ const exportAsTypes = ref<MenuItem[]>([
     }
 ]);
 
-const exportAction = (format: string, mimetype: string) => {
+const streamlineEnabled = ref<boolean>(false);
+watch(streamlineEnabled, value => {
+    if (!value) {
+        publicationExportOptions.value = {
+            collapseCodeCells: false,
+            collapseOutputs: false,
+        };
+    }
+})
+const publicationExportOptions = ref<{
+    collapseCodeCells: boolean,
+    collapseOutputs: boolean,
+}>({
+    collapseCodeCells: false,
+    collapseOutputs: false,
+});
+
+const handleExport = (format: string, mimetype: string, options?: object) => {
+    publicationExportRunning.value = true;
     const url = URLExt.join(PageConfig.getBaseUrl(), 'export', format);
     if (!saveAsFilename.value) {
         resetSaveAsFilename();
@@ -191,6 +285,7 @@ const exportAction = (format: string, mimetype: string) => {
             "body": JSON.stringify({
                 name: saveAsFilename.value,
                 content: notebook.notebook.toIPynb(),
+                options: options ?? {}
             }),
             "headers": {
                 "Content-Type": "application/json;charset=UTF-8"
@@ -208,7 +303,19 @@ const exportAction = (format: string, mimetype: string) => {
             const errorInfo = await result.json();
             showOverlay(errorInfo, "Error converting notebook");
         }
-    }).catch((reason) => console.error(reason));
+    }).catch((reason) => console.error(reason))
+      .finally(() => publicationExportRunning.value = false);
+}
+
+const exportAction = (format: string, mimetype: string) => {
+    console.log("exporting!")
+    if (format === "publication") {
+        publicationExportVisible.value = true;
+    }
+    else {
+        handleExport(format, mimetype);
+    }
+
 }
 
 const refreshExportTypes = async () => {
@@ -221,11 +328,12 @@ const refreshExportTypes = async () => {
         return true
     }).map(([format, formatInfo]) => {
         const mimetype = formatInfo.output_mimetype;
+        const label = format === "publication" ? "✨ publication" : format;
         return {
-            label: format,
+            label,
             tooltip: mimetype,
             command: () => {exportAction(format, mimetype)},
-        }
+        };
     });
 };
 
@@ -326,6 +434,41 @@ function downloadNotebook() {
         }
     }
 
+}
+
+.publication-dialog {
+    width: 40rem;
+    label {
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    .publication-name {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 1rem;
+    }
+    .publication-options {
+        display: flex;
+        flex-direction: column;
+        width: fit-content;
+        gap: 1rem;
+        > div {
+            display: flex;
+            justify-content: space-between;
+            label {
+                margin-right: 2rem;
+            }
+            .p-toggleswitch {
+                margin: auto 0 auto auto;
+            }
+        }
+    }
+    .publication-buttons {
+        display: flex;
+        justify-content: end;
+        gap: 1rem;
+    }
 }
 
 .saveas-overlay {

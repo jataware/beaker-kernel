@@ -208,7 +208,7 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
         super({ ...content});
         Object.assign(this, content)
         if (Array.isArray(this.source)) {
-            this.source = this.source.join("\n");
+            this.source = this.source.join("");
         }
     }
 
@@ -296,14 +296,42 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
     attachments?: nbformat.IAttachments;
 
     constructor(content: Partial<nbformat.ICell>) {
-        super({...content});
+        // loading markdown cells that go back and forth can have extra tags we strip off.
+        // Notebook JSON is invalid: Additional properties are not allowed ('execution_count', 'outputs' were unexpected)
+        if (content?.execution_count) {
+            delete content.execution_count;
+        }
+        if (content?.outputs) {
+            delete content.outputs;
+        }
+        super({ ...content});
         Object.assign(this, content)
+        if (Array.isArray(this.source)) {
+            this.source = this.source.join("");
+        }
     }
+
 
     public execute(session: BeakerSession): IBeakerFuture | null {
         // TODO: Replace this with code to render markdown.
         return null;
     };
+
+    public toIPynb(): nbformat.IBaseCell|nbformat.IBaseCell[] {
+        const output: JSONObject = {};
+        for (const key of Object.keys(this)) {
+            if (BeakerBaseCell.IPYNB_KEYS.includes(key)) {
+                output[key] = this[key];
+            }
+        }
+        if (output?.execution_count) {
+            delete output.execution_count;
+        }
+        if (output?.outputs) {
+            delete output.outputs;
+        }
+        return output as nbformat.IBaseCell;
+    }
 }
 
 export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
@@ -558,43 +586,118 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         this._current_input_request_message = undefined;
     }
 
-    public toMarkdownCell() {
-        const renderedMarkdownLines = [`# ${this.source}\n`];
-        this.events.forEach((event) => {
-            if (event.type === "thought") {
-                renderedMarkdownLines.push(`> Thought: ${event.content.thought}\n> `);
-            }
-            else if (event.type === "response") {
-                if (typeof event.content === "string") {
-                    const lines = event.content.split("\n").map((line) => (/^\s*$/.test(line) ? "" : `**${line}**`))
-                    renderedMarkdownLines.push(lines.join("\n"));
-                }
-                else {
-                    renderedMarkdownLines.push(`**${event.content}**`);
-                 }
-            }
-            else if (event.type === "user_question") {
-                renderedMarkdownLines.push(`*Beaker asks:* ${event.content}\n`);
-            }
-            else if (event.type === "user_answer") {
-                renderedMarkdownLines.push(`*The user responds:* ${event.content}\n`);
-            }
-        });
-        const renderedMarkdown = renderedMarkdownLines.join("\n");
-        const metadata = {
+    public toMultipleCells(): [BeakerMarkdownCell, ...BeakerBaseCell[]] {
+        // break apart a query cell into a series of cells so that code is interspersed with markdown cells
+        // and that in a jupyter notebook, loading and saving handles the redundant cells / query cell mapping
+
+        // only tag first cell with all metadata to reconstruct, and let the rest get dropped on fromIPynb
+        let parentCellPushed = false;
+        const parentMetadata = {
             ...this.metadata,
             beaker_cell_type: "query",
             prompt: this.source,
             events: this.events,
-        }
-        return new BeakerMarkdownCell(
-            {
-                cell_type: "markdown",
-                id: this.id,
-                source: renderedMarkdown,
-                metadata: metadata,
+        };
+        const openIndentSection = `
+<div style="
+display: flex;
+width: 100%;
+">
+<div style="
+border: 1px solid var(--jp-cell-editor-border-color) !important;
+border-radius: var(--jp-border-radius);
+padding: 0.2rem;
+margin: 0.2rem;
+margin-left: 4rem;
+">
+`
+        const closeIndentSection = `</div></div>`
+
+        // add first User: tagged section identical to how the agent ones are.
+        let markdownLinesBuffer = [
+            `### User:\n`,
+            openIndentSection,
+            `${this.source}\n`
+        ]
+        let cells: nbformat.IBaseCell[] = [];
+
+        // make markdown cell from current buffer of lines from the agent output and flush it
+        // so that the current contents are all written before a code cell or other type is written
+        const pushNewAgentMarkdownCell = (additionalTags?: object) => {
+            markdownLinesBuffer.push(closeIndentSection);
+            const renderedMarkdown = markdownLinesBuffer.join("\n");
+            markdownLinesBuffer = [
+                "### Agent:",
+                openIndentSection
+            ];
+
+            if (parentCellPushed) {
+                // redundant information to parent, so ignore loading
+                cells.push(new BeakerMarkdownCell(
+                    {
+                        cell_type: "markdown",
+                        id: uuidv4(),
+                        source: renderedMarkdown,
+                        metadata: { skipWhenLoading: true, beakerQueryCellChild: true, ...(additionalTags ?? {}) },
+                    }
+                ));
             }
-        );
+            else {
+                cells.push(new BeakerMarkdownCell(
+                    {
+                        cell_type: "markdown",
+                        id: this.id,
+                        source: renderedMarkdown,
+                        // contains all parent metadata
+                        metadata: { ...parentMetadata, parentQueryCell: true, beakerQueryCellChild: true, ...(additionalTags ?? {}) },
+                    }
+                ));
+                parentCellPushed = true;
+            };
+        }
+        // push user cell before the first agent thought
+        pushNewAgentMarkdownCell();
+
+        this.events.forEach(event => {
+            if (event.type === "thought") {
+                markdownLinesBuffer.push(`${event.content.thought}  \n`);
+            }
+            else if (event.type === "user_question") {
+                markdownLinesBuffer.push(`**Clarification:**  \n> ${event.content}\n`);
+            }
+            else if (event.type === "user_answer") {
+                markdownLinesBuffer.push(`**User Response:**  \n> ${event.content}\n`);
+            }
+            else if (event.type === "code_cell") {
+                pushNewAgentMarkdownCell();
+                const childCell = this.children.find(child => child.id === event.content.cell_id);
+                if (childCell === undefined) {
+                    throw `Failed to find child cell ${event.content.cell_id} in children`
+                }
+                // tag children the same way as before, warning copied from prior method
+                // TODO: Is this modifying the cells in memory, if so, is this causing problems?
+                childCell.metadata.beaker_child_of = this?.id;
+                childCell.metadata.beakerQueryCellChild = true;
+                cells.push(childCell);
+            }
+            else if (event.type === "response") {
+                if (typeof event.content === "string") {
+                    const lines = event.content.split("\n")
+                        .map(line => (/^\s*$/.test(line) ? "" : `${line}`))
+                        // add an extra ## to shrink agent markdown output headers under notebook "agent" header
+                        .map(line => /^#+\s+/.test(line) ? `###${line}` : line);
+                    markdownLinesBuffer.push(`\n${lines.join("\n")}`);
+                }
+                else {
+                    markdownLinesBuffer.push(`\n${event.content}`);
+                }
+                pushNewAgentMarkdownCell({finalResponse: true});
+            }
+        });
+        if (cells[0]?.cell_type !== "markdown") {
+            throw `Failed to properly convert markdown cell ${this.id} to a series of cells`
+        }
+        return cells as [BeakerMarkdownCell, ...BeakerBaseCell[]];
     }
 
     // public fromJSON(obj: any) {
@@ -619,12 +722,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
     }
 
     public toIPynb(): [nbformat.IMarkdownCell, ...nbformat.IBaseCell[]] {
-        // TODO: Is this modifying the cells in memory, if so, is this causing problems?
-        const taggedChildren: nbformat.IBaseCell[] = this.children?.flatMap((cell) => {
-            cell.metadata.beaker_child_of = this?.id;
-            return cell.toIPynb();
-        });
-        return [this.toMarkdownCell().toIPynb() as nbformat.IMarkdownCell, ...taggedChildren];
+        return this.toMultipleCells().flatMap(cell => cell.toIPynb()) as [nbformat.IMarkdownCell, ...nbformat.IBaseCell[]]
     }
 }
 
@@ -676,29 +774,34 @@ export class BeakerNotebook {
     public loadFromIPynb(obj: any) {
         this.content.nbformat = obj.nbformat;
         this.content.nbformat_minor = obj.nbformat_minor;
-        const cellList = obj.cells.map((cell: IBeakerCell) => {
-            if (cell.cell_type === "raw") {
-                return new BeakerRawCell(cell);
-            }
-            else if (cell.cell_type === "code") {
-                return new BeakerCodeCell(cell);
-            }
-            else if (cell.metadata.beaker_cell_type === "query") {
-                return new BeakerQueryCell({
-                    cell_type: "query",
-                    id: cell.id,
-                    source: cell.metadata.prompt as nbformat.MultilineString,
-                    events: cell.metadata.events,
-                    metadata: cell.metadata,
-                });
-            }
-            else if (cell.cell_type === "markdown") {
-                return new BeakerMarkdownCell(cell);
-            }
-            else {
-                return new BeakerRawCell(cell);
-            }
-        });
+        const cellList = obj.cells
+            .map((cell: IBeakerCell) => {
+                if (cell.cell_type === "raw") {
+                    return new BeakerRawCell(cell);
+                }
+                else if (cell.cell_type === "code") {
+                    return new BeakerCodeCell(cell);
+                }
+                else if (cell.metadata.beaker_cell_type === "query") {
+                    return new BeakerQueryCell({
+                        cell_type: "query",
+                        id: cell.id,
+                        source: cell.metadata.prompt as nbformat.MultilineString,
+                        events: cell.metadata.events,
+                        metadata: cell.metadata,
+                    });
+                }
+                else if (cell.cell_type === "markdown") {
+                    if (cell.metadata?.skipWhenLoading === true) {
+                        return;
+                    }
+                    return new BeakerMarkdownCell(cell);
+                }
+                else {
+                    return new BeakerRawCell(cell);
+                }
+            })
+            .filter((cell: BeakerBaseCell | undefined) => cell);
 
         let cellMap: {[uuid: string]: BeakerBaseCell} = {};
         cellList.forEach((cell: BeakerBaseCell) => {
