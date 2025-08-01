@@ -2,7 +2,8 @@
 *.pyc
 .ipynb_checkpoints
 /*.ipynb
-
+**/.cache
+**/.ipython
 
 # Gradle
 .gradle/
