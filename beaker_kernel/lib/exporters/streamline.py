@@ -7,12 +7,12 @@ from uuid import uuid4
 
 from typing import TypedDict
 
-class PublicationOptions(TypedDict):
+class StreamlineOptions(TypedDict):
     collapseCodeCells: bool
     collapseOutputs: bool
     cleanAgentErrors: bool
 
-class PublicationPreprocessor(Preprocessor):
+class StreamlinePreprocessor(Preprocessor):
     def __init__(self, **kwargs):
         self.model: BaseArchytasModel | None = None
         self.options: dict | None = None
@@ -30,7 +30,11 @@ class PublicationPreprocessor(Preprocessor):
             Only return the abstract text, not anything summarizing actions that you have done.
             Do not mention stripping formatting or HTML tags.
 
+            Below are the contents.
+
+            ```
             {full_text}
+            ```
         """]).content
         abstract = self.model.invoke([f"""
             You will be provided with the contents of a Jupyter Notebook session involving an
@@ -44,7 +48,11 @@ class PublicationPreprocessor(Preprocessor):
             Only return the abstract text, not anything summarizing actions that you have done.
             Do not mention stripping formatting or HTML tags.
 
+            Below are the contents.
+
+            ```
             {full_text}
+            ```
         """]).content
         new_cell = from_dict({
             "id": str(uuid4()),
@@ -77,7 +85,11 @@ class PublicationPreprocessor(Preprocessor):
 
                     Start with an h2 (##) heading in markdown in this block.
 
-                    {cell.source}"""])
+                    Below are the contents.
+
+                    ```markdown
+                    {cell.source}
+                    ```"""])
             elif cell.metadata.get("parentQueryCell"):
                 message = self.model.invoke([f"""
                     Here is a user query to run code on the user's behalf.
@@ -102,7 +114,11 @@ class PublicationPreprocessor(Preprocessor):
                     Instead of code blocks, leave only the header.
                     Code will be added later, so do not create any annotated code blocks or summaries.
 
-                    {cell.source}"""])
+                    Below are the contents.
+
+                    ```markdown
+                    {cell.source}
+                    ```"""])
             elif cell.metadata.get("beakerQueryCellChild"):
                 message = self.model.invoke([f"""
                     Here is a message from an AI agent, written in first person.
@@ -117,7 +133,11 @@ class PublicationPreprocessor(Preprocessor):
                     This is an intermediate step, so please keep it terse.
                     Avoid starting statements with interjections like "Perfect!" or "Excellent!" and remove these if present.
 
-                    {cell.source}"""])
+                    Below are the contents.
+
+                    ```markdown
+                    {cell.source}
+                    ```"""])
             cell.source = f'{message.content}'
         elif cell.cell_type == "code":
             if cell.metadata.get("beakerQueryCellChild") and self.options:
@@ -133,16 +153,16 @@ class PublicationPreprocessor(Preprocessor):
         return cell, resources
 
 
-class PublicationExporter(NotebookExporter):
+class StreamlineExporter(NotebookExporter):
     """
     Exports a notebook with LLM passes to focus and sharpen the information
-    to make publication ready.
+    to make streamlined.
     """
-    export_from_notebook = "Publication Notebook"
+    export_from_notebook = "notebook"
     output_mimetype = "application/json"
 
     def __init__(self, **kwargs):
-        self.preprocessors = [PublicationPreprocessor]
+        self.preprocessors = [StreamlinePreprocessor]
         self.model: BaseArchytasModel | None = None
         self.options: dict | None = None
         super().__init__(**kwargs)
@@ -154,11 +174,11 @@ class PublicationExporter(NotebookExporter):
     def from_notebook_node(self, nb: NotebookNode, resources=None, **kwargs):
         if self.model is None:
             raise ValueError("Failed to get model from Beaker Kernel")
-        publication_preprocessor = next(
+        streamline_preprocessor = next(
             preprocessor for preprocessor in self._preprocessors
-            if isinstance(preprocessor, PublicationPreprocessor)
+            if isinstance(preprocessor, StreamlinePreprocessor)
         )
-        publication_preprocessor.model = self.model
-        publication_preprocessor.options = self.options
+        streamline_preprocessor.model = self.model
+        streamline_preprocessor.options = self.options
         output, resources = super().from_notebook_node(nb, resources, **kwargs)
         return output, resources

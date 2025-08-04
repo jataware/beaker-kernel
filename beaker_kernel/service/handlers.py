@@ -368,8 +368,8 @@ class ExportAsHandler(JupyterHandler):
         nbnode = from_dict(model["content"])
 
         try:
-            # TODO: choose publication model
-            if format == "publication":
+            # TODO: choose streamline model
+            if format == "streamline":
                 exporter.model = config.get_model()
                 exporter.options = model["options"]
             output, resources = exporter.from_notebook_node(
