@@ -103,11 +103,23 @@ class BeakerAgent:
                 # Get the last message which should be the AI response
                 last_message = result["messages"][-1]
                 if isinstance(last_message, AIMessage):
-                    response_content = last_message.content
+                    # Handle different content formats (string vs list for different providers)
+                    content = last_message.content
+                    if isinstance(content, list):
+                        # Anthropic format: extract text from list of content blocks
+                        text_parts = []
+                        for item in content:
+                            if isinstance(item, dict) and item.get('type') == 'text':
+                                text_parts.append(item.get('text', ''))
+                        response_content = ' '.join(text_parts).strip()
+                    else:
+                        # String format (OpenAI, Gemini, etc.)
+                        response_content = str(content).strip()
+                    
                     # Only add to history if it's not already there (avoid duplicates)
                     if last_message not in self.chat_history.messages:
                         self.chat_history.add_message(last_message, loop_id)
-                        logger.debug(f"Added AI response to chat history: {len(last_message.content)} chars")
+                        logger.debug(f"Added AI response to chat history: {len(str(last_message.content))} chars")
             
             return response_content
             
