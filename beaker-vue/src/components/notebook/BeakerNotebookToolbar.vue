@@ -108,68 +108,6 @@
             </slot>
         </template>
     </Toolbar>
-    <Dialog
-        v-model:visible="streamlineExportVisible"
-        modal
-        header="AI-Streamlined Notebook Export"
-        class="streamline-dialog"
-    >
-        <p>
-            Streamline uses an AI agent to do a pass over the notebook for clarity,
-            making agent interactions feel more like a comprehensive and cohesive notebook.
-            This may take up to several minutes for longer notebooks.
-        </p>
-        <div class="streamline-name">
-            <label for="notebookname">Notebook Name</label>
-            <InputGroup>
-                <InputText id="notebookname" style="display: flex; margin: auto" autocomplete="off" v-model="saveAsFilename"/>
-                <InputGroupAddon>.ipynb</InputGroupAddon>
-            </InputGroup>
-        </div>
-        <Divider></Divider>
-
-        <div class="streamline-options">
-            <div
-                v-tooltip="`Enable additional options for streamlining, like collapsing outputs and code cells by default.`"
-            >
-                <label for="additionalStreamlineOptions">Additional Options</label>
-                <ToggleSwitch inputId="additionalStreamlineOptions" v-model="additionalStreamlineOptions"/>
-            </div>
-            <div
-                class="indented-option"
-                v-if="additionalStreamlineOptions"
-                v-tooltip="`Collapse code cells by default, which may be expanded using the toggle button on the left-hand side of the Jupyter pane.`"
-            >
-                <label for="hidecode">Collapse Code Cells</label>
-                <ToggleSwitch inputId="hidecode" v-model="streamlineExportOptions.collapseCodeCells"/>
-            </div>
-            <div
-                class="indented-option"
-                v-if="additionalStreamlineOptions"
-                v-tooltip="`Collapse outputs by default (excluding plots and figures), which may be expanded using the toggle button on the left-hand side of the Jupyter pane.`"
-            >
-                <label for="hidecharts">Collapse Outputs</label>
-                <ToggleSwitch inputId="hidecharts" v-model="streamlineExportOptions.collapseOutputs"/>
-            </div>
-        </div>
-        <Divider></Divider>
-
-        <div v-if="streamlineExportRunning">
-            <ProgressSpinner></ProgressSpinner>
-            <span>Exporting...</span>
-            <Divider></Divider>
-        </div>
-
-
-        <div class="streamline-buttons">
-            <Button type="button" label="Cancel" severity="secondary" @click="streamlineExportVisible = false"></Button>
-            <Button type="button" label="Export Notebook" @click="
-                streamlineExportRunning = true;
-                handleExport('streamline', 'application/json', streamlineExportOptions)"
-            ></Button>
-        </div>
-
-    </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -189,31 +127,19 @@ import InputText from "primevue/inputtext";
 import Popover from "primevue/popover";
 import Toolbar from "primevue/toolbar";
 import type { MenuItem } from "primevue/menuitem";
-import { ProgressSpinner, Dialog, InputGroupAddon, Divider, ToggleSwitch } from "primevue";
+import { useDialog } from "primevue";
 
 import AnnotationButton from "../misc/buttons/AnnotationButton.vue"
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
 import { downloadFileDOM, getDateTimeString } from '../../util';
 
+import StreamlineExportDialog from "../misc/StreamlineExportDialog.vue"
+
 const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
 const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
 const showOverlay = inject<(contents: string, header?: string) => void>('show_overlay');
-
-const streamlineExportVisible = ref<boolean>(false);
-const streamlineExportRunning = ref<boolean>(false)
-
-watch(streamlineExportVisible, () => {
-    if (!saveAsFilename.value) {
-        resetSaveAsFilename();
-    }
-})
-
-watch (streamlineExportRunning, value => {
-    if (!value) {
-        streamlineExportVisible.value = false;
-    }
-})
+const dialog = useDialog();
 
 const addCellMenuItems = computed(() => {
     return Object.entries(cellMapping).map(([name, obj]) => {
@@ -257,37 +183,15 @@ const exportAsTypes = ref<MenuItem[]>([
     }
 ]);
 
-const additionalStreamlineOptions = ref<boolean>(false);
-watch(additionalStreamlineOptions, value => {
-    if (!value) {
-        streamlineExportOptions.value = {
-            collapseCodeCells: false,
-            collapseOutputs: false,
-        };
-    }
-})
-const streamlineExportOptions = ref<{
-    collapseCodeCells: boolean,
-    collapseOutputs: boolean,
-}>({
-    collapseCodeCells: false,
-    collapseOutputs: false,
-});
-
-const handleExport = (format: string, mimetype: string, options?: object) => {
-    streamlineExportRunning.value = true;
+const handleExport = (format: string, mimetype: string) => {
     const url = URLExt.join(PageConfig.getBaseUrl(), 'export', format);
-    if (!saveAsFilename.value) {
-        resetSaveAsFilename();
-    }
     fetch(
         url,
         {
             "method": "POST",
             "body": JSON.stringify({
                 name: saveAsFilename.value,
-                content: notebook.notebook.toIPynb(),
-                options: options ?? {}
+                content: notebook.notebook.toIPynb()
             }),
             "headers": {
                 "Content-Type": "application/json;charset=UTF-8"
@@ -305,14 +209,27 @@ const handleExport = (format: string, mimetype: string, options?: object) => {
             const errorInfo = await result.json();
             showOverlay(errorInfo, "Error converting notebook");
         }
-    }).catch((reason) => console.error(reason))
-      .finally(() => streamlineExportRunning.value = false);
+    }).catch((reason) => console.error(reason));
 }
 
 const exportAction = (format: string, mimetype: string) => {
-    console.log(format)
+    if (!saveAsFilename.value) {
+        resetSaveAsFilename();
+    }
     if (format === "streamline") {
-        streamlineExportVisible.value = true;
+        dialog.open(
+            StreamlineExportDialog,
+            {
+                data: {
+                    saveAsFilename: saveAsFilename.value,
+                    notebook: notebook.notebook.toIPynb(),
+                },
+                props: {
+                    modal: true,
+                    header: "AI-Streamlined Notebook Export"
+                }
+            }
+        );
     }
     else {
         handleExport(format, mimetype);
@@ -352,7 +269,6 @@ watch(props, (oldValue, newValue) => {
 const resetSaveAsFilename = () => {
     saveAsFilename.value = `Beaker-Notebook_${getDateTimeString()}.ipynb`;
 }
-
 
 const analyzeCells = async () => {
     const payload = {
@@ -436,44 +352,6 @@ function downloadNotebook() {
         }
     }
 
-}
-
-.streamline-dialog {
-    width: 40rem;
-    label {
-        font-weight: 600;
-        flex-shrink: 0;
-    }
-    .streamline-name {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        margin-top: 1rem;
-    }
-    .streamline-options {
-        display: flex;
-        flex-direction: column;
-        width: fit-content;
-        gap: 1rem;
-        > div {
-            display: flex;
-            justify-content: space-between;
-            label {
-                margin-right: 2rem;
-            }
-            .p-toggleswitch {
-                margin: auto 0 auto auto;
-            }
-        }
-    }
-    .streamline-buttons {
-        display: flex;
-        justify-content: end;
-        gap: 1rem;
-    }
-    .indented-option {
-        margin-left: 2rem;
-    }
 }
 
 .saveas-overlay {

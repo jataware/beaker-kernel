@@ -292,18 +292,11 @@ export class BeakerCodeCell extends BeakerBaseCell implements nbformat.ICodeCell
 }
 
 export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMarkdownCell {
+    static IPYNB_KEYS = ["cell_type", "source", "metadata", "id", "attachments"];
     cell_type: "markdown" = "markdown";
     attachments?: nbformat.IAttachments;
 
     constructor(content: Partial<nbformat.ICell>) {
-        // loading markdown cells that go back and forth can have extra tags we strip off.
-        // Notebook JSON is invalid: Additional properties are not allowed ('execution_count', 'outputs' were unexpected)
-        if (content?.execution_count) {
-            delete content.execution_count;
-        }
-        if (content?.outputs) {
-            delete content.outputs;
-        }
         super({ ...content});
         Object.assign(this, content)
         if (Array.isArray(this.source)) {
@@ -320,15 +313,9 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
     public toIPynb(): nbformat.IBaseCell|nbformat.IBaseCell[] {
         const output: JSONObject = {};
         for (const key of Object.keys(this)) {
-            if (BeakerBaseCell.IPYNB_KEYS.includes(key)) {
+            if (BeakerMarkdownCell.IPYNB_KEYS.includes(key)) {
                 output[key] = this[key];
             }
-        }
-        if (output?.execution_count) {
-            delete output.execution_count;
-        }
-        if (output?.outputs) {
-            delete output.outputs;
         }
         return output as nbformat.IBaseCell;
     }
@@ -663,7 +650,7 @@ margin-left: 4rem;
                 markdownLinesBuffer.push(`${event.content.thought}  \n`);
             }
             else if (event.type === "user_question") {
-                markdownLinesBuffer.push(`**Clarification:**  \n> ${event.content}\n`);
+                markdownLinesBuffer.push(`**Agent Question:**  \n> ${event.content}\n`);
             }
             else if (event.type === "user_answer") {
                 markdownLinesBuffer.push(`**User Response:**  \n> ${event.content}\n`);

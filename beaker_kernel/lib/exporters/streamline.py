@@ -1,8 +1,9 @@
-from nbformat import NotebookNode, from_dict
+from nbformat import NotebookNode, from_dict, writes
 from traitlets.config import default
 from nbconvert.exporters.notebook import NotebookExporter
 from nbconvert.preprocessors import Preprocessor
 from archytas.models.base import BaseArchytasModel
+from beaker_kernel.lib.config import config
 from uuid import uuid4
 
 from typing import TypedDict
@@ -20,7 +21,7 @@ class StreamlinePreprocessor(Preprocessor):
     def add_title_and_abstract(self, nb: NotebookNode):
         if self.model is None:
             raise ValueError("Failed to retrieve model")
-        full_text = "\n\n".join([cell.source for cell in nb.cells])
+        full_text = writes(nb)
         title = self.model.invoke([f"""
             You will be provided with the contents of a Jupyter Notebook session involving an
             agent and a human working on a notebook together. Read the contents and return a title that adequately
@@ -90,6 +91,7 @@ class StreamlinePreprocessor(Preprocessor):
                     ```markdown
                     {cell.source}
                     ```"""])
+                cell.source = f'{message.content}'
             elif cell.metadata.get("parentQueryCell"):
                 message = self.model.invoke([f"""
                     Here is a user query to run code on the user's behalf.
@@ -119,6 +121,7 @@ class StreamlinePreprocessor(Preprocessor):
                     ```markdown
                     {cell.source}
                     ```"""])
+                cell.source = f'{message.content}'
             elif cell.metadata.get("beakerQueryCellChild"):
                 message = self.model.invoke([f"""
                     Here is a message from an AI agent, written in first person.
@@ -138,7 +141,10 @@ class StreamlinePreprocessor(Preprocessor):
                     ```markdown
                     {cell.source}
                     ```"""])
-            cell.source = f'{message.content}'
+                cell.source = f'{message.content}'
+            # markdown cell without tags that imply it should be processed here: ignore and continue
+            else:
+                pass
         elif cell.cell_type == "code":
             if cell.metadata.get("beakerQueryCellChild") and self.options:
                 if self.options.get("collapseCodeCells"):
@@ -163,7 +169,7 @@ class StreamlineExporter(NotebookExporter):
 
     def __init__(self, **kwargs):
         self.preprocessors = [StreamlinePreprocessor]
-        self.model: BaseArchytasModel | None = None
+        self.model: BaseArchytasModel | None = config.get_model()
         self.options: dict | None = None
         super().__init__(**kwargs)
 
