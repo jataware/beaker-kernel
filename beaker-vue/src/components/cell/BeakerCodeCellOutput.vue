@@ -118,11 +118,15 @@ const rebundleError = (errorOutput) => {
     padding: 0 0.5em 0.5em 0;
     background-color: var(--p-surface-c);
     position: relative;
-    .execute_result {
-        pre {
-            white-space: break-spaces;
-            overflow-wrap: break-word;
-        }
+
+    // Ensure all output wraps correctly.
+    pre {
+        overflow-x: auto;
+        overflow-y: auto;
+        overflow-wrap: break-word;
+        word-break: break-all;
+        word-wrap: break-word;
+        white-space: pre-wrap;
     }
 
     table {
