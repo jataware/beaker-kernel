@@ -17,22 +17,17 @@
             />
         </div>
 
-        <ImageZoom
-            :isVisible="zoomVisible"
-            :imageSrc="zoomImageSrc"
-            :imageAlt="zoomImageAlt"
-            @close="closeImageZoom"
-        />
     </div>
 
 </template>
 
 <script lang="ts" setup>
 import { ref, inject, computed, watch } from "vue";
+import { useDialog } from "primevue";
 import SelectButton from "primevue/selectbutton";
 import { BeakerSession } from "beaker-kernel";
 import type { BeakerRenderOutput } from "../../renderers";
-import ImageZoom from "./ImageZoom.vue";
+import ImageZoomDialog from "./ImageZoomDialog.vue";
 
 const props = defineProps([
     "mimeBundle",
@@ -40,9 +35,9 @@ const props = defineProps([
 ]);
 
 const session = inject<BeakerSession>('session');
-const zoomVisible = ref(false);
-const zoomImageSrc = ref('');
-const zoomImageAlt = ref('');
+
+const dialog = useDialog();
+const overlay = ref();
 
 const renderedBundle = computed<{[key: string]: BeakerRenderOutput}>(
     () => {
@@ -76,18 +71,39 @@ const handleImageClick = (event: MouseEvent) => {
         event.stopPropagation();
 
         const img = target as HTMLImageElement;
-        zoomImageSrc.value = img.src;
-        zoomImageAlt.value = img.alt || 'Zoomed image';
-        zoomVisible.value = true;
+
+        overlay.value = dialog.open(
+            ImageZoomDialog,
+            {
+                // Data used within the dialog to render the image.
+                data: {
+                    imageSrc: img.src,
+                    imageAlt: img.alt || 'Zoomed image',
+                },
+                props: {
+                    modal: true,
+                    draggable: false,
+                    showHeader: false,
+                    closeButtonProps: {
+                        class: "my-close-props",
+                    },
+                    style: {
+                        width: "95vw",
+                        maxHeight: "calc(95vh - 3rem)",
+                        height: "100%",
+                        position: "relative",
+                        top: "1.5rem",
+                    },
+                    contentStyle: {
+                        display: "flex",
+                        flex: "1",
+                        padding: "var(--p-overlay-modal-padding)",
+                    }
+                }
+            }
+        );
     }
 };
-
-const closeImageZoom = () => {
-    zoomVisible.value = false;
-    zoomImageSrc.value = '';
-    zoomImageAlt.value = '';
-};
-
 </script>
 
 
