@@ -45,7 +45,11 @@ const defaultRouteMap: Routes = {
     "admin": {
       "path": "/admin",
       "component": () => import('@/pages/BeakerAdmin.vue'),
-    }
+    },
+    "playground": {
+      "path": "/playground",
+      "component": () => import('@/pages/PlaygroundInterface.vue'),
+    },
 }
 
 const reformatRoutes = (routeMap: Routes) => {
