@@ -18,10 +18,11 @@
         <div class="integration-container">
             <div class="beaker-notebook">
                 <IntegrationEditor
-                    :integrations="integrations"
-                    :selected-on-load="selectedOnLoad"
-                    v-model:selected-integration="selectedIntegration"
-                    v-model:unsaved-changes="unsavedChanges"
+                    v-model="integrations"
+                    :deleteResource="deleteResourceOnSelectedIntegration"
+                    :modifyResource="modifyResourceForSelectedIntegration"
+                    :modifyIntegration="modifySelectedIntegration"
+                    :fetchResources="fetchResourcesForSelectedIntegration"
                 />
             </div>
         </div>
@@ -47,10 +48,10 @@
                 </SideMenuPanel>
                 <SideMenuPanel
                     id="integrations" label="Integrations" icon="pi pi-database"
-                    v-if="integrations.length > 0"
                 >
-                    <IntegrationPanel :integrations="integrations">
-                    </IntegrationPanel>
+                    <IntegrationPanel
+                        v-model="integrations.integrations"
+                    ></IntegrationPanel>
                 </SideMenuPanel>
                 <SideMenuPanel
                     v-if="props.config.config_type !== 'server'"
@@ -93,11 +94,12 @@
                     icon="pi pi-list-check"
                     no-overflow
                 >
-                    <ExamplesPanel
-                        v-model="selectedIntegration"
-                        :disabled="!selectedIntegration"
-                        @onchange="unsavedChanges = true"
-                    />
+                <ExamplesPanel
+                    v-model="integrations"
+                    :disabled="!integrations.selected || integrations.selected === 'new'"
+                    :deleteResource="deleteResourceOnSelectedIntegration"
+                    :modifyResource="modifyResourceForSelectedIntegration"
+                />
                 </SideMenuPanel>
                 <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
                     <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
@@ -129,6 +131,7 @@ import DebugPanel from '../components/panels/DebugPanel.vue'
 
 import IntegrationEditor from '../components/misc/IntegrationEditor.vue';
 import IntegrationPanel from '../components/panels/IntegrationPanel.vue';
+import { listResources, listIntegrations, type IntegrationInterfaceState, type IntegrationResourceMap, updateResource, addResource, updateIntegration, addIntegration, deleteResource } from '@/util/integration';
 import ExamplesPanel from '../components/panels/ExamplesPanel.vue';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
@@ -142,7 +145,7 @@ const previewVisible = ref<boolean>(false);
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.has("session") ? urlParams.get("session") : "notebook_dev_session";
-const selectedOnLoad = urlParams.has("selected") ? urlParams.get("selected") : undefined;
+const selectedParam = urlParams.has("selected") ? urlParams.get("selected") : undefined;
 
 const props = defineProps([
     "config",
@@ -174,7 +177,6 @@ beakerApp.setPage("integrations");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
-const integrations = ref([]);
 
 const hasOpenedPanelOnce = ref(false);
 
@@ -188,9 +190,89 @@ type FilePreview = {
 const previewedFile = ref<FilePreview>();
 
 onMounted(() => {
-    sideMenuRef.value.hidePanel()
-    rightSideMenuRef.value.hidePanel()
+    // sideMenuRef.value.hidePanel()
+    // rightSideMenuRef.value.hidePanel()
+    if (!hasOpenedPanelOnce.value) {
+        nextTick(() => sideMenuRef.value.selectPanel('integrations'));
+        nextTick(() => rightSideMenuRef.value.selectPanel('examples'));
+        (document.querySelector("div.sidemenu.right") as HTMLElement).style.width = '36vi';
+        (document.querySelector("div.sidemenu.left") as HTMLElement).style.width = '25vi';
+        hasOpenedPanelOnce.value = true;
+    }
 })
+
+const beakerSession = computed<BeakerSessionComponentType>(() => {
+    return beakerInterfaceRef?.value?.beakerSession;
+});
+
+const integrations = ref<IntegrationInterfaceState>({
+    selected: selectedParam,
+    integrations: {},
+    unsavedChanges: false,
+    finishedInitialLoad: false,
+})
+
+const fetchResourcesForSelectedIntegration = async () => {
+    const selectedIntegration = integrations.value.integrations?.[integrations.value?.selected];
+    if (selectedIntegration === undefined) {
+        return;
+    }
+    if (integrations.value?.selected === "new") {
+        // in the case of first-load opening a new, local-only integration, assume an empty resources object
+        if (selectedIntegration?.resources === undefined || selectedIntegration?.resources === null ) {
+            selectedIntegration.resources = {};
+        }
+        return;
+    }
+    selectedIntegration.resources = Object.fromEntries(
+        (await listResources(sessionId, integrations.value.selected))
+            ?.map(resource => [resource.resource_id, resource]) ?? []);
+}
+
+const fetchIntegrations = async () => {
+    integrations.value.integrations = await listIntegrations(sessionId);
+    integrations.value.finishedInitialLoad = true;
+}
+
+const modifySelectedIntegration = async (body: object, integrationId?: string) => {
+    if (integrationId) {
+        integrations.value.integrations[integrationId] = await updateIntegration(
+            sessionId,
+            integrationId,
+            body
+        )
+    } else {
+        const newIntegration = await addIntegration(sessionId, body);
+        integrations.value.integrations[newIntegration.uuid] = newIntegration;
+        integrations.value.selected = newIntegration.uuid;
+    }
+}
+
+const modifyResourceForSelectedIntegration = async (body: object, resourceId?: string) => {
+    const selectedIntegration = integrations.value.integrations?.[integrations.value?.selected];
+    if (resourceId) {
+        selectedIntegration.resources[resourceId] = await updateResource(
+            sessionId,
+            integrations.value.selected,
+            resourceId,
+            body
+        );
+    } else {
+        const newResource = await addResource(
+            sessionId,
+            integrations.value.selected,
+            body
+        );
+        selectedIntegration.resources[newResource.resource_id] = newResource;
+    }
+}
+
+const deleteResourceOnSelectedIntegration = async (resourceId: string) => {
+    await deleteResource(sessionId, integrations.value.selected, resourceId)
+}
+
+// on connection, send message with retries: see integrations.py:call_in_context()
+watch(beakerSession, async () => fetchIntegrations());
 
 const headerNav = computed((): NavOption[] => {
     const nav = [];
@@ -204,7 +286,7 @@ const headerNav = computed((): NavOption[] => {
                 component: NotebookSvg,
                 componentStyle: {
                     fill: 'currentColor',
-                    stroke: 'currentColor',
+                    stroke: 'currenatColor',
                     height: '1rem',
                     width: '1rem',
                 },
@@ -249,10 +331,6 @@ const headerNav = computed((): NavOption[] => {
     return nav;
 });
 
-const beakerSession = computed<BeakerSessionComponentType>(() => {
-    return beakerInterfaceRef?.value?.beakerSession;
-});
-
 // Ensure we always have at least one cell
 watch(
     () => beakerNotebookRef?.value?.notebook.cells,
@@ -277,30 +355,6 @@ const iopubMessage = (msg) => {
             body: msg.content.body,
             timestamp: msg.header.date,
         });
-    }
-    else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
-        var incomingIntegrations;
-        if (msg.header.msg_type === "context_setup_response") {
-            incomingIntegrations = msg.content.integrations;
-
-        }
-        else if (msg.header.msg_type === "context_info_response") {
-            incomingIntegrations = msg.content.info.integrations;
-        }
-        if (incomingIntegrations === undefined) {
-            incomingIntegrations = [];
-        }
-        integrations.value.splice(0, integrations.value.length, ...incomingIntegrations);
-
-        // rather than onMounted, we fire once we get the message that sets integrations, and hence
-        // creates/populates the panel
-        if (!hasOpenedPanelOnce.value) {
-            nextTick(() => sideMenuRef.value.selectPanel('integrations'));
-            nextTick(() => rightSideMenuRef.value.selectPanel('examples'));
-            (document.querySelector("div.sidemenu.right") as HTMLElement).style.width = '36vi';
-            (document.querySelector("div.sidemenu.left") as HTMLElement).style.width = '25vi';
-            hasOpenedPanelOnce.value = true;
-        }
     }
 };
 
