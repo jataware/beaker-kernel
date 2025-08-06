@@ -3,7 +3,7 @@ Beaker is a next generation coding notebook built for the AI era. Beaker seamles
 
 Beyond that, Beaker solves one of the major challenges presented by coding notebooks--it introduces a true _undo_ mechanism so that the user can roll back to any previous state in the notebook. Beaker also lets you swap effortlessly between a notebook style coding interface and a chat style interface, giving you the best of both worlds. Since everything is interoperable with Jupyter, you can always export your notebook and use it in any other Jupyter-compatible environment.
 
-Beaker is powered by [Archytas](https://github.com/jataware/archytas), our framework for building AI agents that can interact with code and advanced users can generate their own custom agents to meet their specific needs. These agents can have custom ReAct toolsets built in and can be extended to support any number of use cases.
+Beaker is powered by [LangGraph](https://github.com/langchain-ai/langgraph), the modern framework for building AI agents that can interact with code. Advanced users can generate their own custom agents to meet their specific needs. These agents can have custom ReAct toolsets built in and can be extended to support any number of use cases.
 
 We like to think of Beaker as a (much better!) drop in replacement for workflows where you'd normally rely on Jupyter notebooks and we hope you'll give it a try and let us know what you think!
 

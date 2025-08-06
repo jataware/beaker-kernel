@@ -1,34 +1,29 @@
-import json
+"""
+Default agent implementation for Beaker.
+
+Provides a default agent with basic functionality including a joke tool.
+"""
+
 import logging
-import re
-
-from archytas.tool_utils import AgentRef, LoopControllerRef, tool
-
 from beaker_kernel.lib.agent import BeakerAgent
 from beaker_kernel.lib.context import BeakerContext
-from beaker_kernel.lib.utils import ExecutionError
-
+from beaker_kernel.lib.utils import ExecutionError, get_beaker_kernel
+from beaker_kernel.lib.tools import tool
 
 logger = logging.getLogger(__name__)
 
 
-class DefaultAgent(BeakerAgent):
+@tool
+async def tell_a_joke(topic: str = "any") -> str:
     """
-    You are an programming assistant to aid a developer working in a Jupyter notebook by answering their questions and helping write code for them based on their
-    prompt.
+    Generates a joke for the user.
+
+    Args:
+        topic (str): A topic that the joke should be about. If no topic is provided, use the default value of "any".
+    Returns:
+        str: The text of the joke, possibly with or without formatting.
     """
-
-    @tool()
-    async def tell_a_joke(self, topic: str, agent: AgentRef, loop: LoopControllerRef) -> str:
-        """
-        Generates a joke for the user.
-
-        Args:
-            topic (str): A topic that the joke should be about. If no topic is provided, use the default value of "any".
-        Returns:
-            str: The text of the joke, possibly with or without formatting.
-        """
-        code = """
+    code = """
 import requests
 url = 'https://v2.jokeapi.dev/joke/Programming,Miscellaneous,Pun,Spooky?blacklistFlags=nsfw,religious,political,racist,sexist,explicit'
 result = requests.get(url).json()
@@ -44,11 +39,32 @@ elif result.get('type') == 'twopart':
 formatted_joke
 """.strip()
 
-        try:
-            context = await agent.context.evaluate(code)
+    try:
+        # Get the kernel to access the context
+        kernel = get_beaker_kernel()
+        if kernel and hasattr(kernel, 'context'):
+            context = await kernel.context.evaluate(code)
             joke = context["return"]
-        except ExecutionError as e:
-            logger.warning(f"Error fetching joke: {e}")
-            joke = """Have you ever seen an elephant hiding in a tree? Me neither. They must be VERY good at it!"""
+        else:
+            raise Exception("No kernel context available")
+    except Exception as e:
+        logger.warning(f"Error fetching joke: {e}")
+        joke = """Have you ever seen an elephant hiding in a tree? Me neither. They must be VERY good at it!"""
 
-        return joke
+    return joke
+
+
+class DefaultAgent(BeakerAgent):
+    """
+    Default agent for Beaker contexts.
+    
+    Provides basic functionality with a joke tool as an example.
+    """
+
+    def __init__(self, context: BeakerContext = None, tools=None, **kwargs):
+        # Add our default tools
+        default_tools = [tell_a_joke]
+        all_tools = default_tools + (tools or [])
+        
+        # Initialize the parent agent
+        super().__init__(context=context, tools=all_tools, **kwargs)

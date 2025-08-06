@@ -20,8 +20,6 @@ from beaker_kernel.lib.types import Integration
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
 
 if TYPE_CHECKING:
-    from archytas.react import ReActAgent
-
     from beaker_kernel.kernel import BeakerKernel
 
     from .agent import BeakerAgent
@@ -43,7 +41,7 @@ class BeakerContext:
     beaker_kernel: "BeakerKernel"
     subkernel: "BeakerSubkernel"
     config: Dict[str, Any]
-    agent: "ReActAgent"
+    agent: "BeakerAgent"
     current_llm_query: str | None
     compatible_subkernels: ClassVar[list[str] | None] = None
 
