@@ -41,7 +41,7 @@ dependencies = [
   "numpy",
   "scipy",
   "openpyxl",
-  "tree-sitter",
+  "tree-sitter<0.25.0",
   "tree-sitter-python",
   "tree-sitter-julia",
 ]
