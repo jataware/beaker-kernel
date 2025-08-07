@@ -93,34 +93,67 @@ class StreamlinePreprocessor(Preprocessor):
                     ```"""])
                 cell.source = f'{message.content}'
             elif cell.metadata.get("parentQueryCell"):
-                message = self.model.invoke([f"""
-                    Here is a user query to run code on the user's behalf.
-                    Please preserve the formatting as a markdown h4 (####) header.
-                    Please rewrite this to be a present participle statement about what is going to be done.
-                    Examples:
-                    IN: "can you plot a sine wave?"
-                    OUT: "# Creating a sine wave"
-                    IN: "Please fetch data from this data repository"
-                    OUT: "# Fetching data from data repository"
-                    IN: "Can you create a table of random data
-                    ```python
-                    # numpy code to create a table
-                    ```"
-                    OUT: "#### Creating a table of random data with Numpy"
-                    as if filling out a table of contents.
+                # if we split the cell
+                if "code_cell" in [event["type"] for event in cell.metadata.get("events")]:
+                    message = self.model.invoke([f"""
+                        Here is a user query to run code on the user's behalf.
+                        Please preserve the formatting as a markdown h4 (####) header.
+                        Please rewrite this to be a present participle statement about what is going to be done.
+                        Examples:
+                        IN: "can you plot a sine wave?"
+                        OUT: "# Creating a sine wave"
+                        IN: "Please fetch data from this data repository"
+                        OUT: "# Fetching data from data repository"
+                        IN: "Can you create a table of random data
+                        ```python
+                        # numpy code to create a table
+                        ```"
+                        OUT: "#### Creating a table of random data with Numpy"
+                        as if filling out a table of contents.
 
-                    Only return the rewritten text, not anything that you have done.
-                    Do not mention stripping formatting or HTML tags.
+                        Only return the rewritten text, not anything that you have done.
+                        Do not mention stripping formatting or HTML tags.
 
-                    Do not include anything but the header here.
-                    Instead of code blocks, leave only the header.
-                    Code will be added later, so do not create any annotated code blocks or summaries.
+                        Do not include anything but the header here.
+                        Instead of code blocks, leave only the header.
+                        Code will be added later, so do not create any annotated code blocks or summaries.
 
-                    Below are the contents.
+                        Below are the contents.
 
-                    ```markdown
-                    {cell.source}
-                    ```"""])
+                        ```markdown
+                        {cell.source}
+                        ```"""])
+                # cell hasn't been split, we need both parts
+                else:
+                    message = self.model.invoke([f"""
+                        Here is a user query and its followup on the user's behalf.
+
+                        Please preserve the formatting as a markdown h4 (####) header.
+                        Please rewrite this to be a present participle statement about what is going to be done as a header,
+                        followed by a brief summary of what happened with no self talk.
+                        Examples:
+                        IN: "
+                            USER: Can you tell a joke?
+                            Agent: Why did the functional programmer get thrown out of school?
+                                   Because he refused to take classes.
+                        "
+                        OUT: "#### Telling a joke
+
+                        Why did the functional programmer get thrown out of school?
+                        Because he refused to take classes."
+
+                        Only return the rewritten text, not anything that you have done.
+                        Do not mention stripping formatting or HTML tags.
+
+                        Do not include anything but the header and description here.
+                        Instead of code blocks, leave only the header and description.
+                        Code will be added later, so do not create any annotated code blocks or summaries.
+
+                        Below are the contents.
+
+                        ```markdown
+                        {cell.source}
+                        ```"""])
                 cell.source = f'{message.content}'
             elif cell.metadata.get("beakerQueryCellChild"):
                 message = self.model.invoke([f"""

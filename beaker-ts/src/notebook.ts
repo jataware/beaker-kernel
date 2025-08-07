@@ -585,18 +585,23 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
         class IndentedMarkdown extends JoinableMarkdown {
             public prefix = `
 <div style="display: flex; width: 100%;">
-<div style="border: 1px solid var(--jp-cell-editor-border-color) !important; border-radius: var(--jp-border-radius);
-    padding: 0.2rem; margin: 0.2rem; margin-left: 4rem;">
-            `;
-            public suffix = `</div></div>`;
+<div style="padding: 0.2rem; margin: 0.2rem; margin-left: 4rem;">\n\n`;
+            public suffix = `</div></div>\n\n`;
         }
         class AgentMarkdown extends JoinableMarkdown {
-            public prefix = `<div style="color: red">`;
-            public suffix = `</div>`;
+            public prefix = `
+### Agent:
+<div style="display: flex; width: 100%;">
+<div style="padding: 0.2rem; margin: 0.2rem; margin-left: 4rem;">\n\n`;
+            public suffix = `</div></div>\n\n`;
         }
+        class FinalResponseMarkdown extends AgentMarkdown {}
         class UserMarkdown extends JoinableMarkdown {
-            public prefix = `<div style="color: blue">`;
-            public suffix = `</div>`;
+            public prefix = `
+### User:
+<div style="display: flex; width: 100%;">
+<div style="padding: 0.2rem; margin: 0.2rem; margin-left: 4rem;">\n\n`;
+            public suffix = `</div></div>\n\n`;
         }
 
         // only tag first cell with all metadata to reconstruct, and let the rest get dropped on fromIPynb
@@ -638,7 +643,7 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                 else {
                     output = `\n${event.content}`;
                 }
-                return new AgentMarkdown(output);
+                return new FinalResponseMarkdown(output);
             }
             else if (event.type === "abort") {
                 return new JoinableMarkdown(event.content);
@@ -692,6 +697,9 @@ export class BeakerQueryCell extends BeakerBaseCell implements IQueryCell {
                         source: [],
                         metadata: { skipWhenLoading: true, beakerQueryCellChild: true },
                     })
+                    if (element instanceof FinalResponseMarkdown) {
+                        cell.metadata.finalResponse = true;
+                    }
                     if (element.prefix) {
                         (cell.source as string[]).push(element.prefix);
                     }
