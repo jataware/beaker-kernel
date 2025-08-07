@@ -368,6 +368,10 @@ class ExportAsHandler(JupyterHandler):
         nbnode = from_dict(model["content"])
 
         try:
+            # attach additional options for export from json body to streamlined notebook exporter
+            # options is a superclass field that does not exist on all exporters
+            if format == "streamline":
+                exporter.options = model["options"]
             output, resources = exporter.from_notebook_node(
                 nbnode,
                 resources={

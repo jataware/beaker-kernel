@@ -127,15 +127,19 @@ import InputText from "primevue/inputtext";
 import Popover from "primevue/popover";
 import Toolbar from "primevue/toolbar";
 import type { MenuItem } from "primevue/menuitem";
+import { useDialog } from "primevue";
 
 import AnnotationButton from "../misc/buttons/AnnotationButton.vue"
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
 import { downloadFileDOM, getDateTimeString } from '../../util';
 
+import StreamlineExportDialog from "../misc/StreamlineExportDialog.vue"
+
 const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
 const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
 const showOverlay = inject<(contents: string, header?: string) => void>('show_overlay');
+const dialog = useDialog();
 
 const addCellMenuItems = computed(() => {
     return Object.entries(cellMapping).map(([name, obj]) => {
@@ -179,18 +183,15 @@ const exportAsTypes = ref<MenuItem[]>([
     }
 ]);
 
-const exportAction = (format: string, mimetype: string) => {
+const handleExport = (format: string, mimetype: string) => {
     const url = URLExt.join(PageConfig.getBaseUrl(), 'export', format);
-    if (!saveAsFilename.value) {
-        resetSaveAsFilename();
-    }
     fetch(
         url,
         {
             "method": "POST",
             "body": JSON.stringify({
                 name: saveAsFilename.value,
-                content: notebook.notebook.toIPynb(),
+                content: notebook.notebook.toIPynb()
             }),
             "headers": {
                 "Content-Type": "application/json;charset=UTF-8"
@@ -211,6 +212,31 @@ const exportAction = (format: string, mimetype: string) => {
     }).catch((reason) => console.error(reason));
 }
 
+const exportAction = (format: string, mimetype: string) => {
+    if (!saveAsFilename.value) {
+        resetSaveAsFilename();
+    }
+    if (format === "streamline") {
+        dialog.open(
+            StreamlineExportDialog,
+            {
+                data: {
+                    saveAsFilename: saveAsFilename.value,
+                    notebook: notebook.notebook.toIPynb(),
+                },
+                props: {
+                    modal: true,
+                    header: "AI-Streamlined Notebook Export"
+                }
+            }
+        );
+    }
+    else {
+        handleExport(format, mimetype);
+    }
+
+}
+
 const refreshExportTypes = async () => {
     const ignoredFormats = new Set(["custom", "qtpdf", "qtpng", "webpdf"]);
     const formats = await session.services.nbconvert.getExportFormats();
@@ -221,12 +247,13 @@ const refreshExportTypes = async () => {
         return true
     }).map(([format, formatInfo]) => {
         const mimetype = formatInfo.output_mimetype;
+        const label = format === "streamline" ? "notebook (AI ✨)" : format;
         return {
-            label: format,
+            label,
             tooltip: mimetype,
             command: () => {exportAction(format, mimetype)},
-        }
-    });
+        };
+    }).sort((a, b) => a.label.localeCompare(b.label));
 };
 
 onBeforeMount(async () => {
@@ -242,7 +269,6 @@ watch(props, (oldValue, newValue) => {
 const resetSaveAsFilename = () => {
     saveAsFilename.value = `Beaker-Notebook_${getDateTimeString()}.ipynb`;
 }
-
 
 const analyzeCells = async () => {
     const payload = {
