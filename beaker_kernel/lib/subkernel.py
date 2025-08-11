@@ -91,6 +91,40 @@ async def run_code_summarizer(message: "ToolMessage", chat_history: "ChatHistory
                         content["input"]["code"] = shortened_code
     message.artifact["summarized"] = True
 
+@tool()
+async def attach_workflow(workflow: str, agent: AgentRef):
+    """
+    Chooses a relevant workflow to the user's request and attaches it to the context.
+
+    Use this tool when the user asks to activate, enable, switch to, or attach a workflow.
+
+    If they describe what they want to do, choose the most relevant workflow based on their query.
+
+    Args:
+        workflow (str): The title of the workflow that you have access to, most relevant to their query.
+
+    Returns:
+        str: A summary of what was done
+    """
+    try:
+        if len(agent.context.workflows) == 0:
+            return "No workflows attached to context."
+    except Exception as e:
+        return f"Failed to get workflows on context. {e}"
+    def canonicalize_title(title: str) -> str:
+        return title.strip().lower().replace(" ", "_")
+    desired = canonicalize_title(workflow)
+    titles = {
+        canonicalize_title(workflow.title): uuid
+        for uuid, workflow in agent.context.workflows.items()
+    }
+    if desired not in titles:
+        return f"Failed to find `{desired}` in `{titles}`: invalid tool input."
+
+    agent.context.attached_workflow = titles[desired]
+    return f"Successfully set the attached workflow to {workflow}."
+
+
 
 @tool(autosummarize=True, summarizer=run_code_summarizer)
 async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
@@ -262,7 +296,13 @@ class BeakerSubkernel(abc.ABC):
 
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
-    TOOLS: list[tuple[Callable, Callable]]  = [(run_code, lambda: True)]
+    TOOLS: list[tuple[Callable, Callable]]  = [
+        (run_code, lambda: True),
+        # disabled in context.py if no workflows on context.
+        # if the lambda below contains self -- self.context.workflows won't be
+        # populated at the check time in tools(self)... so checking in context makes more sense.
+        (attach_workflow, lambda: True)
+    ]
 
     FETCH_STATE_CODE: str = ""
 

@@ -3,18 +3,22 @@ import inspect
 import json
 import logging
 import os.path
+from pathlib import Path
 import urllib.parse
+from uuid import uuid4
 import requests
 from dataclasses import asdict
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable, TypedDict, Literal, TypeAlias
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
+import yaml
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError, ensure_async
 from beaker_kernel.lib.config import config as beaker_config
 from beaker_kernel.lib.types import Integration
+from beaker_kernel.lib.workflow import Workflow, create_available_workflows_prompt
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -50,6 +54,10 @@ class BeakerContext:
     intercepts: List[Tuple[str, Callable, str]]
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
+
+    workflows: Dict[str, Workflow]
+    attached_workflow: Optional[str]
+
     preview_function_name: str = "generate_preview"
     kernel_state_function_name: str = "send_kernel_state"
 
@@ -63,6 +71,8 @@ class BeakerContext:
         self.intercepts = []
         self.jinja_env = None
         self.templates = {}
+        self.workflows = {}
+        self.attached_workflow = None
         self.beaker_kernel = beaker_kernel
         self.config = config
         self.subkernel = self.get_subkernel()
@@ -107,6 +117,16 @@ class BeakerContext:
                     # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
                     logger.warning(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
 
+        workflows_dir = os.path.join(os.path.dirname(class_dir), "workflows")
+        if os.path.exists(workflows_dir):
+            for workflow_yaml in Path(workflows_dir).glob("*.yaml"):
+                workflow = Workflow.from_yaml(yaml.safe_load(workflow_yaml.read_text()))
+                # lives as long as the session does
+                workflow_id = str(uuid4())
+                self.workflows[workflow_id] = workflow
+                if workflow.is_context_default:
+                    self.attached_workflow = workflow_id
+
     def __init_subclass__(cls):
         subclass_autocontext = getattr(cls, "auto_context", None)
         if not (subclass_autocontext is None or subclass_autocontext is BeakerContext.auto_context):
@@ -144,6 +164,8 @@ class BeakerContext:
             tool
             for tool, enabled in toggles.items() if not enabled
         ]
+        if len(self.workflows) == 0:
+            disabled_tools.append("attach_workflow")
         self.agent.disable(*disabled_tools)
 
     async def setup(self, context_info=None, parent_header=None):
@@ -193,6 +215,13 @@ field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", 
 part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
 loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
 """)
+
+        if len(self.workflows) > 0:
+            parts.append(create_available_workflows_prompt(
+                list(self.workflows.values()),
+                self.workflows[self.attached_workflow] if self.attached_workflow else None)
+            )
+
         content = "\n\n".join(parts)
         return content
 
