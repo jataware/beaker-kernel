@@ -27,18 +27,12 @@ if TYPE_CHECKING:
 
 @tool
 async def magic_eight_ball(question: str) -> str:
-    \"\"\"
-    This is an example tool that is provided to help users understand how tools work in Beaker. It should only be
-    used when a user explicitly asks for it.
-
-    This simulates a Magic 8 ball toy where a person asks questions and gets answers indicating yes/no/maybe.
+    \"\"\"This is an example tool that is provided to help users understand how tools work in Beaker.
+    
+    This simulates a Magic 8 ball toy where a person asks questions and gets answers indicating yes/no/maybe. It should only be used when a user explicitly asks for it.
 
     Args:
-        question (str): The question the user would like to have answered. The question must be answerable as
-                        yes/no/maybe. If the question is not a yes/no/maybe question then inform the user to
-                        reword the question so that it is a proper question before proceeding.
-    Returns:
-        str: A string that is either the response the magic eight ball returned.
+        question: The question the user would like to have answered. The question must be answerable as yes/no/maybe. If the question is not a yes/no/maybe question then inform the user to reword the question so that it is a proper question before proceeding.
     \"\"\"
     import random
     choices = [

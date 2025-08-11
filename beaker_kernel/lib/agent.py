@@ -41,6 +41,9 @@ class BeakerAgent:
         all_tools = [self.ask_user] + (tools or [])
         self._tools = all_tools
         
+        # Initialize system prompt handling
+        self._system_prompt_callback = None
+        
         # Create LangGraph agent
         self._langgraph_app = create_react_agent(
             model=self.model,
@@ -69,8 +72,22 @@ class BeakerAgent:
             user_message = HumanMessage(content=query)
             loop_id = self.chat_history.add_message(user_message)
             
-            # Get all messages for LangGraph (filter out empty ones)
+            # Get all messages for LangGraph (filter out empty ones and clean for serialization)
             all_messages = []
+            
+            # Add system prompt if available
+            if self._system_prompt_callback:
+                try:
+                    system_content = await self._get_system_prompt_async()
+                    if system_content and system_content.strip():
+                        from langchain_core.messages import SystemMessage
+                        system_msg = SystemMessage(content=system_content)
+                        all_messages.append(system_msg)
+                        logger.debug("Added dynamic system prompt to messages")
+                except Exception as e:
+                    logger.warning(f"Failed to generate system prompt: {e}")
+            
+            # Add existing messages from chat history
             for msg in self.chat_history.messages:
                 content = getattr(msg, 'content', '')
                 if content and content.strip():
@@ -185,5 +202,34 @@ class BeakerAgent:
         return []
 
     def set_auto_context(self, default_content: str, content_updater=None, auto_update: bool = True):
-        """Set auto context (compatibility method)."""
-        pass
+        """Set auto context for system prompt."""
+        if content_updater and callable(content_updater):
+            self._system_prompt_callback = content_updater
+        elif default_content:
+            self._system_prompt_callback = lambda: default_content
+        else:
+            self._system_prompt_callback = None
+            
+        logger.debug(f"Set auto context with callback: {self._system_prompt_callback is not None}")
+
+    async def _get_system_prompt_async(self):
+        """Generate system prompt content asynchronously."""
+        import inspect
+        
+        if self._system_prompt_callback:
+            try:
+                # Call the callback to get updated context
+                result = self._system_prompt_callback()
+                
+                # Handle async callbacks properly
+                if inspect.iscoroutine(result):
+                    prompt_content = await result
+                    return prompt_content
+                else:
+                    # Synchronous callback
+                    return result
+            except Exception as e:
+                logger.warning(f"Failed to generate auto context: {e}")
+                return "You are a helpful AI assistant."
+        else:
+            return "You are a helpful AI assistant."

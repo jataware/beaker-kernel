@@ -1,7 +1,7 @@
 import abc
 import asyncio
 import json
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING, Annotated
 import hashlib
 import shutil
 from tempfile import mkdtemp
@@ -41,26 +41,16 @@ logger = logging.getLogger(__name__)
 
 @tool
 async def run_code(code: str) -> str:
-    """
-    Executes code in the user's notebook on behalf of the user, but collects the outputs of the run for use by the Agent
-    in the ReAct loop, if needed.
+    """Executes code in the user's notebook on behalf of the user.
 
-    The code runs in a new codecell and the user can watch the execution and will see all of the normal output in the
-    Jupyter interface.
+    The code runs in a new codecell and the user can watch the execution and will see all of the normal output in the Jupyter interface.
 
-    This tool can be used to probe the user's environment or collect information to answer questions, or can be used to
-    run code completely on behalf of the user. If a user asks the agent to do something that reasonably should be done
-    via code, you should probably default to using this tool.
+    This tool can be used to probe the user's environment or collect information to answer questions, or can be used to run code completely on behalf of the user. If a user asks the agent to do something that reasonably should be done via code, you should probably default to using this tool.
 
-    This tool can be run more than once in a react loop. All actions and variables created in earlier uses of the tool
-    in a particular loop should be assumed to exist for future uses of the tool in the same loop.
+    This tool can be run more than once in a react loop. All actions and variables created in earlier uses of the tool in a particular loop should be assumed to exist for future uses of the tool in the same loop.
 
     Args:
-        code (str): Code to run directly in Jupyter. This should be a string exactly as it would appear in a notebook
-                    codecell. No extra escaping of newlines or similar characters is required.
-    Returns:
-        str: A summary of the run, along with the collected stdout, stderr, returned result, display_data items, and any
-             errors that may have occurred.
+        code: Code to run directly in Jupyter. This should be a string exactly as it would appear in a notebook codecell. No extra escaping of newlines or similar characters is required.
     """
     def format_execution_context(context) -> str:
         """

@@ -164,12 +164,30 @@ class BeakerContext:
             self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
 
     async def auto_context(self):
-        parts = []
+        # Start with the core Archytas-style system prompt (always first)
+        parts = ["""You are the ReAct (Reason & Action) assistant. You act as an interface between a user and the system.
+
+Your job is to help the user complete their tasks by calling the appropriate tools, evaluating results, and communicating effectively.
+
+Key principles:
+1. Focus precisely on what the user has asked for - no more, no less
+2. Use tools as needed to fulfill the request - multiple tools are fine when necessary
+3. Be efficient but thorough in addressing the specific request
+4. Don't expand the scope beyond the user's explicit question
+
+The user may not see the results of executing the tools, so communicate important results/outputs from tool executions. Only run one tool at a time and review the output before proceeding.
+
+You can provide your thoughts via response text separate from calling a tool, explaining your reasoning when it adds clarity. The user may or may not see these thoughts.
+
+Remember: Your goal is to solve exactly what was asked. For example, if asked for a mean, provide the mean - don't generate additional visualizations or analyses unless specifically requested."""]
+
+        # Add context-specific information if available
         if hasattr(self, "_auto_context"):
             result = await ensure_async(self._auto_context())
-            parts.append(
-                result
-            )
+            if result and result.strip():
+                parts.append(result)
+        
+        # Add kernel state information
         if beaker_config.send_kernel_state:
             kernel_state = await self.get_subkernel_state()
             if kernel_state:
@@ -179,6 +197,8 @@ class BeakerContext:
 {json.dumps(kernel_state)}
 ```\
 """)
+        
+        # Add notebook state information
         if beaker_config.send_notebook_state:
             if self.notebook_state:
                 parts.append(f"""\
@@ -191,6 +211,7 @@ field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", 
 part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
 loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
 """)
+        
         content = "\n\n".join(parts)
         return content
 

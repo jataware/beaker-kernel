@@ -1,124 +1,216 @@
 """
-Native LangChain tool system for Beaker.
+Beaker tool system with automatic thought parameter injection.
 
-Provides a clean @tool decorator that works directly with LangChain/LangGraph
-without any Archytas compatibility layers.
+Based on the Archytas approach but simplified for LangChain/LangGraph.
+Automatically adds 'thought' parameters to tools like Archytas did.
 """
 
 import asyncio
 import inspect
 import logging
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, Type, Union
+from typing import Any, Callable, Dict, Optional, Type, Union, Annotated
 
-from langchain_core.tools import BaseTool, tool as langchain_tool
+from langchain_core.tools import BaseTool, tool as langchain_tool, StructuredTool
 from pydantic import BaseModel, Field, create_model
+from pydantic.fields import FieldInfo
 
 logger = logging.getLogger(__name__)
 
 
+def _parse_docstring_parameters(func: Callable) -> Dict[str, str]:
+    """Extract parameter descriptions from function docstring Args section."""
+    docstring = func.__doc__
+    if not docstring:
+        return {}
+    
+    param_descriptions = {}
+    
+    # Look for Args: section in docstring
+    lines = docstring.split('\n')
+    in_args_section = False
+    current_param = None
+    current_desc = []
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Check if we're entering the Args section
+        if stripped.lower() in ['args:', 'arguments:', 'parameters:']:
+            in_args_section = True
+            continue
+        
+        # Check if we're leaving the Args section (Returns:, Raises:, etc.)
+        if in_args_section and stripped.lower() in ['returns:', 'return:', 'raises:', 'examples:', 'example:', 'note:', 'notes:']:
+            # Save the current parameter if we have one
+            if current_param and current_desc:
+                param_descriptions[current_param] = ' '.join(current_desc).strip()
+            break
+        
+        if in_args_section and stripped:
+            # Check if this line starts a new parameter (contains colon)
+            if ':' in stripped:
+                # Save previous parameter if exists
+                if current_param and current_desc:
+                    param_descriptions[current_param] = ' '.join(current_desc).strip()
+                
+                # Extract parameter name and start of description
+                param_part, desc_part = stripped.split(':', 1)
+                # Remove type annotations in parentheses
+                param_name = param_part.split('(')[0].strip()
+                current_param = param_name
+                current_desc = [desc_part.strip()]
+            elif current_param and stripped:
+                # Continue description for current parameter
+                current_desc.append(stripped)
+    
+    # Save the last parameter
+    if current_param and current_desc:
+        param_descriptions[current_param] = ' '.join(current_desc).strip()
+    
+    return param_descriptions
+
+
 def tool(func: Callable = None, *, name: str = None, description: str = None) -> Callable:
     """
-    Decorator to create LangChain tools with Beaker execution context.
+    Decorator to create LangChain tools with automatic thought parameter injection.
+    
+    Like Archytas, automatically adds a 'thought' parameter to all tools for UI display.
     
     Usage:
         @tool
         def my_tool(param: str) -> str:
             '''Tool description'''
             return f"Result: {param}"
-            
-        @tool(name="custom_name", description="Custom description")
-        def another_tool(x: int, y: int = 5) -> str:
-            return f"Sum: {x + y}"
     """
-    def decorator(func: Callable) -> BaseTool:
-        # Extract metadata
+    def decorator(func: Callable) -> StructuredTool:
+        # Extract metadata and preserve original function for docstring parsing
         tool_name = name or func.__name__
         tool_description = description or func.__doc__ or f"Tool: {tool_name}"
         
-        # Get function signature for schema creation
+        # Get function signature
         sig = inspect.signature(func)
         
-        # Create parameter schema
-        params = {}
+        # Parse parameter descriptions from docstring
+        param_descriptions = _parse_docstring_parameters(func)
+        
+        # Build argument dictionary like Archytas did
+        arg_dict = {}
+        
+        # Add original function parameters
         for param_name, param in sig.parameters.items():
             param_type = param.annotation if param.annotation != inspect.Parameter.empty else str
+            # Use docstring description if available, otherwise fall back to generic
+            param_desc = param_descriptions.get(param_name, f"Parameter {param_name}")
             
             if param.default != inspect.Parameter.empty:
-                params[param_name] = (param_type, Field(default=param.default))
+                arg_dict[param_name] = Annotated[param_type, FieldInfo(description=param_desc, default=param.default)]
             else:
-                params[param_name] = (param_type, Field(...))
+                arg_dict[param_name] = Annotated[param_type, FieldInfo(description=param_desc)]
         
-        # Create Pydantic schema
-        tool_schema = create_model(f"{tool_name}Schema", **params) if params else None
+        # Automatically add thought parameter like Archytas did
+        if "thought" not in arg_dict:
+            arg_dict["thought"] = Annotated[str, FieldInfo(description="Reasoning around why this tool is being called.")]
         
-        # Create wrapper that handles execution context
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            from beaker_kernel.lib.utils import get_execution_context, get_beaker_kernel
-            
-            # Get execution context
-            context = get_execution_context() or {}
-            kernel = get_beaker_kernel()
-            
-            # Log tool invocation
-            if kernel:
-                kernel.log("agent_react_tool", {"tool": tool_name, "input": kwargs or args})
-            
-            try:
-                # Execute the tool
-                if inspect.iscoroutinefunction(func):
-                    # Handle async functions
-                    try:
-                        loop = asyncio.get_event_loop()
-                        if loop.is_running():
-                            # If we're already in an event loop, create a task
-                            import concurrent.futures
-                            with concurrent.futures.ThreadPoolExecutor() as executor:
-                                future = executor.submit(asyncio.run, func(*args, **kwargs))
-                                result = future.result()
-                        else:
-                            result = loop.run_until_complete(func(*args, **kwargs))
-                    except RuntimeError:
-                        result = asyncio.run(func(*args, **kwargs))
-                else:
-                    result = func(*args, **kwargs)
+        # Create Pydantic model for arguments
+        tool_schema = create_model(f"{tool_name}Schema", **arg_dict)
+        
+        # Create wrapper function with thought handling
+        if inspect.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                # Extract and handle thought parameter
+                thought = kwargs.pop('thought', '')
                 
-                # Log result
-                if kernel:
-                    kernel.log("agent_react_tool_output", {
-                        "tool": tool_name,
-                        "input": kwargs or args,
-                        "output": result
-                    })
+                # Send thought to kernel if provided
+                if thought and thought.strip():
+                    _send_thought(thought, tool_name, str(kwargs))
                 
+                # Call original function without thought parameter
+                result = await func(*args, **kwargs)
+                
+                # Log and return result
+                _log_tool_result(tool_name, kwargs, result)
                 return str(result) if result is not None else ""
+            wrapper_func = async_wrapper
+        else:
+            @wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                # Extract and handle thought parameter
+                thought = kwargs.pop('thought', '')
                 
-            except Exception as e:
-                error_msg = f"Error in {tool_name}: {str(e)}"
-                logger.error(error_msg)
+                # Send thought to kernel if provided
+                if thought and thought.strip():
+                    _send_thought(thought, tool_name, str(kwargs))
                 
-                if kernel:
-                    kernel.log("agent_react_tool_output", {
-                        "tool": tool_name,
-                        "input": kwargs or args,
-                        "output": error_msg
-                    })
+                # Call original function without thought parameter
+                result = func(*args, **kwargs)
                 
-                return error_msg
+                # Log and return result
+                _log_tool_result(tool_name, kwargs, result)
+                return str(result) if result is not None else ""
+            wrapper_func = sync_wrapper
         
-        # Create LangChain tool
-        return langchain_tool(
-            tool_name,
-            return_direct=False,
-            args_schema=tool_schema
-        )(wrapper)
+        # Create StructuredTool like Archytas did
+        if inspect.iscoroutinefunction(func):
+            # For async functions, use the async versions
+            return StructuredTool(
+                name=tool_name,
+                description=tool_description,
+                args_schema=tool_schema,
+                coroutine=wrapper_func,  # Use coroutine parameter for async
+            )
+        else:
+            return StructuredTool(
+                name=tool_name,
+                description=tool_description,
+                args_schema=tool_schema,
+                func=wrapper_func,
+            )
     
     # Handle both @tool and @tool() usage
     if func is None:
         return decorator
     else:
         return decorator(func)
+
+
+def _send_thought(thought: str, tool_name: str, tool_input: str):
+    """Send thought to kernel for UI display."""
+    try:
+        from beaker_kernel.lib.utils import get_beaker_kernel, get_parent_message
+        
+        kernel = get_beaker_kernel()
+        if kernel:
+            # Get parent message context
+            parent_context = get_parent_message()
+            parent_header = parent_context.get('parent_message').header if parent_context and 'parent_message' in parent_context else {}
+            
+            kernel.handle_thoughts(
+                thought=thought.strip(),
+                tool_name=tool_name,
+                tool_input=tool_input[:100] + "..." if len(tool_input) > 100 else tool_input,
+                parent_header=parent_header
+            )
+    except Exception as e:
+        logger.warning(f"Failed to send thought for {tool_name}: {e}")
+
+
+def _log_tool_result(tool_name: str, tool_input: dict, result: Any):
+    """Log tool execution for debugging."""
+    try:
+        from beaker_kernel.lib.utils import get_beaker_kernel
+        
+        kernel = get_beaker_kernel()
+        if kernel:
+            kernel.log("agent_react_tool", {"tool": tool_name, "input": tool_input})
+            kernel.log("agent_react_tool_output", {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": str(result)
+            })
+    except Exception as e:
+        logger.warning(f"Failed to log tool result for {tool_name}: {e}")
 
 
 class BeakerTool(BaseTool):

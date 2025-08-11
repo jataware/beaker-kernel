@@ -15,13 +15,10 @@ logger = logging.getLogger(__name__)
 
 @tool
 async def tell_a_joke(topic: str = "any") -> str:
-    """
-    Generates a joke for the user.
+    """Generates a joke for the user.
 
     Args:
-        topic (str): A topic that the joke should be about. If no topic is provided, use the default value of "any".
-    Returns:
-        str: The text of the joke, possibly with or without formatting.
+        topic: A topic that the joke should be about. If no topic is provided, use the default value of 'any'.
     """
     code = """
 import requests
