@@ -285,13 +285,12 @@ li.cm-diagnostic {
 .cm-tooltip-hover {
     z-index: 99 !important;
 }
-
-// decent max-size for long sentences, longer vertical
-// content will scroll instead of overflowing out of the container
 .cm-tooltip {
     max-width: 60vw; 
-    background: transparent !important;
-    border: none !important;
+}
+.cm-tooltip.cm-tooltip-hover:not(.cm-tooltip-lint) {
+    background-color: transparent;
+    border: none;
 }
 
 /**
@@ -301,18 +300,19 @@ have a margin-right, so that it doesn't render exactly all the way to the right 
 Moved the tooltip border/color to the inner element to allow CodeMirror to calc the 
 tooltip size without any weird re-layout animation. It is a bit specific so be careful when changing.
  */
-
 .cm-tooltip > .cm-tooltip-section, .cm-tooltip.cm-tooltip-lint {
     padding: 1rem !important;
     border-radius: 4px !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
     overflow-y: auto;
+    border: none;
 
     background-color: var(--p-surface-0) !important;
 
     // and override for dark theme/mode
-    [data-theme="dark"] & {
+    .beaker-dark & {
         background-color: var(--p-surface-b) !important;
+        border: 1px solid var(--p-surface-a);
     }
 }
 .cm-tooltip > .cm-tooltip-section {
