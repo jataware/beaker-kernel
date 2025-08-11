@@ -1,5 +1,5 @@
 import type { Extension } from "@codemirror/state";
-import { EditorView, Decoration, type DecorationSet, hoverTooltip, gutter, GutterMarker } from "@codemirror/view";
+import { EditorView, Decoration, type DecorationSet, tooltips, hoverTooltip, gutter, GutterMarker } from "@codemirror/view";
 import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
 import { StateField, StateEffect, RangeSet } from "@codemirror/state";
 
@@ -58,6 +58,10 @@ function getSeverityColor(severity: BeakerLintSeverity): string {
     }
 }
 
+const tooltipConfig = tooltips({
+    parent: document.body,
+});
+
 export class LinterAnnotationProvider implements AnnotationProvider {
     name = "linter";
 
@@ -87,14 +91,14 @@ export class LinterAnnotationProvider implements AnnotationProvider {
                         return el;
                     },
                 };
-                
+
                 if (annotation.link) {
                     diagnostic.actions = [{
                         name: "Learn More",
                         apply: () => window.open(annotation.link, '_blank')
                     }];
                 }
-                
+
                 return diagnostic;
             });
         });
@@ -103,7 +107,8 @@ export class LinterAnnotationProvider implements AnnotationProvider {
             linterAnnotations,
             lintGutter({
                 hoverTime: 200,
-            })
+            }),
+            tooltipConfig,
         ];
     }
 }
@@ -117,17 +122,17 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
 
         const getAnnotationsByLine = (annotations: AnnotationData[], doc: any) => {
             const lineAnnotations = new Map<number, AnnotationData[]>();
-            
+
             annotations.forEach(annotation => {
                 const line = doc.lineAt(annotation.start);
                 const lineNumber = line.number;
-                
+
                 if (!lineAnnotations.has(lineNumber)) {
                     lineAnnotations.set(lineNumber, []);
                 }
                 lineAnnotations.get(lineNumber)!.push(annotation);
             });
-            
+
             return lineAnnotations;
         };
 
@@ -181,7 +186,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
             const decorations = annotations.map(annotation => {
                 const category_id = annotation.issue.category?.id ?? "default";
                 const className = `annotation-mark category-${category_id}`;
-                
+
                 return Decoration.mark({
                     class: className,
                     attributes: {
@@ -278,7 +283,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
 
             decorations.between(pos, pos, (from, to, value) => {
                 const annotationId = value.spec.attributes?.['data-annotation-id'];
-                
+
                 if (annotationId) {
                     const annotation = annotations.find(a => a.issue.id === annotationId);
                     if (annotation) {
@@ -297,7 +302,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
                 create(view) {
                     const dom = document.createElement('div');
                     dom.className = 'annotation-tooltip';
-                    
+
                     foundAnnotations.forEach((annotation, index) => {
                         if (index > 0) {
                             const separator = document.createElement('hr');
@@ -308,7 +313,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
                         const section = document.createElement('div');
                         const description = annotation.message_override || annotation.issue.description;
                         const extraMessage = annotation.message_extra ? `<p>${annotation.message_extra}</p>` : '';
-                        
+
                         section.innerHTML = `
                             <h4 style="margin: 0.2rem 0; color: var(--p-text-color)">
                             <span style="color: ${getSeverityColor(annotation.issue.severity as BeakerLintSeverity)}">${annotation.issue.severity}</span> ${annotation.title_override || annotation.issue.title}
@@ -334,7 +339,7 @@ export class DecorationAnnotationProvider implements AnnotationProvider {
             };
         });
 
-        return [decorationField, gutterMarkerField, annotationGutter, decorationTheme, annotationTooltip];
+        return [decorationField, gutterMarkerField, annotationGutter, decorationTheme, annotationTooltip, tooltipConfig];
     }
 }
 
@@ -361,4 +366,4 @@ export class AnnotationProviderFactory {
     static getAvailableTypes(): string[] {
         return Array.from(this.providers.keys());
     }
-} 
+}
