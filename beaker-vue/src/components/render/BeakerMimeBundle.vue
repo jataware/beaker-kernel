@@ -13,17 +13,21 @@
                 :is="renderedBundle[selectedMimeType].component"
                 v-bind="renderedBundle[selectedMimeType].bindMapping"
                 :class="`rendered-output ${selectedMimeType.replace('/', '-')}`"
+                @click="handleImageClick"
             />
         </div>
+
     </div>
 
 </template>
 
 <script lang="ts" setup>
 import { ref, inject, computed, watch } from "vue";
+import { useDialog } from "primevue";
 import SelectButton from "primevue/selectbutton";
 import { BeakerSession } from "beaker-kernel";
 import type { BeakerRenderOutput } from "../../renderers";
+import ImageZoomDialog from "./ImageZoomDialog.vue";
 
 const props = defineProps([
     "mimeBundle",
@@ -31,6 +35,9 @@ const props = defineProps([
 ]);
 
 const session = inject<BeakerSession>('session');
+
+const dialog = useDialog();
+const overlay = ref();
 
 const renderedBundle = computed<{[key: string]: BeakerRenderOutput}>(
     () => {
@@ -55,6 +62,48 @@ watch(sortedMimetypes, (newSortedTypes, _) => {
     selectedMimeType.value = newSortedTypes[0];
 })
 
+// click-to-zoom for img tags
+const handleImageClick = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+
+    if (target.tagName.toLowerCase() === 'img') {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const img = target as HTMLImageElement;
+
+        overlay.value = dialog.open(
+            ImageZoomDialog,
+            {
+                // Data used within the dialog to render the image.
+                data: {
+                    imageSrc: img.src,
+                    imageAlt: img.alt || 'Zoomed image',
+                },
+                props: {
+                    modal: true,
+                    draggable: false,
+                    showHeader: false,
+                    closeButtonProps: {
+                        class: "my-close-props",
+                    },
+                    style: {
+                        width: "95vw",
+                        maxHeight: "calc(95vh - 3rem)",
+                        height: "100%",
+                        position: "relative",
+                        top: "1.5rem",
+                    },
+                    contentStyle: {
+                        display: "flex",
+                        flex: "1",
+                        padding: "var(--p-overlay-modal-padding)",
+                    }
+                }
+            }
+        );
+    }
+};
 </script>
 
 
@@ -106,6 +155,25 @@ watch(sortedMimetypes, (newSortedTypes, _) => {
         }
     }
     overflow-x: auto;
+
+    &.image-png,
+    &.image-jpeg,
+    &.image-jpg,
+    &.image-gif,
+    &.image-svg {
+        img {
+            border-radius: 0.25rem;
+            max-width: 100%;
+            cursor: pointer;
+            transition: box-shadow 0.6s ease;
+            padding: 1px;
+
+            &:hover {
+                box-sizing: border-box;
+                box-shadow: inset 0 0 0 1px var(--p-surface-500);
+            }
+        }
+    }
 }
 
 .mime-payload {

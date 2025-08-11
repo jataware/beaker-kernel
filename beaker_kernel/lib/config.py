@@ -330,7 +330,6 @@ boolean value which will enable/disable the tool based on the value.",
         "LLM_SERVICE_TOKEN",
         default="",
         sensitive=True,
-        aliases=["OPENAI_API_KEY"],
         save_default_value=False,
         placeholder_text="Set this value to override default.",
     )
