@@ -1,163 +1,70 @@
 """
-Beaker tool system with automatic thought parameter injection.
-
-Based on the Archytas approach but simplified for LangChain/LangGraph.
-Automatically adds 'thought' parameters to tools like Archytas did.
+Beaker tool system using native LangChain tools with Beaker-specific logging.
 """
 
-import asyncio
 import inspect
 import logging
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, Type, Union, Annotated
+from typing import Any, Callable
 
-from langchain_core.tools import BaseTool, tool as langchain_tool, StructuredTool
-from pydantic import BaseModel, Field, create_model
-from pydantic.fields import FieldInfo
+from langchain_core.tools import tool as langchain_tool, BaseTool
 
 logger = logging.getLogger(__name__)
 
 
-def _parse_docstring_parameters(func: Callable) -> Dict[str, str]:
-    """Extract parameter descriptions from function docstring Args section."""
-    docstring = func.__doc__
-    if not docstring:
-        return {}
-    
-    param_descriptions = {}
-    
-    # Look for Args: section in docstring
-    lines = docstring.split('\n')
-    in_args_section = False
-    current_param = None
-    current_desc = []
-    
-    for line in lines:
-        stripped = line.strip()
-        
-        # Check if we're entering the Args section
-        if stripped.lower() in ['args:', 'arguments:', 'parameters:']:
-            in_args_section = True
-            continue
-        
-        # Check if we're leaving the Args section (Returns:, Raises:, etc.)
-        if in_args_section and stripped.lower() in ['returns:', 'return:', 'raises:', 'examples:', 'example:', 'note:', 'notes:']:
-            # Save the current parameter if we have one
-            if current_param and current_desc:
-                param_descriptions[current_param] = ' '.join(current_desc).strip()
-            break
-        
-        if in_args_section and stripped:
-            # Check if this line starts a new parameter (contains colon)
-            if ':' in stripped:
-                # Save previous parameter if exists
-                if current_param and current_desc:
-                    param_descriptions[current_param] = ' '.join(current_desc).strip()
-                
-                # Extract parameter name and start of description
-                param_part, desc_part = stripped.split(':', 1)
-                # Remove type annotations in parentheses
-                param_name = param_part.split('(')[0].strip()
-                current_param = param_name
-                current_desc = [desc_part.strip()]
-            elif current_param and stripped:
-                # Continue description for current parameter
-                current_desc.append(stripped)
-    
-    # Save the last parameter
-    if current_param and current_desc:
-        param_descriptions[current_param] = ' '.join(current_desc).strip()
-    
-    return param_descriptions
-
-
-def tool(func: Callable = None, *, name: str = None, description: str = None) -> Callable:
+def tool(func: Callable = None, *, name: str = None, description: str = None):
     """
-    Decorator to create LangChain tools with clean schemas compatible across all providers.
-    
-    Thoughts are extracted from AI message content instead of tool parameters.
+    Wrapper around LangChain's @tool that adds Beaker logging.
     
     Usage:
         @tool
         def my_tool(param: str) -> str:
-            '''Tool description'''
+            '''Tool description
+            
+            Args:
+                param: Description of parameter
+            '''
             return f"Result: {param}"
     """
-    def decorator(func: Callable) -> StructuredTool:
-        # Extract metadata and preserve original function for docstring parsing
-        tool_name = name or func.__name__
-        tool_description = description or func.__doc__ or f"Tool: {tool_name}"
+    def decorator(func: Callable):
+        # Create the LangChain tool with proper docstring parsing
+        langchain_decorated = langchain_tool(func, parse_docstring=True)
         
-        # Get function signature
-        sig = inspect.signature(func)
+        # Override name and description if provided
+        if name:
+            langchain_decorated.name = name
+        if description:
+            langchain_decorated.description = description
         
-        # Parse parameter descriptions from docstring
-        param_descriptions = _parse_docstring_parameters(func)
-        
-        # Build argument dictionary like Archytas did
-        arg_dict = {}
-        
-        # Add original function parameters
-        for param_name, param in sig.parameters.items():
-            param_type = param.annotation if param.annotation != inspect.Parameter.empty else str
-            # Use docstring description if available, otherwise fall back to generic
-            param_desc = param_descriptions.get(param_name, f"Parameter {param_name}")
+        # Add logging wrapper
+        if inspect.iscoroutinefunction(func):
+            # Store original coroutine before replacing it
+            original_coroutine = langchain_decorated.coroutine
             
-            if param.default != inspect.Parameter.empty:
-                arg_dict[param_name] = Annotated[param_type, FieldInfo(description=param_desc, default=param.default)]
-            else:
-                arg_dict[param_name] = Annotated[param_type, FieldInfo(description=param_desc)]
-        
-        # Don't add thought parameter - extract thoughts from AI message content instead
-        # This keeps tool schemas clean and compatible across all providers
-        
-        # Create Pydantic model for arguments
-        tool_schema = create_model(f"{tool_name}Schema", **arg_dict)
-        
-        # Create wrapper function (thought extraction now handled at graph level)
-        if inspect.iscoroutinefunction(func):
-            @wraps(func)
-            async def async_wrapper(*args, **kwargs):
-                # Remove thought parameter if it somehow gets through
-                kwargs.pop('thought', '')
-                
-                # Call original function
-                result = await func(*args, **kwargs)
-                
-                # Log and return result
+            @wraps(original_coroutine)
+            async def async_logging_wrapper(*args, **kwargs):
+                tool_name = langchain_decorated.name
+                result = await original_coroutine(*args, **kwargs)
                 _log_tool_result(tool_name, kwargs, result)
-                return str(result) if result is not None else ""
-            wrapper_func = async_wrapper
+                return result
+            
+            # Replace the coroutine with our logging wrapper
+            langchain_decorated.coroutine = async_logging_wrapper
         else:
-            @wraps(func)
-            def sync_wrapper(*args, **kwargs):
-                # Remove thought parameter if it somehow gets through
-                kwargs.pop('thought', '')
-                
-                # Call original function
-                result = func(*args, **kwargs)
-                
-                # Log and return result
+            # Store original function before replacing it
+            original_func = langchain_decorated.func
+            
+            @wraps(original_func)
+            def sync_logging_wrapper(*args, **kwargs):
+                tool_name = langchain_decorated.name
+                result = original_func(*args, **kwargs)
                 _log_tool_result(tool_name, kwargs, result)
-                return str(result) if result is not None else ""
-            wrapper_func = sync_wrapper
+                return result
+            
+            # Replace the func with our logging wrapper
+            langchain_decorated.func = sync_logging_wrapper
         
-        # Create StructuredTool like Archytas did
-        if inspect.iscoroutinefunction(func):
-            # For async functions, use the async versions
-            return StructuredTool(
-                name=tool_name,
-                description=tool_description,
-                args_schema=tool_schema,
-                coroutine=wrapper_func,  # Use coroutine parameter for async
-            )
-        else:
-            return StructuredTool(
-                name=tool_name,
-                description=tool_description,
-                args_schema=tool_schema,
-                func=wrapper_func,
-            )
+        return langchain_decorated
     
     # Handle both @tool and @tool() usage
     if func is None:
