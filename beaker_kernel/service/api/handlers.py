@@ -47,4 +47,3 @@ def register_api_handlers(app: LabServerApp):
         add_handler_prefix(PREFIX, handler)
         for handler in integration_handlers
     ])
-    logger.warning(app.handlers)

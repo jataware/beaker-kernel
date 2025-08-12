@@ -3,6 +3,7 @@ import logging
 import os
 import typing
 import asyncio
+from queue import Empty
 
 from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
@@ -157,7 +158,9 @@ class BeakerAPIMixin:
                 track=True,
                 metadata=None,
             )
-            result = await client.get_shell_msg(timeout=50) # type: ignore
+            result = await client.get_shell_msg(timeout=30) # timeout is in seconds, not milliseconds
+        except Empty as err:
+            raise TimeoutError(err)
         finally:
             client.stop_channels()
         return result["content"]["return"]
@@ -216,8 +219,10 @@ class IntegrationHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
                     kwargs=body
                 ) or {}
             self.write(self.stringify_serialization(result))
+        except TimeoutError as e:
+            raise tornado.web.HTTPError(status_code=504, log_message="Kernel took too long to repond to request")
         except Exception as e:
-            raise tornado.web.HTTPError(status_code=400, log_message=str(e))
+            raise tornado.web.HTTPError(status_code=500, log_message=str(e))
 
 
 class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterHandler):
@@ -253,16 +258,17 @@ class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterH
                     kwargs={"integration_id": integration_id, "resource_id": resource_id}
                 )
                 self.write(self.stringify_serialization(result))
+            except TimeoutError as e:
+                raise tornado.web.HTTPError(status_code=504, log_message="Kernel took too long to repond to request")
             except Exception as e:
-                raise tornado.web.HTTPError(status_code=400, log_message=str(e))
+                raise tornado.web.HTTPError(status_code=500, log_message=str(e))
 
     async def post(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
-        function = "add_resource"
+        function = "add_resource" if resource_id is None else "update_resource"
         kwargs = {"integration_id": integration_id}
-        if resource_id is not None:
-            function = "update_resource"
+        if function == "update_resource":
             kwargs["resource_id"] = resource_id
-        kwargs |= tornado.escape.json_decode(self.request.body)
+        kwargs.update(tornado.escape.json_decode(self.request.body))
         try:
             result = await self.call_in_context(
                 session_id=session_id,
@@ -270,10 +276,11 @@ class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterH
                 function=function,
                 kwargs=kwargs
             )
-            logger.warning(f"result from int: {result} \n\n {self.stringify_serialization((result))}")
             self.write(self.stringify_serialization(result))
+        except TimeoutError as e:
+            raise tornado.web.HTTPError(status_code=504, log_message="Kernel took too long to repond to request")
         except Exception as e:
-            raise tornado.web.HTTPError(status_code=400, log_message=str(e))
+            raise tornado.web.HTTPError(status_code=500, log_message=str(e))
 
 
     async def delete(self, session_id=None, integration_id=None, resource_type=None, resource_id=None):
@@ -285,8 +292,10 @@ class IntegrationResourceHandler(BeakerAPIMixin, ExtensionHandlerMixin, JupyterH
                 kwargs={"resource_id": resource_id, "integration_id": integration_id}
             )
             self.write({})
+        except TimeoutError as e:
+            raise tornado.web.HTTPError(status_code=504, log_message="Kernel took too long to repond to request")
         except Exception as e:
-            raise tornado.web.HTTPError(status_code=400, log_message=str(e))
+            raise tornado.web.HTTPError(status_code=500, log_message=str(e))
 
 handlers = [
     (r'integrations/(?P<session_id>[\w\d-]+)/?(?P<integration_id>[\w\d-]+)?', IntegrationHandler),

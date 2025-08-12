@@ -4,7 +4,6 @@
         ref="beakerInterfaceRef"
         :header-nav="headerNav"
         :connectionSettings="props.config"
-        sessionName="chat_interface"
         :sessionId="sessionId"
         defaultKernel="beaker_kernel"
         :renderers="renderers"

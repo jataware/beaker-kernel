@@ -113,6 +113,8 @@
                     <div>
                         <CodeEditor
                             v-if="examples?.[panelState?.focusedExampleId]?.query !== undefined"
+                            language="markdown"
+                            :autocompleteEnabled="false"
                             v-model="examples[panelState.focusedExampleId].query"
                         />
                     </div>
@@ -122,6 +124,8 @@
                     <div>
                         <CodeEditor
                             v-if="examples?.[panelState?.focusedExampleId]?.notes !== undefined"
+                            language="markdown"
+                            :autocompleteEnabled="false"
                             v-model="examples[panelState.focusedExampleId].notes"
                         />
                     </div>
@@ -131,6 +135,7 @@
                     <div>
                         <CodeEditor
                             v-if="examples?.[panelState?.focusedExampleId]?.code !== undefined"
+                            :autocompleteEnabled="false"
                             v-model="examples[panelState.focusedExampleId].code"
                             language="python"
                         />

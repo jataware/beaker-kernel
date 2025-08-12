@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from uuid import uuid4
 
+
 IntegrationTypes: typing.TypeAlias = typing.Literal["api", "database", "dataset"]
 
 @dataclass(kw_only=True)
@@ -57,7 +58,7 @@ class Integration:
 
     @classmethod
     def slugify(cls, name: str):
-        slug = "_".join([cls.__name__.lower(), *re.split(r"\W", name.lower())])
+        slug = "_".join(re.split(r"\W", name.lower()))
         return slug
 
     def __post_init__(self):

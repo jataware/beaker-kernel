@@ -23,6 +23,7 @@ export default defineConfig({
         xfwd: true,
         rewriteWsOrigin: true,
       },
+      '/beaker': `${ProxyHost}/`,
       '/appconfig.js': `${ProxyHost}/`,
       '/files': `${ProxyHost}/`,
       '/config': `${ProxyHost}/`,

@@ -1,14 +1,17 @@
 import logging
 import os
+import shutil
+from collections import ChainMap
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from string import Template
 from typing import Optional, cast, Literal, TYPE_CHECKING, ClassVar, Generator
 from typing_extensions import Self
 from uuid import uuid4
 
 import yaml
 from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
+from jinja2 import Environment, nodes
+from jinja2.ext import Extension
 
 from beaker_kernel.lib.integrations.base import MutableBaseIntegrationProvider
 from beaker_kernel.lib.types import ExampleResource, FileResource, Integration, Resource
@@ -28,13 +31,22 @@ def string_formatter(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
 yaml.representer.SafeRepresenter.add_representer(str, string_formatter)
 
+def able_to_write(path: Path) -> bool:
+    target = path
+    while target:
+        if target.exists():
+            # Check if user has write access
+            return os.access(target, os.W_OK)
+        else:
+            target = target.parent
+    return False
 
 @dataclass
 class AdhocSpecificationIntegration(Integration):
     location: Optional[os.PathLike] = None
 
     @classmethod
-    def from_dict(cls, location: os.PathLike, provider: str, content: dict) -> Self:
+    def from_dict(cls, location: Optional[os.PathLike], provider: str, content: dict) -> Self:
         """
         Creates a AdhocSpecificationIntegration from a dict.
 
@@ -46,10 +58,9 @@ class AdhocSpecificationIntegration(Integration):
             description = content["description"]
             source = content["source"]
         except KeyError as e:
-            msg = "Missing required field on API"
+            msg = f"Missing required field on API: {e}"
             raise KeyError(msg) from e
-        # slug = content.get("slug", cls.slugify(name))
-        slug = cls.slugify(name)
+        slug = content.get("slug", cls.slugify(name))
         uuid = content.get("uuid", str(uuid4()))
 
         # convert yaml dict resources to dataclass objects, parsing them
@@ -105,7 +116,7 @@ class AdhocSpecificationIntegration(Integration):
             for example in self.get_examples()
         ]
 
-    def render(self, overrides: Optional[dict[str, str]] = None) -> "APISpec | None":
+    def render(self, provider: "AdhocIntegrationProvider",  overrides: Optional[dict[str, str]] = None) -> "APISpec | None":
         """
         Renders a template with included files given a relative root to start from.
         Raises on nonexistent files and a failure to load.
@@ -129,13 +140,17 @@ class AdhocSpecificationIntegration(Integration):
             for attachment in self.get_files()
             if attachment.filepath is not None
         }
-        substitutions |= (overrides or {})
+        substitutions.update(overrides or {})
         try:
-            documentation = Template(self.source).substitute(substitutions)
+            # Render templates using Jinja
+            jinja_environment: Environment = provider.jinja_environment
+            template = jinja_environment.from_string(self.source)
+            documentation = template.render(substitutions)
+
             # add dataset path to examples
             examples = [
                 Example(
-                    code=Template(example["code"]).substitute(substitutions),
+                    code=jinja_environment.from_string(example["code"]).render(substitutions),
                     query=example["query"],
                     notes=example.get("notes", "")
                 )
@@ -147,10 +162,10 @@ class AdhocSpecificationIntegration(Integration):
                 cache_key=f"beaker_{self.slug}",
                 description=self.description,
                 examples=examples,
-                documentation=documentation
+                documentation=documentation,
             )
-        except KeyError as e:
-            logger.error(f"Failed to render: `${{{e}}}` referenced in {self.name} but does not exist. Continuing, but disabling.")
+        except Exception as e:
+            logger.error(f"Error while rendering {self.name}: {e.__class__.__name__}: {e}\nSkipping this integration.")
             return None
 
 
@@ -171,8 +186,9 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
     DATAFILE_BUILD_PATH: ClassVar[os.PathLike] = "adhoc_data/data"
     PROMPT_BUILD_PATH: ClassVar[os.PathLike] = "adhoc_data/prompts"
 
-    specifications: dict[str, AdhocSpecificationIntegration]
+    specifications: list[AdhocSpecificationIntegration]
     provider_type: ClassVar[str] = "adhoc"
+    jinja_environment: Environment
 
     def __init__(
         self,
@@ -182,8 +198,43 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         super().__init__(display_name)
         self.adhoc_config_options = config_options
 
+        # Define a datafile path finding extension that is within the closure of the integration provider class.
+        provider_ref = self
+        class DatafileExtension(Extension):
+            tags = {'file',}
+
+            def __init__(self, environment):
+                super().__init__(environment)
+                self.provider = provider_ref
+
+            def parse(self, parser):
+                lineno = next(parser.stream).lineno
+                parts = []
+                while parser.stream.current.type != 'block_end':
+                    token = next(parser.stream)
+                    parts.append(str(token.value))
+                filepath = "".join(parts)
+                return nodes.Output([
+                    self.call_method('_render_datafile', [nodes.Const(filepath)])
+                ]).set_lineno(lineno)
+
+            def _render_datafile(self, path):
+                try:
+                    file_path = self.provider.get_file("data", path)
+                except Exception as e:
+                    logger.error("error", exc_info=e)
+                if file_path is None:
+                    return str(path)
+                else:
+                    file_path = file_path.absolute()
+                return str(file_path)
+
+        # Add and configure jinja for templating
+        self.jinja_environment = Environment()
+        self.jinja_environment.add_extension(DatafileExtension)
+
         # prompts_root = self.adhoc_path / "prompts"
-        self.specifications = self.specification_map.values()
+        self.specifications = list(self.specification_map.values())
 
         prompts ="\n".join(
             file.read_text()
@@ -229,41 +280,93 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                 logger.error(msg)
         return specs
 
+    def find_specification_write_location(
+        self,
+        slug: str,
+        current_location: Optional[AdhocSpecificationIntegration] = None,
+    ) -> tuple[Path, bool]:
+        spec_location = Path(current_location).absolute() if current_location else None
+        existing_basedirs = [Path(base_dir).absolute() for base_dir in reversed(self.data_basedirs) if os.path.exists(base_dir)]
+        if spec_location:
+            for basedir in existing_basedirs:
+                if spec_location.is_relative_to(basedir):
+                    spec_file = spec_location / "api.yaml"
+                    if able_to_write(spec_file):
+                        return spec_location, True
+                    else:
+                        # Can't write to the specified location, so writing to a local location
+                        break
+        for basedir in existing_basedirs:
+            spec_location = basedir / "specifications" / slug
+            pre_exists = spec_location.exists()
+            spec_file = spec_location / "api.yaml"
+            if able_to_write(spec_file):
+                if not pre_exists:
+                    try:
+                        os.makedirs(spec_location, exist_ok=True)
+                    except IOError:
+                        continue
+                return spec_location, pre_exists
+        for basedir in [Path(base_dir).absolute() for base_dir in reversed(self.data_basedirs)]:
+            if able_to_write(basedir):
+                spec_location = basedir / "specifications" / slug
+                try:
+                    os.makedirs(spec_location, exist_ok=True)
+                except IOError:
+                    continue
+                return spec_location, False
+        return None, False
+
     def update_specification_file(
         self,
-        spec: Optional[AdhocSpecificationIntegration]=None,
+        spec: AdhocSpecificationIntegration,
         action: Literal["update", "add", "remove"] = "update",
     ):
+        orig_location: Path = spec.location
+        location, pre_exists = self.find_specification_write_location(slug=spec.slug, current_location=spec.location)
+        if location != orig_location:
+            spec.location = location
         if action in ["add", "update"]:
-            if spec.location is None:
-                msg = "invalid specification: location must not be none"
-                raise ValueError(msg)
-            location = Path(spec.location)
-            (location / "attachments").mkdir(parents=True, exist_ok=True)
-            (location / "api.yaml").write_text(spec.to_yaml())
-            # write file contents to their respective filepaths
-            for resource in spec.resources.values():
-                if resource.resource_type == "file":
-                    resource = cast(FileResource, resource)
-                    resource_path = Path(spec.location) / "attachments" / (resource.filepath or resource.name)
-                    resource_path.write_text(resource.content or "")
+            api_file = location / 'api.yaml'
+            logger.info(f"Writing to file {str(api_file)}")
+            api_file.write_text(spec.to_yaml())
+            if not pre_exists:
+                # Spec doesn't already exist at this location. Copy over attachments from original location.
+                attachment_dir = location / "attachments"
+                orig_attachment_dir = orig_location / "attachments"
+                if not attachment_dir.exists():
+                    os.makedirs(attachment_dir)
+                file_resource: FileResource
+                for file_resource in (resource for resource in spec.resources.values() if isinstance(resource, FileResource)):
+                    shutil.copy(src=(orig_attachment_dir / file_resource.filepath), dst=attachment_dir)
         elif action == "remove":
-            # Determine if better to hard delete files or soft-delete by renaming&skipping or similar.
-            pass
+            (location / "api.yaml").write_text("disabled")
+
+    def update_resource_file(
+        self,
+        spec: AdhocSpecificationIntegration,
+        resource: FileResource,
+        action: Literal["update", "add", "remove"] = "update",
+    ):
+        spec_location, _ = self.find_specification_write_location(slug=spec.slug, current_location=spec.location)
+        resource_location = spec_location / "attachments"
+        if not resource_location.exists():
+            os.makedirs(resource_location)
+        resource_path = resource_location / (resource.filepath or resource.name)
+        if action in ["add", "update"]:
+            resource_path.write_text(spec.to_yaml())
+        elif action == "remove":
+            os.remove(resource_path)
 
     def build_adhoc(self):
         from adhoc_api.tool import AdhocApi
-        # datafile_root = Path(self.adhoc_path) / "data"
-        # substitutions = {
-        #     "DATASET_FILES_BASE_PATH": str(datafile_root)
-        # }
         substitutions = {}
         # handling None cases in failed renders keeps them editable but not usable by the agent
-        rendered_apis = [spec.render(substitutions) for spec in self.specifications]
-        # self.adhoc_api = AdhocApi(
-        #     apis=[api for api in rendered_apis if api is not None],
-        #     **self.adhoc_config_options
-        # )
+        rendered_apis = [spec.render(self, substitutions) for spec in self.specifications]
+        self.adhoc_api = AdhocApi(
+            apis=[api for api in rendered_apis if api is not None],
+            **self.adhoc_config_options
+        )
 
     def refresh_adhoc_specs(self):
         # TODO: future way to not fully reinitialize to make it less slow.
@@ -306,20 +409,24 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
     def add_integration(self, **payload) -> Integration:
         for field in ["resources", "uuid", "slug", "url"]:
             payload.pop(field, None)
-        integration_root = self.adhoc_path / "datasources"
+        location, pre_exists = self.find_specification_write_location(
+            slug=AdhocSpecificationIntegration.slugify(payload['name']),
+            current_location=None,
+        )
         new_specification = AdhocSpecificationIntegration.from_dict(
             provider=self.slug,
-            location=integration_root / payload["name"].lower().replace(" ", "_"),
-            content=payload
+            content=payload,
+            location=location,
         )
         self.specifications.append(new_specification)
-        # self.write_all_specifications()
+        self.update_specification_file(new_specification, "add")
         self.refresh_adhoc_specs()
         return new_specification
 
     def remove_integration(self, integration_id: str, **payload) -> None:
         self.specifications = [spec for spec in self.specifications if spec.uuid != integration_id]
-        # self.write_all_specifications()
+        specification = self.get_integration(integration_id)
+        self.update_specification_file(specification, "remove")
         self.refresh_adhoc_specs()
 
     def update_integration(self, integration_id: str, **payload) -> Integration:
@@ -328,11 +435,14 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
 
         # we handle resources separately through other routes, so ignore it here.
         # resources come in as untyped dicts from JS
+        # The updated_spec_dict will ensure resources from the originals specification are included. This prevents
+        # changes to the resources here.
         payload.pop("resources", None)
 
+        allowed_keys = specification.__class__.__dataclass_fields__.keys()
         updated_spec_dict = (
             asdict(specification)
-            | {k: v for k, v in payload.items() if k in asdict(specification)}
+            | {k: v for k, v in payload.items() if k in allowed_keys}
         )
 
         # calling asdict will also call asdict on nested dataclasses like resources
@@ -346,7 +456,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             content=updated_spec_dict
         )
         self.specifications.append(updated_integration)
-        # self.write_all_specifications()
+        self.update_specification_file(updated_integration, "update")
         self.refresh_adhoc_specs()
         return updated_integration
 
@@ -366,6 +476,8 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         resource_type = payload["resource_type"]
         if resource_type == "file":
             resource = FileResource(**(payload | {"integration": integration_id}))
+            # Create resource file
+            self.update_resource_file(spec=specification, resource=resource, action="add")
         elif resource_type == "example":
             resource = ExampleResource(**(payload | {"integration": integration_id}))
         else:
@@ -374,14 +486,15 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         if resource.resource_id is None:
             raise ValueError("Resource must have resource ID to attach to integration.")
         specification.resources[resource.resource_id] = resource
-        # self.write_all_specifications()
         self.refresh_adhoc_specs()
         return resource
 
     def remove_resource(self, integration_id: str, resource_id: str) -> None:
         specification = self._get_specification(integration_id)
-        del specification.resources[resource_id]
-        # self.write_all_specifications()
+        resource = specification.resources.pop(resource_id)
+        # If resource has an associated file, delete it.
+        if isinstance(resource, FileResource):
+            self.update_resource_file(spec=specification, resource=resource, action="remove")
         self.refresh_adhoc_specs()
 
     def update_resource(self, integration_id: str, resource_id: str, **payload) -> Resource:
@@ -397,13 +510,13 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         )
         if resource.resource_type == "file":
             resource = FileResource(**updated_resource_dict)
+            self.update_resource_file(spec=specification, resource=resource, action="update")
         elif resource.resource_type == "example":
             resource = ExampleResource(**updated_resource_dict)
         else:
             msg = "Only examples and files are valid on an adhoc integration."
             raise ValueError(msg)
         specification.resources[resource_id] = resource # type: ignore
-        # self.write_all_specifications()
         self.refresh_adhoc_specs()
         return resource
 

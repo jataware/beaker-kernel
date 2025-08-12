@@ -343,8 +343,10 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
 
     def _call_message_result_wrapper_inner(self, object):
         return asdict(object) if dataclasses.is_dataclass(object) else str(object) # type: ignore
+
     def _call_message_result_wrapper(self, object):
         return json.loads(json.dumps(object, default=self._call_message_result_wrapper_inner))
+
     @action(scope="internal")
     async def call_in_context(self, message):
         content = message.content
@@ -352,13 +354,6 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         kwargs = content.get("kwargs", {})
         target_text = content.get("target", "")
         target_type, target_id = target_text.split(":", maxsplit=1) if ":" in target_text else (target_text, None)
-
-        logger.warning({
-            "target": f"{target_type}:{target_id}",
-            "args": args,
-            "function": content.get("function"),
-            "kwargs_keys": kwargs.keys()
-        })
 
         match target_type:
             # context methods

@@ -160,7 +160,7 @@ def message_handler(func=None, /, *, send_status_updates=True, send_reply=True) 
                         case JupyterMessage():
                             ctx.send_reply = False
                             return result.parts
-                        case ForwardMessage, ForwardMessage():
+                        case ForwardMessage():
                             ctx.send_reply = False
                             return data
                         case _:

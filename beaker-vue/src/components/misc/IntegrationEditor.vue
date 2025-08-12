@@ -25,30 +25,20 @@
                     v-model="model.selected">
                 </Select>
 
-                <SplitButton
+                <Button
                     @click="() => {
                         if (confirmUnsavedChanges()) {
                             newIntegration();
                         }
                     }"
-                    label="New API Integration"
-                    :model="[
-                        {
-                            label: 'New API Integration',
-                            command: () => {}
-                        },
-                        {
-                            label: 'New Dataset Integration',
-                            command: () => {}
-                        }
-                    ]"
-                >
-                </SplitButton>
+                    label="New Integration"
+                />
             </div>
 
             <Fieldset legend="Name">
                 <InputText
                     v-if="selectedIntegration"
+                    ref="nameInput"
                     v-model="selectedIntegration.name"
                     :placeholder="selectedIntegration?.name ? 'Name' : 'No integration selected.'"
                     @change="model.unsavedChanges = true;"
@@ -68,12 +58,16 @@
                 <div class="constrained-editor-height">
                     <CodeEditor
                         v-if="selectedIntegration"
+                        language="markdown"
+                        :autocomplete-enabled="false"
                         v-model="selectedIntegration.description"
                         @change="model.unsavedChanges = true"
                         ref="descriptionEditor"
                     />
                     <CodeEditor
                         v-else
+                        language="markdown"
+                        :autocompleteEnabled="false"
                         disabled
                         v-model="emptyText"
                         placeholder="No integration selected."
@@ -198,12 +192,17 @@
                 <div class="constrained-editor-height">
                     <CodeEditor
                         v-if="selectedIntegration"
+                        language="markdown"
+                        :autocompleteEnabled="true"
+                        :autocomplete-options="Object.values(attachedFiles).map((file) => file.name)"
                         v-model="selectedIntegration.source"
                         @change="model.unsavedChanges = true"
                         ref="instructionEditor"
                     />
                     <CodeEditor
                         v-else
+                        language="markdown"
+                        :autocompleteEnabled="false"
                         disabled
                         v-model="emptyText"
                         placeholder="No integration selected."
@@ -228,7 +227,7 @@
 
 <script setup lang="ts">
 
-import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
+import { defineProps, ref, watch, computed, inject, defineModel } from 'vue';
 import { type IntegrationMap, type Integration, getIntegrationProviderType, type IntegrationAttachedFile, type IntegrationInterfaceState, filterByResourceType } from '../../util/integration';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
@@ -243,7 +242,6 @@ import Tag from 'primevue/tag';
 import * as cookie from 'cookie';
 
 import CodeEditor from './CodeEditor.vue';
-import SplitButton from 'primevue/splitbutton';
 
 import { useRoute } from 'vue-router';
 
@@ -278,6 +276,8 @@ const attachedFiles = computed<{[key in string]: IntegrationAttachedFile}>(() =>
         model.value.integrations[model.value.selected]?.resources, "file")
     )
 
+const nameInput = ref();
+
 // storing deletes until save
 const uncommittedDeletedResources = ref([]);
 // storing new integration file uploads until pushed to
@@ -298,11 +298,12 @@ watch(() => model.value.selected, () => {
 })
 
 const newIntegration = () => {
+    const defaultProvider = (Object.keys(model.value?.integrations).length ? Object.values(model.value.integrations).at(0)?.provider : "adhoc:specialist_agents");
     const integration: Integration = {
         name: "New Integration",
         source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
         description: "This is the description that the agent will use to determine when this integration should be used.",
-        provider: "adhoc:specialist_agents",
+        provider: defaultProvider,
         slug: "new_integration",
         uuid: "new",
         url: ""
@@ -310,6 +311,10 @@ const newIntegration = () => {
     model.value.integrations["new"] = integration;
     model.value.selected = "new";
     model.value.unsavedChanges = true;
+    // Select the contents of the name, focusing input to allow immediate editing
+    const el = nameInput?.value?.$el
+    el?.select();
+    el?.focus();
 }
 
 const delayUntil = (condition, retryInterval) => {
@@ -372,11 +377,10 @@ const uploadForm = ref<HTMLFormElement|undefined>(undefined);
 const uploadFormMultiple = ref<HTMLFormElement|undefined>(undefined);
 
 const unincludedFiles = computed<[string, IntegrationAttachedFile][]>(() => {
-    let unincluded = [];
+    const unincluded = [];
     for (const file of Object.values(attachedFiles.value)) {
-        // [$] is an alternative to backslash escaping
-        // we want to match python's ${interpolation_key} -- where file.name is the interpolation key
-        const pattern = RegExp(`[$]{${file?.name}}`);
+        // we want to match adhoc's handler for {% file path/to/file.ext %}
+        const pattern = RegExp(`{{\\s*${file?.name}\\s*}}`);
         if (!pattern.test(selectedIntegration?.value?.source)) {
             unincluded.push(file.name);
         }
@@ -425,7 +429,6 @@ const save = async () => {
         // sets selected with new uuid
         await props.modifyIntegration({...selectedIntegration.value, source: ""})
         for (const file of uncommittedUploads) {
-            console.log("uploading each file")
             await props.modifyResource(file);
         }
         selectedIntegration.value.source = source;

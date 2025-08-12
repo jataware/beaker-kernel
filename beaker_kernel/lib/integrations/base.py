@@ -63,6 +63,27 @@ class BaseIntegrationProvider(ABC):
                     seen.add(key)
                     yield data_result
 
+    def get_file(self, data_type: str, name: os.PathLike) -> Optional[Path]:
+        if os.path.isabs(name):
+            raise IOError("Files retrieved by get_file cannot be absolute.")
+        for data_dir in self.iter_data([data_type]):
+            name_path = Path(name)
+            # First check if file exists in path
+            file_path = data_dir / name_path
+            if file_path.exists():
+                return file_path
+            # If not, trim overlap of paths between the two paths.
+            for i in range(len(data_dir.parts)):
+                suffix = data_dir.parts[i:]  # possible overlap
+                if name_path.parts[:len(suffix)] == suffix:
+                    name_path = Path(*name_path.parts[len(suffix):])
+                    break
+            # Check if joined version with removed overlap exists.
+            file_path = data_dir / name_path
+            if file_path.exists():
+                return file_path
+        return None
+
     @property
     def data_basedirs(self):
         data_dirs = []
@@ -70,8 +91,9 @@ class BaseIntegrationProvider(ABC):
             base_dir = os.path.join(data_dir, self.slug)
             if os.path.isdir(base_dir):
                 data_dirs.append(base_dir)
-        if os.path.isdir("./integrations"):
-            data_dirs.append("./integrations")
+        alt_integration_dir = os.environ.get("INTEGRATION_PATH", "./integrations")
+        if os.path.isdir(alt_integration_dir):
+            data_dirs.append(alt_integration_dir)
         # Reverse dirs so we go from most specific to user to most general (global installs, etc)
         # This allows user to overwrite defaults
         data_dirs.reverse()
