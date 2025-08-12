@@ -71,42 +71,11 @@ def _parse_docstring_parameters(func: Callable) -> Dict[str, str]:
     return param_descriptions
 
 
-def _is_claude_environment() -> bool:
-    """Check if we're likely running in a Claude/Anthropic environment."""
-    try:
-        from beaker_kernel.lib.utils import get_beaker_kernel
-        
-        kernel = get_beaker_kernel()
-        if kernel and hasattr(kernel, 'context') and kernel.context:
-            agent = getattr(kernel.context, 'agent', None)
-            if agent and hasattr(agent, 'model'):
-                # Check model class name
-                model_class = type(agent.model).__name__.lower()
-                if 'anthropic' in model_class or 'claude' in model_class:
-                    return True
-                
-                # Check model name if available
-                if hasattr(agent.model, 'model') and agent.model.model:
-                    model_name = str(agent.model.model).lower()
-                    if 'claude' in model_name or 'anthropic' in model_name:
-                        return True
-                
-                # Check module name
-                module_name = type(agent.model).__module__.lower()
-                if 'anthropic' in module_name:
-                    return True
-        
-        return False
-    except Exception:
-        # If we can't detect, default to False (no thought parameter)
-        return False
-
-
 def tool(func: Callable = None, *, name: str = None, description: str = None) -> Callable:
     """
-    Decorator to create LangChain tools with automatic thought parameter injection.
+    Decorator to create LangChain tools with clean schemas compatible across all providers.
     
-    Like Archytas, automatically adds a 'thought' parameter to all tools for UI display.
+    Thoughts are extracted from AI message content instead of tool parameters.
     
     Usage:
         @tool
@@ -139,9 +108,8 @@ def tool(func: Callable = None, *, name: str = None, description: str = None) ->
             else:
                 arg_dict[param_name] = Annotated[param_type, FieldInfo(description=param_desc)]
         
-        # Automatically add thought parameter like Archytas did (but only for Claude models)
-        if "thought" not in arg_dict and _is_claude_environment():
-            arg_dict["thought"] = Annotated[str, FieldInfo(description="Reasoning around why this tool is being called.", default="")]
+        # Don't add thought parameter - extract thoughts from AI message content instead
+        # This keeps tool schemas clean and compatible across all providers
         
         # Create Pydantic model for arguments
         tool_schema = create_model(f"{tool_name}Schema", **arg_dict)

@@ -46,8 +46,8 @@ class BeakerAgent:
         # Initialize system prompt handling
         self._system_prompt_callback = None
         
-        # Always use custom LangGraph with thought extraction for all models
-        # (The difference is in whether tools have thought parameters, not the graph itself)
+        # Use custom LangGraph with thought extraction for all models
+        # Extract thoughts from AI message content instead of tool parameters
         logger.debug(f"Using thought-extracting LangGraph for {type(self.model).__name__}")
         self._langgraph_app = self._create_thought_extracting_graph()
         
@@ -234,30 +234,6 @@ class BeakerAgent:
         else:
             return "You are a helpful AI assistant."
 
-    def _is_claude_model(self) -> bool:
-        """Check if the current model is a Claude/Anthropic model."""
-        try:
-            # Check model class name
-            model_class = type(self.model).__name__.lower()
-            if 'anthropic' in model_class or 'claude' in model_class:
-                return True
-            
-            # Check model name if available
-            if hasattr(self.model, 'model') and self.model.model:
-                model_name = str(self.model.model).lower()
-                if 'claude' in model_name or 'anthropic' in model_name:
-                    return True
-            
-            # Check module name
-            module_name = type(self.model).__module__.lower()
-            if 'anthropic' in module_name:
-                return True
-                
-            return False
-        except Exception as e:
-            logger.warning(f"Failed to detect model type: {e}")
-            return False
-
     def _create_thought_extracting_graph(self):
         """Create a custom LangGraph with thought extraction node."""
         from langgraph.graph import END
@@ -320,12 +296,15 @@ class BeakerAgent:
             # Get the AI message content to use as thought when no explicit thought parameter
             ai_content = ""
             if hasattr(last_message, 'content') and last_message.content:
+                logger.debug(f"AI message content type: {type(last_message.content)}")
                 if isinstance(last_message.content, list):
                     # Handle list format (Anthropic)
                     ai_content = "\n".join(item.get('text', '') for item in last_message.content if item.get('type') == 'text')
+                    logger.debug(f"Extracted from list format: {len(ai_content)} chars, {ai_content.count(chr(10))} line breaks")
                 else:
                     # Handle string format
                     ai_content = str(last_message.content)
+                    logger.debug(f"Extracted from string format: {len(ai_content)} chars, {ai_content.count(chr(10))} line breaks")
             
             for tool_call in last_message.tool_calls:
                 if 'args' in tool_call and isinstance(tool_call['args'], dict):
@@ -338,13 +317,15 @@ class BeakerAgent:
                         # Add helpful code parameter to prevent validation error
                         args['code'] = f"# Error: The model generated an empty run_code call.\n# This is a model inference issue, not a problem with your request.\nprint('Model generated empty run_code call - please try again')"
                     
-                    # Extract thought - use AI content if no explicit thought, fallback as last resort
-                    if 'thought' in args:
-                        thought = args.pop('thought')
-                    elif ai_content.strip():
+                    # Extract thought from AI message content, fallback to generic message  
+                    if ai_content.strip():
                         thought = ai_content.strip()
+                        # Debug: Check if line breaks are preserved
+                        logger.debug(f"Tool {tool_name}: extracted thought has {thought.count(chr(10))} line breaks, length {len(thought)}")
+                        logger.debug(f"Tool {tool_name}: first 100 chars: {repr(thought[:100])}")
                     else:
                         thought = f"Calling tool '{tool_name}'"
+                        logger.debug(f"Tool {tool_name}: using fallback thought")
                     
                     extracted_thoughts.append(thought)
                     
@@ -370,7 +351,7 @@ class BeakerAgent:
                 parent_header = parent_context.get('parent_message').header if parent_context and 'parent_message' in parent_context else {}
                 
                 self.context.beaker_kernel.handle_thoughts(
-                    thought=thought.strip(),
+                    thought=thought,  # Preserve original formatting including line breaks
                     tool_name=tool_name,
                     tool_input=tool_input[:100] + "..." if len(tool_input) > 100 else tool_input,
                     parent_header=parent_header
