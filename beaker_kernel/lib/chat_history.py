@@ -108,7 +108,7 @@ def get_model_context_window(model) -> int:
 class BeakerChatHistory:
     """Chat history manager for LangGraph agents."""
     
-    def __init__(self, max_tokens: int = None, summarization_threshold: float = 0.05, model=None, summarization_strategy: str = "archytas"):
+    def __init__(self, max_tokens: int = None, summarization_threshold: float = 0.80, model=None, summarization_strategy: str = "archytas"):
         self.messages: List[BaseMessage] = []
         self.records: List[MessageRecord] = []
         # Use model-specific context window if available

@@ -71,6 +71,37 @@ def _parse_docstring_parameters(func: Callable) -> Dict[str, str]:
     return param_descriptions
 
 
+def _is_claude_environment() -> bool:
+    """Check if we're likely running in a Claude/Anthropic environment."""
+    try:
+        from beaker_kernel.lib.utils import get_beaker_kernel
+        
+        kernel = get_beaker_kernel()
+        if kernel and hasattr(kernel, 'context') and kernel.context:
+            agent = getattr(kernel.context, 'agent', None)
+            if agent and hasattr(agent, 'model'):
+                # Check model class name
+                model_class = type(agent.model).__name__.lower()
+                if 'anthropic' in model_class or 'claude' in model_class:
+                    return True
+                
+                # Check model name if available
+                if hasattr(agent.model, 'model') and agent.model.model:
+                    model_name = str(agent.model.model).lower()
+                    if 'claude' in model_name or 'anthropic' in model_name:
+                        return True
+                
+                # Check module name
+                module_name = type(agent.model).__module__.lower()
+                if 'anthropic' in module_name:
+                    return True
+        
+        return False
+    except Exception:
+        # If we can't detect, default to False (no thought parameter)
+        return False
+
+
 def tool(func: Callable = None, *, name: str = None, description: str = None) -> Callable:
     """
     Decorator to create LangChain tools with automatic thought parameter injection.
@@ -108,25 +139,21 @@ def tool(func: Callable = None, *, name: str = None, description: str = None) ->
             else:
                 arg_dict[param_name] = Annotated[param_type, FieldInfo(description=param_desc)]
         
-        # Automatically add thought parameter like Archytas did
-        if "thought" not in arg_dict:
-            arg_dict["thought"] = Annotated[str, FieldInfo(description="Reasoning around why this tool is being called.")]
+        # Automatically add thought parameter like Archytas did (but only for Claude models)
+        if "thought" not in arg_dict and _is_claude_environment():
+            arg_dict["thought"] = Annotated[str, FieldInfo(description="Reasoning around why this tool is being called.", default="")]
         
         # Create Pydantic model for arguments
         tool_schema = create_model(f"{tool_name}Schema", **arg_dict)
         
-        # Create wrapper function with thought handling
+        # Create wrapper function (thought extraction now handled at graph level)
         if inspect.iscoroutinefunction(func):
             @wraps(func)
             async def async_wrapper(*args, **kwargs):
-                # Extract and handle thought parameter
-                thought = kwargs.pop('thought', '')
+                # Remove thought parameter if it somehow gets through
+                kwargs.pop('thought', '')
                 
-                # Send thought to kernel if provided
-                if thought and thought.strip():
-                    _send_thought(thought, tool_name, str(kwargs))
-                
-                # Call original function without thought parameter
+                # Call original function
                 result = await func(*args, **kwargs)
                 
                 # Log and return result
@@ -136,14 +163,10 @@ def tool(func: Callable = None, *, name: str = None, description: str = None) ->
         else:
             @wraps(func)
             def sync_wrapper(*args, **kwargs):
-                # Extract and handle thought parameter
-                thought = kwargs.pop('thought', '')
+                # Remove thought parameter if it somehow gets through
+                kwargs.pop('thought', '')
                 
-                # Send thought to kernel if provided
-                if thought and thought.strip():
-                    _send_thought(thought, tool_name, str(kwargs))
-                
-                # Call original function without thought parameter
+                # Call original function
                 result = func(*args, **kwargs)
                 
                 # Log and return result
@@ -174,26 +197,6 @@ def tool(func: Callable = None, *, name: str = None, description: str = None) ->
     else:
         return decorator(func)
 
-
-def _send_thought(thought: str, tool_name: str, tool_input: str):
-    """Send thought to kernel for UI display."""
-    try:
-        from beaker_kernel.lib.utils import get_beaker_kernel, get_parent_message
-        
-        kernel = get_beaker_kernel()
-        if kernel:
-            # Get parent message context
-            parent_context = get_parent_message()
-            parent_header = parent_context.get('parent_message').header if parent_context and 'parent_message' in parent_context else {}
-            
-            kernel.handle_thoughts(
-                thought=thought.strip(),
-                tool_name=tool_name,
-                tool_input=tool_input[:100] + "..." if len(tool_input) > 100 else tool_input,
-                parent_header=parent_header
-            )
-    except Exception as e:
-        logger.warning(f"Failed to send thought for {tool_name}: {e}")
 
 
 def _log_tool_result(tool_name: str, tool_input: dict, result: Any):

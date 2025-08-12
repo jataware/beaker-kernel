@@ -7,9 +7,11 @@ import logging
 import typing
 from typing import Any, Dict, List, Optional
 
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.prebuilt import create_react_agent
+from langgraph.graph import StateGraph, MessagesState
+from langgraph.prebuilt import ToolNode
 
 from beaker_kernel.lib.config import config
 from beaker_kernel.lib.utils import DefaultModel, get_beaker_kernel, set_beaker_kernel
@@ -44,12 +46,10 @@ class BeakerAgent:
         # Initialize system prompt handling
         self._system_prompt_callback = None
         
-        # Create LangGraph agent
-        self._langgraph_app = create_react_agent(
-            model=self.model,
-            tools=self._tools,
-            **kwargs
-        )
+        # Always use custom LangGraph with thought extraction for all models
+        # (The difference is in whether tools have thought parameters, not the graph itself)
+        logger.debug(f"Using thought-extracting LangGraph for {type(self.model).__name__}")
+        self._langgraph_app = self._create_thought_extracting_graph()
         
         if context:
             context.beaker_kernel.debug("init-langgraph-agent", {
@@ -233,3 +233,148 @@ class BeakerAgent:
                 return "You are a helpful AI assistant."
         else:
             return "You are a helpful AI assistant."
+
+    def _is_claude_model(self) -> bool:
+        """Check if the current model is a Claude/Anthropic model."""
+        try:
+            # Check model class name
+            model_class = type(self.model).__name__.lower()
+            if 'anthropic' in model_class or 'claude' in model_class:
+                return True
+            
+            # Check model name if available
+            if hasattr(self.model, 'model') and self.model.model:
+                model_name = str(self.model.model).lower()
+                if 'claude' in model_name or 'anthropic' in model_name:
+                    return True
+            
+            # Check module name
+            module_name = type(self.model).__module__.lower()
+            if 'anthropic' in module_name:
+                return True
+                
+            return False
+        except Exception as e:
+            logger.warning(f"Failed to detect model type: {e}")
+            return False
+
+    def _create_thought_extracting_graph(self):
+        """Create a custom LangGraph with thought extraction node."""
+        from langgraph.graph import END
+        
+        # Create the state graph
+        workflow = StateGraph(MessagesState)
+        
+        # Add nodes
+        workflow.add_node("agent", self._agent_node)
+        workflow.add_node("extract_thoughts", self._extract_thoughts_node)  
+        workflow.add_node("tools", ToolNode(self._tools))
+        
+        # Set entry point
+        workflow.set_entry_point("agent")
+        
+        # Add edges
+        workflow.add_conditional_edges(
+            "agent",
+            self._should_extract_thoughts,
+            {
+                "extract_thoughts": "extract_thoughts",
+                "end": END,
+            }
+        )
+        
+        workflow.add_edge("extract_thoughts", "tools")
+        workflow.add_edge("tools", "agent")
+        
+        return workflow.compile()
+
+    def _agent_node(self, state: MessagesState):
+        """The main agent node that generates responses."""
+        # Bind tools to the model so it can call them
+        model_with_tools = self.model.bind_tools(self._tools)
+        logger.debug(f"Agent node: {len(self._tools)} tools bound to model")
+        response = model_with_tools.invoke(state["messages"])
+        logger.debug(f"Agent response type: {type(response)}, has tool_calls: {hasattr(response, 'tool_calls')}")
+        if hasattr(response, 'tool_calls'):
+            logger.debug(f"Tool calls: {len(response.tool_calls) if response.tool_calls else 0}")
+        return {"messages": [response]}
+
+    def _should_extract_thoughts(self, state: MessagesState):
+        """Determine if we need to extract thoughts from tool calls."""
+        last_message = state["messages"][-1]
+        logger.debug(f"Should extract thoughts check - message type: {type(last_message)}")
+        if isinstance(last_message, AIMessage) and hasattr(last_message, 'tool_calls') and last_message.tool_calls:
+            logger.debug(f"Found {len(last_message.tool_calls)} tool calls - going to extract_thoughts")
+            return "extract_thoughts"
+        logger.debug("No tool calls found - going to end")
+        return "end"
+
+    def _extract_thoughts_node(self, state: MessagesState):
+        """Extract thoughts from tool calls and send to UI (just like Archytas did)."""
+        messages = state["messages"]
+        last_message = messages[-1]
+        
+        if isinstance(last_message, AIMessage) and hasattr(last_message, 'tool_calls'):
+            extracted_thoughts = []
+            
+            # Get the AI message content to use as thought when no explicit thought parameter
+            ai_content = ""
+            if hasattr(last_message, 'content') and last_message.content:
+                if isinstance(last_message.content, list):
+                    # Handle list format (Anthropic)
+                    ai_content = "\n".join(item.get('text', '') for item in last_message.content if item.get('type') == 'text')
+                else:
+                    # Handle string format
+                    ai_content = str(last_message.content)
+            
+            for tool_call in last_message.tool_calls:
+                if 'args' in tool_call and isinstance(tool_call['args'], dict):
+                    args = tool_call['args']
+                    tool_name = tool_call.get('name', 'unknown_tool')
+                    
+                    # Check for malformed tool calls (missing required parameters)
+                    if tool_name == 'run_code' and (not args or 'code' not in args or not args.get('code', '').strip()):
+                        logger.warning(f"Detected malformed run_code call with missing/empty code parameter - adding fallback")
+                        # Add helpful code parameter to prevent validation error
+                        args['code'] = f"# Error: The model generated an empty run_code call.\n# This is a model inference issue, not a problem with your request.\nprint('Model generated empty run_code call - please try again')"
+                    
+                    # Extract thought - use AI content if no explicit thought, fallback as last resort
+                    if 'thought' in args:
+                        thought = args.pop('thought')
+                    elif ai_content.strip():
+                        thought = ai_content.strip()
+                    else:
+                        thought = f"Calling tool '{tool_name}'"
+                    
+                    extracted_thoughts.append(thought)
+                    
+                    # Send thought to UI
+                    self._send_thought_to_ui(thought, tool_name, str(args))
+                    
+                    logger.debug(f"Extracted thought for {tool_name}: {thought[:50]}...")
+            
+            # If message has no content but has tool calls, use thoughts as content (like Archytas)
+            if not last_message.content and extracted_thoughts:
+                last_message.content = "\n".join(extracted_thoughts)
+                logger.debug("Set message content to extracted thoughts")
+        
+        return {"messages": messages}
+
+    def _send_thought_to_ui(self, thought: str, tool_name: str, tool_input: str):
+        """Send thought to UI via kernel handle_thoughts."""
+        try:
+            if self.context and self.context.beaker_kernel and thought.strip():
+                # Get parent message context
+                from beaker_kernel.lib.utils import get_parent_message
+                parent_context = get_parent_message()
+                parent_header = parent_context.get('parent_message').header if parent_context and 'parent_message' in parent_context else {}
+                
+                self.context.beaker_kernel.handle_thoughts(
+                    thought=thought.strip(),
+                    tool_name=tool_name,
+                    tool_input=tool_input[:100] + "..." if len(tool_input) > 100 else tool_input,
+                    parent_header=parent_header
+                )
+                logger.debug(f"Sent thought to UI: {thought[:50]}...")
+        except Exception as e:
+            logger.warning(f"Failed to send thought to UI: {e}")
