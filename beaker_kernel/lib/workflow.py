@@ -65,9 +65,10 @@ class WorkflowStage:
 @dataclass(kw_only=True)
 class Workflow:
     title: str
-    description: str
+    agent_description: str
+    human_description: str
     example_prompt: str
-    body: list[WorkflowStage]
+    stages: list[WorkflowStage]
 
     hidden: Optional[bool] = field(default=False)
     is_context_default: Optional[bool] = field(default=False)
@@ -76,12 +77,13 @@ class Workflow:
 
     @staticmethod
     def from_yaml(source: dict[str, Any]) -> "Workflow":
-        body = [WorkflowStage.from_yaml(stage) for stage in source.get("stages", [])]
+        stages = [WorkflowStage.from_yaml(stage) for stage in source.get("stages", [])]
         return Workflow(
             title=source["title"],
-            description=source["description"],
+            agent_description=source["agent_description"],
+            human_description=source["human_description"],
             example_prompt=source["example_prompt"],
-            body=body,
+            stages=stages,
 
             hidden=source.get("hidden", None),
             category=source.get("category", None),
@@ -94,7 +96,7 @@ class Workflow:
         return "\n\n".join(
             [
                 (f"{stage.name}:\n" + ('\n'.join([step.prompt for step in stage.steps])))
-                for stage in self.body
+                for stage in self.stages
             ]
         )
 
@@ -107,7 +109,7 @@ def create_available_workflows_prompt(
     if any, of them is active.
     """
     workflow_synopsis = "\n\n".join([
-        f"{workflow.title}: {workflow.description}"
+        f"{workflow.title}: {workflow.agent_description}"
         for workflow in workflows
     ])
 

@@ -25,6 +25,17 @@
 
                 v-tooltip.bottom="'Connecting'"
             />
+            <Button
+                outlined
+                size="small"
+                icon="pi pi-angle-down"
+                iconPos="right"
+                class="connection-button"
+                :label="attachedWorkflow?.title ?? 'No Workflow'"
+                :loading="loading"
+                v-tooltip.bottom="'Change Workflow'"
+                @click="dialog.open(WorkflowSelectDialog, {props: {modal: true, header: 'Workflows'}})"
+            />
         </template>
 
         <template #center>
@@ -87,13 +98,13 @@ import Button from 'primevue/button';
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type IBeakerTheme } from '../../plugins/theme';
 import SessionStatus from "../session/SessionStatus.vue";
+import { useDialog } from "primevue";
 
 export interface BeakerHeaderProps {
     title: string;
     titleExtra?: string;
     nav?: any[];
 }
-
 
 const props = withDefaults(defineProps<BeakerHeaderProps>(), {
     title: "Beaker",
@@ -139,8 +150,22 @@ function selectKernel() {
     emit('selectKernel');
 }
 
+const dialog = useDialog()
+
 const loading = computed(() => {
     return !(beakerSession.activeContext?.slug);
+})
+
+const workflows = computed(() => {
+    return beakerSession?.activeContext?.info?.workflows?.workflows;
+})
+
+const attachedWorkflowId = computed(() => {
+    return beakerSession?.activeContext?.info?.workflows?.attached;
+})
+
+const attachedWorkflow = computed(() => {
+    return workflows.value?.[attachedWorkflowId.value]
 })
 
 const showContextSelection = computed(() => {
@@ -160,6 +185,7 @@ const showContextSelection = computed(() => {
 
 <script lang="ts">
 import { type Component } from 'vue';
+import WorkflowSelectDialog from "./WorkflowSelectDialog.vue";
 export interface NavOption {
     type: "button"|"link";
     href?: string

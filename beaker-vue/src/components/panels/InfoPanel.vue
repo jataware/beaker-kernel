@@ -93,7 +93,7 @@ const toggleContextPanel = () => {
 // This should mostly be uncontrolled, but it was
 // "hard" to open by default without controlling
 // TODO easier way for tree to auto-open by default
-const contextExpandedKeys = ref({0: true, 1: true, 2: true, 3: true});
+const contextExpandedKeys = ref({0: true, 1: true, 2: true, 3: true, 5: true});
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const activeContext = computed(() => {
@@ -133,6 +133,20 @@ const contextNodes = computed<TreeNode[]>(() => {
             // ),
     ]
     }];
+
+    if (context?.info?.workflows) {
+        const { workflows, attached } = context.info.workflows;
+        displayableNodes.push({
+            key: "5",
+            label: 'Workflows',
+            icon: 'pi pi-fw pi-list-check',
+            expanded: true,
+            children: Object.keys(workflows).map((workflow_id) => ({
+                key: `5-${workflow_id}`,
+                label: `${workflows[workflow_id].title}${attached === workflow_id ? " (Active)" : ""}`,
+            }))
+        });
+    }
 
     displayableNodes.push({
         key: "3",

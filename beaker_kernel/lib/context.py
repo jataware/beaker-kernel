@@ -319,12 +319,22 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             agent_details = self.agent.get_info()
         else:
             agent_details = None
+
+        workflows = {
+            "attached": self.attached_workflow,
+            "workflows": {
+                uuid: asdict(workflow)
+                for uuid, workflow in self.workflows.items()
+            }
+        }
+
         payload = {
             "language": self.subkernel.DISPLAY_NAME,
             "subkernel": self.subkernel.KERNEL_NAME,
             "actions": action_details,
             "custom_messages": custom_messages,
             "procedures": list(self.templates.keys()),
+            "workflows": workflows,
             "agent": agent_details,
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
@@ -395,6 +405,11 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         """
         return await self.preview()
 
+    @action()
+    async def set_workflow(self, message):
+        if (content := message.content["workflow"]) == "none":
+            self.attached_workflow = None
+        self.attached_workflow = content
 
     @action(default_payload=LinterCodeCellsPayload(notebook_id='nb1', cells=[LinterCodeCellPayload(cell_id='cell1', content='import os\nos.exit(0)')]))
     async def lint_code(self, message):
