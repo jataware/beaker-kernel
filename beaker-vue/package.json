@@ -7,7 +7,7 @@
     "serve": "vite",
     "build": "run-p type-check \"build-only {@}\" --; run-p routes --",
     "build-and-serve": "run-s serve",
-    "routes": "vite-node extractRoutes.ts",
+    "routes": "NODE_ENV=production vite-node extractRoutes.ts",
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
