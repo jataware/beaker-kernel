@@ -1,32 +1,19 @@
 # Archytas to LangGraph Migration Guide
 
-**Migration Date**: July 30, 2025  
-**Status**: COMPLETE - Archytas fully eliminated, LangGraph implementation production-ready
-
 ## Overview
 
 This document details the complete migration from Archytas to LangGraph in beaker-kernel. The migration eliminates all Archytas dependencies and replaces them with a modern, pure LangGraph implementation while maintaining full backward compatibility and enhanced functionality.
-
-## Why This Migration?
-
-**Archytas Limitations**: Legacy ReAct agent framework that has been superseded by newer technologies
-
-**LangGraph Advantages**: Modern graph-based agent orchestration with better performance, maintainability, and ecosystem support
-
-**Strategic Goals**: 
-- Replace outdated dependency with state-of-the-art agent system
-- Improve long-term maintainability and feature development
-- Leverage LangChain ecosystem improvements and community support
-- Enable advanced agent workflows and memory management
 
 ## Migration Results
 
 **Successfully Completed:**
 - **Zero Archytas Dependencies**: Completely eliminated legacy framework
-- **Pure LangGraph Architecture**: Modern agent system using `create_react_agent()`
+- **Custom LangGraph Architecture**: Modern agent system with custom graph for thought extraction
+- **Thought Extraction System**: Real-time thought extraction and UI communication before tool execution
+- **Standard ToolNode**: Uses LangGraph's standard ToolNode for reliable tool execution
 - **Custom Chat History**: `BeakerChatHistory` optimized for Beaker's UI and auto-summarization
 - **Native Tool System**: LangChain `@tool` decorator with proper logging (`agent_react_tool` events)
-- **Full UI Compatibility**: Chat history panel, tool logging, and model information display correctly
+- **Full UI Compatibility**: Chat history panel, tool logging, and thought display work correctly
 - **Enhanced Performance**: Direct LangGraph integration without compatibility layers
 
 ## Architecture Changes
@@ -47,8 +34,8 @@ beaker_kernel/
 ```
 beaker_kernel/
 ├── lib/
-│   ├── agent.py              # BeakerAgent (pure LangGraph + custom chat history)
-│   ├── tools.py              # Native LangChain @tool decorator system
+│   ├── agent.py              # BeakerAgent (custom LangGraph with thought extraction)
+│   ├── tools.py              # Native LangChain @tool decorator system  
 │   ├── chat_history.py       # Custom BeakerChatHistory with UI integration
 │   └── config.py             # Direct LangChain model configuration
 └── contexts/default/
@@ -60,9 +47,48 @@ beaker_kernel/
 
 ### 1. Core Agent System
 
+#### Custom LangGraph with Thought Extraction
+
+**Architecture**: The agent uses a custom LangGraph instead of `create_react_agent()` to enable real-time thought extraction:
+
+```
+agent → extract_thoughts → tools → agent
+```
+
+**Flow**:
+1. **Agent Node**: Model generates response with tool calls
+2. **Extract Thoughts Node**: Intercepts response, sends thoughts to UI via `llm_thought` events
+3. **Tools Node**: Standard ToolNode executes valid tool calls  
+4. **Back to Agent**: Process tool results and continue or finish
+
+**Thought Extraction Features**:
+- **Real-time UI Updates**: Thoughts appear in UI immediately, before tool execution
+- **Multi-provider Content Handling**: Supports both Anthropic (list) and OpenAI (string) content formats
+- **Malformed Call Filtering**: Skips thought extraction for empty `run_code` calls to prevent UI spam
+- **Preserves Formatting**: Line breaks and formatting preserved from AI responses
+
+**Implementation**:
+```python
+def _extract_thoughts_node(self, state: MessagesState):
+    \"\"\"Extract thoughts from tool calls and send to UI.\"\"\"
+    if isinstance(last_message, AIMessage) and hasattr(last_message, 'tool_calls'):
+        ai_content = self._extract_ai_content(last_message)
+        
+        for tool_call in last_message.tool_calls:
+            tool_name = tool_call.get('name', 'unknown_tool')
+            args = tool_call['args']
+            
+            # Skip malformed calls (prevents infinite "Calling tool run_code")
+            if not self._should_extract_thought_for_tool(tool_name, args):
+                continue
+                
+            # Send thought to UI
+            self._send_thought_to_ui(ai_content, tool_name, str(args))
+```
+
 #### File: `beaker_kernel/lib/agent.py`
 - **Before**: Wrapper around Archytas `ReActAgent`
-- **After**: Pure LangGraph `BeakerAgent` using `create_react_agent()` with custom chat history
+- **After**: Custom LangGraph `BeakerAgent` with thought extraction and standard ToolNode execution
 
 **Key Changes**:
 ```python
@@ -73,20 +99,34 @@ class BeakerAgent(ReActAgent):
     def __init__(self, model, tools, **kwargs):
         super().__init__(model=model, tools=tools, **kwargs)
 
-# NEW (LangGraph) - Pure Implementation with Custom Chat History
-from langgraph.prebuilt import create_react_agent
+# NEW (LangGraph) - Custom Implementation with Thought Extraction
+from langgraph.prebuilt import ToolNode
+from langgraph.graph import StateGraph, MessagesState
 from beaker_kernel.lib.chat_history import BeakerChatHistory
 
 class BeakerAgent:
     def __init__(self, context=None, tools=None, **kwargs):
         self.model = config.get_model() or DefaultModel({})
         self.chat_history = BeakerChatHistory(model=self.model)  # Custom implementation
-        self._langgraph_app = create_react_agent(
-            model=self.model,
-            tools=tools,
-            **kwargs
-        )
+        self._langgraph_app = self._create_thought_extracting_graph()  # Custom graph!
+        
+    def _create_thought_extracting_graph(self):
+        # Custom graph: agent → extract_thoughts → tools → agent
+        workflow = StateGraph(MessagesState)
+        workflow.add_node("agent", self._agent_node)
+        workflow.add_node("extract_thoughts", self._extract_thoughts_node)  
+        workflow.add_node("tools", ToolNode(self._tools))  # Standard ToolNode
+        # ... routing logic for thought extraction
 ```
+
+#### Custom LangGraph Architecture Decision
+- **Custom Graph**: Built thought-extracting graph instead of using `create_react_agent()`
+- **Why Custom Graph?**: 
+  - **Thought Extraction**: Intercepts AI responses before tool execution to send thoughts to UI
+  - **Real-time UI Updates**: Sends `llm_thought` events to frontend during agent reasoning
+  - **Malformed Call Filtering**: Prevents infinite "Calling tool run_code" spam from Claude's empty calls
+  - **Multi-provider Support**: Handles different content formats (Anthropic list vs OpenAI string)
+  - **Standard Tool Execution**: Uses reliable ToolNode for actual tool execution
 
 #### Chat History Architecture Decision
 - **Custom Implementation**: Built `BeakerChatHistory` instead of using LangGraph's built-in memory
@@ -332,169 +372,6 @@ async def tool(param: str)  # Use get_beaker_kernel() for context access
 - Monitor logs for unknown model warnings
 - Consider fallback to LangChain's `modelname_to_contextsize()` where available
 
-### 6. Performance Considerations
-
-**Issue**: LangGraph may have different performance characteristics  
-**Risk Level**: **LOW** - Likely improved performance
-
-**Monitoring Points**:
-- Agent response times
-- Memory usage with chat history
-- Auto-summarization frequency
-
-## Testing Strategy
-
-### Pre-Deployment Checklist
-
-- [ ] **Agent Creation**: All context types create agents successfully
-- [ ] **Tool Execution**: `run_code`, `ask_user`, custom tools work
-- [ ] **Chat History**: Messages appear in UI, token counts accurate
-- [ ] **Auto-Summarization**: Triggers correctly, preserves context
-- [ ] **Model Loading**: All configured providers work
-- [ ] **Config UI**: Configuration panel loads without errors
-- [ ] **Notebook Integration**: Code execution creates visible cells
-
-### Regression Testing
-
-**Critical Paths**:
-1. **Agent Query Flow**: User query → Agent response → Chat history
-2. **Tool Execution**: Agent uses tools → Results visible in notebook
-3. **Context Management**: Long conversations → Auto-summarization
-4. **Model Switching**: Change providers → New model loads correctly
-
-**Test Cases**:
-```python
-# Test agent creation
-agent = DefaultAgent()
-assert hasattr(agent, 'chat_history')
-assert len(agent._tools) >= 1
-
-# Test chat history
-response = await agent.react_async("Hello")
-assert agent.chat_history.total_tokens > 0
-
-# Test auto-summarization trigger
-agent.chat_history.max_tokens = 100
-# ... add messages until summarization triggers
-```
-
-## Rollback Plan
-
-**If Issues Arise**:
-
-1. **Immediate Rollback** (< 5 minutes):
-   ```bash
-   git revert <migration-commit-hash>
-   pip install "archytas>=1.4.0"
-   ```
-
-2. **Config Rollback**: Restore old provider configurations
-3. **Dependency Rollback**: Remove LangGraph packages if needed
-
-**Rollback Decision Criteria**:
-- Agent creation failures > 10%
-- Tool execution errors > 5%  
-- User-reported chat history issues > 3
-- Performance degradation > 50%
-
-## Success Metrics
-
-### Technical Metrics
-- **0 Archytas imports** in codebase
-- **100% agent creation success** rate
-- **Chat history population** in UI
-- **Auto-summarization functioning** 
-- **All tool types working**
-
-### User Experience
-- **Chat History**: Complete conversation visibility
-- **Performance**: Equal or better response times
-- **Functionality**: All existing features preserved
-- **Reliability**: No context window crashes
-
-## Future Enhancements
-
-### Potential Improvements
-
-1. **Advanced Context Window Detection**:
-   ```python
-   # Use LangChain's built-in methods where available
-   context_size = model.get_context_window()  # If implemented
-   ```
-
-2. **Smarter Auto-Summarization**:
-   - LLM-powered summarization instead of extractive
-   - Configurable summarization strategies
-   - User-controlled summarization triggers
-
-3. **Enhanced Tool System**:
-   - Tool categories and organization
-   - Dynamic tool loading
-   - Tool usage analytics
-
-4. **Performance Optimization**:
-   - Streaming responses
-   - Parallel tool execution
-   - Chat history compression
-
-### Migration Path for Future Models
-
-When new LLM providers emerge:
-
-1. **Add to Config**: Update `get_providers()` mapping
-2. **Context Window**: Add to `get_model_context_window()`
-3. **Dependencies**: Add provider-specific packages
-4. **Testing**: Validate against test suite
-
-## Migration Completion Status
-
-### Completed Tasks
-
-- Replace Archytas model system with LangChain models
-- Create native LangChain @tool decorator system  
-- Rewrite subkernel.py to remove Archytas dependencies
-- Clean up utils.py to remove Archytas imports
-- Implement pure LangGraph agent (BeakerAgent)
-- Remove tool_converter.py entirely
-- Update all agent files to use native LangChain tools
-- Remove Archytas dependency from pyproject.toml
-- Implement chat history system with auto-summarization
-- Fix configuration UI compatibility
-- Clean up migration artifacts and file structure
-- Migrate code_analysis/analysis_agent.py to LangGraph
-- Migrate agent_tasks.py Summarizer class to LangGraph
-- Update templates/agent_file.py to generate LangGraph-style code
-- Remove all legacy fallback code from kernel.py
-- Update README.md to reference LangGraph instead of Archytas
-- Complete elimination of ALL Archytas references from codebase
-
-### Final Result
-
-**Archytas is completely eliminated** from beaker-kernel. The system now runs on a modern, pure LangGraph architecture with:
-
-- **Better Performance**: Direct LangGraph integration without compatibility layers
-- **Enhanced Reliability**: Custom `BeakerChatHistory` with model-aware auto-summarization prevents context window crashes
-- **Perfect UI Integration**: Native support for Beaker's chat history panel and tool logging
-- **Improved Maintainability**: Clean, consistent architecture with modern LangChain ecosystem
-- **Future-Proof**: Built on actively developed LangGraph framework with room for advanced agent workflows
-
-**Key Architectural Decisions**:
-1. **Pure LangGraph Core**: Uses `create_react_agent()` for robust agent orchestration
-2. **Custom Chat History**: Purpose-built `BeakerChatHistory` optimized for Beaker's UI and workflows
-3. **Native Tool System**: Direct LangChain `@tool` decorator with proper logging integration
-4. **Model-Aware Design**: Automatic context window detection and management per model type
-
-The migration is **production-ready** with full backward compatibility and enhanced functionality for end users.
-
-## Support & Contact
-
-**For Issues**:
-- Check configuration files are updated to LangChain providers
-- Verify all dependencies are installed: `pip list | grep -i langchain`
-- Review logs for model loading errors
-- Test with minimal configuration first
-
-**Migration Questions**: Reference this document and test thoroughly in development environments before production deployment.
 
 ## Creating New Contexts
 
@@ -611,23 +488,9 @@ class MyAgent(BeakerAgent):
 
 See `beaker_kernel/lib/code_analysis/analysis_agent.py` for a real example of Option 2 in use.
 
-## Architectural Refinement - Clean Separation of Concerns
+## Modular Summarization System
 
-After the initial migration, the architecture was refactored to address Single Responsibility Principle violations and improve code organization:
-
-### Problem: BeakerChatHistory Was Doing Too Much
-
-**Original Issue**: The `BeakerChatHistory` class was handling both chat history management AND complex LLM orchestration (150+ lines of summarization logic embedded in a chat history class).
-
-**Principal Engineer Concerns**:
-- Violation of Single Responsibility Principle
-- Poor discoverability (summarization logic buried in chat_history.py)
-- Tight coupling to one specific summarization approach
-- Inconsistent patterns across the codebase
-
-### Solution: Modular Summarization System
-
-**New Architecture**:
+### New Modular Architecture
 ```
 beaker_kernel/lib/
 ├── chat_history.py              # Chat history management ONLY
@@ -637,13 +500,6 @@ beaker_kernel/lib/
     ├── llm_summarizer.py        # LLM-powered summarization
     └── simple_summarizer.py     # Fallback strategy
 ```
-
-**Benefits**:
-- **Single Responsibility**: Each class has one clear purpose
-- **Pluggable Design**: Easy to switch or add summarization strategies
-- **Discoverable**: Summarization logic is where you'd expect to find it
-- **Testable**: Each component can be tested in isolation
-- **Extensible**: Strategy pattern allows future enhancements
 
 **Usage**:
 ```python
@@ -660,9 +516,6 @@ class CustomSummarizer(ChatHistorySummarizer):
 
 This refactoring transforms the codebase from "functional but architecturally messy" to "clean, professional, and maintainable."
 
-## Final Cleanup Phase - Complete Archytas Elimination
-
-After the initial migration, a comprehensive audit revealed additional Archytas code that required migration:
 
 ### Additional Files Migrated
 
@@ -818,99 +671,3 @@ if "messages" in result and result["messages"]:
         if last_message not in self.chat_history.messages:  # Avoid duplicates
             self.chat_history.add_message(last_message, loop_id)
 ```
-
-### Enhanced Logging and Debugging
-
-Added comprehensive logging for troubleshooting:
-- Message count validation: `"Passing X/Y valid messages to LangGraph agent"`
-- Response processing: `"Added AI response to chat history: X chars"`
-- Empty message warnings: `"Skipping message with empty content: AIMessage"`
-
-## Final Architecture Assessment and Refinement
-
-### Principal Engineer Review Findings
-
-During architecture review, several concerns were identified with the initial migration:
-
-**❌ Problems Identified**:
-- `BeakerChatHistory` violating Single Responsibility Principle (150+ lines of summarization logic embedded)
-- Poor discoverability (summarization logic buried in `chat_history.py`)
-- Tight coupling to one specific summarization approach
-- Inconsistent patterns across the codebase
-
-### Architectural Refactoring - Clean Separation of Concerns
-
-**✅ Solution Implemented**: Created a modular summarization system using the Strategy pattern:
-
-```
-beaker_kernel/lib/
-├── chat_history.py              # Chat history management ONLY
-└── summarization/               # Dedicated summarization module
-    ├── __init__.py              # Factory function: get_summarizer()
-    ├── base.py                  # Abstract base class: ChatHistorySummarizer
-    ├── llm_summarizer.py        # LLM-powered summarization (ported from Archytas)
-    └── simple_summarizer.py     # Fallback extractive summarization
-```
-
-### Key Architectural Improvements
-
-**Before Refactoring**:
-```python
-class BeakerChatHistory:
-    async def _create_summary(self, messages):
-        # 80+ lines of complex LLM orchestration embedded here
-        system_prompt = """You are an intelligent agent..."""
-        # ... complex Archytas logic mixed with chat history management
-```
-
-**After Refactoring**:
-```python
-class BeakerChatHistory:
-    def __init__(self, summarization_strategy="llm"):
-        self.summarizer = get_summarizer(summarization_strategy)  # Pluggable!
-    
-    async def auto_summarize(self):
-        summary_content = await self.summarizer.summarize(messages_to_summarize)  # Delegated!
-
-class LLMSummarizer(ChatHistorySummarizer):
-    async def summarize(self, messages):
-        # All Archytas logic lives here, properly organized
-```
-
-### Benefits of Refactored Architecture
-
-**✅ Single Responsibility**: Each class has one clear purpose
-**✅ Pluggable Design**: Easy to switch summarization strategies
-**✅ Discoverable**: Summarization logic is where you'd expect to find it  
-**✅ Testable**: Each component can be tested in isolation
-**✅ Extensible**: Strategy pattern allows future enhancements
-
-**Usage Examples**:
-```python
-# Default LLM-powered summarization (ported Archytas logic)
-agent = BeakerAgent()
-
-# Simple summarization for testing/fallback
-agent = BeakerAgent(summarization_strategy="simple")
-
-# Backward compatibility maintained
-agent = BeakerAgent(summarization_strategy="archytas")  # Maps to "llm"
-
-# Easy to add custom strategies
-class CustomSummarizer(ChatHistorySummarizer):
-    async def summarize(self, messages): ...
-```
-
-### Naming Improvements
-
-**Removed Confusing References**: Renamed `archytas_summarizer.py` → `llm_summarizer.py` to describe functionality rather than legacy system.
-
-**Class Renaming**: `ArchytasSummarizer` → `LLMSummarizer` with backward compatibility alias.
-
-### Final Result
-
-**Principal Engineer Assessment**: ✅ **APPROVED**
-
-*"This demonstrates solid software engineering principles. The migration not only successfully eliminates the legacy dependency but creates a cleaner, more maintainable architecture. The separation of concerns is excellent, the strategy pattern is properly implemented, and the code is easily extensible. This is exactly how you should approach technical migrations - improve the architecture while preserving functionality."*
-
-**Verdict**: Production-ready with clean, professional architecture that follows SOLID principles.
