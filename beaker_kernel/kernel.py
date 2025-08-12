@@ -274,7 +274,7 @@ class BeakerKernel(KernelProxyManager):
 
     async def send_chat_history(self, parent_header=None):
         # All agents now use BeakerChatHistory with to_outbound_format method
-        if self.context.agent.chat_history:
+        if self.context and self.context.agent and self.context.agent.chat_history:
             try:
                 from dataclasses import asdict
                 model = getattr(self.context.agent, 'model', None)
