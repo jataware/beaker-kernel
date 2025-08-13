@@ -247,7 +247,7 @@ export default {
     }
     .cm-focused {
         outline: none;
-        border: 1px solid var(--purple-200);
+        border: 1px solid var(--p-primary-200);
     }
     &.dark-mode {
         .cm-focused {

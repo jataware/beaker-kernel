@@ -29,6 +29,10 @@ const defaultRouteMap: Routes = {
       "component": () => import('@/pages/NotebookInterface.vue'),
       "role": "home",
     },
+    "nextgen-notebook": {
+      "path": "/next", 
+      "component": () => import('@/pages/NextGenNotebookInterface.vue'),
+    },
     "chat": {
       "path": "/chat",
       "component": () => import('@/pages/ChatInterface.vue'),
