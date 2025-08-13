@@ -400,6 +400,8 @@ provide('activeQueryCell', activeQueryCell);
     flex-direction: column;
     max-width: 1260px;
     width: 100%;
+
+    z-index: 35;
 }
 
 .chat-layout {
