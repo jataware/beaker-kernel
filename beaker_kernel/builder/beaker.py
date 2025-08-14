@@ -5,13 +5,22 @@ import json
 import os.path
 import shutil
 import sys
-from typing import Any
+from collections import namedtuple
+from typing import Any, TYPE_CHECKING
 from hatchling.bridge.app import Application
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 from hatchling.metadata.core import ProjectMetadata
 from hatchling.plugin import hookimpl
 from pathlib import Path
 
+if TYPE_CHECKING:
+        from beaker_kernel.lib.app import BeakerApp
+        from beaker_kernel.lib.integrations.base import BaseIntegrationProvider
+        from beaker_kernel.lib.context import BeakerContext
+        from beaker_kernel.lib.subkernel import BeakerSubkernel
+
+
+ClassDef = namedtuple("ClassDef", ("mod_str", "class_name", "cls"))
 
 
 class BuildError(Exception):
@@ -60,7 +69,7 @@ class BeakerBuildHook(BuildHookInterface):
                                 class_map[class_name] = (mod_str, str(import_path))
         return class_map
 
-    def find_slugged_subclasses_of(self, subclass, packages=None):
+    def find_slugged_subclasses_of(self, subclass, packages=None) -> dict[str, ClassDef]:
         contexts = {}
         if packages is None:
             packages = self.build_config.packages
@@ -76,8 +85,31 @@ class BeakerBuildHook(BuildHookInterface):
                 slug = getattr(cls, 'SLUG', None) or getattr(cls, 'slug', None)
                 if not slug:
                     continue
-                contexts[slug] = (mod_str, class_name)
+                contexts[slug] = ClassDef(mod_str, class_name, cls)
         return contexts
+
+    def find_integration_data_files(self, integration_classes: "list[BaseIntegrationProvider]") -> dict[str, os.PathLike]:
+        output = {}
+        for integration_cls in integration_classes:
+            # Fetch data mapping
+            cls_data = integration_cls.get_cls_data()
+            if not cls_data:
+                continue
+            for data_key, data_path in cls_data.items():
+                base_path = Path(self.root)
+                data_path = Path(data_path)
+                abs_path = base_path.absolute() / data_path
+                if not abs_path.exists():
+                    raise IOError(
+                        f"Integration data path '{abs_path}' does not exist.\n"
+                        f"The 'data_path' value should be relative to the root directory which holds the pyproject.toml file and not the python source directory."
+                    )
+                if not abs_path.is_dir():
+                    raise IOError(
+                        f"Integration data path '{abs_path}' must point to a directory."
+                    )
+                output[os.path.join(integration_cls.slug, data_key)] = abs_path
+        return output
 
     def add_packages_to_path(self, paths=None):
         if paths is None:
@@ -112,49 +144,44 @@ class BeakerBuildHook(BuildHookInterface):
             self.inserted_paths.add(local_path)
 
         from beaker_kernel.lib.app import BeakerApp
+        from beaker_kernel.lib.integrations.base import BaseIntegrationProvider
         from beaker_kernel.lib.context import BeakerContext
         from beaker_kernel.lib.subkernel import BeakerSubkernel
 
         dest = os.path.join(self.root, "build", "data_share_beaker")
         search_paths = self.build_config.packages or []
 
-        context_paths = self.config.get("context_paths", [])
-        subkernel_paths = self.config.get("subkernel_paths", [])
-
-        context_base_paths = self.config.get("context_base_paths", search_paths)
-        subkernel_base_paths = self.config.get("subkernel_base_paths", search_paths)
-
-        contexts = self.config.get("contexts", [])
-        subkernels = self.config.get("subkernels", [])
-
-        # TODO: controls for explicit definition of contexts/subkernels
-        # TODO: controls for setting context/subkernel directory to search
-
-        # if not context_paths or True:
-        #     context_paths = self.find_contexts_in_packages(self.build_config.packages)
-        #     print("contexts:")
-        #     pprint.pprint(context_paths)
-
         self.add_packages_to_path()
-        context_classes = self.find_slugged_subclasses_of(BeakerContext)
-        subkernel_classes = self.find_slugged_subclasses_of(BeakerSubkernel)
-        app_classes = self.find_slugged_subclasses_of(BeakerApp)
+        context_class_defs = self.find_slugged_subclasses_of(BeakerContext)
+        subkernel_class_defs = self.find_slugged_subclasses_of(BeakerSubkernel)
+        app_class_defs = self.find_slugged_subclasses_of(BeakerApp)
+        integration_provider_class_defs = self.find_slugged_subclasses_of(BaseIntegrationProvider)
+        integration_provider_classes = [class_def.cls for class_def in integration_provider_class_defs.values()]
+        integration_data = self.find_integration_data_files(integration_provider_classes)
         self.remove_packages_from_path()
 
-        if context_classes:
+        if context_class_defs:
             print( "Found the following contexts:")
-            for slug, (pkg, cls) in context_classes.items():
-                print(f"  '{slug}': {cls} in package {pkg}")
+            for slug, class_def in context_class_defs.items():
+                print(f"  '{slug}': {class_def.class_name} in package {class_def.mod_str}")
             print()
-        if subkernel_classes:
+        if subkernel_class_defs:
             print( "Found the following subkernels:")
-            for slug, (pkg, cls) in subkernel_classes.items():
-                print(f"  '{slug}': {cls} in package {pkg}")
+            for slug, class_def in subkernel_class_defs.items():
+                print(f"  '{slug}': {class_def.class_name} in package {class_def.mod_str}")
             print()
-        if app_classes:
+        if app_class_defs:
             print("Found app: ")
-            for slug, (pkg, cls) in app_classes.items():
-                print(f"  '{slug}': {cls} in package {pkg}")
+            for slug, class_def in app_class_defs.items():
+                print(f"  '{slug}': {class_def.class_name} in package {class_def.mod_str}")
+        if integration_provider_class_defs:
+            print("Found integration providers: ")
+            for slug, class_def in integration_provider_class_defs.items():
+                print(f"  '{slug}': {class_def.class_name} in package {class_def.mod_str}")
+        if integration_data:
+            print("Found integration data: ")
+            for dest_path, data_path in integration_data.items():
+                print(f"  '{dest_path}': {data_path}")
 
         # Recreate the destination directory, clearing any existing build artifacts
         if os.path.exists(dest):
@@ -162,12 +189,19 @@ class BeakerBuildHook(BuildHookInterface):
         os.makedirs(dest)
 
         # Write out mappings for each context and subkernel to an individual json file
-        for typename, src in [("contexts", context_classes), ("subkernels", subkernel_classes), ("apps", app_classes)]:
+        for typename, src in [("contexts", context_class_defs), ("subkernels", subkernel_class_defs), ("apps", app_class_defs), ("integrations", integration_provider_class_defs)]:
             dest_dir = os.path.join(dest, typename)
             os.makedirs(dest_dir, exist_ok=True)
-            for slug, (package_name, class_name) in src.items():
+            # for slug, (package_name, class_name) in src.items():
+            for slug, class_def in src.items():
                 dest_file = os.path.join(dest_dir, f"{slug}.json")
                 with open(dest_file, "w") as f:
-                    json.dump({"slug": slug, "package": package_name, "class_name": class_name}, f, indent=2)
+                    json.dump({"slug": slug, "package": class_def.mod_str, "class_name": class_def.class_name}, f, indent=2)
                 # Add shared-data mappings for each file so it is installed to the correct location
                 self.build_config.shared_data[dest_file] = f"share/beaker/{typename}/{slug}.json"
+
+        # Copy data files to proper location in build directory and update configuration
+        for integration_data_path, integration_data_source in integration_data.items():
+            integration_data_dest = os.path.join(dest, "data", integration_data_path)
+            shutil.copytree(integration_data_source, integration_data_dest)
+            self.build_config.shared_data[integration_data_dest] = f"share/beaker/data/{integration_data_path}"

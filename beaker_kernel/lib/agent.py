@@ -32,6 +32,17 @@ class BeakerAgent(ReActAgent):
             "debug": self.context.beaker_kernel.debug_enabled,
             "verbose": self.context.beaker_kernel.verbose,
         })
+
+        if tools is None:
+            tools = []
+        if context.integrations:
+            for integration in self.context.integrations:
+                # TODO: There is a bug in archytas that is causing the tool to be duplicated if you pass the methods
+                # directly. Instead, if we pass the whole instance, archytas will extract the tools itself.
+                tools.append(integration)
+                # if integration.tools:
+                    # tools.extend(integration.tools)
+
         super().__init__(
             model=model,
             api_key=config.llm_service_token,
