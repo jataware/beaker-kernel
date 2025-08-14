@@ -138,8 +138,6 @@ const panelsByPosition = computed(() => {
     return result;
 });
 
-const isStatic = computed(() => (props.staticSize || (expanded.value && panelWidth.value === null)))
-
 const containerStyle = computed(() => {
     if (expanded.value) {
         let width: string;
@@ -423,7 +421,7 @@ defineExpose({
     background-color: var(--p-surface-b);
     display: flex;
     flex-direction: column;
-    min-width: 4rem;
+    min-width: 3.5rem;
 
     > div {
         display: flex;
@@ -450,45 +448,53 @@ defineExpose({
 
     &:hover {
         cursor: col-resize;
+        background-color: var(--p-surface-e);
     }
 }
 
 .sidemenu-gutter-handle {
     display: flex;
     position: absolute;
-    right: -6px;
-    width: 14px;
-    z-index: 31;
-    height: 3rem;
-    background-color: var(--p-surface-f);
-    justify-content: space-around;
-    align-items: center;
-    overflow: clip;
-    border: 1px outset var(--p-surface-g);
+    width: 6px;
+    left: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 50;
+    height: 40px;
+    background-color: var(--p-primary-500);
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    filter: saturate(1.1);
 
-    &:before {
-        filter: blur(0.75px);
-        color: var(--p-surface-b);
-        writing-mode: sideways-lr;
-        letter-spacing: -1px;
-        content: "▮▮▮▮▮▮";
-        position: relative;
-        left: -6px;
-        font-size: 20px;
+    &::before {
+        content: '';
+        position: absolute;
+        width: 12px;
+        height: 46px;
+        left: -3px;
+        top: -3px;
+        background: transparent;
+        z-index: -1;
+    }
+
+    // expand handle when hovering over the larger area
+    &:hover {
+        width: 12px;
+        height: 46px;
+        left: -4px;
+        top: 50%;
+        transform: translateY(-50%);
     }
 }
 
 button.menu-button {
     background-color: transparent;
-    color: var(--p-primary-300);
     border-color: transparent;
     aspect-ratio: 1;
     width: 100%;
-    padding: .75rem .5rem;
 
-    // Increase size of icon if no text
     &.p-button-icon-only .p-button-icon{
-        font-size: 1.75rem;
+        font-size: 1.15rem;
     }
 
     &:focus {
@@ -507,27 +513,35 @@ button.menu-button {
         &:hover {
             background-color: var(--p-surface-c);
             border-color: var(--p-surface-d);
-
         }
     }
-
     &.line {
         border-radius: 0;
     }
     &.line.right {
-        border-width: 0 5px 0 0;
+        border-width: 0 6px 0 0;
     }
     &.line.left {
-        border-width: 0 0 0 5px;
+        border-width: 0 0 0 6px;
     }
-    &.full.selected {
-        background-color: var(--p-primary-color);
-        color: var(--p-surface-b);
-    }
+    &.full {
+        border-radius: 0;
+        border-color: transparent;
 
+        &.selected {
+            background-color: var(--p-primary-600);
+            border-radius: 0;
+            border-color: transparent;
+            color: var(--p-surface-b);
+        }
+        &:hover {
+            border: none;
+            border-color: transparent;
+            box-shadow: none;
+        }
+    }
     &.selected {
         border-color: var(--p-primary-color);
-        color: var(--p-primary-color);
     }
 
     &.shadow:hover {
