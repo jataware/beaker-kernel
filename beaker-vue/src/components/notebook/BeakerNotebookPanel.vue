@@ -152,7 +152,6 @@ defineExpose({
     position: relative;
     flex: 1;
     background-color: var(--p-surface-b);
-    z-index: 50;
     overflow: auto;
     width: 100%;
     height: 100%;
