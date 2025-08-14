@@ -14,8 +14,6 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any, TYPE_CHECKING, Callable, List, Coroutine
 
-from archytas.models.base import BaseArchytasModel
-from archytas.exceptions import AuthenticationError
 
 from .jupyter_kernel_proxy import ( KERNEL_SOCKETS, KERNEL_SOCKETS_NAMES,
                                    JupyterMessage, JupyterMessageTuple)
@@ -55,15 +53,43 @@ def find_file_along_path(filename: str, start_path: Path | str | None = None) ->
             return potential_file
     return None
 
-class DefaultModel(BaseArchytasModel):
-    def initialize_model(self, **kwargs):
-        return
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage, AIMessage
+from langchain_core.tools import BaseTool
+from typing import Any, List
 
-    def invoke(self, input, *, config=None, stop=None, **kwargs):
-        raise AuthenticationError("Model not found or misconfigured. Please check your provider configuration.")
-
-    def ainvoke(self, input, *, config=None, stop=None, **kwargs):
-        raise AuthenticationError("Model not found or misconfigured. Please check your provider configuration.")
+class DefaultModel(BaseChatModel):
+    """Fallback model when no proper model is configured."""
+    
+    def __init__(self, config=None, **kwargs):
+        super().__init__(**kwargs)
+        self._config = config or {}
+    
+    @property
+    def _llm_type(self) -> str:
+        return "beaker_default"
+    
+    def bind_tools(self, tools: List[BaseTool], **kwargs):
+        """LangGraph compatibility - return self since we're a fallback."""
+        # Create a copy with tools bound (for LangGraph compatibility)
+        bound = DefaultModel(self._config)
+        bound._bound_tools = tools
+        return bound
+    
+    def with_structured_output(self, schema, **kwargs):
+        """LangGraph compatibility.""" 
+        return self
+    
+    def _generate(self, messages: List[BaseMessage], stop=None, run_manager=None, **kwargs):
+        """Generate method required by BaseChatModel."""
+        from langchain_core.outputs import ChatGeneration, ChatResult
+        
+        error_message = "Model not found or misconfigured. Please check your provider configuration."
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content=error_message))])
+    
+    async def _agenerate(self, messages: List[BaseMessage], stop=None, run_manager=None, **kwargs):
+        """Async generate method required by BaseChatModel."""
+        return self._generate(messages, stop, run_manager, **kwargs)
 
 class ExecutionError(RuntimeError):
     def __init__(self, ename: str, evalue: str, traceback: List[str]) -> None:
@@ -337,3 +363,16 @@ async def ensure_async(fn: Coroutine|Callable):
         return await fn
     else:
         return fn
+
+
+# Global kernel reference for tools to access
+_beaker_kernel = None
+
+def set_beaker_kernel(kernel):
+    """Set the global Beaker kernel reference."""
+    global _beaker_kernel
+    _beaker_kernel = kernel
+
+def get_beaker_kernel():
+    """Get the global Beaker kernel reference."""
+    return _beaker_kernel

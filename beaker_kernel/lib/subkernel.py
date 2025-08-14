@@ -1,7 +1,7 @@
 import abc
 import asyncio
 import json
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING, Annotated
 import hashlib
 import shutil
 from tempfile import mkdtemp
@@ -9,7 +9,8 @@ import os
 import os.path
 import requests
 
-from archytas.tool_utils import AgentRef, tool, LoopControllerRef, ReactContextRef
+from beaker_kernel.lib.tools import tool
+from beaker_kernel.lib.utils import get_execution_context, get_beaker_kernel
 
 from .autodiscovery import autodiscover
 from .utils import env_enabled, action, ExecutionTask
@@ -20,9 +21,6 @@ from .code_analysis.analysis_types import AnalysisCodeCells
 
 if TYPE_CHECKING:
     from langchain_core.messages import ToolMessage, AIMessage, BaseMessage, ToolCall
-    from archytas.models.base import BaseArchytasModel
-    from archytas.agent import Agent
-    from archytas.chat_history import ChatHistory
     try:
         from tree_sitter import Language as TreeSitterLanguage
     except ImportError:
@@ -39,81 +37,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def run_code_summarizer(message: "ToolMessage", chat_history: "ChatHistory", agent: "Agent", model: "BaseArchytasModel"):
-    from langchain_core.messages import AIMessage
-    size_threshold = 800
-    excision_text_template = "...skipping {} characters..."
-    split_percentage = 0.7
-    text = message.text()
-    message_len = len(text)
-    calling_record, tool_call = chat_history.get_tool_caller(message.tool_call_id)
-    calling_message: AIMessage = calling_record.message
-    code = tool_call.get("args", {}).get("code", "")
-    code_len = len(code)
-
-    if message_len > size_threshold:
-        message_excision_label_len = len(excision_text_template) - 2 + len(str(message_len - size_threshold))
-        message_excision_text = excision_text_template.format(message_len - size_threshold + message_excision_label_len)
-        message_excision_start = int(size_threshold * split_percentage)
-        message_excision_end = message_len - (size_threshold - message_excision_start - len(message_excision_text))
-
-        message.additional_kwargs["orig_content"] = message.content
-        message.content = "".join([
-            text[:message_excision_start],
-            message_excision_text,
-            text[message_excision_end:],
-        ])
-    if code_len > size_threshold:
-        code_excision_label_len = len(excision_text_template) - 2 + len(str(code_len - size_threshold))
-        code_excision_text = excision_text_template.format(code_len - size_threshold + code_excision_label_len)
-        code_excision_start = int(size_threshold * split_percentage)
-        code_excision_end = code_len - (size_threshold - code_excision_start - len(code_excision_text))
-
-        message.additional_kwargs["orig_code"] = code
-        tool_call["_orig_code"] = code
-        shortened_code = "".join([
-            code[:code_excision_start],
-            code_excision_text,
-            code[code_excision_end:],
-        ])
-
-        tool_call["args"]["code"] = shortened_code
-
-        if isinstance(calling_message.content, list):
-            for content in calling_message.content:
-                if (
-                    isinstance(content, dict)
-                    and content.get("type", None) == "tool_use"
-                    and content.get("id", None) == message.tool_call_id
-                ):
-                    code_input = content.get("input", None)
-                    if isinstance(code_input, dict) and "code" in code_input:
-                        content["input"]["code"] = shortened_code
-    message.artifact["summarized"] = True
 
 
-@tool(autosummarize=True, summarizer=run_code_summarizer)
-async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
-    """
-    Executes code in the user's notebook on behalf of the user, but collects the outputs of the run for use by the Agent
-    in the ReAct loop, if needed.
+@tool
+async def run_code(code: str) -> str:
+    """Executes code in the user's notebook on behalf of the user.
 
-    The code runs in a new codecell and the user can watch the execution and will see all of the normal output in the
-    Jupyter interface.
+    The code runs in a new codecell and the user can watch the execution and will see all of the normal output in the Jupyter interface.
 
-    This tool can be used to probe the user's environment or collect information to answer questions, or can be used to
-    run code completely on behalf of the user. If a user asks the agent to do something that reasonably should be done
-    via code, you should probably default to using this tool.
+    This tool can be used to probe the user's environment or collect information to answer questions, or can be used to run code completely on behalf of the user. If a user asks the agent to do something that reasonably should be done via code, you should probably default to using this tool.
 
-    This tool can be run more than once in a react loop. All actions and variables created in earlier uses of the tool
-    in a particular loop should be assumed to exist for future uses of the tool in the same loop.
+    This tool can be run more than once in a react loop. All actions and variables created in earlier uses of the tool in a particular loop should be assumed to exist for future uses of the tool in the same loop.
 
     Args:
-        code (str): Code to run directly in Jupyter. This should be a string exactly as it would appear in a notebook
-                    codecell. No extra escaping of newlines or similar characters is required.
-    Returns:
-        str: A summary of the run, along with the collected stdout, stderr, returned result, display_data items, and any
-             errors that may have occurred.
+        code: Code to run directly in Jupyter. This should be a string exactly as it would appear in a notebook codecell. No extra escaping of newlines or similar characters is required.
     """
     def format_execution_context(context) -> str:
         """
@@ -184,64 +121,84 @@ async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_co
         output.append("Execution Report Complete")
         return "\n".join(output)
 
+    # Get execution context and kernel
+    context = get_execution_context() or {}
+    kernel = get_beaker_kernel()
+    
+    if not kernel:
+        return "Error: No Beaker kernel available"
+    
+    # Get parent message for proper execution context
+    from beaker_kernel.lib.utils import get_parent_message
+    parent_context = get_parent_message()
+    message = parent_context.get('parent_message') if parent_context else None
+    
+    identities = getattr(message, 'identities', []) if message else []
+    parent_header = getattr(message, 'header', {}) if message else {}
+    
     # TODO: In future, this may become a parameter and we allow the agent to decide if code should be automatically run
     # or just be added.
     autoexecute = True
-    message = react_context.get("message", None)
-    identities = getattr(message, 'identities', [])
-
+    
     try:
+        # Get the agent context through the kernel
+        agent_context = kernel.context if hasattr(kernel, 'context') else None
+        if not agent_context:
+            return "Error: No agent context available"
+            
         execution_task: ExecutionTask
-        if isinstance(agent.context.subkernel, CheckpointableBeakerSubkernel) and is_checkpointing_enabled():
-            checkpoint_index, execution_task = await agent.context.subkernel.checkpoint_and_execute(
-                code, not autoexecute, parent_header=message.header, identities=identities
+        if isinstance(agent_context.subkernel, CheckpointableBeakerSubkernel) and is_checkpointing_enabled():
+            checkpoint_index, execution_task = await agent_context.subkernel.checkpoint_and_execute(
+                code, not autoexecute, parent_header=parent_header, identities=identities
             )
         else:
-            execution_task = agent.context.execute(
-                code, store_history=True, surpress_messages=(not autoexecute), parent_header=message.header, identities=identities
+            execution_task = agent_context.execute(
+                code, store_history=True, surpress_messages=(not autoexecute), parent_header=parent_header, identities=identities
             )
             checkpoint_index = None
+            
         execute_request_msg = {
             name: getattr(execution_task.execute_request_msg, name)
             for name in execution_task.execute_request_msg.json_field_names
         }
         payload = {
             "action": "code_cell",
-            "language": agent.context.subkernel.SLUG,
+            "language": agent_context.subkernel.SLUG,
             "code": code.strip(),
             "autoexecute": autoexecute,
             "execute_request_msg": execute_request_msg,
         }
         if checkpoint_index is not None:
             payload["checkpoint_index"] = checkpoint_index
-        agent.context.send_response(
+            
+        agent_context.send_response(
             "iopub",
             "add_child_codecell",
             payload,
-            parent_header=message.header,
-            parent_identities=getattr(message, "identities", None),
+            parent_header=parent_header,
+            parent_identities=identities,
         )
 
         execution_context = await execution_task
 
         try:
-            preview_payload = await agent.context.preview()
-            agent.context.send_response(
+            preview_payload = await agent_context.preview()
+            agent_context.send_response(
                 "iopub",
                 "preview",
                 preview_payload,
-                parent_header=message.header,
+                parent_header=parent_header,
             )
         except Exception as e:
             logger.error(f"Successfully ran code, but failed to fetch preview: {e}")
 
         try:
-            kernel_state_payload = await agent.context.kernel_state()
-            agent.context.send_response(
+            kernel_state_payload = await agent_context.kernel_state()
+            agent_context.send_response(
                 "iopub",
                 "kernel_state_info",
                 kernel_state_payload,
-                parent_header=message.header,
+                parent_header=parent_header,
             )
         except Exception as e:
             logger.error(f"Successfully ran code, but failed to fetch kernel state: {e}")

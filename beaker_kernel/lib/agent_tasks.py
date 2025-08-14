@@ -1,27 +1,26 @@
 import asyncio
 import json
 
-from archytas.react import ReActAgent
-
+from langchain_core.messages import HumanMessage
+from beaker_kernel.lib.agent import BeakerAgent
+from beaker_kernel.lib.utils import DefaultModel
 from .config import config
 
 OUTPUT_CHAR_LIMIT = 1000
 
-class Summarizer(ReActAgent):
+class Summarizer(BeakerAgent):
 
     def __init__(
         self,
         notebook: dict = {},
         **kwargs,
     ):
+        # Get model from config or use default
+        model = config.get_model() or DefaultModel({})
+        
         super().__init__(
-            model=config.LLM_SERVICE_MODEL,
-            api_key=config.default_llm_service_token,
-            tools=[],
-            verbose=False,
-            spinner=None,
-            rich_print=False,
-            allow_ask_user=False,
+            context=None,
+            tools=[],  # No tools needed for summarization
             **kwargs
         )
 
@@ -37,7 +36,9 @@ of `query` contain the the user query, the agents thoughts and possibly the fina
 of the agent. If a code cell has a parent_id, that means the code cell was produced by the LLM Agent
 in the parent query cell.
 """
-        self.add_context(context)
+        # Add context as a system message
+        context_message = HumanMessage(content=context)
+        self.chat_history.add_message(context_message)
 
 
 async def summarize(notebook: dict, summary_prompts: dict[str, str] | None = None):
