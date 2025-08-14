@@ -21,7 +21,16 @@ jobs:
         with:
           node-version: '20.x'
           cache: 'npm'
-          cache-dependency-path: 'beaker-vue/package-lock.json'
+          cache-dependency-path: |
+            beaker-ts/package-lock.json
+            beaker-vue/package-lock.json
+
+      - name: Install and build beaker-ts
+        working-directory: beaker-ts
+        shell: bash
+        run: |
+          npm ci
+          npm run build
 
       - name: Install dependencies
         working-directory: beaker-vue
