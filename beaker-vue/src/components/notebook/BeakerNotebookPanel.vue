@@ -157,7 +157,7 @@ defineExpose({
     width: 100%;
     height: 100%;
 
-    // Separators between cells
+    // separators between cells
     > .beaker-cell {
         padding-top: 2px;
         border-collapse: separate;

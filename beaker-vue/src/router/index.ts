@@ -49,7 +49,11 @@ const defaultRouteMap: Routes = {
     "admin": {
       "path": "/admin",
       "component": () => import('@/pages/BeakerAdmin.vue'),
-    }
+    },
+    "playground": {
+      "path": "/playground",
+      "component": () => import('@/pages/PlaygroundInterface.vue'),
+    },
 }
 
 const reformatRoutes = (routeMap: Routes) => {
@@ -86,13 +90,16 @@ const convertPagesToRoutes = (pages: Pages): Routes => {
 }
 
 const createRouter = (config) => {
-  const routes = reformatRoutes(
-    (
-      config?.appConfig?.pages
-      ? convertPagesToRoutes(config.appConfig.pages)
-      : defaultRouteMap
-    )
-  );
+  let routeMap = config?.appConfig?.pages
+    ? convertPagesToRoutes(config.appConfig.pages)
+    : { ...defaultRouteMap };
+
+  // only include playground in development
+  if (!import.meta.env.DEV) {
+    delete routeMap.playground;
+  }
+
+  const routes = reformatRoutes(routeMap);
 
   return vueCreateRouter({
     history: createWebHistory(import.meta.env?.BASE_URL),
