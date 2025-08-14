@@ -196,7 +196,12 @@ const contextNodes = computed<TreeNode[]>(() => {
     right: 0;
 
     .p-treenode .p-treenode-content {
-      padding: 0;
+      padding: 0 !important;
+
+        .p-tree-node-toggle-button {
+            width: 0.75rem !important;
+            padding: 0;
+        }
     }
 
   }
