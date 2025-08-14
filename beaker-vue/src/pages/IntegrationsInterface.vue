@@ -285,7 +285,7 @@ const headerNav = computed((): NavOption[] => {
                 component: NotebookSvg,
                 componentStyle: {
                     fill: 'currentColor',
-                    stroke: 'currenatColor',
+                    stroke: 'currentColor',
                     height: '1rem',
                     width: '1rem',
                 },

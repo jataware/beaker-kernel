@@ -38,7 +38,14 @@ else:
     if "XDG_DATA_HOME" in os.environ:
         RAW_LIB_LOCATIONS.append(os.path.join(os.environ["XDG_DATA_HOME"], "beaker"))
 
-RAW_LIB_LOCATIONS.extend([os.path.expanduser("~/.beaker"), os.path.abspath("./beaker"), os.path.abspath("./.beaker")])
+RAW_LIB_LOCATIONS.extend(
+    [
+        os.path.expanduser("~/.config/beaker"),
+        os.path.expanduser("~/.beaker"),
+        os.path.abspath("./beaker"),
+        os.path.abspath("./.beaker"),
+    ]
+)
 # Ensure locations are unique without affecting order
 LIB_LOCATIONS = []
 for location in RAW_LIB_LOCATIONS:

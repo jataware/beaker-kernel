@@ -32,6 +32,7 @@ def string_formatter(dumper, data):
 yaml.representer.SafeRepresenter.add_representer(str, string_formatter)
 
 def able_to_write(path: Path) -> bool:
+    """Checks to see a path can be written to. The full path does not need to exist."""
     target = path
     while target:
         if target.exists():
@@ -287,15 +288,13 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
     ) -> tuple[Path, bool]:
         spec_location = Path(current_location).absolute() if current_location else None
         existing_basedirs = [Path(base_dir).absolute() for base_dir in reversed(self.data_basedirs) if os.path.exists(base_dir)]
-        if spec_location:
-            for basedir in existing_basedirs:
-                if spec_location.is_relative_to(basedir):
-                    spec_file = spec_location / "api.yaml"
-                    if able_to_write(spec_file):
-                        return spec_location, True
-                    else:
-                        # Can't write to the specified location, so writing to a local location
-                        break
+        # If existing location is within in the user's home directory or the current working directory, just modify in place.
+        if spec_location.is_relative_to(os.path.expanduser('~')) or spec_location.is_relative_to(os.curdir):
+            if spec_location.exists():
+                spec_file = spec_location / "api.yaml"
+                if able_to_write(spec_file):
+                    return spec_location, True
+        # Next, look for basedir locations already exist, and use the first one that is writable
         for basedir in existing_basedirs:
             spec_location = basedir / "specifications" / slug
             pre_exists = spec_location.exists()
@@ -307,6 +306,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                     except IOError:
                         continue
                 return spec_location, pre_exists
+        # If we don't have a pre-existing basedir that is writable, find one that we can write to.
         for basedir in [Path(base_dir).absolute() for base_dir in reversed(self.data_basedirs)]:
             if able_to_write(basedir):
                 spec_location = basedir / "specifications" / slug
@@ -315,6 +315,12 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
                 except IOError:
                     continue
                 return spec_location, False
+        # Fall back to update file in original location if we can write to it.
+        if spec_location:
+            if spec_location.exists():
+                spec_file = spec_location / "api.yaml"
+                if able_to_write(spec_file):
+                    return spec_location, True
         return None, False
 
     def update_specification_file(
@@ -407,7 +413,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         return self._get_specification(integration_id)
 
     def add_integration(self, **payload) -> Integration:
-        for field in ["resources", "uuid", "slug", "url"]:
+        for field in ["resources", "uuid", "slug"]:
             payload.pop(field, None)
         location, pre_exists = self.find_specification_write_location(
             slug=AdhocSpecificationIntegration.slugify(payload['name']),
@@ -486,6 +492,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         if resource.resource_id is None:
             raise ValueError("Resource must have resource ID to attach to integration.")
         specification.resources[resource.resource_id] = resource
+        self.update_specification_file(specification, "update")
         self.refresh_adhoc_specs()
         return resource
 
@@ -495,6 +502,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         # If resource has an associated file, delete it.
         if isinstance(resource, FileResource):
             self.update_resource_file(spec=specification, resource=resource, action="remove")
+        self.update_specification_file(specification, "update")
         self.refresh_adhoc_specs()
 
     def update_resource(self, integration_id: str, resource_id: str, **payload) -> Resource:
@@ -517,6 +525,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
             msg = "Only examples and files are valid on an adhoc integration."
             raise ValueError(msg)
         specification.resources[resource_id] = resource # type: ignore
+        self.update_specification_file(specification, "update")
         self.refresh_adhoc_specs()
         return resource
 
