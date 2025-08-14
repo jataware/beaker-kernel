@@ -25,17 +25,20 @@
 
                 v-tooltip.bottom="'Connecting'"
             />
-            <Button
-                outlined
-                size="small"
-                icon="pi pi-angle-down"
-                iconPos="right"
-                class="connection-button"
-                :label="attachedWorkflow?.title ?? 'No Workflow'"
-                :loading="loading"
-                v-tooltip.bottom="'Change Workflow'"
-                @click="dialog.open(WorkflowSelectDialog, {props: {modal: true, header: 'Workflows'}})"
-            />
+            <div v-if="showWorkflowDropdown">
+                <Button
+                    outlined
+                    size="small"
+                    icon="pi pi-angle-down"
+                    iconPos="right"
+                    class="connection-button"
+                    :label="attachedWorkflow?.title ?? 'No Workflow'"
+                    :loading="loading"
+                    v-tooltip.bottom="'Change Workflow'"
+                    @click="dialog.open(WorkflowSelectDialog, {props: {modal: true, header: 'Workflows'}})"
+                />
+            </div>
+
         </template>
 
         <template #center>
@@ -158,6 +161,13 @@ const loading = computed(() => {
 
 const workflows = computed(() => {
     return beakerSession?.activeContext?.info?.workflows?.workflows;
+})
+
+const showWorkflowDropdown = computed(() => {
+    if (beakerSession?.activeContext?.info?.workflows?.workflows === undefined) {
+        return false;
+    }
+    return Object.keys(beakerSession?.activeContext?.info?.workflows?.workflows).length > 0;
 })
 
 const attachedWorkflowId = computed(() => {

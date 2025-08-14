@@ -134,7 +134,7 @@ const contextNodes = computed<TreeNode[]>(() => {
     ]
     }];
 
-    if (context?.info?.workflows) {
+    if (context?.info?.workflows && Object.keys(context?.info?.workflows?.workflows ?? []).length > 0) {
         const { workflows, attached } = context.info.workflows;
         displayableNodes.push({
             key: "5",
