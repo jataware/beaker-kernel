@@ -1,5 +1,5 @@
 ---
-name: Beaker ts/vue Type Check PRs
+name: Beaker ts/vue
 
 # yamllint disable-line rule:truthy
 on:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   type-check:
-    name: Type Check beaker-vue and beaker-ts
+    name: Run Typescript Check
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout

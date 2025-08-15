@@ -1,5 +1,5 @@
 ---
-name: Beaker Kernel Python Tests
+name: Beaker Kernel
 
 # yamllint disable-line rule:truthy
 on:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: Run Beaker Kernel Python Tests
+    name: Run Python Tests
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
