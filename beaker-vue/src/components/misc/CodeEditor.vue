@@ -17,8 +17,7 @@ import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import type { LanguageSupport } from "@codemirror/language";
 import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion, completeFromList } from "@codemirror/autocomplete";
-import { linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint";
-import type { Diagnostic } from "@codemirror/lint";
+import { AnnotationProviderFactory, type AnnotationData } from "../../util/annotations";
 import type { IBeakerTheme } from '../../plugins/theme';
 import { type BeakerLanguage, LanguageRegistry, getCompletions } from "../../util/autocomplete";
 import { BeakerSession } from 'beaker-kernel';
@@ -26,6 +25,8 @@ import { BeakerSession } from 'beaker-kernel';
 const session: BeakerSession = inject('session');
 
 declare type DisplayMode = "light" | "dark";
+
+type AnnotationProvider = "linter" | "decoration";
 
 export interface CodeEditorProps {
     displayMode?: DisplayMode,
@@ -39,6 +40,7 @@ export interface CodeEditorProps {
     disabled?: boolean,
     readonly?: boolean,
     annotations?: any[],
+    annotationProvider?: AnnotationProvider,
 }
 
 const props = withDefaults(defineProps<CodeEditorProps>(), {
@@ -47,6 +49,7 @@ const props = withDefaults(defineProps<CodeEditorProps>(), {
     autofocus: false,
     disabled: false,
     annotations: () => [],
+    annotationProvider: "linter",
 });
 
 const model = ref<string>(props.modelValue);
@@ -55,9 +58,7 @@ const emit = defineEmits([
         'submit',
         "update:modelValue",
 ]);
-const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
-
-const annotationCategories = ref<Map<string, {}>>(new Map());
+const { theme } = inject<IBeakerTheme>('theme');
 
 const codeMirrorView = shallowRef<EditorView>();
 const codeMirrorState = shallowRef();
@@ -179,49 +180,20 @@ const extensions = computed(() => {
         )
     }
 
-    if(props.annotations?.length) {
-        const linterAnnotations = linter((view) => {
-            return props.annotations.map(annotation => {
-                const category_id = annotation.issue.category?.id ?? "default"
-                if (annotation.issue?.category && !annotationCategories.value.has(annotation.issue.category.id)) {
-                    annotationCategories.value.set(annotation.issue.category.id, annotation.issue.category);
-                }
-                const className = `category-${category_id} icon-${annotation.issue.category?.icon ?? "default"}`;
-                const diagnostic = {
-                    from: annotation.start,
-                    to: annotation.end,
-                    severity: annotation.issue.severity,
-                    message: annotation.title_override ?? annotation.issue.title,
-                    markClass: className,
-                    source: category_id,
-                    // color: annotation.issue.category?.color,
-                    // icon: annotation.issue.category?.icon ?? undefined,
-                    renderMessage() {
-                        const el = document.createElement('div');
-                        const description = annotation.message_override || annotation.issue.description;
-                        const extraMessage = annotation.message_extra ? `<p>${annotation.message_extra}</p>` : '';
-                        el.innerHTML = `<h4 style="margin: 0.2rem 0">${annotation.title_override || annotation.issue.title}</h4>`;
-                        el.innerHTML += `<p>${description}</p>`;
-                        if(extraMessage) {
-                            el.innerHTML += `<p>${extraMessage}</p>`;
-                        }
-                        return el;
-                    },
-                }
-                if (annotation.link) {
-                    diagnostic["actions"] = [{
-                        name: "Learn More",
-                        apply: () => window.open(annotation.link, '_blank')
-                    }]
-                }
-                return diagnostic;
-            });
-        });
-        enabledExtensions.push(linterAnnotations);
-        enabledExtensions.push(lintGutter({
-            hoverTime: 200,
-        }));
+    if (props.annotations?.length) {
+        try {
+            const provider = AnnotationProviderFactory.create(props.annotationProvider || "decoration");
+            const annotationExtensions = provider.createExtensions(props.annotations as AnnotationData[]);
+            enabledExtensions.push(...annotationExtensions);
+        } catch (error) {
+            console.warn(`Failed to create annotation provider '${props.annotationProvider}':`, error);
+            // fallback to linter
+            const fallbackProvider = AnnotationProviderFactory.create("linter");
+            const annotationExtensions = fallbackProvider.createExtensions(props.annotations as AnnotationData[]);
+            enabledExtensions.push(...annotationExtensions);
+        }
     }
+
     return enabledExtensions;
 });
 
@@ -250,8 +222,12 @@ defineExpose({
         }
     }
 
-.cm-diagnostic {
-    white-space: normal;
+li.cm-diagnostic {
+    white-space: normal !important;
+
+    p {
+        margin: 0.5em 0;
+    }
 }
 
 // for gutter markers
@@ -318,19 +294,43 @@ defineExpose({
     }
 }
 
+//  z-index > 99 is higher than the sidemenu drag handle, etc
 .cm-tooltip-hover {
-    position: absolute !important;
-    z-index: 9999 !important;
-    max-width: 60vw;
+    z-index: 99 !important;
+}
+.cm-tooltip {
+    max-width: 60vw; 
+}
+.cm-tooltip.cm-tooltip-hover:not(.cm-tooltip-lint) {
+    background-color: transparent;
+    border: none;
 }
 
-// Make tooltips look better
-.cm-tooltip.cm-tooltip-lint {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 4px 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+/**
+All these styles cm-tooltip styles are exactly defined to have the tooltip-wrapper 
+have a margin-right, so that it doesn't render exactly all the way to the right of the page 
+(which would happen sometimes and look odd).
+Moved the tooltip border/color to the inner element to allow CodeMirror to calc the 
+tooltip size without any weird re-layout animation. It is a bit specific so be careful when changing.
+ */
+.cm-tooltip > .cm-tooltip-section, .cm-tooltip.cm-tooltip-lint {
+    padding: 1rem !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+    overflow-y: auto;
+    border: none;
+
+    background-color: var(--p-surface-0) !important;
+
+    // and override for dark theme/mode
+    .beaker-dark & {
+        background-color: var(--p-surface-b) !important;
+        border: 1px solid var(--p-surface-a);
+    }
+}
+.cm-tooltip > .cm-tooltip-section {
+    margin-right: 1rem;
+    max-width: 100%;
 
     ul {
         margin: 0;
@@ -362,6 +362,16 @@ defineExpose({
 
     &.category-grounding.category-literal {
         background-color: rgba(#00FF00, 0.1);
+    }
+}
+
+// some override styles for decoration-based annotations (to match linter styles above)
+.annotation-tooltip {
+    h4 {
+        margin: 0.2rem 0;
+    }
+    p {
+        margin: 0.5em 0;
     }
 }
 
