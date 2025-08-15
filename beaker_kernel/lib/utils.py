@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 import traceback
+import typing
 import warnings
 from frozendict import frozendict
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
@@ -159,7 +160,7 @@ def message_handler(func=None, /, *, send_status_updates=True, send_reply=True) 
                         case JupyterMessage():
                             ctx.send_reply = False
                             return result.parts
-                        case ForwardMessage, ForwardMessage():
+                        case ForwardMessage():
                             ctx.send_reply = False
                             return data
                         case _:
@@ -201,7 +202,7 @@ def intercept(msg_type=None, stream="shell", docs: str|None=None, default_payloa
     return register_intercept
 
 
-def action(action_name: str|None=None, docs: str|None=None, default_payload=None, enabled: None|Callable[[], bool]=None):
+def action(action_name: str|None=None, docs: str|None=None, default_payload=None, enabled: None|Callable[[], bool]=None, scope: typing.Literal["internal", "external", "global"]="global"):
     """
     Method decorator to identify and register context actions.
     """
@@ -219,6 +220,7 @@ def action(action_name: str|None=None, docs: str|None=None, default_payload=None
         msg_request_type = f"{action_nm}_request"
 
         setattr(fn, "_action", action_nm)
+        setattr(fn, "_scope", scope)
 
         if default_payload and hasattr(fn, '_default_payload') and default_payload != getattr(fn, '_default_payload'):
             raise ValueError(f"The default payload for action `{action_nm}` is defined twice. Please ensure only one definition.")
