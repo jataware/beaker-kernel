@@ -1,10 +1,14 @@
 import asyncio
+import dataclasses
 import inspect
 import json
 import logging
 import os.path
 import urllib.parse
+from attr import dataclass
 import requests
+import uuid
+import itertools
 from dataclasses import asdict
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable, TypedDict, Literal, TypeAlias
@@ -14,6 +18,7 @@ from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError, ensure_async
 from beaker_kernel.lib.config import config as beaker_config
+from beaker_kernel.lib.integrations.base import BaseIntegrationProvider
 from beaker_kernel.lib.types import Integration
 
 
@@ -55,12 +60,15 @@ class BeakerContext:
 
     notebook_state: Optional[dict]
     kernel_state: Optional[dict]
+    integrations: list[BaseIntegrationProvider]
 
     SLUG: Optional[str]
     WEIGHT: int = 50  # Used for auto-sorting in drop-downs, etc. Lower weights are listed earlier.
 
-    def __init__(self, beaker_kernel: "BeakerKernel", agent_cls: "BeakerAgent", config: Dict[str, Any]):
+    def __init__(self, beaker_kernel: "BeakerKernel", agent_cls: "BeakerAgent", config: Dict[str, Any],
+                 integrations: list[BaseIntegrationProvider] = None):
         self.intercepts = []
+        self.integrations = integrations if integrations is not None else []
         self.jinja_env = None
         self.templates = {}
         self.beaker_kernel = beaker_kernel
@@ -193,6 +201,12 @@ field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", 
 part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
 loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
 """)
+        if self.integrations:
+            parts.append("Here are integrations that you have access to:")
+            integration_prompts = [
+                integration.prompt for integration in self.integrations
+            ]
+            parts.append("---".join(integration_prompts))
         content = "\n\n".join(parts)
         return content
 
@@ -285,11 +299,13 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             }
             for message_type, intercept_func, _ in self.intercepts
             if getattr(intercept_func, "_action", None) is not None
+            and getattr(intercept_func, "_scope", None) in ["external", "global"]
         }
         if self.agent:
             agent_details = self.agent.get_info()
         else:
             agent_details = None
+
         payload = {
             "language": self.subkernel.DISPLAY_NAME,
             "subkernel": self.subkernel.KERNEL_NAME,
@@ -301,13 +317,95 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "verbose": self.beaker_kernel.verbose,
         }
 
-        if get_integration_method := getattr(self, "get_integrations", None):
-            integrations: list[Integration] = await ensure_async(get_integration_method())
-            payload["integrations"] = [
-                asdict(integration) if isinstance(integration, Integration) else integration
-                for integration in integrations
-            ]
         return payload
+
+    async def list_providers(self):
+        if not self.integrations:
+            return {}
+        return {
+            provider.slug: {
+                "display_name": provider.display_name,
+                "mutable": provider.mutable,
+            }
+            for provider in self.integrations
+        }
+
+    async def list_integrations(self):
+        if not self.integrations:
+            return {}
+        # return as uuid->integration mapping for faster search/lookup on receiver
+        return {
+            integration.uuid: asdict(integration)
+            for integration in itertools.chain(
+                *[provider.list_integrations() or [] for provider in self.integrations]
+            )
+        }
+
+    def _call_message_result_wrapper_inner(self, object):
+        return asdict(object) if dataclasses.is_dataclass(object) else str(object) # type: ignore
+
+    def _call_message_result_wrapper(self, object):
+        return json.loads(json.dumps(object, default=self._call_message_result_wrapper_inner))
+
+    @action(scope="internal")
+    async def call_in_context(self, message):
+        content = message.content
+        args = content.get("args", [])
+        kwargs = content.get("kwargs", {})
+        target_text = content.get("target", "")
+        target_type, target_id = target_text.split(":", maxsplit=1) if ":" in target_text else (target_text, None)
+
+        match target_type:
+            # context methods
+            case "context":
+                function = getattr(self, content.get("function"))
+                result = await ensure_async(function(*args, **kwargs))
+                result = self._call_message_result_wrapper(result)
+            # calling directly on a provider itself -- `provider:adhoc:my_adhoc_provider`
+            case "provider":
+                if target_id is None:
+                    msg = "Provider targets must specify desired provider: e.g. `provider:my_provider`"
+                    raise ValueError(msg)
+                _provider_type, provider_slug = target_id.split(":", maxsplit=1)
+                try:
+                    provider = next(
+                        provider for provider in self.integrations
+                        if provider.slug == provider_slug
+                    )
+                    function = getattr(provider, content.get("function"))
+                    result = await ensure_async(function(*args, **kwargs))
+                    result = self._call_message_result_wrapper(result)
+                except StopIteration as e:
+                    msg = f"Provider not found in integrations. `{provider_slug}` not in {[p.slug for p in self.integrations]}"
+                    raise KeyError(msg) from e
+            # mapping from an integration uuid to its parent provider, to call a method on that parent
+            case "integration":
+                all_integrations = list(itertools.chain(
+                    *[provider.list_integrations() or [] for provider in self.integrations]
+                ))
+                try:
+                    integration = next(
+                        integration for integration in all_integrations
+                        if integration.uuid == target_id
+                    )
+                except StopIteration as e:
+                    msg = f"Integration `{target_id}` not found in {[i.slug for i in all_integrations]}"
+                    raise KeyError(msg) from e
+                _provider_type, provider_slug = integration.provider.split(":", maxsplit=1)
+                try:
+                    provider = next(
+                        provider for provider in self.integrations
+                        if provider.slug == provider_slug
+                    )
+                except StopIteration as e:
+                    msg = f"Provider not found: `{provider_slug}` in {[provider.slug for provider in self.integrations]}"
+                    raise KeyError(msg) from e
+                function = getattr(provider, content.get("function"))
+                result = await ensure_async(function(*args, **kwargs))
+                result = self._call_message_result_wrapper(result)
+            case _:
+                raise NotImplementedError
+        return result
 
     async def get_subkernel_state(self):
         fetch_state_code = self.subkernel.FETCH_STATE_CODE
@@ -342,7 +440,6 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         )
         return state
     get_subkernel_state_action._default_payload = "{}"
-
 
     @action()
     async def get_agent_history(self, message):
@@ -665,61 +762,6 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             logger.error("Unable to parse result.")
             logger.debug("Subkernel: %s\nResult:\n%s", self.subkernel.connected_kernel, result)
         return result
-
-    async def get_integration_root(self, message):
-        raise NotImplementedError
-
-    @action(action_name="get_integration_root")
-    async def get_integration_root_action(self, message):
-        """
-        Integration handling action for getting the root folder of an integration
-        in the canonicalized jupyter path. Not implemented by default but should be
-        overridden by any context using integration support.
-        """
-        return await self.get_integration_root(message)
-
-    async def create_integration_folders_for_upload(self, message):
-        raise NotImplementedError
-
-    @action(action_name="create_integration_folders_for_upload")
-    async def create_integration_folders_for_upload_action(self, message):
-        """
-        Integration handling action for creating folders in the backend storage
-        to support uploading additional datasets and files. Distinct from
-        writing the integration for the case in which a temporary/unsaved buffer
-        needs to have file uploads.
-
-        Not implemented by default but should be overridden
-        by any context using integration support.
-        """
-        return await self.create_integration_folders_for_upload(message)
-
-    async def add_example(self, message):
-        raise NotImplementedError
-
-    @action(action_name="add_example")
-    async def add_example_action(self, message):
-        """
-        Integration handling action for adding an example to a given integration.
-
-        Not implemented by default but should be overridden
-        by any context using integration support.
-        """
-        return await self.add_example(message)
-
-    async def save_integration(self, message):
-        raise NotImplementedError
-
-    @action(action_name="save_integration")
-    async def save_integration_action(self, message):
-        """
-        Integration handling action for one-shot creation of a new integration
-        from a schema URI (either a URL or a local filepath) and a base URL.
-
-        Not implemented by default but should be overridden
-        by any context using integration support.
-        """
-        return await self.save_integration(message)
 
 # Provided for backwards compatibility
 BaseContext = BeakerContext

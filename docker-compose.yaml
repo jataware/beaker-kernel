@@ -1,7 +1,7 @@
 ---
 services:
   jupyter:
-    user: jupyter:jupyter
+    user: root
     build:
       dockerfile: ${DOCKERFILE:-Dockerfile}
       context: .
@@ -31,7 +31,7 @@ services:
       - .:/jupyter
       - ui-html:/jupyter/beaker_kernel/service/ui
       - run:/var/run/beaker/
-    command: ["beaker", "dev", "watch", "--ip", "0.0.0.0"]
+    command: ["beaker", "dev", "watch", "--ip", "0.0.0.0", "--allow-root"]
   ui:
     build:
       dockerfile_inline: |
