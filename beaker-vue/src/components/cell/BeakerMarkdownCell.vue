@@ -1,6 +1,6 @@
 <template>
     <div class="markdown-cell"
-        @dblclick="enter()"
+        @dblclick="!isReadOnly && enter()"
     >
         <div v-if="!isEditing" v-html="renderedMarkdown"></div>
         <div v-else>
@@ -15,6 +15,7 @@
                         placeholder="Your markdown..."
                         ref="codeEditorRef"
                         :autofocus="false"
+                        :readonly="isReadOnly"
                         language="markdown"
                         display-mode="dark"
                         @click="clicked"
@@ -62,7 +63,15 @@ const execute = () => {
     cell.value.source = editorContents.value;
 }
 
+const isReadOnly = computed(() => {
+    return ['thought', 'response'].includes(cell.value?.metadata?.beaker_cell_type);
+});
+
 const enter = (position?: "start" | "end" | number) => {
+    if (isReadOnly.value) {
+        return;
+    }
+
     if (!isEditing.value) {
         isEditing.value = true;
     }

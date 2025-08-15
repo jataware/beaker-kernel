@@ -162,6 +162,7 @@ const surfaceColors = [
 const textColors = [
     'text-color',
     'text-color-secondary', 
+    'highlight-text-color',
 ];
 
 const semanticColors = {

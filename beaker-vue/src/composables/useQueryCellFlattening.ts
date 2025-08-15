@@ -12,8 +12,8 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
     const findCellByMetadata = (parentQueryId: string, eventIndex: number, cellType: 'thought' | 'response' | 'code') => {
         const notebook = beakerSession().session.notebook;
         return notebook.cells.find(cell => 
-            cell.metadata?.beaker_parent_query === parentQueryId &&
-            cell.metadata?.beaker_event_index === eventIndex &&
+            cell.metadata?.parent_query_cell === parentQueryId &&
+            cell.metadata?.query_event_index === eventIndex &&
             cell.metadata?.beaker_cell_type === cellType
         );
     };
@@ -26,9 +26,9 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         processedQueryEvents.value.clear();
         
         for (const cell of notebook.cells) {
-            if (cell.metadata?.beaker_parent_query && cell.metadata?.beaker_event_index !== undefined) {
-                const parentQueryId = cell.metadata.beaker_parent_query;
-                const eventIndex = cell.metadata.beaker_event_index;
+            if (cell.metadata?.parent_query_cell && cell.metadata?.query_event_index !== undefined) {
+                const parentQueryId = cell.metadata.parent_query_cell;
+                const eventIndex = cell.metadata.query_event_index;
                 
                 if (!processedQueryEvents.value.has(parentQueryId)) {
                     processedQueryEvents.value.set(parentQueryId, new Set());
@@ -48,7 +48,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         // last cell that's related the query
         let insertIndex = queryCellIndex + 1;
         while (insertIndex < notebook.cells.length && 
-               notebook.cells[insertIndex].metadata?.beaker_parent_query === queryCellId) {
+               notebook.cells[insertIndex].metadata?.parent_query_cell === queryCellId) {
             insertIndex++;
         }
         
@@ -63,8 +63,8 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
 
         const metadata = {
             beaker_cell_type: 'thought',
-            beaker_parent_query: queryCellId,
-            beaker_event_index: eventIndex
+            parent_query_cell: queryCellId,
+            query_event_index: eventIndex
         };
 
         const markdownCell = new BeakerMarkdownCell({
@@ -95,8 +95,8 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
 
         const metadata = {
             beaker_cell_type: 'response',
-            beaker_parent_query: queryCellId,
-            beaker_event_index: eventIndex
+            parent_query_cell: queryCellId,
+            query_event_index: eventIndex
         };
 
         const markdownCell = new BeakerMarkdownCell({
@@ -125,12 +125,11 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             return;
         }
 
-        // TODO rename these fields for clarity
         const metadata = {
             beaker_cell_type: 'code',
-            beaker_parent_query: queryCellId,
-            beaker_event_index: eventIndex,
-            beaker_original_id: codeCellId // Keep track of the original child cell ID
+            parent_query_cell: queryCellId,
+            query_event_index: eventIndex,
+            source_cell_id: codeCellId // Keep track of the original child cell ID
         };
 
         const newCodeCell = new BeakerCodeCell({
