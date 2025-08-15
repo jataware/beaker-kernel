@@ -1,16 +1,17 @@
 ---
-name: Beaker Vue Type Check PRs
+name: Beaker ts/vue Type Check PRs
 
 # yamllint disable-line rule:truthy
 on:
   pull_request:
     paths:
       - 'beaker-vue/src/**'
+      - 'beaker-ts/src/**'
     types: [opened, synchronize, reopened]
 
 jobs:
   type-check:
-    name: Type Check beaker-vue
+    name: Type Check beaker-vue and beaker-ts
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -32,12 +33,17 @@ jobs:
           npm ci
           npm run build
 
-      - name: Install dependencies
+      - name: Run beaker-ts type check
+        working-directory: beaker-ts
+        shell: bash
+        run: tsc --noEmit --strict
+
+      - name: Install dependencies for beaker-vue
         working-directory: beaker-vue
         shell: bash
         run: npm ci
 
-      - name: Run type check
+      - name: Run beaker-vue type check
         working-directory: beaker-vue
         shell: bash
         run: npm run type-check
