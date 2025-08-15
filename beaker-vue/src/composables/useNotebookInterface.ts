@@ -9,7 +9,7 @@ import type { NavOption } from '../components/misc/BeakerHeader.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 import type { IBeakerTheme } from '../plugins/theme';
 import type { IChatHistory } from '../components/panels/ChatHistoryPanel';
-import { handleAddExampleMessage, handleAddIntegrationMessage } from '../util/integration';
+// import { handleAddExampleMessage, handleAddIntegrationMessage } from '../util/integration';
 
 export function useNotebookInterface() {
     const beakerNotebookRef = ref<BeakerNotebookComponentType>();
@@ -290,47 +290,6 @@ export function useNotebookInterface() {
                 incomingIntegrations = [];
             }
             integrations.value.splice(0, integrations.value.length, ...incomingIntegrations);
-        } else if (msg.header.msg_type === "add_example") {
-            const showToast = beakerInterfaceRef.value.showToast;
-            const session = beakerInterfaceRef.value.getSession();
-            try {
-                handleAddExampleMessage(msg, integrations.value, session)
-                showToast({
-                    title: 'Example Added',
-                    detail: `The example has been successfully added.`,
-                    severity: 'success',
-                    life: 4000
-                });
-            }
-            catch (error) {
-                showToast({
-                    title: 'Error',
-                    detail: `Unable to add example: ${error}.`,
-                    severity: 'error',
-                    life: 8000
-                });
-            }
-        } else if (msg.header.msg_type === "add_integration") {
-            const showToast = beakerInterfaceRef.value.showToast;
-            const session = beakerInterfaceRef.value.getSession();
-            const integration = msg.content.integration;
-            try {
-                handleAddIntegrationMessage(msg, integrations.value, session)
-                showToast({
-                    title: 'Integration Added',
-                    detail: `The integration '${integration}' has been successfully added.`,
-                    severity: 'success',
-                    life: 4000
-                });
-            }
-            catch (error) {
-                showToast({
-                    title: 'Error',
-                    detail: `Unable to add integration: ${error}.`,
-                    severity: 'error',
-                    life: 8000
-                });
-            }
         } else if (msg.header.msg_type === "lint_code_result") {
             msg.content.forEach((result) => {
                 const cell = beakerSession.value.findNotebookCellById(result.cell_id);
