@@ -4,7 +4,6 @@
         :title-extra="saveAsFilename"
         :connectionSettings="props.config"
         ref="beakerInterfaceRef"
-        sessionName="dev_interface"
         :sessionId="sessionId"
         defaultKernel="beaker_kernel"
         :renderers="renderers"

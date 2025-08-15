@@ -4,7 +4,6 @@
         ref="beakerInterfaceRef"
         :header-nav="headerNav"
         :connectionSettings="props.config"
-        sessionName="chat_interface"
         :sessionId="sessionId"
         defaultKernel="beaker_kernel"
         :renderers="renderers"
@@ -73,9 +72,11 @@
 
                 <SideMenuPanel
                     id="integrations" label="Integrations" icon="pi pi-database"
-                    v-if="integrations.length > 0"
+                    v-if="Object.keys(integrations).length > 0"
                 >
-                    <IntegrationPanel :integrations="integrations">
+                    <IntegrationPanel
+                        v-model="integrations"
+                    >
                     </IntegrationPanel>
                 </SideMenuPanel>
                 <SideMenuPanel
@@ -165,8 +166,6 @@ import { standardRendererFactories } from '@jupyterlab/rendermime';
 import { JupyterMimeRenderer, type IBeakerCell } from 'beaker-kernel';
 import type { NavOption } from '../components/misc/BeakerHeader.vue';
 
-import { handleAddExampleMessage, handleAddIntegrationMessage } from '../util/integration';
-
 import { inject, ref, computed, watch, provide } from 'vue';
 import { JSONRenderer, LatexRenderer, wrapJupyterRenderer } from '../renderers';
 
@@ -179,6 +178,7 @@ import MediaPanel from '../components/panels/MediaPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
 import AgentActivityPane from '../components/chat-interface/AgentActivityPane.vue';
 import IntegrationPanel from '../components/panels/IntegrationPanel.vue';
+import { listIntegrations, type IntegrationMap } from '@/util/integration';
 
 const beakerInterfaceRef = ref();
 const isMaximized = ref(false);
@@ -189,7 +189,7 @@ beakerApp.setPage("chat");
 const rightSideMenuRef = ref();
 const contextPreviewData = ref<any>();
 const debugLogs = ref<object[]>([]);
-const integrations = ref([]);
+
 const activeQueryCell = ref<IBeakerCell | null>(null);
 const chatHistory = ref<IChatHistory>()
 
@@ -203,6 +203,11 @@ const previewVisible = ref<boolean>(false);
 const beakerSession = computed(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
+
+const integrations = ref<IntegrationMap>({})
+watch(beakerSession, async () => {
+    integrations.value = await listIntegrations(sessionId);
+})
 
 const isChatEmpty = computed(() => {
     const cells = beakerSession.value?.session?.notebook?.cells ?? [];
@@ -351,63 +356,6 @@ const iopubMessage = (msg) => {
         });
     } else if (msg.header.msg_type === "chat_history") {
         chatHistory.value = msg.content;
-    }
-    else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
-        var incomingIntegrations;
-        if (msg.header.msg_type === "context_setup_response") {
-            incomingIntegrations = msg.content.integrations;
-
-        }
-        else if (msg.header.msg_type === "context_info_response") {
-            incomingIntegrations = msg.content.info.integrations;
-        }
-        if (incomingIntegrations === undefined) {
-            incomingIntegrations = [];
-        }
-        integrations.value.splice(0, integrations.value.length, ...incomingIntegrations);
-    }
-        else if (msg.header.msg_type === "add_example") {
-        const showToast = beakerInterfaceRef.value.showToast;
-        const session = beakerInterfaceRef.value.getSession();
-        try {
-            handleAddExampleMessage(msg, integrations.value, session)
-            showToast({
-                title: 'Example Added',
-                detail: `The example has been successfully added.`,
-                severity: 'success',
-                life: 4000
-            });
-        }
-        catch (error) {
-            showToast({
-                title: 'Error',
-                detail: `Unable to add example: ${error}.`,
-                severity: 'error',
-                life: 8000
-            });
-        }
-    }
-    else if (msg.header.msg_type === "add_integration") {
-        const showToast = beakerInterfaceRef.value.showToast;
-        const session = beakerInterfaceRef.value.getSession();
-        const integration = msg.content.integration;
-        try {
-            handleAddIntegrationMessage(msg, integrations.value, session)
-            showToast({
-                title: 'Integration Added',
-                detail: `The integration '${integration}' has been successfully added.`,
-                severity: 'success',
-                life: 4000
-            });
-        }
-        catch (error) {
-            showToast({
-                title: 'Error',
-                detail: `Unable to add integration: ${error}.`,
-                severity: 'error',
-                life: 8000
-            });
-        }
     }
 };
 

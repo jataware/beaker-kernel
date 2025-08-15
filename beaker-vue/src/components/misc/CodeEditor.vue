@@ -16,7 +16,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import type { LanguageSupport } from "@codemirror/language";
-import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion } from "@codemirror/autocomplete";
+import { autocompletion, completionKeymap, completionStatus, selectedCompletion, acceptCompletion, closeCompletion, startCompletion, completeFromList } from "@codemirror/autocomplete";
 import { linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint";
 import type { Diagnostic } from "@codemirror/lint";
 import type { IBeakerTheme } from '../../plugins/theme';
@@ -31,6 +31,8 @@ export interface CodeEditorProps {
     displayMode?: DisplayMode,
     language?: string,
     languageOptions?: any,
+    autocompleteEnabled?: boolean,
+    autocompleteOptions?: string[],
     modelValue: string,
 
     autofocus?: boolean,
@@ -41,6 +43,7 @@ export interface CodeEditorProps {
 
 const props = withDefaults(defineProps<CodeEditorProps>(), {
     displayMode: "light",
+    autocompleteEnabled: true,
     autofocus: false,
     disabled: false,
     annotations: () => [],
@@ -150,12 +153,24 @@ const extensions = computed(() => {
 
     const language: BeakerLanguage = LanguageRegistry.get(props.language);
 
-    const autocompleteOptions = autocompletion({
-        override: [(completion) => getCompletions(completion, session)],
-        defaultKeymap: false,
-        activateOnCompletion: language?.activateOnCompletion,
-    });
-    enabledExtensions.push(autocompleteOptions);
+    if (props.autocompleteEnabled) {
+        let autocompleteOptions;
+        if (props.autocompleteOptions) {
+            autocompleteOptions = autocompletion({
+                override: [completeFromList(props.autocompleteOptions)],
+                defaultKeymap: false,
+                activateOnCompletion: language?.activateOnCompletion,
+            });
+        }
+        else {
+            autocompleteOptions = autocompletion({
+                override: [(completion) => getCompletions(completion, session)],
+                defaultKeymap: false,
+                activateOnCompletion: language?.activateOnCompletion,
+            });
+        }
+        enabledExtensions.push(autocompleteOptions);
+    }
 
     if(language !== undefined) {
         const languageSupport: LanguageSupport = language.initializer(props.languageOptions);

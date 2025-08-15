@@ -8,12 +8,10 @@
         <div class="integration-main-content" v-else>
             <div class="integration-header">
                 <Select :options="
-                    allIntegrations.map((integration) => {
-                        return {
-                            label: integration.name,
-                            value: integration
-                        }
-                    })"
+                    sortedIntegrations.map(integration => ({
+                        label: integration.name,
+                        value: integration.uuid
+                    }))"
                     :option-label="(option) => option?.label ?? 'Select integration...'"
                     option-value="value"
                     placeholder="Select a integration..."
@@ -21,40 +19,29 @@
                         if (!confirmUnsavedChanges()) {
                             event.preventDefault;
                         } else {
-                            unsavedChanges = false;
-                            temporaryIntegration = undefined;
+                            model.unsavedChanges = false;
                         }
                     }"
-                    v-model="selectedIntegration">
+                    v-model="model.selected">
                 </Select>
 
-                <SplitButton
+                <Button
                     @click="() => {
                         if (confirmUnsavedChanges()) {
                             newIntegration();
                         }
                     }"
-                    label="New API Integration"
-                    :model="[
-                        {
-                            label: 'New API Integration',
-                            command: () => {}
-                        },
-                        {
-                            label: 'New Dataset Integration',
-                            command: () => {}
-                        }
-                    ]"
-                >
-                </SplitButton>
+                    label="New Integration"
+                />
             </div>
 
             <Fieldset legend="Name">
                 <InputText
                     v-if="selectedIntegration"
+                    ref="nameInput"
                     v-model="selectedIntegration.name"
                     :placeholder="selectedIntegration?.name ? 'Name' : 'No integration selected.'"
-                    @change="unsavedChanges = true;"
+                    @change="model.unsavedChanges = true;"
                 />
                 <InputText
                     v-else
@@ -71,12 +58,16 @@
                 <div class="constrained-editor-height">
                     <CodeEditor
                         v-if="selectedIntegration"
+                        language="markdown"
+                        :autocomplete-enabled="false"
                         v-model="selectedIntegration.description"
-                        @change="setUnsavedChanges"
+                        @change="model.unsavedChanges = true"
                         ref="descriptionEditor"
                     />
                     <CodeEditor
                         v-else
+                        language="markdown"
+                        :autocompleteEnabled="false"
                         disabled
                         v-model="emptyText"
                         placeholder="No integration selected."
@@ -120,59 +111,41 @@
                         :value="xsrfCookie"
                     />
                 </form>
-                <Toolbar v-for="file in selectedIntegration?.attached_files" :key="file?.filepath">
+                <Toolbar v-for="file, id in attachedFiles" :key="file?.filepath">
                     <template #start>
-                        <Badge
-                            severity="warning"
-                            size="large"
-                            v-if="!RegExp(`\{${file?.name}\}`).test(selectedIntegration?.source)"
-                            style="margin-right: 0.5rem;"
-                            v-tooltip="{
-                                value: `${file?.name} is not used in the below agent instructions.
-                                    If you mean for this file to be included, please ensure it is referenced
-                                    with {${file?.name}} in the below agent instructions body.`,
-                                pt: {
-                                    root: {
-                                        style: {
-                                            maxWidth: undefined
-                                        }
-                                    }
-                                }
-                            }"
-                        >
-                            <span class="pi pi-exclamation-triangle"></span>
-                        </Badge>
                         <Button
                             icon="pi pi-download"
                             v-tooltip="'Download'"
                             style="width: 32px; height: 32px"
-                            @click="download(file?.filepath)"
-                        />
-                        <Button
-                            icon="pi pi-upload"
-                            v-tooltip="'Upload and replace'"
-                            style="width: 32px; height: 32px"
-                            @click="openFileSelection(file?.filepath)"
+                            @click="downloadFile(id)"
                         />
                     </template>
                     <template #center>
-                        <InputText v-model="file.name" type="text">
-
-                        </InputText>
-                        <Button icon="pi pi-file" outlined v-tooltip="file?.filepath">
-
-                        </Button>
+                        <InputText v-model="file.name" type="text"></InputText>
                     </template>
                     <template #end>
                         <Button
                             icon="pi pi-trash"
                             severity="danger"
                             style="width: 32px; height: 32px"
-                            @click="() => {
-                                selectedIntegration.attached_files.splice(
-                                    selectedIntegration.attached_files.indexOf(file), 1
-                                )
-                            }"
+                            @click="removeFile(id)"
+                            v-tooltip="'Remove File'"
+                        />
+                    </template>
+                </Toolbar>
+                <Toolbar v-for="file, index in uncommittedNewFileUploads" :key="file?.filepath">
+                    <template #start>
+                        <span>Pending Upload</span>
+                    </template>
+                    <template #center>
+                        <InputText v-model="file.name" type="text"></InputText>
+                    </template>
+                    <template #end>
+                        <Button
+                            icon="pi pi-trash"
+                            severity="danger"
+                            style="width: 32px; height: 32px"
+                            @click="uncommittedNewFileUploads.splice(index, 1)"
                             v-tooltip="'Remove File'"
                         />
                     </template>
@@ -185,6 +158,21 @@
                     :disabled="!selectedIntegration"
                 />
             </Fieldset>
+
+            <div
+                style="display: flex;
+                flex-direction: column;
+                gap: 0.5rem"
+                v-if="unincludedFiles.length > 0"
+            >
+                <Tag
+                    icon="pi pi-exclamation-triangle"
+                    severity="warning"
+                    size="large"
+                >
+                    Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
+                </Tag>
+            </div>
 
             <Fieldset legend="Agent Instructions">
                 <p>
@@ -204,35 +192,26 @@
                 <div class="constrained-editor-height">
                     <CodeEditor
                         v-if="selectedIntegration"
+                        language="markdown"
+                        :autocompleteEnabled="true"
+                        :autocomplete-options="Object.values(attachedFiles).map((file) => file.name)"
                         v-model="selectedIntegration.source"
-                        @change="setUnsavedChanges"
+                        @change="model.unsavedChanges = true"
                         ref="instructionEditor"
                     />
                     <CodeEditor
                         v-else
+                        language="markdown"
+                        :autocompleteEnabled="false"
                         disabled
                         v-model="emptyText"
                         placeholder="No integration selected."
                     />
                 </div>
-
             </Fieldset>
-
-            <Divider v-if="unincludedFiles.length > 0"></Divider>
-
-            <div style="display: flex; flex-direction: column; gap: 0.5rem">
-                <Tag
-                    icon="pi pi-exclamation-triangle"
-                    severity="warning"
-                    size="large"
-                    v-if="unincludedFiles.length > 0"
-                >
-                    Some files are not included: {{ unincludedFiles.join(', ') }}; see the above documentation about how to reference these files.
-                </Tag>
-            </div>
         </div>
         <div style="flex: 1 0; margin: 0.2rem; display: flex; justify-content: flex-end;">
-            <div v-if="unsavedChanges" style="flex-shrink: 0;">
+            <div v-if="model.unsavedChanges" style="flex-shrink: 0;">
                 <Button
                     @click="save"
                     :disabled="!selectedIntegration"
@@ -248,15 +227,13 @@
 
 <script setup lang="ts">
 
-import { defineProps, ref, watch, computed, nextTick, inject, defineModel } from 'vue';
-import { type Integration } from '../../util/integration';
-import { BeakerSession } from 'beaker-kernel';
+import { defineProps, ref, watch, computed, inject, defineModel } from 'vue';
+import { type IntegrationMap, type Integration, getIntegrationProviderType, type IntegrationAttachedFile, type IntegrationInterfaceState, filterByResourceType } from '../../util/integration';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 
 import Select from 'primevue/select';
 import Fieldset from 'primevue/fieldset';
 import Button from "primevue/button";
-import Divider from 'primevue/divider';
 import Toolbar from 'primevue/toolbar';
 import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
@@ -264,52 +241,122 @@ import Tag from 'primevue/tag';
 
 import * as cookie from 'cookie';
 
-import { ContentsManager, Contents } from '@jupyterlab/services';
-import Badge from 'primevue/badge';
 import CodeEditor from './CodeEditor.vue';
-import SplitButton from 'primevue/splitbutton';
+
+import { useRoute } from 'vue-router';
+
 const showToast = inject<any>('show_toast');
 
-const props = defineProps(["integrations", "selectedOnLoad"]);
-const selectedIntegration = defineModel<Integration>('selectedIntegration', {required: true});
-const unsavedChanges = defineModel<boolean>('unsavedChanges', {required: true});
-// buffer for changes not yet committed
-const temporaryIntegration = ref(undefined);
+// these are props rather than events due to awaiting async finishes;
+// file uploads need to be done before the integration is changed.
+const props = defineProps<{
+    fetchResources: () => Promise<void>,
+    deleteResource: (resourceId: string) => Promise<void>,
+    modifyResource: (body: object, resourceId?: string) => Promise<void>,
+    modifyIntegration: (body: object, integrationId?: string) => Promise<void>,
+}>();
 
-const hasLoadedInitialSelection = ref(false);
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
-const sortedIntegrations = computed(() =>
-    props?.integrations?.toSorted((a, b) => a?.name.localeCompare(b?.name)))
+const model = defineModel<IntegrationInterfaceState>()
 
-const allIntegrations = computed(() =>
-    [...sortedIntegrations?.value, ...(temporaryIntegration?.value ? [temporaryIntegration.value] : [])])
+const sortIntegrations = (integrations: IntegrationMap): Integration[] =>
+    Object.values(integrations).toSorted((a, b) => a?.name.localeCompare(b?.name))
 
-watch(props.integrations, (updatedIntegrations) => {
-    if (updatedIntegrations.length === 0) {
-        return;
+const adhocIntegrations = computed<IntegrationMap>(() =>
+    Object.fromEntries(Object.entries(model.value.integrations ?? {})
+        .filter(([_name, integration]) => getIntegrationProviderType(integration) === "adhoc")))
+
+const sortedIntegrations = computed<Integration[]>(() => sortIntegrations(adhocIntegrations.value))
+
+const selectedIntegration = computed<Integration>(() => adhocIntegrations.value[model.value.selected])
+
+const attachedFiles = computed<{[key in string]: IntegrationAttachedFile}>(() =>
+    filterByResourceType<IntegrationAttachedFile>(
+        model.value.integrations[model.value.selected]?.resources, "file")
+    )
+
+const nameInput = ref();
+
+// storing deletes until save
+const uncommittedDeletedResources = ref([]);
+// storing new integration file uploads until pushed to
+const uncommittedNewFileUploads = ref<IntegrationAttachedFile[]>([]);
+
+const updateSelectedParam = () => {
+    // keep URL in sync with focused integration after save
+    const url = new URL(window.location.href);
+    url.searchParams.set('selected', model.value.selected);
+    window.history.pushState(null, '', url.toString());
+}
+
+watch(() => model.value.selected, () => {
+    model.value.unsavedChanges = false;
+    uncommittedNewFileUploads.value = [];
+    uncommittedDeletedResources.value = [];
+    props.fetchResources()
+})
+
+const newIntegration = () => {
+    const defaultProvider = (Object.keys(model.value?.integrations).length ? Object.values(model.value.integrations).at(0)?.provider : "adhoc:specialist_agents");
+    const integration: Integration = {
+        name: "New Integration",
+        source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
+        description: "This is the description that the agent will use to determine when this integration should be used.",
+        provider: defaultProvider,
+        slug: "new_integration",
+        uuid: "new",
+        url: ""
     }
-    if (hasLoadedInitialSelection.value) {
-        return;
+    model.value.integrations["new"] = integration;
+    model.value.selected = "new";
+    model.value.unsavedChanges = true;
+    // Select the contents of the name, focusing input to allow immediate editing
+    const el = nameInput?.value?.$el
+    el?.select();
+    el?.focus();
+}
+
+const delayUntil = (condition, retryInterval) => {
+    const poll = resolve => {
+        if (condition()) {
+            resolve();
+        }
+        else {
+            setTimeout(() => poll(resolve), retryInterval)
+        }
     }
-    if (props?.selectedOnLoad) {
-        nextTick(() => {
-            if (props?.selectedOnLoad === 'new') {
-                newIntegration();
-                return;
-            }
-            for (const integration of updatedIntegrations) {
-                if (integration?.slug === props?.selectedOnLoad) {
-                    selectedIntegration.value = integration;
-                    return;
-                }
-            }
-        })
+    return new Promise(poll);
+}
+
+const route = useRoute();
+// in the case of non-remounting, where ?selected= is changed via other means, go with that
+watch(() => route, (newRoute) => {
+    if (newRoute.query?.selected === "new") {
+        // newIntegration sets model.value to a temp uuid - this handles non-pageload cases
+        if (model.value.finishedInitialLoad) {
+            newIntegration();
+        }
+        // when we're dealing with pageload, just wait until valid
+        else {
+            delayUntil(() => model.value.finishedInitialLoad, 100)
+                .then(() => newIntegration());
+        }
+    } else {
+        model.value.selected = newRoute.query?.selected as string|undefined ?? model.value.selected;
     }
-    hasLoadedInitialSelection.value = true;
+}, {immediate: true, deep: true})
+
+watch(model, ({unsavedChanges}) => {
+    if (unsavedChanges) {
+        onbeforeunload = () => true;
+    } else {
+        onbeforeunload = undefined;
+    }
 })
 
 const descriptionEditor = ref();
-watch(() => [selectedIntegration.value?.description], (current) => {
+watch(() => [selectedIntegration?.value?.description], (current) => {
     if (descriptionEditor.value) {
         descriptionEditor.value.model = current[0];
     }
@@ -322,9 +369,6 @@ watch(() => [selectedIntegration.value?.source], (current) => {
     }
 })
 
-const session = inject<BeakerSession>('session');
-const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-
 const emptyText = ref<string|undefined>(undefined);
 
 const fileInput = ref<HTMLInputElement|undefined>(undefined);
@@ -332,133 +376,97 @@ const fileInputMultiple = ref<HTMLInputElement|undefined>(undefined);
 const uploadForm = ref<HTMLFormElement|undefined>(undefined);
 const uploadFormMultiple = ref<HTMLFormElement|undefined>(undefined);
 
-const unincludedFiles = computed(() =>
-    (selectedIntegration?.value?.attached_files ?? [])
-        ?.map((file) =>
-            RegExp(`{${file?.name}}`).test(selectedIntegration?.value?.source) ? false : file?.name)
-        ?.filter((x) => x))
+const unincludedFiles = computed<[string, IntegrationAttachedFile][]>(() => {
+    const unincluded = [];
+    for (const file of Object.values(attachedFiles.value)) {
+        // we want to match adhoc's handler for {% file path/to/file.ext %}
+        const pattern = RegExp(`{{\\s*${file?.name}\\s*}}`);
+        if (!pattern.test(selectedIntegration?.value?.source)) {
+            unincluded.push(file.name);
+        }
+    }
+    return unincluded;
+})
 
-const setUnsavedChanges = () => {unsavedChanges.value = true;};
 const confirmUnsavedChanges = () => {
-    if (unsavedChanges?.value) {
+    if (model.value.unsavedChanges) {
         return confirm("You currently have unsaved changes that would be lost with this change. Are you sure?")
     }
     return true;
 }
 
-watch(unsavedChanges, async (newValue, _) => {
-    if (newValue) {
-        onbeforeunload = () => true;
-    } else {
-        onbeforeunload = undefined;
-    }
-})
+const removeFile = async (id) => {
+    model.value.unsavedChanges = true;
+    delete selectedIntegration.value.resources[id];
+    // if exists remote -- if it's only a local unsaved change, the request here is a no-op
+    uncommittedDeletedResources.value.push(id);
+}
 
 const fileTarget = ref();
-
-const openFileSelection = (target) => {
-    fileTarget.value = target;
-    fileInput.value?.click();
-}
 
 const openFileSelectionMultiple = () => {
     fileTarget.value = undefined;
     fileInputMultiple.value?.click();
 }
 
-const contentManager = new ContentsManager({});
 const cookies = cookie.parse(document.cookie);
 const xsrfCookie = cookies._xsrf;
 
-const newIntegration = () => {
-    unsavedChanges.value = true;
-    selectedIntegration.value = {
-        name: "New Integration",
-        url: "",
-        slug: undefined,
-        source: "This is the prompt information that the agent will consult when using the integration. Include API details or how to find datasets here.",
-        description: "This is the description that the agent will use to determine when this integration should be used.",
-        attached_files: [],
-        examples: []
-    }
-    temporaryIntegration.value = selectedIntegration.value
-}
-
 const save = async () => {
-    unsavedChanges.value = false;
-    temporaryIntegration.value = undefined;
-
-    if (selectedIntegration.value === undefined) {
+    if (selectedIntegration?.value === undefined) {
         return;
     }
 
-    try {
-        const action = session.executeAction('save_integration', {
-            ...selectedIntegration.value,
-        });
-        const response = await action.done;
-        if (response.content?.status === "ok") {
-            showToast({
-                title: 'Saved!',
-                detail: `The session will now reconnect and load the new definition.`,
-                severity: 'success',
-                life: 4000
-            });
+    for (const id of uncommittedDeletedResources.value) {
+        await props.deleteResource(id);
+    }
+    uncommittedDeletedResources.value = [];
+
+    // if local only, sync minimal details to get a uuid from the server, then update after files are pushed
+    if (model.value.selected === "new") {
+        const source = selectedIntegration.value.source;
+        const uncommittedUploads = [...uncommittedNewFileUploads.value];
+        // sets selected with new uuid
+        await props.modifyIntegration({...selectedIntegration.value, source: ""})
+        for (const file of uncommittedUploads) {
+            await props.modifyResource(file);
+        }
+        selectedIntegration.value.source = source;
+    } else {
+        for (const [file_id, file] of Object.entries(attachedFiles.value)) {
+            await props.modifyResource(file, file_id);
         }
     }
-    catch (error) {
-        showToast({
-            title: 'Failed to save integration',
-            detail: `${error}`,
-            severity: 'danger',
-            life: 4000
-        });
-    }
-}
+    await props.modifyIntegration(selectedIntegration.value, model.value.selected);
 
-const getIntegrationRoot = async (integration) => {
-    const future = session.executeAction('get_integration_root', {
-        integration
-    })
-    return (await future.done).content?.return;
-}
+    showToast({
+        title: 'Saved!',
+        detail: `The session will now reconnect and load the new definition.`,
+        severity: 'success',
+        life: 4000
+    });
 
-const download = async (name) => {
-    const folderRoot = await getIntegrationRoot(selectedIntegration.value);
-    const path = `${folderRoot}/documentation/${name}`;
-    await downloadFile(path);
+    // if exists
+    delete model.value.integrations["new"];
+
+    model.value.unsavedChanges = false;
+    // if ?selected=new, assign it to the new uuid for clarity
+    // updateSelectedParam();
 }
 
 const onSelectFileForUpload = async () => {
     const fileList = uploadForm.value['uploadfiles']?.files;
-    await uploadFile(fileList);
+    await uploadFiles(fileList);
 }
 
 const onSelectFilesForUpload = async () => {
     const fileList = uploadFormMultiple.value['uploadfilesMultiple']?.files;
-    await uploadFile(fileList);
-    for (const file of fileList) {
-        selectedIntegration?.value.attached_files.push({
-            name: file.name.split('.').slice(0, -1).join(''),
-            filepath: file.name
-        })
-    }
-
+    await uploadFiles(fileList);
 }
 
-const uploadFile = async (files: FileList) => {
-    await session.executeAction('create_integration_folders_for_upload', {
-        integration: selectedIntegration.value
-    }).done;
-
-    const folderRoot = await getIntegrationRoot(selectedIntegration.value);
-    unsavedChanges.value = true;
+const uploadFiles = async (files: FileList) => {
+    model.value.unsavedChanges = true;
     const promises = Array.from(files).map(async (file) => {
-        let path = `${folderRoot}/documentation/${file.name}`;
-        if (fileTarget?.value !== undefined) {
-            path = `${folderRoot}/documentation/${fileTarget.value}`;
-        }
-
         const bytes = [];
         const reader = file.stream().getReader();
         var chunk = (await reader.read()).value;
@@ -466,63 +474,34 @@ const uploadFile = async (files: FileList) => {
             bytes.push(Array.from(chunk, (byte) => String.fromCharCode(byte)).join(""));
             chunk = (await reader.read()).value;
         }
-        const type = (file.type !== "" ? file.type : "application/octet-stream");
-        const content = btoa(bytes.join(""));
-        const format = 'base64';
-
-        const fileObj: Partial<Contents.IModel> = {
-            type,
-            format,
-            content,
-        };
-
-        let result;
-        try {
-            result = await contentManager.save(path, fileObj);
+        const fileResource = {
+            resource_type: "file",
+            integration: model.value.selected,
+            content: String(bytes),
+            filepath: file.name,
+            name: file.name.split('.')[0]
         }
-        catch(e) {
-            showToast({
-                title: 'Upload failed',
-                detail: `Unable to upload file "${path}": ${e}`,
-                severity: 'error',
-                life: 8000
-            });
-            return;
-        }
-
-        if (result && result.created && result.size) {
-            showToast({
-                title: 'Upload complete',
-                detail: `File "${result.path}" (${result.size} bytes) successfully uploaded.`,
-                severity: 'success',
-                life: 4000
-            });
-        }
-        else {
-            showToast({
-                title: 'Upload failed',
-                detail: `Unable to upload file "${path}".`,
-                severity: 'error',
-                life: 8000
-            });
+        // keep local until save on new temporary integration
+        if (model.value.selected !== "new") {
+            await props.modifyResource(fileResource);
+        } else {
+            uncommittedNewFileUploads.value.push(fileResource as IntegrationAttachedFile);
         }
     });
-
     await Promise.all(promises);
 }
 
-const downloadFile = async (path) => {
-    let url = await contentManager.getDownloadUrl(path);
-    // Ensure we are downloading. Add the download query param
-    if (!/download=/.test(url)) {
-        if (/\?/.test(url)) {
-            url = url + "&download=1"
-        }
-        else {
-            url = url + "?download=1"
-        }
-    }
-    window.location.href = url;
+const downloadFile = async (id) => {
+    const file: IntegrationAttachedFile = selectedIntegration.value.resources[id] as IntegrationAttachedFile
+    const blob = new Blob([file?.content], {type: "text/plain"})
+    const url = window.URL.createObjectURL(blob);
+    const temporaryElement  = document.createElement("a");
+    temporaryElement.href = url;
+    temporaryElement.download = file.filepath;
+    temporaryElement.click();
+
+    window.URL.revokeObjectURL(url)
+    temporaryElement.remove()
 };
 
 </script>
@@ -539,6 +518,21 @@ const downloadFile = async (path) => {
             display: flex;
             flex-direction: row;
             gap: 0.5rem;
+            width: 100%;
+            max-width: 100%;
+            flex-shrink: 0;
+            > div.p-select {
+                flex: 1 1 auto;
+                width: 100px;
+                span.p-select-label {
+                    flex-shrink: 2;
+                    display: block;
+                    min-width: 0;
+                }
+            }
+            > div.p-splitbutton {
+                flex-shrink: 0;
+            }
         }
     }
     padding: 0 0.4rem;
