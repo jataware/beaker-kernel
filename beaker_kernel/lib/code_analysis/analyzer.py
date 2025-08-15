@@ -55,7 +55,7 @@ class AnalysisEngine:
             )
         results = await asyncio.gather(*futures)
 
-        # Flatten results into a simple list of annotations
+        # flatten results into a simple list of annotations
         raw_annotations = [
             annotation for result in results
             for annotation in result

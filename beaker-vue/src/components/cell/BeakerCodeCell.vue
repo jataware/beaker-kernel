@@ -60,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
+import { ref, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
@@ -88,7 +88,7 @@ const instance = getCurrentInstance();
 
 const lintAnnotations = ref<{}[]>([]);
 
-const emit = defineEmits([
+defineEmits([
     'blur',
 ])
 
