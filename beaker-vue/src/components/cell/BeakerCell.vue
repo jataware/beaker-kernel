@@ -44,7 +44,7 @@
                     @pointerenter="overlayMenuHoverHandler"
                     @pointerleave="overlayMenuHoverHandler"
                 >
-                    <div v-tooltip.left="'Change Cell Type'">
+                    <div v-tooltip.left="'Change Cell Type'" v-if="!shouldHideCellTypeSelector">
                         <Select
                             :name="`${cell.id}-celltype`"
                             class="cell-type-selector overlay-menu-button"
@@ -68,6 +68,7 @@
                         </Select>
                     </div>
                     <Button
+                        v-if="!shouldHideExecuteButton"
                         v-tooltip.left="'Execute cell'"
                         @click="beakerSession.findNotebookCellById(cell.id).execute(); hoverMenuRef.hide();"
                         icon="pi pi-play"
@@ -130,6 +131,8 @@ interface BeakerCellProps {
     cell: IBeakerCell;
     index?: number;
     dragEnabled?: boolean;
+    hideCellTypeSelector?: boolean;
+    hideExecuteButton?: boolean;
 }
 
 const props = defineProps<BeakerCellProps>();
@@ -163,6 +166,28 @@ const cellIconMap = {
 };
 
 const cellIcon = computed(() => cellIconMap[props.cell.cell_type]);
+
+const isThoughtCell = computed(() => {
+    return props.cell.cell_type === 'markdown' && 
+           props.cell.metadata?.beaker_cell_type === 'thought';
+});
+
+const isResponseCell = computed(() => {
+    return props.cell.cell_type === 'markdown' && 
+           props.cell.metadata?.beaker_cell_type === 'response';
+});
+
+const isMarkdownCell = computed(() => {
+    return props.cell.cell_type === 'markdown';
+});
+
+const shouldHideCellTypeSelector = computed(() => {
+    return props.hideCellTypeSelector || isThoughtCell.value || isResponseCell.value;
+});
+
+const shouldHideExecuteButton = computed(() => {
+    return props.hideExecuteButton || isMarkdownCell.value;
+});
 
 enum CellState {
     Success = 'success',

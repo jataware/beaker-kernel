@@ -162,6 +162,9 @@ export function useNotebookInterface() {
                 });
             }
         },
+        "keydown.enter.exact.prevent.stop.!in-editor": () => {
+            beakerNotebookRef.value?.selectedCell().enter();
+        },
         "keydown.esc.exact.prevent": () => {
             beakerNotebookRef.value?.selectedCell().exit();
         },

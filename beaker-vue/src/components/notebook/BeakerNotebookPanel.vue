@@ -10,6 +10,8 @@
             :index="index"
             :key="`outercell-${cell.id}`"
             class="beaker-cell"
+            :hide-cell-type-selector="cell.cell_type === 'query'"
+            :hide-execute-button="cell.cell_type === 'query'"
             :class="{
                 selected: (cell.id === notebook.selectedCellId),
                 'drag-source': (index == dragSourceIndex),
