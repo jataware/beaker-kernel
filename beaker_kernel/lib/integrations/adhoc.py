@@ -289,7 +289,7 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         spec_location = Path(current_location).absolute() if current_location else None
         existing_basedirs = [Path(base_dir).absolute() for base_dir in reversed(self.data_basedirs) if os.path.exists(base_dir)]
         # If existing location is within in the user's home directory or the current working directory, just modify in place.
-        if spec_location.is_relative_to(os.path.expanduser('~')) or spec_location.is_relative_to(os.curdir):
+        if spec_location and (spec_location.is_relative_to(os.path.expanduser('~')) or spec_location.is_relative_to(os.curdir)):
             if spec_location.exists():
                 spec_file = spec_location / "api.yaml"
                 if able_to_write(spec_file):
