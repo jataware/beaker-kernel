@@ -15,6 +15,7 @@ export function useNotebookInterface() {
     const beakerNotebookRef = ref<BeakerNotebookComponentType>();
     const beakerInterfaceRef = ref();
     const filePanelRef = ref();
+    const configPanelRef = ref();
     const sideMenuRef = ref();
     const rightSideMenuRef = ref();
     const agentQueryRef = ref();
@@ -340,6 +341,14 @@ export function useNotebookInterface() {
             await filePanelRef.value.flashFile(path);
         }
     };
+
+    const restartSession = async () => {
+        const resetFuture = beakerSession.value.session.sendBeakerMessage(
+            "reset_request",
+            {}
+        )
+        await resetFuture;
+    };
     
     // at least one cell
     watch(
@@ -357,6 +366,7 @@ export function useNotebookInterface() {
         beakerNotebookRef,
         beakerInterfaceRef,
         filePanelRef,
+        configPanelRef,
         sideMenuRef,
         rightSideMenuRef,
         agentQueryRef,
@@ -370,6 +380,7 @@ export function useNotebookInterface() {
         chatHistory,
         integrations,
         contextPreviewData,
+        kernelStateInfo,
         copiedCell,
         activeQueryCells,
         
@@ -387,6 +398,7 @@ export function useNotebookInterface() {
         loadNotebook,
         handleNotebookSaved,
         scrollToCell,
+        restartSession,
         
         // injections
         theme,

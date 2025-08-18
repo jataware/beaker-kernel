@@ -62,7 +62,6 @@
             </BeakerNotebook>
         </div>
 
-        <!-- TODO add all left/right panels as like in NotebookInterface.vue -->
         <template #left-panel>
             <SideMenu
                 ref="sideMenuRef"
@@ -79,6 +78,36 @@
                     <FilePanel
                         ref="filePanelRef"
                         @open-file="handleLoadNotebook"
+                        @preview-file="(file, mimetype) => {
+                            previewedFile = {url: file, mimetype: mimetype};
+                            previewVisible = true;
+                            rightSideMenuRef.selectPanel('file-contents');
+                        }"
+                    />
+                </SideMenuPanel>
+                <SideMenuPanel icon="pi pi-comments" label="Chat History">
+                    <ChatHistoryPanel :chat-history="chatHistory"/>
+                </SideMenuPanel>
+                <SideMenuPanel
+                    id="integrations" label="Integrations" icon="pi pi-database"
+                    v-if="Object.keys(integrations).length > 0"
+                >
+                    <IntegrationPanel
+                        v-model="integrations"
+                    >
+                    </IntegrationPanel>
+                </SideMenuPanel>
+                <SideMenuPanel
+                    v-if="props.config.config_type !== 'server'"
+                    id="config"
+                    :label="`${$tmpl._('short_title', 'Beaker')} Config`"
+                    icon="pi pi-cog"
+                    :lazy="true"
+                    position="bottom"
+                >
+                    <ConfigPanel
+                        ref="configPanelRef"
+                        @restart-session="restartSession"
                     />
                 </SideMenuPanel>
             </SideMenu>
@@ -96,6 +125,23 @@
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
+                <SideMenuPanel
+                    id="file-contents"
+                    label="File Contents"
+                    icon="pi pi-file beaker-zoom"
+                    no-overflow
+                >
+                    <FileContentsPanel
+                        :url="previewedFile?.url"
+                        :mimetype="previewedFile?.mimetype"
+                    />
+                </SideMenuPanel>
+                <SideMenuPanel id="media" label="Graphs and Images" icon="pi pi-chart-bar" no-overflow>
+                    <MediaPanel />
+                </SideMenuPanel>
+                <SideMenuPanel id="kernel-state" label="Kernel State" icon="pi pi-server" no-overflow>
+                    <KernelStatePanel :data="kernelStateInfo"/>
+                </SideMenuPanel>
                 <SideMenuPanel id="kernel-logs" label="Logs" icon="pi pi-list" position="bottom">
                     <DebugPanel :entries="debugLogs" @clear-logs="debugLogs.splice(0, debugLogs.length)" v-autoscroll />
                 </SideMenuPanel>
@@ -105,21 +151,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
 import InfoPanel from '../components/panels/InfoPanel.vue';
 import FilePanel from '../components/panels/FilePanel.vue';
+import ConfigPanel from '../components/panels/ConfigPanel.vue';
 import SvgPlaceholder from '../components/misc/SvgPlaceholder.vue';
 import SideMenu from "../components/sidemenu/SideMenu.vue";
 import SideMenuPanel from "../components/sidemenu/SideMenuPanel.vue";
+import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
+import { ChatHistoryPanel, type IChatHistory } from '../components/panels/ChatHistoryPanel';
+import IntegrationPanel from '../components/panels/IntegrationPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
 import AgentThinkingIndicator from '../components/misc/AgentThinkingIndicator.vue';
+import MediaPanel from '../components/panels/MediaPanel.vue';
+import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 import BeakerCodeCellComponent from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCellComponent from '../components/cell/BeakerMarkdownCell.vue';
@@ -128,6 +180,7 @@ import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
 import { useNotebookInterface } from '../composables/useNotebookInterface';
 import { useQueryCellFlattening } from '../composables/useQueryCellFlattening';
+import { listIntegrations, type IntegrationMap } from '../util/integration';
 
 const props = defineProps([
     "config",
@@ -142,6 +195,7 @@ const {
     beakerNotebookRef,
     beakerInterfaceRef,
     filePanelRef,
+    configPanelRef,
     sideMenuRef,
     rightSideMenuRef,
     agentQueryRef,
@@ -149,6 +203,7 @@ const {
     isMaximized,
     debugLogs,
     contextPreviewData,
+    kernelStateInfo,
     beakerSession,
     defaultRenderers,
     activeQueryCells,
@@ -162,6 +217,7 @@ const {
     handleNotebookSaved,
     scrollToCell,
     beakerApp,
+    restartSession,
 } = useNotebookInterface();
 
 beakerApp.setPage("nextgen-notebook");
@@ -192,6 +248,20 @@ const handleLoadNotebook = (notebookJSON: any, filename: string) => {
     resetProcessedEvents();
     loadNotebook(notebookJSON, filename);
 };
+
+const chatHistory = ref<IChatHistory>();
+const integrations = ref<IntegrationMap>({});
+const previewVisible = ref<boolean>(false);
+
+type FilePreview = {
+    url: string,
+    mimetype?: string
+}
+const previewedFile = ref<FilePreview>();
+
+watch(beakerSession, async () => {
+    integrations.value = await listIntegrations(sessionIdFromUrl);
+});
 
 </script>
 
