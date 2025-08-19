@@ -1,130 +1,268 @@
 <template>
-        <div class="playground-container">
-            <Card class="theme-showcase">
-                <template #title>
-                    <div class="showcase-header">
-                        <h2>Beaker Theme Color Palette</h2>
-                        <Button 
-                            :icon="`pi ${isDarkMode ? 'pi-sun' : 'pi-moon'}`"
-                            @click="toggleTheme"
-                            text
-                            rounded
-                            v-tooltip.bottom="`Switch to ${isDarkMode ? 'light' : 'dark'} mode`"
-                        />
-                    </div>
-                </template>
-                <template #content>
-                    <div class="color-sections">
-                        <section class="color-section">
-                            <h3>Primary Colors</h3>
-                            <div class="color-grid">
-                                <div class="color-card" v-for="(value, key) in primaryColors" :key="key">
-                                    <div class="color-swatch" :style="{backgroundColor: `var(--p-${key})`}"></div>
-                                    <div class="color-info">
-                                        <code class="color-name">--p-{{ key }}</code>
-                                        <span class="color-value" :style="{color: `var(--p-${key})`}">●</span>
+    <div class="playground-container">
+        <!-- tab navigation -->
+        <div class="tab-navigation">
+            <Button 
+                v-for="tab in tabs" 
+                :key="tab.id"
+                :label="tab.label"
+                :class="['tab-button', { active: activeTab === tab.id }]"
+                @click="activeTab = tab.id"
+                text
+            />
+        </div>
+
+        <!-- tab content -->
+        <div class="tab-content">
+            <!-- theme tab (default) -->
+            <div v-show="activeTab === 'theme'" class="tab-panel">
+                <Card class="theme-showcase">
+                    <template #title>
+                        <div class="showcase-header">
+                            <h2>Beaker Theme Color Palette</h2>
+                            <Button 
+                                :icon="`pi ${isDarkMode ? 'pi-sun' : 'pi-moon'}`"
+                                @click="toggleTheme"
+                                text
+                                rounded
+                                v-tooltip.bottom="`Switch to ${isDarkMode ? 'light' : 'dark'} mode`"
+                            />
+                        </div>
+                    </template>
+                    <template #content>
+                        <div class="color-sections">
+                            <section class="color-section">
+                                <h3>Primary Colors</h3>
+                                <div class="color-grid">
+                                    <div class="color-card" v-for="(value, key) in primaryColors" :key="key">
+                                        <div class="color-swatch" :style="{backgroundColor: `var(--p-${key})`}"></div>
+                                        <div class="color-info">
+                                            <code class="color-name">--p-{{ key }}</code>
+                                            <span class="color-value" :style="{color: `var(--p-${key})`}">●</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </section>
+                            </section>
 
-                        <!-- surfaces -->
-                        <section class="color-section">
-                            <h3>Surface Colors</h3>
-                            <div class="color-grid">
-                                <div class="color-card" v-for="surface in surfaceColors" :key="surface">
-                                    <div class="color-swatch" :style="{backgroundColor: `var(--p-surface-${surface})`}"></div>
-                                    <div class="color-info">
-                                        <code class="color-name">--p-surface-{{ surface }}</code>
-                                        <span class="color-value" :style="{color: `var(--p-surface-${surface})`}">●</span>
+                            <!-- surfaces -->
+                            <section class="color-section">
+                                <h3>Surface Colors</h3>
+                                <div class="color-grid">
+                                    <div class="color-card" v-for="surface in surfaceColors" :key="surface">
+                                        <div class="color-swatch" :style="{backgroundColor: `var(--p-surface-${surface})`}"></div>
+                                        <div class="color-info">
+                                            <code class="color-name">--p-surface-{{ surface }}</code>
+                                            <span class="color-value" :style="{color: `var(--p-surface-${surface})`}">●</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </section>
+                            </section>
 
-                        <!-- text -->
-                        <section class="color-section">
-                            <h3>Text Colors</h3>
-                            <div class="color-grid">
-                                <div class="color-card" v-for="textColor in textColors" :key="textColor">
-                                    <div class="color-swatch text-demo" :style="{backgroundColor: 'var(--p-surface-a)', color: `var(--${textColor})`}">
-                                        Sample Text
-                                    </div>
-                                    <div class="color-info">
-                                        <code class="color-name">--{{ textColor }}</code>
-                                        <span class="color-value" :style="{color: `var(--${textColor})`}">●</span>
+                            <!-- text -->
+                            <section class="color-section">
+                                <h3>Text Colors</h3>
+                                <div class="color-grid">
+                                    <div class="color-card" v-for="textColor in textColors" :key="textColor">
+                                        <div class="color-swatch text-demo" :style="{backgroundColor: 'var(--p-surface-a)', color: `var(--${textColor})`}">
+                                            Sample Text
+                                        </div>
+                                        <div class="color-info">
+                                            <code class="color-name">--{{ textColor }}</code>
+                                            <span class="color-value" :style="{color: `var(--${textColor})`}">●</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </section>
+                            </section>
 
-                        <!-- semantic -->
-                        <section class="color-section">
-                            <h3>Semantic Colors & Others</h3>
-                            <div class="semantic-colors">
-                                <div v-for="(colors, colorName) in semanticColors" :key="colorName" class="semantic-group">
-                                    <h4 class="semantic-title">{{ colorName.charAt(0).toUpperCase() + colorName.slice(1) }}</h4>
-                                    <div class="color-row">
-                                        <div class="color-card small" v-for="shade in colors" :key="shade">
-                                            <div class="color-swatch small" :style="{backgroundColor: `var(--p-${colorName}-${shade})`}"></div>
-                                            <div class="color-info small">
-                                                <code class="color-name small">--p-{{ colorName }}-{{ shade }}</code>
+                            <!-- semantic -->
+                            <section class="color-section">
+                                <h3>Semantic Colors & Others</h3>
+                                <div class="semantic-colors">
+                                    <div v-for="(colors, colorName) in semanticColors" :key="colorName" class="semantic-group">
+                                        <h4 class="semantic-title">{{ colorName.charAt(0).toUpperCase() + colorName.slice(1) }}</h4>
+                                        <div class="color-row">
+                                            <div class="color-card small" v-for="shade in colors" :key="shade">
+                                                <div class="color-swatch small" :style="{backgroundColor: `var(--p-${colorName}-${shade})`}"></div>
+                                                <div class="color-info small">
+                                                    <code class="color-name small">--p-{{ colorName }}-{{ shade }}</code>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </section>
+                            </section>
 
-                        <!-- component specific (didnt work) -->
-                        <!-- <section class="color-section">
-                            <h3>Component-Specific Colors</h3>
-                            <div class="color-grid">
-                                <div class="color-card" v-for="compColor in componentColors" :key="compColor">
-                                    <div class="color-swatch" :style="{backgroundColor: `var(--p-${compColor})`}"></div>
-                                    <div class="color-info">
-                                        <code class="color-name">--p-{{ compColor }}</code>
-                                        <span class="color-value" :style="{color: `var(--p-${compColor})`}">●</span>
+                        </div>
+                    </template>
+                </Card>
+            </div>
+
+            <!-- query cell demo tab -->
+            <div v-show="activeTab === 'query-cells'" class="tab-panel">
+                <Card class="query-cell-demo">
+                    <template #title>
+                        <h2>Query Cell Badge States Demo</h2>
+                    </template>
+                    <template #content>
+                        <p class="demo-description">Hover over each badge to see tooltips. This demonstrates all the different states of query cell badges.</p>
+                        
+                        <div class="demo-grid">
+                            <div class="demo-item">
+                                <h3>Pending</h3>
+                                <NextGenBeakerQueryCell 
+                                    :index="0" 
+                                    :cell="pendingCell" 
+                                />
+                            </div>
+                            
+                            <div class="demo-item">
+                                <h3>In Progress</h3>
+                                <NextGenBeakerQueryCell 
+                                    :index="1" 
+                                    :cell="inProgressCell" 
+                                />
+                            </div>
+                            
+                            <div class="demo-item">
+                                <h3>Success</h3>
+                                <NextGenBeakerQueryCell 
+                                    :index="2" 
+                                    :cell="successCell" 
+                                />
+                            </div>
+                            
+                            <div class="demo-item">
+                                <h3>Aborted</h3>
+                                <NextGenBeakerQueryCell 
+                                    :index="3" 
+                                    :cell="abortedCell" 
+                                />
+                            </div>
+                            
+                            <div class="demo-item">
+                                <h3>Failed</h3>
+                                <NextGenBeakerQueryCell 
+                                    :index="4" 
+                                    :cell="failedCell" 
+                                />
+                            </div>
+                        </div>
+                    </template>
+                </Card>
+            </div>
+
+            <!-- widgets tab -->
+            <div v-show="activeTab === 'widgets'" class="tab-panel">
+                <Card class="widget-examples">
+                    <template #title>
+                        <h2>Widget Usage Examples</h2>
+                    </template>
+                    <template #content>
+                        <p class="demo-description">Examples of various widgets and components available in the system.</p>
+                        
+                        <div class="widget-grid">
+                            <!-- cards -->
+                            <div class="widget-section">
+                                <h3>Card Components</h3>
+                                <div class="card-examples">
+                                    <Card class="example-card">
+                                        <template #title>
+                                            <h4>Basic Card</h4>
+                                        </template>
+                                        <template #content>
+                                            <p>This is a basic card component with title and content sections.</p>
+                                        </template>
+                                    </Card>
+                                    
+                                    <Card class="example-card">
+                                        <template #title>
+                                            <h4>Card with Actions</h4>
+                                        </template>
+                                        <template #content>
+                                            <p>Card content with action buttons below.</p>
+                                        </template>
+                                        <template #footer>
+                                            <div class="card-actions">
+                                                <Button label="Save" icon="pi pi-check" />
+                                                <Button label="Cancel" severity="secondary" text />
+                                            </div>
+                                        </template>
+                                    </Card>
+                                </div>
+                            </div>
+
+                            <!-- badges -->
+                            <div class="widget-section">
+                                <h3>Badge Components</h3>
+                                <div class="badge-examples">
+                                    <div class="badge-item">
+                                        <span class="badge success">Success</span>
+                                        <span class="badge warning">Warning</span>
+                                        <span class="badge error">Error</span>
+                                        <span class="badge info">Info</span>
+                                    </div>
+                                    <div class="badge-item">
+                                        <span class="badge primary">Primary</span>
+                                        <span class="badge secondary">Secondary</span>
+                                        <span class="badge outline">Outline</span>
                                     </div>
                                 </div>
                             </div>
-                        </section> -->
 
-                        <!-- examples -->
-                        <section class="color-section">
-                            <h3>Usage Examples</h3>
-                            <div class="usage-examples">
-                                <div class="example-card" style="background: var(--p-surface-a); border: 1px solid var(--p-surface-border);">
-                                    <h4 style="color: var(--p-primary-color);">Card with Primary Header</h4>
-                                    <p style="color: var(--p-primary-color-text);">This is regular text content.</p>
-                                    <p style="color: var(--p-text-secondary-color);">This is secondary text content.</p>
-                                    <Button 
-                                        label="Primary Button" 
-                                        style="background: var(--p-primary-color); border-color: var(--p-primary-color);"
-                                    />
+                            <!-- buttons -->
+                            <div class="widget-section">
+                                <h3>Button Variants</h3>
+                                <div class="button-examples">
+                                    <Button label="Primary" class="mr-2" />
+                                    <Button label="Secondary" severity="secondary" class="mr-2" />
+                                    <Button label="Success" severity="success" class="mr-2" />
+                                    <Button label="Warning" severity="warn" class="mr-2" />
+                                    <Button label="Danger" severity="danger" class="mr-2" />
+                                    <Button label="Info" severity="info" class="mr-2" />
                                 </div>
-                                
-                                <div class="example-card" style="background: var(--p-surface-b); border: 1px solid var(--p-surface-border);">
-                                    <h4 style="color: var(--p-text-color);">Surface B Background</h4>
-                                    <div class="color-chips">
-                                        <span class="chip" style="background: var(--p-green-500); color: white;">Success</span>
-                                        <span class="chip" style="background: var(--p-orange-500); color: white;">Warning</span>
-                                        <span class="chip" style="background: var(--p-blue-500); color: white;">Info</span>
-                                        <span class="chip" style="background: var(--p-gray-500); color: white;">Neutral</span>
+                                <div class="button-examples mt-3">
+                                    <Button label="Outlined" outlined class="mr-2" />
+                                    <Button label="Text" text class="mr-2" />
+                                    <Button label="Rounded" rounded class="mr-2" />
+                                    <Button icon="pi pi-star" class="mr-2" />
+                                </div>
+                            </div>
+
+                            <!-- form elements -->
+                            <div class="widget-section">
+                                <h3>Form Elements</h3>
+                                <div class="form-examples">
+                                    <div class="form-row">
+                                        <label>Input Field:</label>
+                                        <input type="text" placeholder="Enter text..." class="form-input" />
+                                    </div>
+                                    <div class="form-row">
+                                        <label>Select:</label>
+                                        <select class="form-select">
+                                            <option>Option 1</option>
+                                            <option>Option 2</option>
+                                            <option>Option 3</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <label>Checkbox:</label>
+                                        <input type="checkbox" class="form-checkbox" />
                                     </div>
                                 </div>
                             </div>
-                        </section>
-                    </div>
-                </template>
-            </Card>
+                        </div>
+                    </template>
+                </Card>
+            </div>
         </div>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject } from 'vue';
+import { computed, inject, ref } from 'vue';
 import Card from 'primevue/card';
 import Button from 'primevue/button';
+import NextGenBeakerQueryCell from '../components/cell/NextGenBeakerQueryCell.vue';
 import type { IBeakerTheme } from '../plugins/theme';
 
 const beakerApp = inject<any>("beakerAppConfig");
@@ -137,6 +275,106 @@ const isDarkMode = computed(() => theme.mode === 'dark');
 const toggleTheme = () => {
     toggleDarkMode();
 };
+
+const tabs = [
+    { id: 'theme', label: 'Theme' },
+    { id: 'query-cells', label: 'Query Cells' },
+    { id: 'widgets', label: 'Widgets' }
+];
+
+const activeTab = ref('theme');
+
+const pendingCell = ref({
+  id: 'demo-pending',
+  source: 'This is a pending query',
+  status: 'idle',
+  metadata: { query_status: 'pending' },
+  events: [],
+  last_execution: {},
+  children: [],
+  cell_type: 'query',
+});
+
+const inProgressCell = ref({
+  id: 'demo-in-progress',
+  source: 'This query is running',
+  status: 'busy',
+  metadata: { query_status: 'in-progress' },
+  events: [{ type: 'thought', content: 'Thinking...' }],
+  last_execution: {},
+  children: [],
+  cell_type: 'query',
+});
+
+const successCell = ref({
+  id: 'demo-success',
+  source: 'This query completed successfully',
+  status: 'idle',
+  metadata: { query_status: 'success' },
+  events: [
+    { type: 'thought', content: 'Processing...' },
+    { type: 'response', content: 'Success! Here are the results...' }
+  ],
+  last_execution: { status: 'ok' },
+  children: [],
+  cell_type: 'query',
+});
+
+const abortedCell = ref({
+  id: 'demo-aborted',
+  source: 'This query was aborted',
+  status: 'idle',
+  metadata: { query_status: 'aborted' },
+  events: [
+    { type: 'thought', content: 'Processing...' },
+    { type: 'abort', content: 'Request interrupted' }
+  ],
+  last_execution: { status: 'abort' },
+  children: [],
+  cell_type: 'query',
+});
+
+const failedCell = ref({
+  id: 'demo-failed',
+  source: 'This query failed',
+  status: 'idle',
+  metadata: { query_status: 'failed' },
+  events: [
+    { type: 'thought', content: 'Processing...' },
+    { type: 'error', content: 'An error occurred' }
+  ],
+  last_execution: { status: 'error' },
+  children: [],
+  cell_type: 'query',
+});
+
+// const currentStatus = ref('idle');
+// const currentQueryStatus = ref('pending');
+// const lastExecutionStatus = ref('ok');
+// const interactiveEvents = ref([]);
+
+// const interactiveCell = computed(() => ({
+//   id: 'demo-interactive',
+//   source: 'Interactive demo cell - change the controls above',
+//   status: currentStatus.value,
+//   metadata: { query_status: currentQueryStatus.value },
+//   events: interactiveEvents.value,
+//   last_execution: { status: lastExecutionStatus.value },
+//   children: [],
+//   cell_type: 'query',
+// }));
+
+// const addEvent = (type) => {
+//   interactiveEvents.value.push({
+//     type,
+//     content: `Demo ${type} event`,
+//     id: Date.now()
+//   });
+// };
+
+// const clearEvents = () => {
+//   interactiveEvents.value = [];
+// };
 
 const primaryColors = {
     'primary-color': 'Primary',
@@ -187,6 +425,140 @@ const componentColors = [
     padding: 1rem;
     height: 100%;
     overflow-y: auto;
+}
+
+.tab-navigation {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--p-surface-border);
+    padding-bottom: 0.5rem;
+}
+
+.tab-button {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px 8px 0 0;
+    border: none;
+    background: transparent;
+    color: var(--p-text-color-secondary);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    
+    &:hover {
+        background: var(--p-surface-b);
+        color: var(--p-text-color);
+    }
+    
+    &.active {
+        background: var(--p-primary-color);
+        color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+}
+
+.tab-content {
+    min-height: 500px;
+}
+
+.tab-panel {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.query-cell-demo {
+    margin-bottom: 2rem;
+}
+
+.demo-description {
+    color: var(--p-text-color-secondary);
+    margin-bottom: 1.5rem;
+    font-style: italic;
+}
+
+.demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.demo-item {
+    border: 1px solid var(--p-surface-border);
+    border-radius: 8px;
+    padding: 1rem;
+    background: var(--p-surface-a);
+    
+    h3 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        color: var(--p-primary-color);
+        font-size: 1.1rem;
+    }
+}
+
+.demo-controls {
+    background: var(--p-surface-b);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin: 2rem 0;
+    border: 1px solid var(--p-surface-border);
+    
+    h3 {
+        margin-top: 0;
+        color: var(--p-primary-color);
+        margin-bottom: 1.5rem;
+    }
+    
+    .control-group {
+        margin: 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        
+        label {
+            font-weight: 600;
+            min-width: 120px;
+            color: var(--p-text-color);
+        }
+        
+        select, button {
+            padding: 0.5rem;
+            border: 1px solid var(--p-surface-border);
+            border-radius: 4px;
+            background: var(--p-surface-a);
+            color: var(--p-text-color);
+        }
+        
+        button {
+            background: var(--p-primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            
+            &:hover {
+                background: var(--p-primary-600);
+            }
+        }
+    }
+}
+
+.demo-cell {
+    border: 2px solid var(--p-primary-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 2rem 0;
+    background: var(--p-surface-a);
+    
+    h3 {
+        margin-top: 0;
+        color: var(--p-primary-color);
+        margin-bottom: 1rem;
+    }
 }
 
 .theme-showcase {
@@ -346,4 +718,110 @@ const componentColors = [
     font-size: 0.8rem;
     font-weight: 600;
 }
+
+.widget-examples {
+    margin-bottom: 2rem;
+}
+
+.widget-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.widget-section {
+    h3 {
+        color: var(--p-primary-color);
+        margin-bottom: 1rem;
+        border-bottom: 2px solid var(--p-surface-border);
+        padding-bottom: 0.5rem;
+    }
+}
+
+.card-examples {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.badge-examples {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.badge-item {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    
+    &.success { background: var(--p-green-500); color: white; }
+    &.warning { background: var(--p-orange-500); color: white; }
+    &.error { background: var(--p-red-500); color: white; }
+    &.info { background: var(--p-blue-500); color: white; }
+    &.primary { background: var(--p-primary-color); color: white; }
+    &.secondary { background: var(--p-gray-500); color: white; }
+    &.outline { 
+        background: transparent; 
+        color: var(--p-primary-color); 
+        border: 2px solid var(--p-primary-color);
+    }
+}
+
+.button-examples {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.form-examples {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 400px;
+}
+
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    
+    label {
+        min-width: 100px;
+        font-weight: 600;
+        color: var(--p-text-color);
+    }
+    
+    .form-input, .form-select {
+        flex: 1;
+        padding: 0.5rem;
+        border: 1px solid var(--p-surface-border);
+        border-radius: 4px;
+        background: var(--p-surface-a);
+        color: var(--p-text-color);
+    }
+    
+    .form-checkbox {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.mr-2 { margin-right: 0.5rem; }
+.mt-3 { margin-top: 1rem; }
 </style> 

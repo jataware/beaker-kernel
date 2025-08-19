@@ -37,7 +37,11 @@
                         :severity="badgeSeverity"
                         value=" "
                         v-tooltip.top="badgeTooltip">
-                        <i v-if="badgeIcon" :class="badgeIcon"></i>
+                        <BrainIcon 
+                            v-if="cell.metadata?.query_status === 'in-progress'" 
+                            class="brain-icon" 
+                        />
+                        <i v-else-if="badgeIcon" :class="badgeIcon"></i>
                     </Badge>
                 </div>
                 <i
@@ -50,13 +54,14 @@
 </template>
 
 <script setup lang="ts">
-import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch, watchEffect } from "vue";
+import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watchEffect } from "vue";
 import Button from "primevue/button";
 import Badge from 'primevue/badge';
 import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import InputGroup from 'primevue/inputgroup';
 import InputText from 'primevue/inputtext';
 import { useBaseQueryCell } from './BaseQueryCell';
+import BrainIcon from '../../assets/icon-components/BrainIcon.vue';
 
 const props = defineProps([
     'index',
@@ -77,17 +82,12 @@ const {
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
 
-onBeforeMount(() => {
-    if (!cell.value.metadata.query_status) {
-        cell.value.metadata.query_status = 'pending';
-    }
-});
-
 watchEffect(() => {
     const currentStatus = cell.value.status;
-    const currentQueryStatus = cell.value.metadata.query_status;
+    const currentQueryStatus = cell?.value?.metadata?.query_status;
     const currentEvents = events.value;
     const currentLastExecution = cell.value.last_execution;
+    
     if (currentStatus === 'busy' && currentQueryStatus === 'pending') {
         cell.value.metadata.query_status = 'in-progress'
         console.log('Transitioning to in-progress');
@@ -114,7 +114,7 @@ watchEffect(() => {
 });
 
 const badgeSeverity = computed(() => {
-    const queryStatus = cell.value.metadata.query_status;
+    const queryStatus = cell.value.metadata?.query_status;
     
     switch (queryStatus) {
         case 'success':
@@ -131,7 +131,7 @@ const badgeSeverity = computed(() => {
 });
 
 const badgeIcon = computed(() => {
-    const queryStatus = cell.value.metadata.query_status;
+    const queryStatus = cell.value.metadata?.query_status;
     
     switch (queryStatus) {
         case 'success':
@@ -141,7 +141,7 @@ const badgeIcon = computed(() => {
         case 'aborted':
             return 'pi pi-minus';
         case 'in-progress':
-            return 'pi pi-cog';
+            return null;
         case 'pending':
             return 'pi pi-clock';
         default:
@@ -150,7 +150,7 @@ const badgeIcon = computed(() => {
 });
 
 const badgeTooltip = computed(() => {
-    const queryStatus = cell.value.metadata.query_status;
+    const queryStatus = cell.value.metadata?.query_status;
     
     switch (queryStatus) {
         case 'success':
@@ -177,7 +177,15 @@ defineExpose({
 });
 
 onBeforeMount(() => {
-    beakerSession.cellRegistry[cell.value.id] = instance.vnode;
+    if (beakerSession?.cellRegistry) {
+      beakerSession.cellRegistry[cell.value.id] = instance.vnode;
+    }
+
+    if (!cell.value.metadata?.query_status) {
+        if(cell.value.metadata) {
+            cell.value.metadata.query_status = 'pending';
+        }
+    }
 });
 
 onBeforeUnmount(() => {
@@ -275,5 +283,19 @@ onBeforeUnmount(() => {
 .input-request-wrapper {
     display: flex;
     width: 100%;
+}
+
+.brain-icon {
+    width: 1rem;
+    height: 1rem;
+    
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    .brain-svg-path {
+        fill: var(--p-badge-secondary-color);
+    }
 }
 </style>
