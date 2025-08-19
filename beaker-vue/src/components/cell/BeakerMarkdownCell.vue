@@ -50,7 +50,12 @@ const notebook = inject<BeakerNotebookComponentType>("notebook");
 const editorContents = ref<string>(cell.value.source);
 
 const renderedMarkdown = computed(() => {
-    return marked.parse(props.cell?.source || "");
+    if (typeof props.cell === 'object' && props.cell) {
+        const { source } = props.cell;
+        const cellSource = Array.isArray(source) ? source.join("") : source;
+        return marked.parse(cellSource);
+    }
+    return "";
 });
 
 const clicked = (evt) => {
