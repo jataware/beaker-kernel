@@ -26,6 +26,16 @@ export const useBaseQueryCell = (props) => {
         const future = props.cell.execute(session, sendNotebookState);
         future.registerMessageHook(
           (msg) => {
+            if (msg.header?.msg_type === 'stream' && 
+                msg.content?.name === 'stderr' && 
+                msg.content?.text === 'Request interrupted.') {
+              cell.value.last_execution = {
+                status: "abort"
+              };
+              cell.value.events.push({
+                type: "abort",
+                content: "Request interrupted."
+              });
             msg.cell = cell.value;
           }
         )

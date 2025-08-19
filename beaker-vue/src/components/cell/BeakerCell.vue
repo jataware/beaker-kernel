@@ -44,7 +44,7 @@
                     @pointerenter="overlayMenuHoverHandler"
                     @pointerleave="overlayMenuHoverHandler"
                 >
-                    <div v-tooltip.left="'Change Cell Type'" v-if="!shouldHideCellTypeSelector">
+                    <div v-tooltip.left="'Change Cell Type'" v-if="!shouldHideCellTypeAndExecuteButtons">
                         <Select
                             :name="`${cell.id}-celltype`"
                             class="cell-type-selector overlay-menu-button"
@@ -68,8 +68,8 @@
                         </Select>
                     </div>
                     <Button
-                        v-if="!props.hideExecuteButton"
                         v-tooltip.left="'Execute cell'"
+                        v-if="!shouldHideCellTypeAndExecuteButtons"
                         @click="beakerSession.findNotebookCellById(cell.id).execute(); hoverMenuRef.hide();"
                         icon="pi pi-play"
                         size="small"
@@ -131,8 +131,6 @@ interface BeakerCellProps {
     cell: IBeakerCell;
     index?: number;
     dragEnabled?: boolean;
-    hideCellTypeSelector?: boolean;
-    hideExecuteButton?: boolean;
 }
 
 const props = defineProps<BeakerCellProps>();
@@ -177,8 +175,8 @@ const isResponseCell = computed(() => {
            props.cell.metadata?.beaker_cell_type === 'response';
 });
 
-const shouldHideCellTypeSelector = computed(() => {
-    return props.hideCellTypeSelector || isThoughtCell.value || isResponseCell.value;
+const shouldHideCellTypeAndExecuteButtons = computed(() => {
+    return isThoughtCell.value || isResponseCell.value || props.cell.cell_type === 'query';
 });
 
 enum CellState {

@@ -35,7 +35,9 @@
                         class="execution-badge"
                         :class="{secondary: badgeSeverity === 'secondary'}"
                         :severity="badgeSeverity"
-                        value="1">
+                        value=" "
+                        v-tooltip.top="badgeTooltip">
+                        <i v-if="badgeIcon" :class="badgeIcon"></i>
                     </Badge>
                 </div>
                 <i
@@ -48,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount } from "vue";
+import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watch, watchEffect } from "vue";
 import Button from "primevue/button";
 import Badge from 'primevue/badge';
 import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
@@ -75,15 +77,95 @@ const {
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
 
-const isCompleted = computed(() => {
-    return cell.value.status === 'idle' && events.value.length > 0;
+onBeforeMount(() => {
+    if (!cell.value.metadata.query_status) {
+        cell.value.metadata.query_status = 'pending';
+    }
+});
+
+watchEffect(() => {
+    const currentStatus = cell.value.status;
+    const currentQueryStatus = cell.value.metadata.query_status;
+    const currentEvents = events.value;
+    const currentLastExecution = cell.value.last_execution;
+    if (currentStatus === 'busy' && currentQueryStatus === 'pending') {
+        cell.value.metadata.query_status = 'in-progress'
+        console.log('Transitioning to in-progress');
+    } else if (currentStatus === 'failed') {
+        cell.value.metadata.query_status = 'failed';
+        console.log('Transitioning to failed');
+    } else if (currentStatus === 'idle' && currentEvents.length >= 0 && currentQueryStatus === 'in-progress') {
+        if (currentLastExecution?.status === 'abort') {
+            cell.value.metadata.query_status = 'aborted';
+            return;
+        }
+        
+        const hasAbortEvent = currentEvents.some(event => event.type === 'abort');
+        if (hasAbortEvent) {
+            cell.value.metadata.query_status = 'aborted';
+            return;
+        }
+        
+        const hasResponseEvent = currentEvents.some(event => event.type === 'response');
+        if (hasResponseEvent && currentEvents.length > 0) {
+            cell.value.metadata.query_status = 'success';
+        }
+    }
 });
 
 const badgeSeverity = computed(() => {
-    if (isCompleted.value) {
-        return 'success';
+    const queryStatus = cell.value.metadata.query_status;
+    
+    switch (queryStatus) {
+        case 'success':
+            return 'success';
+        case 'failed':
+            return 'danger';
+        case 'aborted':
+            return 'warn';
+        case 'in-progress':
+        case 'pending':
+        default:
+            return 'secondary';
     }
-    return 'secondary';
+});
+
+const badgeIcon = computed(() => {
+    const queryStatus = cell.value.metadata.query_status;
+    
+    switch (queryStatus) {
+        case 'success':
+            return 'pi pi-check';
+        case 'failed':
+            return 'pi pi-times';
+        case 'aborted':
+            return 'pi pi-minus';
+        case 'in-progress':
+            return 'pi pi-cog';
+        case 'pending':
+            return 'pi pi-clock';
+        default:
+            return null;
+    }
+});
+
+const badgeTooltip = computed(() => {
+    const queryStatus = cell.value.metadata.query_status;
+    
+    switch (queryStatus) {
+        case 'success':
+            return 'Query completed successfully';
+        case 'failed':
+            return 'Query failed with error';
+        case 'aborted':
+            return 'Query was aborted';
+        case 'in-progress':
+            return 'Query is currently running';
+        case 'pending':
+            return 'Query is waiting to start';
+        default:
+            return 'Query status unknown';
+    }
 });
 
 defineExpose({
@@ -164,8 +246,15 @@ onBeforeUnmount(() => {
     height: 2em;
     aspect-ratio: 1/1;
     border-radius: 15%;
+    position: relative;
+    
     &.secondary {
         background-color: var(--p-surface-e);
+    }
+    i {
+        font-size: 0.9rem;
+        position: absolute;
+        color: inherit;
     }
 }
 
