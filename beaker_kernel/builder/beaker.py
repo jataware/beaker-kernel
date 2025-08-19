@@ -147,15 +147,17 @@ class BeakerBuildHook(BuildHookInterface):
         from beaker_kernel.lib.integrations.base import BaseIntegrationProvider
         from beaker_kernel.lib.context import BeakerContext
         from beaker_kernel.lib.subkernel import BeakerSubkernel
-        from beaker_kernel.lib.extension import BeakerExtension
+        from beaker_kernel.lib.extension import BeakerExtension, BeakerCLICommands
 
         dest = os.path.join(self.root, "build", "data_share_beaker")
 
+        # MappingType = typing.Literal["contexts", "subkernels", "apps", "commands"]
         type_map = {
             "contexts": BeakerContext,
             "subkernels": BeakerSubkernel,
             "apps": BeakerApp,
             "integrations": BaseIntegrationProvider,
+            "commands": BeakerCLICommands,
             "extensions": BeakerExtension,
         }
         maps = {}
