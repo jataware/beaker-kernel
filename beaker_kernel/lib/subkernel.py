@@ -15,7 +15,7 @@ from .autodiscovery import autodiscover
 from .utils import env_enabled, action, ExecutionTask
 from .jupyter_kernel_proxy import ProxyKernelClient
 from .config import config
-from .context import BeakerContext
+from .context import BeakerContext, WorkflowStageProgress
 from .code_analysis.analysis_types import AnalysisCodeCells
 
 if TYPE_CHECKING:
@@ -96,12 +96,15 @@ async def attach_workflow(workflow: str, agent: AgentRef):
     """
     Chooses a relevant workflow to the user's request and attaches it to the context.
 
+    If the user wants to detach a workflow or remove it, that is equivalent to attaching "none."
+
     Use this tool when the user asks to activate, enable, switch to, or attach a workflow.
 
     If they describe what they want to do, choose the most relevant workflow based on their query.
 
     Args:
         workflow (str): The title of the workflow that you have access to, most relevant to their query.
+                        This is "none" if the user wants to detachm remove, or unset the workflow.
 
     Returns:
         str: A summary of what was done
@@ -120,11 +123,42 @@ async def attach_workflow(workflow: str, agent: AgentRef):
     }
     if desired not in titles:
         return f"Failed to find `{desired}` in `{titles}`: invalid tool input."
-
-    agent.context.attached_workflow = titles[desired]
+    agent.context.attach_workflow(titles[desired])
+    agent.context.send_response("iopub", "attached_workflow", agent.context.attached_workflow)
     return f"Successfully set the attached workflow to {workflow}."
 
+@tool()
+async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: AgentRef):
+    """
+    Updates the information about a workflow stage.
 
+    This should be used directly after finishing each stage of a workflow,
+    and at the start of a new stage.
+
+    Args:
+        stage_name (str): The name of the stage to mark as completed to the user.
+                          IMPORTANT: This must be the exact name of the stage.
+        state (str): State will always either one of 'in_progress' or 'finished'.
+                     If finished, results must not be blank.
+                     If the stage is now in progress, results should be blank.
+        results (str): The final response of the operation, formatted in markdown.
+                       Format this in markdown if it is not already.
+                       This argument must be an empty string if state is 'in_progress'.
+
+    Returns:
+        str: Information about the operation.
+    """
+    if state != 'in_progress' and state != 'finished':
+        return "State must be one of `in_progress` or `finished`."
+    if stage_name not in agent.context.attached_workflow["progress"]:
+        return f"Stage name not found. Must be one of: {agent.context.attached_workflow["progress"].keys()}"
+    agent.context.attached_workflow["progress"][stage_name] = WorkflowStageProgress(
+            code_cell_id='',
+            state=state,
+            results_markdown=results,
+        )
+    agent.context.send_response("iopub", "attached_workflow", agent.context.attached_workflow)
+    return "Successfully marked stage."
 
 @tool(autosummarize=True, summarizer=run_code_summarizer)
 async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
@@ -301,7 +335,8 @@ class BeakerSubkernel(abc.ABC):
         # disabled in context.py if no workflows on context.
         # if the lambda below contains self -- self.context.workflows won't be
         # populated at the check time in tools(self)... so checking in context makes more sense.
-        (attach_workflow, lambda: True)
+        (attach_workflow, lambda: True),
+        (mark_workflow_stage, lambda: True)
     ]
 
     FETCH_STATE_CODE: str = ""

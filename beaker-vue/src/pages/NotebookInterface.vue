@@ -66,6 +66,9 @@
                 <SideMenuPanel label="Context Info" icon="pi pi-home">
                     <InfoPanel/>
                 </SideMenuPanel>
+                <SideMenuPanel label="Workflow Info" icon="pi pi-list-check">
+                    <WorkflowPanel></WorkflowPanel>
+                </SideMenuPanel>
                 <SideMenuPanel id="files" label="Files" icon="pi pi-folder" no-overflow :lazy="true">
                     <FilePanel
                         ref="filePanelRef"
@@ -181,6 +184,7 @@ import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 import DebugPanel from '../components/panels/DebugPanel.vue'
 import { listIntegrations, type IntegrationMap } from '../util/integration';
+import WorkflowPanel from '@/components/panels/WorkflowPanel.vue';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -311,6 +315,12 @@ const iopubMessage = (msg) => {
     }
     else if (msg.header.msg_type === "kernel_state_info") {
         kernelStateInfo.value = msg.content;
+    }
+    else if (msg.header.msg_type === "attached_workflow") {
+        const workflows = beakerSession?.value?.activeContext?.info?.workflows;
+        if (workflows) {
+            workflows.attached = msg.content;
+        }
     }
     else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({

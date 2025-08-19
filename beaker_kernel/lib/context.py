@@ -5,6 +5,7 @@ import json
 import logging
 import os.path
 from pathlib import Path
+from re import S
 import urllib.parse
 from uuid import uuid4
 import requests
@@ -47,6 +48,15 @@ class LinterCodeCellsPayload(TypedDict):
     notebook_id: str
     cells: list[LinterCodeCellPayload]
 
+class WorkflowStageProgress(TypedDict):
+    state: Literal['in_progress'] | Literal['finished']
+    code_cell_id: str
+    results_markdown: str
+
+class AttachedWorkflow(TypedDict):
+    workflow_id: str
+    progress: dict[str, WorkflowStageProgress | None]
+
 class BeakerContext:
     beaker_kernel: "BeakerKernel"
     subkernel: "BeakerSubkernel"
@@ -60,7 +70,7 @@ class BeakerContext:
     templates: Dict[str, Template]
 
     workflows: Dict[str, Workflow]
-    attached_workflow: Optional[str]
+    attached_workflow: Optional[AttachedWorkflow]
 
     preview_function_name: str = "generate_preview"
     kernel_state_function_name: str = "send_kernel_state"
@@ -132,7 +142,10 @@ class BeakerContext:
                 workflow_id = str(uuid4())
                 self.workflows[workflow_id] = workflow
                 if workflow.is_context_default:
-                    self.attached_workflow = workflow_id
+                    self.attach_workflow(workflow_id)
+        if len(self.workflows) == 0:
+            logger.warning("Context has no workflows: disabling tools.")
+            self.agent.disable("attach_workflow")
 
     def __init_subclass__(cls):
         subclass_autocontext = getattr(cls, "auto_context", None)
@@ -171,8 +184,6 @@ class BeakerContext:
             tool
             for tool, enabled in toggles.items() if not enabled
         ]
-        if len(self.workflows) == 0:
-            disabled_tools.append("attach_workflow")
         self.agent.disable(*disabled_tools)
 
     async def setup(self, context_info=None, parent_header=None):
@@ -226,7 +237,7 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         if len(self.workflows) > 0:
             parts.append(create_available_workflows_prompt(
                 list(self.workflows.values()),
-                self.workflows[self.attached_workflow] if self.attached_workflow else None)
+                self.workflows.get(self.attached_workflow["workflow_id"], None) if self.attached_workflow else None)
             )
 
         if self.integrations:
@@ -500,11 +511,25 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         """
         return await self.preview()
 
+    def attach_workflow(self, workflow_id: str | None):
+        if workflow_id is None:
+            self.attached_workflow = None
+            return
+        self.attached_workflow = AttachedWorkflow(
+            workflow_id=workflow_id,
+            progress={
+                stage.name: None
+                for stage in self.workflows[workflow_id].stages
+            }
+        )
+        self.send_response("iopub", "attached_workflow", self.attached_workflow)
+
     @action()
     async def set_workflow(self, message):
-        if (content := message.content["workflow"]) == "none":
-            self.attached_workflow = None
-        self.attached_workflow = content
+        if (content := message.content["workflow"].lower()) == "none":
+            self.attach_workflow(None)
+        self.attach_workflow(content)
+
 
     @action(default_payload=LinterCodeCellsPayload(notebook_id='nb1', cells=[LinterCodeCellPayload(cell_id='cell1', content='import os\nos.exit(0)')]))
     async def lint_code(self, message):

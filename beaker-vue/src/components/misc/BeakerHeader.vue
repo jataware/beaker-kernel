@@ -94,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, getCurrentInstance, getCurrentScope } from "vue";
+import { computed, inject } from "vue";
 import { RouterLink } from "vue-router";
 import Toolbar from 'primevue/toolbar';
 import Button from 'primevue/button';
@@ -171,7 +171,7 @@ const showWorkflowDropdown = computed(() => {
 })
 
 const attachedWorkflowId = computed(() => {
-    return beakerSession?.activeContext?.info?.workflows?.attached;
+    return beakerSession?.activeContext?.info?.workflows?.attached?.workflow_id;
 })
 
 const attachedWorkflow = computed(() => {

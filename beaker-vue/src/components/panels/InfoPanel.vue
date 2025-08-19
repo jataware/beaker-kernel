@@ -143,7 +143,7 @@ const contextNodes = computed<TreeNode[]>(() => {
             expanded: true,
             children: Object.keys(workflows).map((workflow_id) => ({
                 key: `5-${workflow_id}`,
-                label: `${workflows[workflow_id].title}${attached === workflow_id ? " (Active)" : ""}`,
+                label: `${workflows[workflow_id].title}${attached?.workflow_id === workflow_id ? " (Active)" : ""}`,
             }))
         });
     }

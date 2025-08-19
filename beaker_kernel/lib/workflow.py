@@ -8,7 +8,9 @@ A workflow is a commonly grouped set of tasks to solve an end-to-end problem.
 
 Workflows are divided into STAGES that contain STEPS.
 
-CRITICAL: you must show the to-do list for each STAGE you do at each time and fill out the list with the results of that operation, informing the user every step.
+CRITICAL: at the end of each STAGE, you must use the "mark_workflow_stage" tool and you must show the results of each STAGE to the user and then ask them to confirm to continue.
+
+CRITICAL: after the user confirms to start the next STAGE, use the "mark_workflow_stage" tool to communicate that the stage is in progress.
 
 CRITICAL: do not ever use assumed or example data if data is not available; stop and inform the user and ask how to proceed.
 

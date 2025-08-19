@@ -88,7 +88,6 @@ const searchText = ref<undefined|string>(undefined);
 
 const setWorkflow = (id?: string) => {
     session.executeAction('set_workflow', {workflow: id ? id : "none"});
-    beakerSession.activeContext.info.workflows.attached = id;
     dialogRef.value.close();
 }
 
@@ -99,7 +98,7 @@ const workflows = computed<{[key in string]: any}>(() => {
 })
 
 const attachedWorkflowId = computed(() => {
-    return beakerSession?.activeContext?.info?.workflows?.attached;
+    return beakerSession?.activeContext?.info?.workflows?.attached?.workflow_id;
 })
 
 const attachedWorkflow = computed(() => {
