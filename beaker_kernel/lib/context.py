@@ -255,9 +255,12 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             language = subkernel_opts[language].KERNEL_NAME
 
         url = urllib.parse.urljoin(self.beaker_kernel.jupyter_server, "/api/kernels")
+        path = self.beaker_kernel.session_config.get("beaker_session", None)
+        if path is None:
+            path = self.beaker_kernel.session_config.get("jupyter_session", "")
         res = requests.post(
             url,
-            json={"name": language, "path": self.beaker_kernel.session_config.get("jupyter_session", "")},
+            json={"name": language, "path": path},
             headers={
                 "X-AUTH-BEAKER": self.beaker_kernel.api_auth()
             },

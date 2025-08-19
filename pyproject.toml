@@ -274,3 +274,8 @@ asyncio_default_fixture_loop_scope = "function"
 
 [project.entry-points."nbconvert.exporters"]
 streamline = "beaker_kernel.lib.exporters.streamline:StreamlineExporter"
+
+# [project.entry-points."jupyter_client.kernel_provisioners"]
+# beaker-chroot-provisioner = "beaker_kernel.service.provisioning:ChrootProvisioner"
+# beaker-docker-provisioner = "beaker_kernel.service.provisioning:DockerProvisioner"
+# beaker-kubernetes-provisioner = "beaker_kernel.service.provisioning:KubernetesProvisioner"
