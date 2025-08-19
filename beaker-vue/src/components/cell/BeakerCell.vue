@@ -68,7 +68,7 @@
                         </Select>
                     </div>
                     <Button
-                        v-if="!shouldHideExecuteButton"
+                        v-if="!props.hideExecuteButton"
                         v-tooltip.left="'Execute cell'"
                         @click="beakerSession.findNotebookCellById(cell.id).execute(); hoverMenuRef.hide();"
                         icon="pi pi-play"
@@ -177,16 +177,8 @@ const isResponseCell = computed(() => {
            props.cell.metadata?.beaker_cell_type === 'response';
 });
 
-const isMarkdownCell = computed(() => {
-    return props.cell.cell_type === 'markdown';
-});
-
 const shouldHideCellTypeSelector = computed(() => {
     return props.hideCellTypeSelector || isThoughtCell.value || isResponseCell.value;
-});
-
-const shouldHideExecuteButton = computed(() => {
-    return props.hideExecuteButton || isMarkdownCell.value;
 });
 
 enum CellState {
@@ -195,8 +187,6 @@ enum CellState {
     Error = 'error',
     Pending = 'pending',
 }
-
-const cellState = ref<CellState>(CellState.Pending);
 
 const collapseCell = (evt) => {
     if (metadata.value) {
