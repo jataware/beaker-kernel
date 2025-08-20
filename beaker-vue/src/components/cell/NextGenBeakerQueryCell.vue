@@ -9,24 +9,6 @@
                     </div>
                     <div class="query-text">{{ cell.source }}</div>
                 </div>
-                
-                <div class="input-request" v-if="cell.status === 'awaiting_input'">
-                    <div class="input-request-wrapper">
-                        <InputGroup>
-                            <InputText
-                                placeholder="Reply to the agent"
-                                @keydown.enter.exact.prevent="respond"
-                                @keydown.escape.prevent.stop="($event.target as HTMLElement).blur()"
-                                autoFocus
-                                v-model="response"
-                            />
-                            <Button
-                                icon="pi pi-send"
-                                @click="respond"
-                            />
-                        </InputGroup>
-                    </div>
-                </div>
             </div>
             
             <div class="state-info">
@@ -55,11 +37,8 @@
 
 <script setup lang="ts">
 import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watchEffect } from "vue";
-import Button from "primevue/button";
 import Badge from 'primevue/badge';
 import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
-import InputGroup from 'primevue/inputgroup';
-import InputText from 'primevue/inputtext';
 import { useBaseQueryCell } from './BaseQueryCell';
 import BrainIcon from '../../assets/icon-components/BrainIcon.vue';
 
@@ -70,13 +49,11 @@ const props = defineProps([
 
 const {
   cell,
-  response,
   events,
   execute,
   enter,
   exit,
   clear,
-  respond
 } = useBaseQueryCell(props);
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
@@ -160,7 +137,7 @@ const badgeTooltip = computed(() => {
         case 'aborted':
             return 'Query was aborted';
         case 'in-progress':
-            return 'Query is currently running';
+            return 'Query is active';
         case 'pending':
             return 'Query is waiting to start';
         default:
@@ -271,6 +248,7 @@ onBeforeUnmount(() => {
     font-weight: bold;
     font-size: 1.3rem;
     margin-top: 1rem;
+    margin-right: 0.33rem;
 }
 
 .input-request {

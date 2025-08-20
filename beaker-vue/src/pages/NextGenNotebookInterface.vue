@@ -57,6 +57,8 @@
                     <BeakerAgentQuery
                         ref="agentQueryRef"
                         class="agent-query-container"
+                        :awaiting-input-cell="awaitingInputCell"
+                        :awaiting-input-question="awaitingInputQuestion"
                     />
                 </div>
             </BeakerNotebook>
@@ -207,6 +209,8 @@ const {
     beakerSession,
     defaultRenderers,
     activeQueryCells,
+    awaitingInputCell,
+    awaitingInputQuestion,
     createHeaderNav,
     createNotebookKeyBindings,
     createIopubMessageHandler,

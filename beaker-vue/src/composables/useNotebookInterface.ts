@@ -9,7 +9,6 @@ import type { NavOption } from '../components/misc/BeakerHeader.vue';
 import { standardRendererFactories } from '@jupyterlab/rendermime';
 import type { IBeakerTheme } from '../plugins/theme';
 import type { IChatHistory } from '../components/panels/ChatHistoryPanel';
-// import { handleAddExampleMessage, handleAddIntegrationMessage } from '../util/integration';
 
 export function useNotebookInterface() {
     const beakerNotebookRef = ref<BeakerNotebookComponentType>();
@@ -50,6 +49,23 @@ export function useNotebookInterface() {
                 status: cell.status
             }));
     });
+
+    const awaitingInputCell = computed(() => {
+        const cells = beakerSession.value?.session?.notebook?.cells ?? [];
+        return cells.find(cell => 
+            cell.cell_type === 'query' && cell.status === 'awaiting_input'
+        ) || null;
+    });
+
+    const awaitingInputQuestion = computed(() => {
+        if (!awaitingInputCell.value) return null;
+        
+        // find the last user_question event to get the question text
+        const events = awaitingInputCell.value.events || [];
+        const lastQuestionEvent = [...events].reverse().find(event => event.type === 'user_question');
+        
+        return lastQuestionEvent?.content?.question || 'The agent is waiting for your response.';
+    });
     
     const defaultRenderers: IMimeRenderer<BeakerRenderOutput>[] = [
         ...standardRendererFactories.map((factory: any) => new JupyterMimeRenderer(factory)).map(wrapJupyterRenderer),
@@ -63,7 +79,7 @@ export function useNotebookInterface() {
     const createHeaderNav = (currentPage: string): NavOption[] => {
         const nav = [];
         
-        // navigation to other interfaces
+        // navigation, other interfaces
         if (currentPage !== 'notebook') {
             nav.push({
                 type: 'link',
@@ -383,6 +399,8 @@ export function useNotebookInterface() {
         kernelStateInfo,
         copiedCell,
         activeQueryCells,
+        awaitingInputCell,
+        awaitingInputQuestion,
         
         // computed
         beakerSession,
