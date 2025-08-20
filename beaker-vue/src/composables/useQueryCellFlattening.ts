@@ -135,7 +135,8 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         }
 
         const metadata = createCellMetadata('code', queryCellId, eventIndex, {
-            source_cell_id: codeCellId
+            source_cell_id: codeCellId,
+            collapsed: true // collapsed by default
         });
 
         const newCodeCell = createAndPositionCodeCell(

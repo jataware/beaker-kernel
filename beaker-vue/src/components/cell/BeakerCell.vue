@@ -6,6 +6,7 @@
         ref="beakerCellRef"
         :class="{collapsed}"
         :cell-id="cell.id"
+        :style="collapsed ? { '--dynamic-collapse-height': collapseHeight } : {}"
     >
         <div class="collapse-box" @click.prevent="collapseCell"></div>
         <div
@@ -156,6 +157,20 @@ const collapsed = computed(() => {
     return metadata.value?.collapsed || false;
 });
 
+const collapseHeight = computed(() => {
+    if (!collapsed.value || !beakerCellRef.value) {
+        return 'auto';
+    }
+    
+    const cellElement = beakerCellRef.value;
+    const naturalHeight = cellElement.scrollHeight;
+    if (naturalHeight < 250) {
+        return '3.5em';
+    } else {
+        return '250px';
+    }
+});
+
 const cellIconMap = {
     "code": "pi pi-code",
     "markdown": "pi pi-pencil",
@@ -253,6 +268,7 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
     position: relative;
     background-color: var(--p-surface-a);
     --collapsed-height: 3.5em;
+    --dynamic-collapse-height: var(--collapsed-height);
     min-height: 3.5em;
 
     grid:
@@ -281,24 +297,12 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
     }
 
     &.collapsed {
-
-        // filter: drop-shadow(0 0.5rem 0.3rem crimson);
         overflow: hidden;
 
         .cm-editor {
-            max-height: var(--collapsed-height);
+            max-height: var(--dynamic-collapse-height);
         }
-        max-height: var(--collapsed-height);
-
-        // &:after {
-        //     content: "";
-        //     position: absolute;
-        //     bottom: -4px;
-        //     left: 0;
-        //     right: 0;
-        //     height: 16px;
-        //     box-shadow: inset 0 -10px 8px -4px var(--p-surface-border);
-        // }
+        max-height: var(--dynamic-collapse-height);
     }
 
     &.selected.collapsed .collapse-box {
