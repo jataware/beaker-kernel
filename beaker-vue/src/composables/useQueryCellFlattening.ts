@@ -10,7 +10,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         return `${iconHtml}`;
     };
 
-    const findCellByMetadata = (parentQueryId: string, eventIndex: number, cellType: 'thought' | 'response' | 'code' | 'user_question' | 'user_answer' | 'error' | 'abort' | 'question') => {
+    const findCellByMetadata = (parentQueryId: string, eventIndex: number, cellType: 'thought' | 'response' | 'code' | 'user_question' | 'user_answer' | 'error' | 'abort') => {
         const notebook = beakerSession().session.notebook;
         return notebook.cells.find(cell => 
             cell.metadata?.parent_query_cell === parentQueryId &&
@@ -201,13 +201,13 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
     };
 
     const createQuestionCell = (questionContent: string, queryCellId: string, eventIndex: number) => {
-        if (findCellByMetadata(queryCellId, eventIndex, 'question')) {
+        if (findCellByMetadata(queryCellId, eventIndex, 'user_question')) {
             console.warn(`Question cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
         }
 
-        const markdownContent = `${createIconPrefix('question')}**Agent Question:**\n\n${questionContent}`;
-        const metadata = createCellMetadata('question', queryCellId, eventIndex);
+        const markdownContent = `${createIconPrefix('user_question')}**Agent Question:**\n\n${questionContent}`;
+        const metadata = createCellMetadata('user_question', queryCellId, eventIndex);
         
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
@@ -219,7 +219,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         
         // look backwards for the most recent question cell
         while (questionEventIndex >= 0 && !questionCell) {
-            questionCell = findCellByMetadata(queryCellId, questionEventIndex, 'question');
+            questionCell = findCellByMetadata(queryCellId, questionEventIndex, 'user_question');
             questionEventIndex--;
         }
         

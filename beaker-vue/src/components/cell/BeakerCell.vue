@@ -177,12 +177,7 @@ const isResponseCell = computed(() => {
 
 const isQuestionCell = computed(() => {
     return props.cell.cell_type === 'markdown' && 
-           props.cell.metadata?.beaker_cell_type === 'question';
-});
-
-const isReplyCell = computed(() => {
-    return props.cell.cell_type === 'markdown' && 
-           props.cell.metadata?.beaker_cell_type === 'user_answer';
+           props.cell.metadata?.beaker_cell_type === 'user_question';
 });
 
 const isErrorCell = computed(() => {
@@ -196,8 +191,8 @@ const isAbortCell = computed(() => {
 });
 
 const shouldHideCellTypeAndExecuteButtons = computed(() => {
-    return isThoughtCell.value || isResponseCell.value || isQuestionCell.value || isReplyCell.value || isErrorCell.value || isAbortCell.value || 
-    props.cell.cell_type === 'query' || isErrorCell.value || isAbortCell.value || isQuestionCell.value || isReplyCell.value;
+    return isThoughtCell.value || isResponseCell.value || isQuestionCell.value || isErrorCell.value || isAbortCell.value || 
+    props.cell.cell_type === 'query';
 });
 
 enum CellState {
