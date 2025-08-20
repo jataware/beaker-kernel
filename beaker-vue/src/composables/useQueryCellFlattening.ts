@@ -1,13 +1,14 @@
 import { ref, watch, nextTick } from 'vue';
-import { BeakerMarkdownCell, BeakerCodeCell } from 'beaker-kernel';
 import type { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
-
-// TODO our approach was affected by disappearing cells, due to localStorage
-// filling up without us noticing. We could refactor/simplify this now that we're
-// aware of this...
+import brainIconSvg from '../assets/brain.svg?raw';
 
 export function useQueryCellFlattening(beakerSession: () => BeakerSessionComponentType) {
     const processedQueryEvents = ref<Map<string, Set<number>>>(new Map());
+
+    const createIconPrefix = (cellType: string) => {
+        const iconHtml = brainIconSvg.replace('<svg', '<svg style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;"');
+        return `${iconHtml}`;
+    };
 
     const findCellByMetadata = (parentQueryId: string, eventIndex: number, cellType: 'thought' | 'response' | 'code' | 'user_question' | 'user_answer' | 'error' | 'abort' | 'question') => {
         const notebook = beakerSession().session.notebook;
@@ -53,11 +54,42 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         
         return insertIndex;
     };
+
+    const createCellMetadata = (cellType: string, queryCellId: string, eventIndex: number, additionalMetadata = {}) => {
+        return {
+            beaker_cell_type: cellType,
+            parent_query_cell: queryCellId,
+            query_event_index: eventIndex,
+            ...additionalMetadata
+        };
+    };
+
+    function moveCellToPosition(currentIndex: number, insertPosition: number) {
+        if (currentIndex !== insertPosition) {
+            beakerSession().session.notebook.moveCell(currentIndex, insertPosition);
+        }
+    }
+
+    const createAndPositionMarkdownCell = (source: string, queryCellId: string, metadata: any) => {
+        const insertPosition = findInsertionPosition(queryCellId);
+        const markdownCell = beakerSession().session.addMarkdownCell(source, metadata);
+
+        moveCellToPosition(beakerSession().session.notebook.cells.length - 1, insertPosition);
+        return markdownCell;
+    };
+
+    const createAndPositionCodeCell = (source: string, queryCellId: string, metadata: any, outputs: any[] = []) => {
+        const insertPosition = findInsertionPosition(queryCellId);
+        const codeCell = beakerSession().session.addCodeCell(source, metadata, outputs);
+
+        moveCellToPosition(beakerSession().session.notebook.cells.length - 1, insertPosition);
+        return codeCell;
+    };
     
     const createThoughtCell = (thoughtContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'thought')) {
             console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
-            return; // don't create duplicate
+            return;
         }
 
         if(thoughtContent.length === 0 || thoughtContent === null || thoughtContent === "Thinking...") {
@@ -65,63 +97,36 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             return;
         }
 
-        const metadata = {
-            beaker_cell_type: 'thought',
-            parent_query_cell: queryCellId,
-            query_event_index: eventIndex
-        };
-
-        const markdownCell = new BeakerMarkdownCell({
-            cell_type: "markdown",
-            source: `**Agent Thought:**\n\n${thoughtContent}`,
-            metadata
-        });
+        const metadata = createCellMetadata('thought', queryCellId, eventIndex);
+        const iconPrefix = createIconPrefix('thought');
+        const source = `${iconPrefix}**Agent Thought:**\n\n${thoughtContent}`;
         
-        const insertPosition = findInsertionPosition(queryCellId);
-        
-        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
-        
-        return markdownCell;
+        return createAndPositionMarkdownCell(source, queryCellId, metadata);
     };
     
     const createResponseCell = (responseContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'response')) {
             console.warn(`Response cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
-            return; // don't create duplicate
+            return;
         }
 
         let markdownContent = '';
         if (typeof responseContent === 'string') {
-            markdownContent = `**Agent Response:**\n\n${responseContent}`;
+            markdownContent = `${createIconPrefix('response')}**Agent Response:**\n\n${responseContent}`;
         } else if (responseContent && typeof responseContent === 'object') {
-            markdownContent = `**Agent Response:**\n\n\`\`\`json\n${JSON.stringify(responseContent, null, 2)}\n\`\`\``;
+            markdownContent = `${createIconPrefix('response')}**Agent Response:**\n\n\`\`\`json\n${JSON.stringify(responseContent, null, 2)}\n\`\`\``;
         }
 
-        const metadata = {
-            beaker_cell_type: 'response',
-            parent_query_cell: queryCellId,
-            query_event_index: eventIndex
-        };
-
-        const markdownCell = new BeakerMarkdownCell({
-            cell_type: "markdown",
-            source: markdownContent,
-            metadata
-        });
+        const metadata = createCellMetadata('response', queryCellId, eventIndex);
         
-        const insertPosition = findInsertionPosition(queryCellId);
-        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
-        
-        return markdownCell;
+        return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
     
     const createCodeCell = (codeCellId: string, queryCell: any, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'code')) {
             console.warn(`Code cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
-            return; // don't create duplicate
+            return;
         }
-
-        // console.log(`creating code cell for query ${queryCellId}, event ${eventIndex}`);
 
         const childCell = queryCell.children?.find(child => child.id === codeCellId);
         if (!childCell) {
@@ -129,25 +134,31 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             return;
         }
 
-        const metadata = {
-            beaker_cell_type: 'code',
-            parent_query_cell: queryCellId,
-            query_event_index: eventIndex,
-            source_cell_id: codeCellId // Keep track of the original child cell ID
-        };
-
-        const newCodeCell = new BeakerCodeCell({
-            cell_type: "code",
-            source: childCell.source,
-            metadata,
-            outputs: childCell.outputs || []
+        const metadata = createCellMetadata('code', queryCellId, eventIndex, {
+            source_cell_id: codeCellId
         });
+
+        const newCodeCell = createAndPositionCodeCell(
+            childCell.source, 
+            queryCellId, 
+            metadata, 
+            childCell.outputs || []
+        );
         
         newCodeCell.execution_count = childCell.execution_count;
-        
-        const insertPosition = findInsertionPosition(queryCellId);
-        
-        beakerSession().session.notebook.insertCell(newCodeCell, insertPosition);
+        if (childCell.last_execution) {
+            newCodeCell.last_execution = {
+                ...childCell.last_execution,
+                status: 'ok' // or ... childCell.last_execution.status ...
+            };
+        } else if (childCell.outputs && childCell.outputs.length > 0) {
+            // outputs with no execution state => assume it was executed successfully
+            // since this is added by the agent
+            newCodeCell.last_execution = {
+                status: 'ok',
+                checkpoint_index: undefined // TODO
+            };
+        }
         
         return newCodeCell;
     };
@@ -155,91 +166,50 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
     const createErrorCell = (errorContent: any, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'error')) {
             console.warn(`Error cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
-            return; // don't create duplicate
+            return;
         }
 
         let markdownContent = '';
         if (typeof errorContent === 'string') {
-            markdownContent = `**Error:**\n\n${errorContent}`;
+            markdownContent = `${createIconPrefix('error')}**Error:**\n\n${errorContent}`;
         } else if (errorContent && typeof errorContent === 'object') {
             if (errorContent.ename && errorContent.evalue) {
-                markdownContent = `**Error:**\n\n**${errorContent.ename}:** ${errorContent.evalue}`;
+                markdownContent = `${createIconPrefix('error')}**Error:**\n\n**${errorContent.ename}:** ${errorContent.evalue}`;
                 if (errorContent.traceback && errorContent.traceback.length > 0) {
                     markdownContent += `\n\n\`\`\`\n${errorContent.traceback.join('\n')}\n\`\`\``;
                 }
             } else {
-                markdownContent = `**Error:**\n\n\`\`\`json\n${JSON.stringify(errorContent, null, 2)}\n\`\`\``;
+                markdownContent = `${createIconPrefix('error')}**Error:**\n\n\`\`\`json\n${JSON.stringify(errorContent, null, 2)}\n\`\`\``;
             }
         }
 
-        const metadata = {
-            beaker_cell_type: 'error',
-            parent_query_cell: queryCellId,
-            query_event_index: eventIndex
-        };
-
-        const markdownCell = new BeakerMarkdownCell({
-            cell_type: "markdown",
-            source: markdownContent,
-            metadata
-        });
+        const metadata = createCellMetadata('error', queryCellId, eventIndex);
         
-        const insertPosition = findInsertionPosition(queryCellId);
-        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
-        
-        return markdownCell;
+        return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
 
     const createAbortCell = (abortContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'abort')) {
             console.warn(`Abort cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
-            return; // don't create duplicate
+            return;
         }
 
-        const markdownContent = `**Request Aborted:**\n\n${abortContent}`;
-
-        const metadata = {
-            beaker_cell_type: 'abort',
-            parent_query_cell: queryCellId,
-            query_event_index: eventIndex
-        };
-
-        const markdownCell = new BeakerMarkdownCell({
-            cell_type: "markdown",
-            source: markdownContent,
-            metadata
-        });
+        const markdownContent = `${createIconPrefix('abort')}**Request Aborted:**\n\n${abortContent}`;
+        const metadata = createCellMetadata('abort', queryCellId, eventIndex);
         
-        const insertPosition = findInsertionPosition(queryCellId);
-        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
-        
-        return markdownCell;
+        return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
 
     const createQuestionCell = (questionContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'question')) {
             console.warn(`Question cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
-            return; // don't create duplicate
+            return;
         }
 
-        const markdownContent = `**Agent Question:**\n\n${questionContent}`;
-
-        const metadata = {
-            beaker_cell_type: 'question',
-            parent_query_cell: queryCellId,
-            query_event_index: eventIndex
-        };
-
-        const markdownCell = new BeakerMarkdownCell({
-            cell_type: "markdown",
-            source: markdownContent,
-            metadata
-        });
+        const markdownContent = `${createIconPrefix('question')}**Agent Question:**\n\n${questionContent}`;
+        const metadata = createCellMetadata('question', queryCellId, eventIndex);
         
-        const insertPosition = findInsertionPosition(queryCellId);
-        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
-        
-        return markdownCell;
+        return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
 
     const updateQuestionCellWithReply = (replyContent: string, queryCellId: string, eventIndex: number) => {
@@ -272,24 +242,10 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             return;
         }
 
-        const markdownContent = `**User Response:**\n\n${replyContent}`;
-
-        const metadata = {
-            beaker_cell_type: 'user_answer',
-            parent_query_cell: queryCellId,
-            query_event_index: eventIndex
-        };
-
-        const markdownCell = new BeakerMarkdownCell({
-            cell_type: "markdown",
-            source: markdownContent,
-            metadata
-        });
+        const markdownContent = `${createIconPrefix('user_answer')}**User Response:**\n\n${replyContent}`;
+        const metadata = createCellMetadata('user_answer', queryCellId, eventIndex);
         
-        const insertPosition = findInsertionPosition(queryCellId);
-        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
-        
-        return markdownCell;
+        return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
     
     const setupQueryCellFlattening = (cells: () => any[]) => {
@@ -325,7 +281,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
                                 
                                 events.forEach((event, eventIndex) => {
                                     if (processedEvents.has(eventIndex)) {
-                                        return; // already processed
+                                        return;
                                     }
                                     
                                     console.log(`Processing new event ${eventIndex} of type ${event.type}`);
