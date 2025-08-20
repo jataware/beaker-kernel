@@ -41,10 +41,7 @@ const activeQuery = computed(() => {
 
 const thinkingText = computed(() => {
     if (!activeQuery.value) return '';
-    const truncatedQuery = activeQuery.value.source.length > 40 
-        ? activeQuery.value.source.substring(0, 37) + '...' 
-        : activeQuery.value.source;
-    return `"${truncatedQuery}"`;
+    return `"${activeQuery.value.source}"`;
 });
 
 const scrollToActiveQuery = () => {
@@ -64,16 +61,17 @@ const scrollToActiveQuery = () => {
     
     .thinking-content {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 0.5rem;
         flex: 1;
-        min-width: 0; // allow text to shrink
+        min-width: 0;
         
         .thought-icon {
             display: inline-block;
             height: 1rem;
             color: var(--p-primary-500);
             flex-shrink: 0;
+            margin-top: 0.1rem;
             
             svg {
                 fill: currentColor;
@@ -87,16 +85,22 @@ const scrollToActiveQuery = () => {
             font-size: 0.85rem;
             color: var(--p-text-color);
             flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
             min-width: 0;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+            line-height: 1.3;
+            max-height: calc(1.3em * 2);
         }
         
         .thinking-animation {
             font-size: 1rem;
             flex-shrink: 0;
-            width: 3em; // prevents overflow
+            width: 2.5em;
+            align-self: flex-end;
+            margin-top: auto;
+            margin-left: 1.75rem;
         }
     }
     
@@ -116,13 +120,13 @@ const scrollToActiveQuery = () => {
     vertical-align: bottom;
     position: relative;
     animation: thinking-ellipsis 2000ms steps(36, end) infinite;
-    content: "\2026\2026\2026"; /* 3 ellipsis */
-    width: 3em;
+    content: "\2026\2026\2026";
+    width: 2.5em;
 }
 
 @keyframes thinking-ellipsis {
     from {
-        right: 3em; // start from off-screen, right
+        right: 2.5em;
     }
     to {
         right: 0;
@@ -162,25 +166,50 @@ const scrollToActiveQuery = () => {
         
         .thinking-content {
             gap: 0.25rem;
+            align-items: flex-start;
             
             .thinking-text {
                 font-size: 0.8rem;
             }
             
             .thinking-animation {
-                width: 2em;
+                width: 1.5em;
+                align-self: flex-end;
             }
         }
     }
     
     .thinking-animation:after {
         content: "\2026\2026";
-        width: 2em;
+        width: 1.5em;
     }
     
     @keyframes thinking-ellipsis {
         from {
-            right: 2em;
+            right: 1.5em;
+        }
+        to {
+            right: 0;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .agent-thinking-indicator {
+        .thinking-content {
+            .thinking-animation {
+                width: 1.2em;
+            }
+        }
+    }
+    
+    .thinking-animation:after {
+        width: 1.2em;
+    }
+    
+    @keyframes thinking-ellipsis {
+        from {
+            right: 1.2em;
         }
         to {
             right: 0;
