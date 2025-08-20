@@ -180,18 +180,12 @@ const messageEvents = computed(() => {
         (event) => ["user_question", "user_answer"].includes(event.type)
     ).map(
         (event) => {
-// <<<<<<< HEAD
             let messageClass;
             if (event.type === "user_question") {
                 messageClass = "query-answer-chat query-answer-chat-override";
             }
             else {
                 messageClass = "llm-prompt-container llm-prompt-container-chat llm-prompt-text llm-prompt-text-chat";
-// =======
-//             var messageClass = "";
-//             if (event.type !== "user_question") {
-//                 messageClass = "llm-prompt-container llm-prompt-text";
-// >>>>>>> origin/dev
             }
             return [event, messageClass];
         }
@@ -454,12 +448,9 @@ h3.query-steps {
 
 
 div.query-tab a.p-accordion-header-link.p-accordion-header-action{
-    // padding-left: 0px;
     padding: 0.5rem;
     background: none;
     border: none;
-    // padding-top: 1rem;
-    // padding-bottom: 0;
 }
 
 div.query-tab-thought a.p-accordion-header-link.p-accordion-header-action,

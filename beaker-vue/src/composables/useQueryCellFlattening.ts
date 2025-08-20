@@ -8,8 +8,8 @@ import type { BeakerSessionComponentType } from '../components/session/BeakerSes
 
 export function useQueryCellFlattening(beakerSession: () => BeakerSessionComponentType) {
     const processedQueryEvents = ref<Map<string, Set<number>>>(new Map());
-    
-    const findCellByMetadata = (parentQueryId: string, eventIndex: number, cellType: 'thought' | 'response' | 'code') => {
+
+    const findCellByMetadata = (parentQueryId: string, eventIndex: number, cellType: 'thought' | 'response' | 'code' | 'user_question' | 'user_answer' | 'error' | 'abort' | 'question') => {
         const notebook = beakerSession().session.notebook;
         return notebook.cells.find(cell => 
             cell.metadata?.parent_query_cell === parentQueryId &&
@@ -34,7 +34,6 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
                     processedQueryEvents.value.set(parentQueryId, new Set());
                 }
                 processedQueryEvents.value.get(parentQueryId).add(eventIndex);
-                // console.log(`marking event ${eventIndex} as processed, query: ${parentQueryId}`);
             }
         }
     };
@@ -43,7 +42,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
     const findInsertionPosition = (queryCellId: string): number => {
         const notebook = beakerSession().session.notebook;
         const queryCellIndex = notebook.cells.findIndex(cell => cell.id === queryCellId);
-        if (queryCellIndex === -1) return notebook.cells.length; // Append at end if not found
+        if (queryCellIndex === -1) return notebook.cells.length; // append at end if not found
         
         // last cell that's related the query
         let insertIndex = queryCellIndex + 1;
@@ -59,6 +58,11 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         if (findCellByMetadata(queryCellId, eventIndex, 'thought')) {
             console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return; // don't create duplicate
+        }
+
+        if(thoughtContent.length === 0 || thoughtContent === null || thoughtContent === "Thinking...") {
+            console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} is practically empty, skipping`);
+            return;
         }
 
         const metadata = {
@@ -147,6 +151,146 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         
         return newCodeCell;
     };
+
+    const createErrorCell = (errorContent: any, queryCellId: string, eventIndex: number) => {
+        if (findCellByMetadata(queryCellId, eventIndex, 'error')) {
+            console.warn(`Error cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            return; // don't create duplicate
+        }
+
+        let markdownContent = '';
+        if (typeof errorContent === 'string') {
+            markdownContent = `**Error:**\n\n${errorContent}`;
+        } else if (errorContent && typeof errorContent === 'object') {
+            if (errorContent.ename && errorContent.evalue) {
+                markdownContent = `**Error:**\n\n**${errorContent.ename}:** ${errorContent.evalue}`;
+                if (errorContent.traceback && errorContent.traceback.length > 0) {
+                    markdownContent += `\n\n\`\`\`\n${errorContent.traceback.join('\n')}\n\`\`\``;
+                }
+            } else {
+                markdownContent = `**Error:**\n\n\`\`\`json\n${JSON.stringify(errorContent, null, 2)}\n\`\`\``;
+            }
+        }
+
+        const metadata = {
+            beaker_cell_type: 'error',
+            parent_query_cell: queryCellId,
+            query_event_index: eventIndex
+        };
+
+        const markdownCell = new BeakerMarkdownCell({
+            cell_type: "markdown",
+            source: markdownContent,
+            metadata
+        });
+        
+        const insertPosition = findInsertionPosition(queryCellId);
+        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
+        
+        return markdownCell;
+    };
+
+    const createAbortCell = (abortContent: string, queryCellId: string, eventIndex: number) => {
+        if (findCellByMetadata(queryCellId, eventIndex, 'abort')) {
+            console.warn(`Abort cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            return; // don't create duplicate
+        }
+
+        const markdownContent = `**Request Aborted:**\n\n${abortContent}`;
+
+        const metadata = {
+            beaker_cell_type: 'abort',
+            parent_query_cell: queryCellId,
+            query_event_index: eventIndex
+        };
+
+        const markdownCell = new BeakerMarkdownCell({
+            cell_type: "markdown",
+            source: markdownContent,
+            metadata
+        });
+        
+        const insertPosition = findInsertionPosition(queryCellId);
+        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
+        
+        return markdownCell;
+    };
+
+    const createQuestionCell = (questionContent: string, queryCellId: string, eventIndex: number) => {
+        if (findCellByMetadata(queryCellId, eventIndex, 'question')) {
+            console.warn(`Question cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            return; // don't create duplicate
+        }
+
+        const markdownContent = `**Agent Question:**\n\n${questionContent}`;
+
+        const metadata = {
+            beaker_cell_type: 'question',
+            parent_query_cell: queryCellId,
+            query_event_index: eventIndex
+        };
+
+        const markdownCell = new BeakerMarkdownCell({
+            cell_type: "markdown",
+            source: markdownContent,
+            metadata
+        });
+        
+        const insertPosition = findInsertionPosition(queryCellId);
+        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
+        
+        return markdownCell;
+    };
+
+    const updateQuestionCellWithReply = (replyContent: string, queryCellId: string, eventIndex: number) => {
+        // the question should be in a previous event index
+        let questionCell = null;
+        let questionEventIndex = eventIndex - 1;
+        
+        // look backwards for the most recent question cell
+        while (questionEventIndex >= 0 && !questionCell) {
+            questionCell = findCellByMetadata(queryCellId, questionEventIndex, 'question');
+            questionEventIndex--;
+        }
+        
+        if (questionCell) {
+            const currentContent = questionCell.source;
+            const updatedContent = `${currentContent}\n\n**User Response:**\n\n${replyContent}`;
+            questionCell.source = updatedContent;
+            
+            console.log(`updated question cell with reply for query ${queryCellId}, event ${eventIndex}`);
+            return questionCell;
+        } else {
+            console.warn(`no question cell found for reply in query ${queryCellId}, creating standalone reply cell`);
+            return createReplyCell(replyContent, queryCellId, eventIndex);
+        }
+    };
+
+    const createReplyCell = (replyContent: string, queryCellId: string, eventIndex: number) => {
+        if (findCellByMetadata(queryCellId, eventIndex, 'user_answer')) {
+            console.warn(`User answer cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            return;
+        }
+
+        const markdownContent = `**User Response:**\n\n${replyContent}`;
+
+        const metadata = {
+            beaker_cell_type: 'user_answer',
+            parent_query_cell: queryCellId,
+            query_event_index: eventIndex
+        };
+
+        const markdownCell = new BeakerMarkdownCell({
+            cell_type: "markdown",
+            source: markdownContent,
+            metadata
+        });
+        
+        const insertPosition = findInsertionPosition(queryCellId);
+        beakerSession().session.notebook.insertCell(markdownCell, insertPosition);
+        
+        return markdownCell;
+    };
     
     const setupQueryCellFlattening = (cells: () => any[]) => {
         watch(
@@ -196,6 +340,15 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
                                         });
                                     } else if (event.type === 'response') {
                                         createResponseCell(event.content, cell.id, eventIndex);
+                                    } else if (event.type === 'error') {
+                                        createErrorCell(event.content, cell.id, eventIndex);
+                                    } else if (event.type === 'abort') {
+                                        console.info("Not creating abort cells for now, as the abort state is shown on query cell.")
+                                    //  createAbortCell(event.content, cell.id, eventIndex);
+                                    } else if (event.type === 'user_question') {
+                                        createQuestionCell(event.content, cell.id, eventIndex);
+                                    } else if (event.type === 'user_answer') {
+                                        updateQuestionCellWithReply(event.content, cell.id, eventIndex);
                                     }
                                 });
                             },
@@ -217,5 +370,12 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         setupQueryCellFlattening,
         resetProcessedEvents,
         initializeProcessedEvents,
+        // createErrorCell,
+        // createAbortCell,
+        // createQuestionCell,
+        // createReplyCell,
+        // createThoughtCell,
+        // createResponseCell,
+        // createCodeCell,
     };
 }
