@@ -64,7 +64,7 @@ export function useNotebookInterface() {
         const events = awaitingInputCell.value.events || [];
         const lastQuestionEvent = [...events].reverse().find(event => event.type === 'user_question');
         
-        return lastQuestionEvent?.content?.question || 'The agent is waiting for your response.';
+        return lastQuestionEvent?.content || 'The agent is waiting for your response.';
     });
     
     const defaultRenderers: IMimeRenderer<BeakerRenderOutput>[] = [

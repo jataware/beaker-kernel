@@ -177,7 +177,7 @@ import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 import BeakerCodeCellComponent from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCellComponent from '../components/cell/BeakerMarkdownCell.vue';
-import NextGenBeakerQueryCell from '../components/cell/NextGenBeakerQueryCell.vue';
+import NextGenBeakerQueryCell from '../components/cell/NextBeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 
 import { useNotebookInterface } from '../composables/useNotebookInterface';
@@ -270,6 +270,38 @@ watch(beakerSession, async () => {
 </script>
 
 <style lang="scss">
+
+.cell-container {
+
+    .beaker-cell {
+        padding-top: 0;
+    }
+    .cell-contents {
+
+        .markdown-cell {
+                padding-right: 0;
+        
+                &>div {
+
+                    p {
+                        margin-block-start: 0.5rem;
+                        margin-block-end: 0.25rem;
+                    }
+        
+                    p:first-child {
+                        margin-block-start: 0;
+                        margin-block-end: 0;
+                    }
+        
+                    p:last-child {
+                        margin-block-start: 0.5rem;
+                        margin-block-end: 0.25rem;
+                    }
+                }
+            }
+    }
+}
+
 .notebook-container {
     display: flex;
     height: 100%;
@@ -310,5 +342,48 @@ watch(beakerSession, async () => {
     display: inline-block;
     height: 100%;
     font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
+}
+
+/* global scrollbar styling */
+* {
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: #a3a6aa transparent;
+}
+
+/* webkit (chrome/safari/edge) */
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+    border: none;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: #a3a6aa;
+    border-radius: 4px;
+    border: none;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: #a3a6aa;
+}
+
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+.notebook-container {
+    scrollbar-width: thin;
+    scrollbar-color: #a3a6aa transparent transparent;
+}
+
+.beaker-notebook {
+    scrollbar-width: thin;
+    scrollbar-color: #a3a6aa transparent transparent;
+    //  transparent
 }
 </style>

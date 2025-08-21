@@ -1,5 +1,5 @@
 <template>
-    <div class="nextgen-query-cell">
+    <div class="next-query-cell">
         <div class="query-cell-grid">
             <div class="query-content">
                 <div class="query-prompt">
@@ -8,6 +8,20 @@
                         <span>User Query:</span>
                     </div>
                     <div class="query-text">{{ cell.source }}</div>
+
+                    <div class="query-controls">
+                        <div v-if="showCollapseControl" class="collapse-control">
+                            <Checkbox
+                                v-model="autoCollapseCodeCells"
+                                :binary="true"
+                                :disabled="!isQueryActive"
+                                inputId="auto-collapse-checkbox"
+                            />
+                            <label for="auto-collapse-checkbox" class="collapse-label">
+                                Truncate code cells
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -19,28 +33,29 @@
                         :severity="badgeSeverity"
                         value=" "
                         v-tooltip.top="badgeTooltip">
-                        <BrainIcon 
+                        <!-- <BrainIcon 
                             v-if="cell.metadata?.query_status === 'in-progress'" 
                             class="brain-icon" 
-                        />
-                        <i v-else-if="badgeIcon" :class="badgeIcon"></i>
+                        /> -->
+                        <i :class="badgeIcon"></i>
                     </Badge>
                 </div>
-                <i
-                    v-if="cell.status === 'busy'"
+                <!-- <i
+                    v-if="cell.status === 'busy' || cell.status === 'awaiting_input'"
                     class="pi pi-spin pi-spinner busy-icon"
-                />
+                /> -->
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watchEffect } from "vue";
+import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watchEffect, ref } from "vue";
 import Badge from 'primevue/badge';
 import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import { useBaseQueryCell } from './BaseQueryCell';
-import BrainIcon from '../../assets/icon-components/BrainIcon.vue';
+// import BrainIcon from '../../assets/icon-components/BrainIcon.vue';
+import Checkbox from 'primevue/checkbox';
 
 const props = defineProps([
     'index',
@@ -58,6 +73,24 @@ const {
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const instance = getCurrentInstance();
+
+const autoCollapseCodeCells = ref(false);
+
+const isQueryActive = computed(() => {
+    const queryStatus = cell.value.metadata?.query_status;
+    return queryStatus === 'in-progress' || queryStatus === 'pending';
+});
+
+const showCollapseControl = computed(() => {
+    const queryStatus = cell.value.metadata?.query_status;
+    return queryStatus === 'in-progress' || queryStatus === 'pending';
+});
+
+watchEffect(() => {
+    if (cell.value.metadata) {
+        cell.value.metadata.auto_collapse_code_cells = autoCollapseCodeCells.value;
+    }
+});
 
 watchEffect(() => {
     const currentStatus = cell.value.status;
@@ -118,7 +151,7 @@ const badgeIcon = computed(() => {
         case 'aborted':
             return 'pi pi-minus';
         case 'in-progress':
-            return null;
+            return 'pi pi-spinner pi-spin busy-icon';
         case 'pending':
             return 'pi pi-clock';
         default:
@@ -163,6 +196,10 @@ onBeforeMount(() => {
             cell.value.metadata.query_status = 'pending';
         }
     }
+    
+    if (cell.value.metadata?.auto_collapse_code_cells !== undefined) {
+        autoCollapseCodeCells.value = cell.value.metadata.auto_collapse_code_cells;
+    }
 });
 
 onBeforeUnmount(() => {
@@ -172,11 +209,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss">
-.nextgen-query-cell {
+.next-query-cell {
     background-color: var(--p-surface-a);
     border-radius: var(--p-surface-border-radius);
-    margin-top: 0.75rem;
-    margin-bottom: 0.5rem;
 }
 
 .query-cell-grid {
@@ -197,15 +232,10 @@ onBeforeUnmount(() => {
     align-items: flex-end;
 }
 
-.query-prompt {
-    margin-bottom: 0.75rem;
-}
-
 .query-label {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
     font-weight: 600;
     color: var(--p-text-color);
 }
@@ -220,6 +250,22 @@ onBeforeUnmount(() => {
     border-radius: var(--p-surface-border-radius);
     white-space: pre-wrap;
     font-family: inherit;
+    margin-top: 0.25rem;
+}
+
+.collapse-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0 0.25rem 0;
+    background-color: var(--p-surface-0);
+}
+
+.collapse-label {
+    font-size: 0.875rem;
+    color: var(--p-text-color-secondary);
+    cursor: pointer;
+    user-select: none;
 }
 
 .execution-badge {
@@ -244,23 +290,10 @@ onBeforeUnmount(() => {
 }
 
 .busy-icon {
-    color: var(--p-blue-500);
+    // color: var(--p-surface-a) !important;
     font-weight: bold;
     font-size: 1.3rem;
-    margin-top: 1rem;
-    margin-right: 0.33rem;
-}
-
-.input-request {
-    padding: 0.5rem 0;
-    display: flex;
-    align-items: flex-start;
-    width: 100%;
-}
-
-.input-request-wrapper {
-    display: flex;
-    width: 100%;
+    // margin-right: 0.33rem;
 }
 
 .brain-icon {

@@ -1,7 +1,6 @@
 <template>
   <div class="demo-container">
     <h2>Query Cell Badge States Demo</h2>
-    <p>Hover over each badge to see tooltips</p>
     
     <div class="demo-grid">
       <div class="demo-item">
@@ -44,60 +43,12 @@
         />
       </div>
     </div>
-    
-    <div class="demo-controls">
-      <h3>Interactive Testing</h3>
-      <div class="control-group">
-        <label>Cell Status:</label>
-        <select v-model="currentStatus">
-          <option value="idle">Idle</option>
-          <option value="busy">Busy</option>
-          <option value="failed">Failed</option>
-        </select>
-      </div>
-      
-      <div class="control-group">
-        <label>Query Status:</label>
-        <select v-model="currentQueryStatus">
-          <option value="pending">Pending</option>
-          <option value="in-progress">In Progress</option>
-          <option value="success">Success</option>
-          <option value="aborted">Aborted</option>
-          <option value="failed">Failed</option>
-        </select>
-      </div>
-      
-      <div class="control-group">
-        <label>Events:</label>
-        <button @click="addEvent('thought')">Add Thought</button>
-        <button @click="addEvent('response')">Add Response</button>
-        <button @click="addEvent('abort')">Add Abort</button>
-        <button @click="clearEvents">Clear Events</button>
-      </div>
-      
-      <div class="control-group">
-        <label>Last Execution:</label>
-        <select v-model="lastExecutionStatus">
-          <option value="ok">OK</option>
-          <option value="abort">Abort</option>
-          <option value="error">Error</option>
-        </select>
-      </div>
-    </div>
-    
-    <div class="demo-cell">
-      <h3>Interactive Cell</h3>
-      <NextGenBeakerQueryCell 
-        :index="5" 
-        :cell="interactiveCell" 
-      />
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import NextGenBeakerQueryCell from './NextGenBeakerQueryCell.vue';
+import NextGenBeakerQueryCell from './NextBeakerQueryCell.vue';
 
 const pendingCell = ref({
   id: 'demo-pending',

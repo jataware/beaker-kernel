@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
-import NextGenBeakerQueryCell from '../NextGenBeakerQueryCell.vue';
+import NextBeakerQueryCell from '../NextBeakerQueryCell.vue';
 
 vi.mock('../BaseQueryCell', () => ({
   useBaseQueryCell: () => ({
@@ -22,7 +22,7 @@ const mockBeakerSession = {
   cellRegistry: {},
 };
 
-describe('NextGenBeakerQueryCell', () => {
+describe('NextBeakerQueryCell', () => {
   let wrapper: any;
   
   const createMockCell = (overrides = {}) => ({
@@ -38,10 +38,10 @@ describe('NextGenBeakerQueryCell', () => {
   });
 
   beforeEach(() => {
-    const app = createApp(NextGenBeakerQueryCell);
+    const app = createApp(NextBeakerQueryCell);
     app.use(PrimeVue);
     
-    wrapper = mount(NextGenBeakerQueryCell, {
+    wrapper = mount(NextBeakerQueryCell, {
       props: {
         index: 0,
         cell: createMockCell(),

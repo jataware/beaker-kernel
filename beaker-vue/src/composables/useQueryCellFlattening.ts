@@ -6,6 +6,14 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
     const processedQueryEvents = ref<Map<string, Set<number>>>(new Map());
 
     const createIconPrefix = (cellType: string) => {
+        if (cellType === 'user_question') {
+            return '<i class="pi pi-question-circle" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;"></i>';
+        }
+        
+        if (cellType === 'error') {
+            return '<i class="pi pi-times-circle" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;"></i>';
+        }
+
         const iconHtml = brainIconSvg.replace('<svg', '<svg style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;"');
         return `${iconHtml}`;
     };
@@ -86,6 +94,9 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         return codeCell;
     };
     
+    // TODO eventually use a custom component, which would use markdown-like func
+    // but also add buttons to like for example "More Info" to display usage data
+    // or  bg execution by agent, etc.
     const createThoughtCell = (thoughtContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'thought')) {
             console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
@@ -134,9 +145,11 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             return;
         }
 
+        const shouldCollapse = queryCell.metadata?.auto_collapse_code_cells === true;
+
         const metadata = createCellMetadata('code', queryCellId, eventIndex, {
             source_cell_id: codeCellId,
-            collapsed: true // collapsed by default
+            collapsed: shouldCollapse
         });
 
         const newCodeCell = createAndPositionCodeCell(
@@ -261,56 +274,69 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
                 
                 for (const cell of cellsArray) {
                     if (cell.cell_type === 'query') {
-                        if (!processedQueryEvents.value.has(cell.id)) {
-                            processedQueryEvents.value.set(cell.id, new Set());
+                        const queryStatus = cell.metadata?.query_status;
+                        const isInProgress = queryStatus === 'in-progress' || queryStatus === 'pending';
+                        const isCompleted = queryStatus === 'success' || queryStatus === 'failed' || queryStatus === 'aborted';
+                        
+                        if (isCompleted) {
+                            // console.log(`Query ${cell.id} is completed (${queryStatus}), skipping flattening setup`);
+                            continue;
                         }
                         
-                        watch(
-                            () => cell.events,
-                            (events) => {
-                                if (!events || events.length === 0) return;
-                                
-                                const processedEvents = processedQueryEvents.value.get(cell.id);
-                                
-                                const isCompleted = events.length > 0 && 
-                                    ['response', 'error', 'abort'].includes(events[events.length - 1].type);
+                        if (isInProgress) {
+                            if (!processedQueryEvents.value.has(cell.id)) {
+                                processedQueryEvents.value.set(cell.id, new Set());
+                            }
+                            
+                            watch(
+                                () => cell.events,
+                                (events) => {
+                                    if (!events || events.length === 0) return;
                                     
-                                if (isCompleted && processedEvents.size === events.length) {
-                                    console.log(`Query ${cell.id} is completed and all events processed, skipping`);
-                                    return;
-                                }
-                                
-                                events.forEach((event, eventIndex) => {
-                                    if (processedEvents.has(eventIndex)) {
+                                    const processedEvents = processedQueryEvents.value.get(cell.id);
+                                    
+                                    const isCompleted = events.length > 0 && 
+                                        ['response', 'error', 'abort'].includes(events[events.length - 1].type);
+                                        
+                                    if (isCompleted && processedEvents.size === events.length) {
+                                        console.log(`Query ${cell.id} is completed and all events processed, skipping`);
                                         return;
                                     }
                                     
-                                    console.log(`Processing new event ${eventIndex} of type ${event.type}`);
-                                    
-                                    processedEvents.add(eventIndex);
-                                    
-                                    if (event.type === 'thought' && event.content?.thought) {
-                                        createThoughtCell(event.content.thought, cell.id, eventIndex);
-                                    } else if (event.type === 'code_cell' && event.content?.cell_id) {
-                                        nextTick(() => {
-                                            createCodeCell(event.content.cell_id, cell, cell.id, eventIndex);
-                                        });
-                                    } else if (event.type === 'response') {
-                                        createResponseCell(event.content, cell.id, eventIndex);
-                                    } else if (event.type === 'error') {
-                                        createErrorCell(event.content, cell.id, eventIndex);
-                                    } else if (event.type === 'abort') {
-                                        console.info("Not creating abort cells for now, as the abort state is shown on query cell.")
-                                    //  createAbortCell(event.content, cell.id, eventIndex);
-                                    } else if (event.type === 'user_question') {
-                                        createQuestionCell(event.content, cell.id, eventIndex);
-                                    } else if (event.type === 'user_answer') {
-                                        updateQuestionCellWithReply(event.content, cell.id, eventIndex);
-                                    }
-                                });
-                            },
-                            { deep: true, immediate: true }
-                        );
+                                    events.forEach((event, eventIndex) => {
+                                        if (processedEvents.has(eventIndex)) {
+                                            return;
+                                        }
+                                        
+                                        console.log(`Processing new event ${eventIndex} of type ${event.type}`);
+                                        
+                                        processedEvents.add(eventIndex);
+                                        
+                                        if (event.type === 'thought' && event.content?.thought) {
+                                            createThoughtCell(event.content.thought, cell.id, eventIndex);
+                                        } else if (event.type === 'code_cell' && event.content?.cell_id) {
+                                            nextTick(() => {
+                                                createCodeCell(event.content.cell_id, cell, cell.id, eventIndex);
+                                            });
+                                        } else if (event.type === 'response') {
+                                            createResponseCell(event.content, cell.id, eventIndex);
+                                        } else if (event.type === 'error') {
+                                            createErrorCell(event.content, cell.id, eventIndex);
+                                        } else if (event.type === 'abort') {
+                                            console.info("Not creating abort cells for now, as the abort state is shown on query cell.")
+                                        //  createAbortCell(event.content, cell.id, eventIndex);
+                                        } else if (event.type === 'user_question') {
+                                            createQuestionCell(event.content, cell.id, eventIndex);
+                                        } else if (event.type === 'user_answer') {
+                                            updateQuestionCellWithReply(event.content, cell.id, eventIndex);
+                                        }
+                                    });
+                                },
+                                { deep: true, immediate: true }
+                            );
+                        } else {
+                            console.log(`Query ${cell.id} is not in progress (${queryStatus}), skipping flattening setup`);
+                        }
                     }
                 }
             },
