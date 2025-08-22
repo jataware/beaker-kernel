@@ -24,6 +24,10 @@
         :value="contextNodes"
         :loading="!contextNodes"
         v-model:expandedKeys="contextExpandedKeys"
+        :pt="{
+            root: { class: 'context-tree' },
+            nodeContent: { style: { padding: '0' } }
+        }"
     >
         <template v-slot:loadingicon>
             <div class="loading-area">
@@ -162,13 +166,19 @@ const contextNodes = computed<TreeNode[]>(() => {
   margin: 1rem 1.25rem 0.25rem 1.25rem;
 }
 
-.context-tree {
+.context-tree-debug {
+    // TODO
+
   margin-top: 0.5rem;
   flex: 1;
 
   border: none;
   width: 21rem;
   position: relative;
+
+  .p-tree-node-content {
+    padding: 0;
+  }
 
   .p-tree {
     border: none;
@@ -181,7 +191,7 @@ const contextNodes = computed<TreeNode[]>(() => {
     bottom: 0;
     right: 0;
 
-    .p-treenode .p-treenode-content {
+    .p-treenode.p-treenode-leaf .p-tree-node-content {
       padding: 0 !important;
 
         .p-tree-node-toggle-button {

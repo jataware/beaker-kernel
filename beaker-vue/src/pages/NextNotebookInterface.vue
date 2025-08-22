@@ -15,7 +15,7 @@
         @session-status-changed="statusChangedHandler"
         @open-file="handleLoadNotebook"
     >
-        <div class="notebook-container">
+        <div class="next-notebook-container">
             <BeakerNotebook
                 ref="beakerNotebookRef"
                 :cell-map="cellComponentMapping"
@@ -275,6 +275,12 @@ watch(beakerSession, async () => {
 
 <style lang="scss">
 
+.next-notebook-container {
+    display: flex;
+    height: 100%;
+    max-width: 100%;
+}
+
 .cell-container {
 
     .beaker-cell {
@@ -306,12 +312,6 @@ watch(beakerSession, async () => {
                 }
             }
     }
-}
-
-.notebook-container {
-    display: flex;
-    height: 100%;
-    max-width: 100%;
 }
 
 .beaker-notebook {
@@ -382,7 +382,7 @@ watch(beakerSession, async () => {
     background: transparent;
 }
 
-.notebook-container {
+.next-notebook-container {
     scrollbar-width: thin;
     scrollbar-color: #a3a6aa transparent transparent;
 }
@@ -405,7 +405,7 @@ watch(beakerSession, async () => {
     background: var(--p-surface-d);
 }
 
-.beaker-dark .notebook-container {
+.beaker-dark .next-notebook-container {
     scrollbar-color: var(--p-surface-d) transparent transparent;
 }
 
@@ -416,5 +416,10 @@ watch(beakerSession, async () => {
 .agent-thinking-indicator-container {
     background-color: var(--p-surface-b);
     border-bottom: 1px solid var(--p-surface-border);
+}
+
+.execution-badge, .execution-count-badge {
+    font-size: 0.8rem;
+    height: 1.5rem;
 }
 </style>
