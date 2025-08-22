@@ -184,6 +184,7 @@ import BeakerCodeCellComponent from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCellComponent from '../components/cell/BeakerMarkdownCell.vue';
 import NextGenBeakerQueryCell from '../components/cell/NextBeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
+import BeakerAgentCell from '../components/cell/BeakerAgentCell.vue';
 
 import { useNotebookInterface } from '../composables/useNotebookInterface';
 import { useQueryCellFlattening } from '../composables/useQueryCellFlattening';
@@ -236,11 +237,31 @@ const sessionIdFromUrl = urlParams.has("session") ? urlParams.get("session") : "
 const sessionIdFromProps = computed(() => props.sessionId);
 const renderersFromProps = computed(() => props.renderers);
 
+const getCellComponent = (cell: any) => {
+    if (cell.cell_type === 'markdown' && cell.metadata?.beaker_cell_type) {
+        const agentCellType = cell.metadata.beaker_cell_type;
+        if (['thought', 'response', 'user_question', 'error', 'abort'].includes(agentCellType)) {
+            return BeakerAgentCell; // Your custom component
+        }
+    }
+    
+    const defaultMapping = {
+        'code': BeakerCodeCellComponent,
+        'markdown': BeakerMarkdownCellComponent,
+        'query': NextGenBeakerQueryCell,
+        'raw': BeakerRawCell,
+    };
+    
+    return defaultMapping[cell.cell_type] || BeakerMarkdownCellComponent;
+};
+
 const cellComponentMapping = {
     'code': BeakerCodeCellComponent,
     'markdown': BeakerMarkdownCellComponent,
     'query': NextGenBeakerQueryCell,
     'raw': BeakerRawCell,
+    
+    getCellComponent
 };
 
 const headerNav = computed(() => createHeaderNav('nextgen-notebook'));
@@ -290,7 +311,13 @@ watch(beakerSession, async () => {
         }
 
         .cell-contents {
-            padding-left: 0.5rem;
+            margin-left: 0.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.65rem;
+
+            .state-info {
+                margin-left: 0;
+            }
 
             .markdown-cell {
                 padding-right: 0;

@@ -25,7 +25,7 @@
         :loading="!contextNodes"
         v-model:expandedKeys="contextExpandedKeys"
         :pt="{
-            root: { class: 'context-tree' },
+            root: { class: 'context-tree', },
             nodeContent: { style: { padding: '0' } }
         }"
     >
@@ -166,42 +166,16 @@ const contextNodes = computed<TreeNode[]>(() => {
   margin: 1rem 1.25rem 0.25rem 1.25rem;
 }
 
-.context-tree-debug {
-    // TODO
+.context-tree {
 
-  margin-top: 0.5rem;
-  flex: 1;
-
-  border: none;
-  width: 21rem;
-  position: relative;
-
-  .p-tree-node-content {
-    padding: 0;
-  }
-
-  .p-tree {
+  &.p-tree {
     border: none;
-  }
+    padding: 0.5rem var(--p-tree-padding);
 
-  .p-tree-wrapper {
-    position: absolute;
-    left: 1rem;
-    top: 0;
-    bottom: 0;
-    right: 0;
-
-    .p-treenode.p-treenode-leaf .p-tree-node-content {
-      padding: 0 !important;
-
-        .p-tree-node-toggle-button {
-            width: 0.75rem !important;
-            padding: 0;
-        }
+    .p-tree-root {
+        overflow-x: hidden;
     }
-
   }
-
 }
 
 .context-toggle-button {

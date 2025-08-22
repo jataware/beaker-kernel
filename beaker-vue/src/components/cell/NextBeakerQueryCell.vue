@@ -194,6 +194,7 @@ const badgeSeverity = computed(() => {
         case 'aborted':
             return 'warn';
         case 'in-progress':
+            return 'info';
         case 'pending':
         default:
             return 'secondary';
@@ -213,7 +214,7 @@ const badgeIcon = computed(() => {
         case 'aborted':
             return 'pi pi-minus';
         case 'in-progress':
-            return 'pi pi-spinner pi-spin busy-icon';
+            return 'pi pi-spin pi-cog busy-icon';
         case 'pending':
             return 'pi pi-clock';
         default:
@@ -542,7 +543,6 @@ onBeforeUnmount(() => {
     grid-area: exec;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
 }
 
 .query-label {
@@ -550,6 +550,7 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 0.25rem;
     font-weight: 600;
+    min-height: 1.95rem;
 
     .query-label-user {
         color: var(--p-green-600);
@@ -558,7 +559,7 @@ onBeforeUnmount(() => {
 
 .query-icon {
     color: var(--p-green-600);
-    font-size: 1.1rem;
+    // font-size: 1.1rem;
 }
 
 .query-text {

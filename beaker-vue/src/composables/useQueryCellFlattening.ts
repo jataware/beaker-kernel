@@ -1,23 +1,8 @@
 import { ref, watch, nextTick } from 'vue';
 import type { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
-import brainIconSvg from '../assets/brain.svg?raw';
 
 export function useQueryCellFlattening(beakerSession: () => BeakerSessionComponentType) {
     const processedQueryEvents = ref<Map<string, Set<number>>>(new Map());
-
-    // TODO move this to custom cell, as this would be EXPORTED in the cell contents, etc....
-    const createIconPrefix = (cellType: string) => {
-        if (cellType === 'user_question') {
-            return '<i class="pi pi-question-circle" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;"></i>';
-        }
-        
-        if (cellType === 'error') {
-            return '<i class="pi pi-times-circle" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;"></i>';
-        }
-
-        const iconHtml = brainIconSvg.replace('<svg', '<svg style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;"');
-        return `${iconHtml}`;
-    };
 
     const findCellByMetadata = (parentQueryId: string, eventIndex: number, cellType: 'thought' | 'response' | 'code' | 'user_question' | 'user_answer' | 'error' | 'abort') => {
         const notebook = beakerSession().session.notebook;
@@ -95,9 +80,6 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         return codeCell;
     };
     
-    // TODO eventually use a custom component, which would use markdown-like func
-    // but also add buttons to like for example "More Info" to display usage data
-    // or  bg execution by agent, etc.
     const createThoughtCell = (thoughtContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'thought')) {
             console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
@@ -110,10 +92,9 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         }
 
         const metadata = createCellMetadata('thought', queryCellId, eventIndex);
-        // const iconPrefix = createIconPrefix('thought');
-        const source = `**Assistant**\n\n${thoughtContent}`;
+        const markdownContent = `**Assistant:**\n\n${thoughtContent}`;
         
-        return createAndPositionMarkdownCell(source, queryCellId, metadata);
+        return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
     
     const createResponseCell = (responseContent: string, queryCellId: string, eventIndex: number) => {
@@ -124,11 +105,9 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
 
         let markdownContent = '';
         if (typeof responseContent === 'string') {
-            markdownContent = `**Assistant**\n\n${responseContent}`;
-            // markdownContent = `${createIconPrefix('response')}**Agent Response:**\n\n${responseContent}`;
+            markdownContent = `**Assistant:**\n\n${responseContent}`;
         } else if (responseContent && typeof responseContent === 'object') {
-            markdownContent = `**Assistant**\n\n\`\`\`json\n${JSON.stringify(responseContent, null, 2)}\n\`\`\``;
-            // markdownContent = `${createIconPrefix('response')}**Agent Response:**\n\n\`\`\`json\n${JSON.stringify(responseContent, null, 2)}\n\`\`\``;
+            markdownContent = `\`\`\`json\n${JSON.stringify(responseContent, null, 2)}\n\`\`\``;
         }
 
         const metadata = createCellMetadata('response', queryCellId, eventIndex);
@@ -188,10 +167,10 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
 
         let markdownContent = '';
         if (typeof errorContent === 'string') {
-            markdownContent = `${createIconPrefix('error')}**Error:**\n\n${errorContent}`;
+            markdownContent = `**Error:**\n\n${errorContent}`;
         } else if (errorContent && typeof errorContent === 'object') {
             if (errorContent.ename && errorContent.evalue) {
-                markdownContent = `${createIconPrefix('error')}**Error:**\n\n**${errorContent.ename}:** ${errorContent.evalue}`;
+                markdownContent = `**Error:**\n\n**${errorContent.ename}:** ${errorContent.evalue}`;
                 if (errorContent.traceback && errorContent.traceback.length > 0) {
                     markdownContent += `\n\n\`\`\`\n${errorContent.traceback.join('\n')}\n\`\`\``;
                 }
@@ -211,7 +190,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             return;
         }
 
-        const markdownContent = `${createIconPrefix('abort')}**Request Aborted:**\n\n${abortContent}`;
+        const markdownContent = `**Request Aborted:**\n\n${abortContent}`;
         const metadata = createCellMetadata('abort', queryCellId, eventIndex);
         
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
