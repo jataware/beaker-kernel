@@ -38,12 +38,12 @@
                     </template>
                 </BeakerNotebookToolbar>
 
-                <div class="agent-thinking-indicator-container">
+                <!-- <div class="agent-thinking-indicator-container">
                     <AgentThinkingIndicator 
                         :active-query-cells="activeQueryCells"
                         @scroll-to-query="scrollToCell"
                     />
-                </div>
+                </div> -->
 
                 <BeakerNotebookPanel
                     :selected-cell="beakerNotebookRef?.selectedCellId"

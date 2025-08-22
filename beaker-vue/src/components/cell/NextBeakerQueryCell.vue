@@ -1,5 +1,21 @@
 <template>
-    <div class="next-query-cell">
+    <div 
+        class="next-query-cell" 
+        ref="queryCellRef"
+        :class="{ 'sticky-query': isSticky }"
+        @click="handleCellClick"
+        @wheel="handleWheelEvent"
+    >
+        <div v-if="isDevelopment && isSelected" class="mock-controls">
+            <button @click="toggleMockSticky" class="mock-button">
+                {{ mockStickyForce ? 'Disable' : 'Enable' }} Sticky Test
+            </button>
+            <span class="status-debug">
+                Mock: {{ mockStickyForce ? 'ON' : 'OFF' }} | 
+                Status: {{ cell.metadata?.query_status || 'undefined' }}
+            </span>
+        </div>
+        
         <div class="query-cell-grid">
             <div class="query-content">
                 <div class="query-prompt">
@@ -8,8 +24,16 @@
                         <span class="query-label-user">User</span>
                     </div>
                     <div class="query-text">{{ cell.source }}</div>
+                    
+                    <div v-if="shouldShowThought && lastThoughtText" class="last-thought">
+                        <div class="thought-label">
+                            <span class="pi pi-robot thought-icon"></span>
+                            <span class="thought-label-text">Assistant</span>
+                        </div>
+                        <div class="thought-content">{{ lastThoughtText }}</div>
+                    </div>
 
-                    <div class="query-controls">
+                    <!-- <div class="query-controls">
                         <div v-if="showCollapseControl" class="collapse-control">
                             <Checkbox
                                 v-model="autoCollapseCodeCells"
@@ -21,7 +45,7 @@
                                 Truncate code cells
                             </label>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
             
@@ -33,29 +57,21 @@
                         :severity="badgeSeverity"
                         value=" "
                         v-tooltip.top="badgeTooltip">
-                        <!-- <BrainIcon 
-                            v-if="cell.metadata?.query_status === 'in-progress'" 
-                            class="brain-icon" 
-                        /> -->
                         <i :class="badgeIcon"></i>
                     </Badge>
                 </div>
-                <!-- <i
-                    v-if="cell.status === 'busy' || cell.status === 'awaiting_input'"
-                    class="pi pi-spin pi-spinner busy-icon"
-                /> -->
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watchEffect, ref } from "vue";
+import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watchEffect, ref, nextTick } from "vue";
 import Badge from 'primevue/badge';
 import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
+import type { BeakerNotebookComponentType } from "../notebook/BeakerNotebook.vue";
 import { useBaseQueryCell } from './BaseQueryCell';
-// import BrainIcon from '../../assets/icon-components/BrainIcon.vue';
-import Checkbox from 'primevue/checkbox';
+// import Checkbox from 'primevue/checkbox';
 
 const props = defineProps([
     'index',
@@ -72,19 +88,61 @@ const {
 } = useBaseQueryCell(props);
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
+const notebook = inject<BeakerNotebookComponentType>("notebook");
 const instance = getCurrentInstance();
 
 const autoCollapseCodeCells = ref(false);
+const queryCellRef = ref<HTMLElement | null>(null);
+const isSticky = ref(false);
+
+const mockStickyForce = ref(false);
+
+const isDevelopment = computed(() => {
+    return true;
+});
+
+const isSelected = computed(() => {
+    return cell.value.id === notebook?.selectedCellId;
+});
+
+const lastThoughtText = computed(() => {
+    const thoughtEvents = events.value.filter(event => event.type === 'thought');
+    if (thoughtEvents.length === 0) return null;
+    
+    const lastThought = thoughtEvents[thoughtEvents.length - 1];
+    
+    if (typeof lastThought.content === 'string') {
+        return lastThought.content;
+    } else if (typeof lastThought.content === 'object' && lastThought.content?.thought) {
+        return lastThought.content.thought;
+    } else if (typeof lastThought.content === 'object') {
+        const content = lastThought.content;
+        return content.thought || content.text || content.message || JSON.stringify(content);
+    }
+    
+    return null;
+});
+
+const shouldShowThought = computed(() => {
+    return isSticky.value && isQueryActive.value;
+});
+
+const toggleMockSticky = () => {
+    mockStickyForce.value = !mockStickyForce.value;
+    console.log('Mock sticky force:', mockStickyForce.value);
+};
 
 const isQueryActive = computed(() => {
+    if (mockStickyForce.value) return true; // Force active for testing
+    
     const queryStatus = cell.value.metadata?.query_status;
     return queryStatus === 'in-progress' || queryStatus === 'pending';
 });
 
-const showCollapseControl = computed(() => {
-    const queryStatus = cell.value.metadata?.query_status;
-    return queryStatus === 'in-progress' || queryStatus === 'pending';
-});
+// const showCollapseControl = computed(() => {
+//     const queryStatus = cell.value.metadata?.query_status;
+//     return queryStatus === 'in-progress' || queryStatus === 'pending';
+// });
 
 watchEffect(() => {
     if (cell.value.metadata) {
@@ -124,6 +182,8 @@ watchEffect(() => {
 });
 
 const badgeSeverity = computed(() => {
+    if (mockStickyForce.value) return 'info';
+    
     const queryStatus = cell.value.metadata?.query_status;
     
     switch (queryStatus) {
@@ -141,11 +201,13 @@ const badgeSeverity = computed(() => {
 });
 
 const badgeIcon = computed(() => {
+    if (mockStickyForce.value) return 'pi pi-cog pi-spin';
+    
     const queryStatus = cell.value.metadata?.query_status;
     
     switch (queryStatus) {
         case 'success':
-            return 'pi pi-check';
+            return 'pi pi-check bolded';
         case 'failed':
             return 'pi pi-times';
         case 'aborted':
@@ -160,6 +222,8 @@ const badgeIcon = computed(() => {
 });
 
 const badgeTooltip = computed(() => {
+    if (mockStickyForce.value) return 'Mock sticky mode active';
+    
     const queryStatus = cell.value.metadata?.query_status;
     
     switch (queryStatus) {
@@ -177,6 +241,137 @@ const badgeTooltip = computed(() => {
             return 'Query status unknown';
     }
 });
+
+const setupStickyBehavior = () => {
+    const cellContainer = queryCellRef.value?.closest('.cell-container') as HTMLElement;
+    if (!cellContainer) {
+        return;
+    }
+
+    let ticking = false;
+
+    const updateStickyPosition = () => {
+        if (!queryCellRef.value || !isSticky.value) return;
+        
+        const containerRect = cellContainer.getBoundingClientRect();
+        queryCellRef.value.style.setProperty('--sticky-top', `${containerRect.top}px`);
+        queryCellRef.value.style.setProperty('--sticky-left', `${containerRect.left}px`);
+        queryCellRef.value.style.setProperty('--sticky-right', `${window.innerWidth - containerRect.right}px`);
+    };
+
+    const handleScroll = () => {
+        if (!ticking) {
+            requestAnimationFrame(() => {
+                if (!queryCellRef.value || !isQueryActive.value) {
+                    ticking = false;
+                    return;
+                }
+
+                const beakerCell = queryCellRef.value.closest('.beaker-cell') as HTMLElement;
+                if (!beakerCell) {
+                    ticking = false;
+                    return;
+                }
+
+                const cellRect = beakerCell.getBoundingClientRect();
+                const containerRect = cellContainer.getBoundingClientRect();
+                
+                if (cellRect.top < containerRect.top && !isSticky.value) {
+                    isSticky.value = true;
+                    updateStickyPosition();
+                    
+                } else if (cellRect.top >= containerRect.top && isSticky.value) {
+                    isSticky.value = false;
+                    
+                    queryCellRef.value.style.removeProperty('--sticky-top');
+                    queryCellRef.value.style.removeProperty('--sticky-left');
+                    queryCellRef.value.style.removeProperty('--sticky-right');
+                } else if (isSticky.value) {
+                    updateStickyPosition();
+                }
+                
+                ticking = false;
+            });
+            ticking = true;
+        }
+    };
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (window.ResizeObserver) {
+        resizeObserver = new ResizeObserver(() => {
+            if (isSticky.value) {
+                updateStickyPosition();
+            }
+        });
+        resizeObserver.observe(cellContainer);
+    }
+
+    cellContainer.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+        cellContainer.removeEventListener('scroll', handleScroll);
+        if (resizeObserver) {
+            resizeObserver.disconnect();
+        }
+    };
+};
+
+const handleQueryCompletion = async () => {
+    if (!isSticky.value) return;
+    
+    await nextTick();
+    
+    if (queryCellRef.value) {
+        queryCellRef.value.style.removeProperty('--sticky-top');
+        queryCellRef.value.style.removeProperty('--sticky-left');
+        queryCellRef.value.style.removeProperty('--sticky-right');
+    }
+    
+    isSticky.value = false;
+    
+    if (queryCellRef.value) {
+        const beakerCell = queryCellRef.value.closest('.beaker-cell') as HTMLElement;
+        if (beakerCell) {
+            beakerCell.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+    }
+};
+
+watchEffect(() => {
+    if (mockStickyForce.value) return;
+    
+    const queryStatus = cell.value.metadata?.query_status;
+    if (queryStatus === 'success' || queryStatus === 'failed' || queryStatus === 'aborted') {
+        if (isSticky.value) {
+            handleQueryCompletion();
+        }
+    }
+});
+
+const handleCellClick = (event: MouseEvent) => {
+    if (isSticky.value) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+};
+
+const handleWheelEvent = (event: WheelEvent) => {
+    if (isSticky.value) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const cellContainer = queryCellRef.value?.closest('.cell-container') as HTMLElement;
+        if (cellContainer) {
+            cellContainer.scrollTop += event.deltaY;
+            cellContainer.scrollLeft += event.deltaX;
+        }
+    }
+};
+
+let cleanupSticky: (() => void) | undefined;
 
 defineExpose({
     execute,
@@ -200,10 +395,23 @@ onBeforeMount(() => {
     if (cell.value.metadata?.auto_collapse_code_cells !== undefined) {
         autoCollapseCodeCells.value = cell.value.metadata.auto_collapse_code_cells;
     }
+    
+    nextTick(() => {
+        cleanupSticky = setupStickyBehavior();
+    });
 });
 
 onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
+    if (cleanupSticky) {
+        cleanupSticky();
+    }
+    
+    if (queryCellRef.value) {
+        queryCellRef.value.style.removeProperty('--sticky-top');
+        queryCellRef.value.style.removeProperty('--sticky-left');
+        queryCellRef.value.style.removeProperty('--sticky-right');
+    }
 });
 
 </script>
@@ -212,6 +420,109 @@ onBeforeUnmount(() => {
 .next-query-cell {
     background-color: var(--p-surface-a);
     border-radius: var(--p-surface-border-radius);
+    position: relative;
+    
+    &.sticky-query {
+        position: fixed !important;
+        top: var(--sticky-top, 0) !important;
+        left: var(--sticky-left, 0) !important;
+        right: var(--sticky-right, 0) !important;
+        z-index: 500 !important;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid var(--p-surface-border) !important;
+        border-radius: 6px !important;
+        background-color: var(--p-surface-a) !important;
+
+        padding: 8px 12px !important;
+        margin: 0.5rem !important;
+        
+        pointer-events: auto !important;
+        
+        .query-cell-grid {
+            margin: 0 !important;
+        }
+        
+        .query-content {
+            margin: 0.1rem 0.25rem 0.33rem 0rem !important;
+        }
+        
+        animation: stickySlideDown 0.2s ease-out;
+    }
+}
+
+@keyframes stickySlideDown {
+    from {
+        transform: translateY(-10px);
+        opacity: 0.9;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.mock-controls {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    .mock-button {
+        background: var(--p-orange-500);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        opacity: 0.8;
+        
+        &:hover {
+            opacity: 1;
+            background: var(--p-orange-600);
+        }
+    }
+    
+    .status-debug {
+        font-size: 10px;
+        color: var(--p-text-color-secondary);
+        background: var(--p-surface-0);
+        padding: 2px 6px;
+        border-radius: 3px;
+        white-space: nowrap;
+    }
+}
+
+.last-thought {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: var(--p-surface-b);
+    border-radius: var(--p-surface-border-radius);
+    
+    .thought-label {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--p-text-color-secondary);
+        margin-bottom: 0.25rem;
+        
+        .thought-icon {
+            color: var(--p-primary-500);
+            font-size: 0.875rem;
+        }
+    }
+    
+    .thought-content {
+        font-size: 0.875rem;
+        color: var(--p-text-color);
+        line-height: 1.4;
+        white-space: pre-wrap;
+    }
 }
 
 .query-cell-grid {
@@ -223,7 +534,7 @@ onBeforeUnmount(() => {
 
 .query-content {
     grid-area: content;
-    margin: 0.4rem 0.25rem 0.5rem 0rem;
+    margin: 0.1rem 0.25rem 0.33rem 0rem;
 }
 
 .state-info {
@@ -236,9 +547,8 @@ onBeforeUnmount(() => {
 .query-label {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.25rem;
     font-weight: 600;
-    // color: var(--p-text-color);
 
     .query-label-user {
         color: var(--p-green-600);
@@ -251,11 +561,10 @@ onBeforeUnmount(() => {
 }
 
 .query-text {
-    background-color: var(--p-surface-0);
     border-radius: var(--p-surface-border-radius);
     white-space: pre-wrap;
     font-family: inherit;
-    margin-top: 0.25rem;
+    margin-top: 0.33rem;
 }
 
 .collapse-control {
@@ -295,11 +604,8 @@ onBeforeUnmount(() => {
 }
 
 .busy-icon {
-    // color: var(--p-surface-a) !important;
     font-weight: bold;
     margin: 0;
-    // font-size: 1.3rem !important; // else gets overridden by the execution-badge > i
-    // margin-right: 0.33rem;
 }
 
 .brain-icon {
@@ -314,5 +620,9 @@ onBeforeUnmount(() => {
     .brain-svg-path {
         fill: var(--p-badge-secondary-color);
     }
+}
+
+.bolded {
+    font-weight: bold;
 }
 </style>
