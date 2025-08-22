@@ -5,6 +5,7 @@ import brainIconSvg from '../assets/brain.svg?raw';
 export function useQueryCellFlattening(beakerSession: () => BeakerSessionComponentType) {
     const processedQueryEvents = ref<Map<string, Set<number>>>(new Map());
 
+    // TODO move this to custom cell, as this would be EXPORTED in the cell contents, etc....
     const createIconPrefix = (cellType: string) => {
         if (cellType === 'user_question') {
             return '<i class="pi pi-question-circle" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;"></i>';
@@ -109,8 +110,8 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         }
 
         const metadata = createCellMetadata('thought', queryCellId, eventIndex);
-        const iconPrefix = createIconPrefix('thought');
-        const source = `${iconPrefix}**Agent Thought:**\n\n${thoughtContent}`;
+        // const iconPrefix = createIconPrefix('thought');
+        const source = `**Assistant**\n\n${thoughtContent}`;
         
         return createAndPositionMarkdownCell(source, queryCellId, metadata);
     };
@@ -123,9 +124,11 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
 
         let markdownContent = '';
         if (typeof responseContent === 'string') {
-            markdownContent = `${createIconPrefix('response')}**Agent Response:**\n\n${responseContent}`;
+            markdownContent = `**Assistant**\n\n${responseContent}`;
+            // markdownContent = `${createIconPrefix('response')}**Agent Response:**\n\n${responseContent}`;
         } else if (responseContent && typeof responseContent === 'object') {
-            markdownContent = `${createIconPrefix('response')}**Agent Response:**\n\n\`\`\`json\n${JSON.stringify(responseContent, null, 2)}\n\`\`\``;
+            markdownContent = `**Assistant**\n\n\`\`\`json\n${JSON.stringify(responseContent, null, 2)}\n\`\`\``;
+            // markdownContent = `${createIconPrefix('response')}**Agent Response:**\n\n\`\`\`json\n${JSON.stringify(responseContent, null, 2)}\n\`\`\``;
         }
 
         const metadata = createCellMetadata('response', queryCellId, eventIndex);
@@ -193,7 +196,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
                     markdownContent += `\n\n\`\`\`\n${errorContent.traceback.join('\n')}\n\`\`\``;
                 }
             } else {
-                markdownContent = `${createIconPrefix('error')}**Error:**\n\n\`\`\`json\n${JSON.stringify(errorContent, null, 2)}\n\`\`\``;
+                markdownContent = `**Error:**\n\n\`\`\`json\n${JSON.stringify(errorContent, null, 2)}\n\`\`\``;
             }
         }
 
@@ -220,7 +223,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             return;
         }
 
-        const markdownContent = `${createIconPrefix('user_question')}**Agent Question:**\n\n${questionContent}`;
+        const markdownContent = `**Agent Question:**\n\n${questionContent}`;
         const metadata = createCellMetadata('user_question', queryCellId, eventIndex);
         
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
@@ -256,7 +259,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             return;
         }
 
-        const markdownContent = `${createIconPrefix('user_answer')}**User Response:**\n\n${replyContent}`;
+        const markdownContent = `**User Response:**\n\n${replyContent}`;
         const metadata = createCellMetadata('user_answer', queryCellId, eventIndex);
         
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);

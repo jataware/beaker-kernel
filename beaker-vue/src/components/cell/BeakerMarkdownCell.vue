@@ -69,7 +69,7 @@ const execute = () => {
 }
 
 const isReadOnly = computed(() => {
-    return ['thought', 'response', 'user_answer', 'user_question'].includes(cell.value?.metadata?.beaker_cell_type);
+    return ['thought', 'response', 'user_answer', 'user_question', 'error'].includes(cell.value?.metadata?.beaker_cell_type);
 });
 
 const enter = (position?: "start" | "end" | number) => {

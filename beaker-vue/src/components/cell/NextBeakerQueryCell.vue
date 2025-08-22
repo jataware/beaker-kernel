@@ -4,8 +4,8 @@
             <div class="query-content">
                 <div class="query-prompt">
                     <div class="query-label">
-                        <span class="pi pi-sparkles query-icon"></span>
-                        <span>User Query:</span>
+                        <span class="pi pi-user query-icon"></span>
+                        <span class="query-label-user">User</span>
                     </div>
                     <div class="query-text">{{ cell.source }}</div>
 
@@ -223,6 +223,7 @@ onBeforeUnmount(() => {
 
 .query-content {
     grid-area: content;
+    margin: 0.4rem 0.25rem 0.5rem 0rem;
 }
 
 .state-info {
@@ -237,11 +238,15 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 0.5rem;
     font-weight: 600;
-    color: var(--p-text-color);
+    // color: var(--p-text-color);
+
+    .query-label-user {
+        color: var(--p-green-600);
+    }
 }
 
 .query-icon {
-    color: var(--p-primary-500);
+    color: var(--p-green-600);
     font-size: 1.1rem;
 }
 
@@ -283,7 +288,7 @@ onBeforeUnmount(() => {
         background-color: var(--p-surface-e);
     }
     i {
-        font-size: 0.9rem;
+        font-size: 1rem;
         position: absolute;
         color: inherit;
     }
@@ -292,7 +297,8 @@ onBeforeUnmount(() => {
 .busy-icon {
     // color: var(--p-surface-a) !important;
     font-weight: bold;
-    font-size: 1.3rem;
+    margin: 0;
+    // font-size: 1.3rem !important; // else gets overridden by the execution-badge > i
     // margin-right: 0.33rem;
 }
 

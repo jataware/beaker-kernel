@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        :title="$tmpl._('short_title', 'Beaker NextGen')"
+        :title="$tmpl._('short_title', 'Beaker Next')"
         :title-extra="saveAsFilename"
         :header-nav="headerNav"
         ref="beakerInterfaceRef"
@@ -37,6 +37,14 @@
                         />
                     </template>
                 </BeakerNotebookToolbar>
+
+                <div class="agent-thinking-indicator-container">
+                    <AgentThinkingIndicator 
+                        :active-query-cells="activeQueryCells"
+                        @scroll-to-query="scrollToCell"
+                    />
+                </div>
+
                 <BeakerNotebookPanel
                     :selected-cell="beakerNotebookRef?.selectedCellId"
                     v-autoscroll
@@ -49,10 +57,6 @@
                 </BeakerNotebookPanel>
                 
                 <div class="agent-input-section">
-                    <AgentThinkingIndicator 
-                        :active-query-cells="activeQueryCells"
-                        @scroll-to-query="scrollToCell"
-                    />
                     
                     <BeakerAgentQuery
                         ref="agentQueryRef"
@@ -277,6 +281,7 @@ watch(beakerSession, async () => {
         padding-top: 0;
     }
     .cell-contents {
+        padding-left: 0.5rem;
 
         .markdown-cell {
                 padding-right: 0;
@@ -284,6 +289,7 @@ watch(beakerSession, async () => {
                 &>div {
 
                     p {
+                        word-break: break-word;
                         margin-block-start: 0.5rem;
                         margin-block-end: 0.25rem;
                     }
@@ -346,7 +352,7 @@ watch(beakerSession, async () => {
 
 /* global scrollbar styling */
 * {
-    /* Firefox */
+    /* firefox */
     scrollbar-width: thin;
     scrollbar-color: #a3a6aa transparent;
 }
@@ -384,6 +390,31 @@ watch(beakerSession, async () => {
 .beaker-notebook {
     scrollbar-width: thin;
     scrollbar-color: #a3a6aa transparent transparent;
-    //  transparent
+}
+
+/* dark mode scrollbar overrides */
+.beaker-dark * {
+    scrollbar-color: var(--p-surface-d) transparent;
+}
+
+.beaker-dark *::-webkit-scrollbar-thumb {
+    background: var(--p-surface-d);
+}
+
+.beaker-dark *::-webkit-scrollbar-thumb:hover {
+    background: var(--p-surface-d);
+}
+
+.beaker-dark .notebook-container {
+    scrollbar-color: var(--p-surface-d) transparent transparent;
+}
+
+.beaker-dark .beaker-notebook {
+    scrollbar-color: var(--p-surface-d) transparent transparent;
+}
+
+.agent-thinking-indicator-container {
+    background-color: var(--p-surface-b);
+    border-bottom: 1px solid var(--p-surface-border);
 }
 </style>

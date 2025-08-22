@@ -52,12 +52,30 @@ const scrollToActiveQuery = () => {
 </script>
 
 <style lang="scss">
+
+.beaker-dark {
+    .agent-thinking-indicator {
+        border: 1px solid var(--p-primary-200);
+        background-color: var(--p-surface-c);
+    }
+}
+
 .agent-thinking-indicator {
-    border: 1px solid var(--p-primary-300);
+    // border: 1px solid var(--p-primary-400);
     padding: 0.75rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
+
+    border-radius: var(--p-surface-border-radius);
+    background-color: var(--p-surface-a);
+
+    // box-shadow: var(--p-shadow-sm);
+    // filter: drop-shadow(var(--p-shadow-sm));
+
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+
+    margin: 0.5rem 0.5rem 0.5rem 0.5rem;
     
     .thinking-content {
         display: flex;
