@@ -4,8 +4,10 @@ import inspect
 import json
 import logging
 import os.path
+from pathlib import Path
+from re import S
 import urllib.parse
-from attr import dataclass
+from uuid import uuid4
 import requests
 import uuid
 import itertools
@@ -14,12 +16,14 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable, TypedDict, Literal, TypeAlias
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
+import yaml
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError, ensure_async
 from beaker_kernel.lib.config import config as beaker_config
 from beaker_kernel.lib.integrations.base import BaseIntegrationProvider
 from beaker_kernel.lib.types import Integration
+from beaker_kernel.lib.workflow import Workflow, create_available_workflows_prompt
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -44,6 +48,16 @@ class LinterCodeCellsPayload(TypedDict):
     notebook_id: str
     cells: list[LinterCodeCellPayload]
 
+class WorkflowStageProgress(TypedDict):
+    state: Literal['in_progress'] | Literal['finished']
+    code_cell_id: str
+    results_markdown: str
+
+class AttachedWorkflow(TypedDict):
+    workflow_id: str
+    progress: dict[str, WorkflowStageProgress | None]
+    final_response: str
+
 class BeakerContext:
     beaker_kernel: "BeakerKernel"
     subkernel: "BeakerSubkernel"
@@ -55,6 +69,10 @@ class BeakerContext:
     intercepts: List[Tuple[str, Callable, str]]
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
+
+    workflows: Dict[str, Workflow]
+    attached_workflow: Optional[AttachedWorkflow]
+
     preview_function_name: str = "generate_preview"
     kernel_state_function_name: str = "send_kernel_state"
 
@@ -71,6 +89,8 @@ class BeakerContext:
         self.integrations = integrations if integrations is not None else []
         self.jinja_env = None
         self.templates = {}
+        self.workflows = {}
+        self.attached_workflow = None
         self.beaker_kernel = beaker_kernel
         self.config = config
         self.subkernel = self.get_subkernel()
@@ -114,6 +134,19 @@ class BeakerContext:
                 except UnicodeDecodeError:
                     # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
                     logger.warning(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
+
+        workflows_dir = os.path.join(os.path.dirname(class_dir), "workflows")
+        if os.path.exists(workflows_dir):
+            for workflow_yaml in Path(workflows_dir).glob("*.yaml"):
+                workflow = Workflow.from_yaml(yaml.safe_load(workflow_yaml.read_text()))
+                # lives as long as the session does
+                workflow_id = str(uuid4())
+                self.workflows[workflow_id] = workflow
+                if workflow.is_context_default:
+                    self.attach_workflow(workflow_id)
+        if len(self.workflows) == 0:
+            logger.warning("Context has no workflows: disabling tools.")
+            self.agent.disable("attach_workflow")
 
     def __init_subclass__(cls):
         subclass_autocontext = getattr(cls, "auto_context", None)
@@ -201,6 +234,13 @@ field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", 
 part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
 loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
 """)
+
+        if len(self.workflows) > 0:
+            parts.append(create_available_workflows_prompt(
+                list(self.workflows.values()),
+                self.workflows.get(self.attached_workflow["workflow_id"], None) if self.attached_workflow else None)
+            )
+
         if self.integrations:
             parts.append("Here are integrations that you have access to:")
             integration_prompts = [
@@ -306,12 +346,21 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         else:
             agent_details = None
 
+        workflows = {
+            "attached": self.attached_workflow,
+            "workflows": {
+                uuid: asdict(workflow)
+                for uuid, workflow in self.workflows.items()
+            }
+        }
+
         payload = {
             "language": self.subkernel.DISPLAY_NAME,
             "subkernel": self.subkernel.KERNEL_NAME,
             "actions": action_details,
             "custom_messages": custom_messages,
             "procedures": list(self.templates.keys()),
+            "workflows": workflows,
             "agent": agent_details,
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
@@ -462,6 +511,27 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         Returns the current preview payload if enabled, otherwise None.
         """
         return await self.preview()
+
+    def attach_workflow(self, workflow_id: str | None):
+        if workflow_id is None:
+            self.attached_workflow = None
+            return
+        self.attached_workflow = AttachedWorkflow(
+            workflow_id=workflow_id,
+            progress={
+                stage.name: None
+                for stage in self.workflows[workflow_id].stages
+            },
+            final_response=""
+        )
+        self.send_response("iopub", "attached_workflow", self.attached_workflow)
+
+    @action()
+    async def set_workflow(self, message):
+        if (content := message.content["workflow"].lower()) == "none":
+            self.attach_workflow(None)
+        else:
+            self.attach_workflow(content)
 
 
     @action(default_payload=LinterCodeCellsPayload(notebook_id='nb1', cells=[LinterCodeCellPayload(cell_id='cell1', content='import os\nos.exit(0)')]))

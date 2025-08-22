@@ -10,7 +10,7 @@ import sys
 import traceback
 import uuid
 from functools import partial
-from typing import Optional, ClassVar, Awaitable
+from typing import Literal, Optional, ClassVar, Awaitable
 
 import requests
 from tornado import ioloop
@@ -458,12 +458,12 @@ class BeakerKernel(KernelProxyManager):
         loop.call_later(0.2, stop_loop, loop)
         return None
 
-    async def prompt_user(self, query, parent_message=None):
+    async def prompt_user(self, query, parent_message=None, format: Optional[Literal['workflow_confirmation']]=None):
         msg_id = str(uuid.uuid4())
         self.send_response(
             "stdin",
             "input_request",
-            {"prompt": query},
+            {"prompt": query, "format": format},
             parent_header=getattr(parent_message, "header", None),
             parent_identities=getattr(parent_message, "identities", None),
             msg_id=msg_id,
