@@ -428,8 +428,9 @@ onBeforeUnmount(() => {
         left: var(--sticky-left, 0) !important;
         right: var(--sticky-right, 0) !important;
         z-index: 500 !important;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
-        border: 1px solid var(--p-surface-border) !important;
+        // box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0rem 0.25rem 1rem rgba(0, 0, 0, 0.6) !important;
+        border: 2px solid var(--p-purple-400) !important;
         border-radius: 6px !important;
         background-color: var(--p-surface-a) !important;
 

@@ -14,6 +14,7 @@
         @any-msg="anyMessageHandler"
         @session-status-changed="statusChangedHandler"
         @open-file="handleLoadNotebook"
+        pageClass="next-notebook-interface"
     >
         <div class="next-notebook-container">
             <BeakerNotebook
@@ -281,17 +282,19 @@ watch(beakerSession, async () => {
     max-width: 100%;
 }
 
-.cell-container {
+.next-notebook-interface {
+    .cell-container {
 
-    .beaker-cell {
-        padding-top: 0;
-    }
-    .cell-contents {
-        padding-left: 0.5rem;
+        .beaker-cell {
+            padding-top: 0;
+        }
 
-        .markdown-cell {
+        .cell-contents {
+            padding-left: 0.5rem;
+
+            .markdown-cell {
                 padding-right: 0;
-        
+
                 &>div {
 
                     p {
@@ -299,127 +302,130 @@ watch(beakerSession, async () => {
                         margin-block-start: 0.5rem;
                         margin-block-end: 0.25rem;
                     }
-        
+
                     p:first-child {
                         margin-block-start: 0;
                         margin-block-end: 0;
                     }
-        
+
                     p:last-child {
                         margin-block-start: 0.5rem;
                         margin-block-end: 0.25rem;
                     }
                 }
             }
+        }
     }
-}
 
-.beaker-notebook {
-    flex: 2 0 calc(50vw - 2px);
-    border: 2px solid var(--p-surface-border);
-    border-radius: 0;
-    border-top: 0;
-    max-width: 100%;
-}
-
-.agent-input-section {
-    background-color: var(--p-surface-b);
-}
-
-.spacer {
-    &.left {
-        flex: 1 1000 25vw;
+    .beaker-notebook {
+        flex: 2 0 calc(50vw - 2px);
+        border: 2px solid var(--p-surface-border);
+        border-radius: 0;
+        border-top: 0;
+        max-width: 100%;
     }
-    &.right {
-        flex: 1 1 25vw;
+
+    .agent-input-section {
+        background-color: var(--p-surface-b);
     }
-}
 
-.notebook-toolbar {
-    border-style: inset;
-    border-radius: 0;
-    border-top: unset;
-    border-left: unset;
-    border-right: unset;
-}
+    .spacer {
+        &.left {
+            flex: 1 1000 25vw;
+        }
 
-.title-extra {
-    vertical-align: baseline;
-    display: inline-block;
-    height: 100%;
-    font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
-}
+        &.right {
+            flex: 1 1 25vw;
+        }
+    }
 
-/* global scrollbar styling */
-* {
-    /* firefox */
-    scrollbar-width: thin;
-    scrollbar-color: #a3a6aa transparent;
-}
+    .notebook-toolbar {
+        border-style: inset;
+        border-radius: 0;
+        border-top: unset;
+        border-left: unset;
+        border-right: unset;
+    }
 
-/* webkit (chrome/safari/edge) */
-*::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
+    .title-extra {
+        vertical-align: baseline;
+        display: inline-block;
+        height: 100%;
+        font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
+    }
 
-*::-webkit-scrollbar-track {
-    background: transparent;
-    border: none;
-}
+    /* global scrollbar styling */
+    * {
+        /* firefox */
+        scrollbar-width: thin;
+        scrollbar-color: #a3a6aa transparent;
+    }
 
-*::-webkit-scrollbar-thumb {
-    background: #a3a6aa;
-    border-radius: 4px;
-    border: none;
-}
+    /* webkit (chrome/safari/edge) */
+    *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
 
-*::-webkit-scrollbar-thumb:hover {
-    background: #a3a6aa;
-}
+    *::-webkit-scrollbar-track {
+        background: transparent;
+        border: none;
+    }
 
-*::-webkit-scrollbar-corner {
-    background: transparent;
-}
+    *::-webkit-scrollbar-thumb {
+        background: #a3a6aa;
+        border-radius: 4px;
+        border: none;
+    }
 
-.next-notebook-container {
-    scrollbar-width: thin;
-    scrollbar-color: #a3a6aa transparent transparent;
-}
+    *::-webkit-scrollbar-thumb:hover {
+        background: #a3a6aa;
+    }
 
-.beaker-notebook {
-    scrollbar-width: thin;
-    scrollbar-color: #a3a6aa transparent transparent;
-}
+    *::-webkit-scrollbar-corner {
+        background: transparent;
+    }
 
-/* dark mode scrollbar overrides */
-.beaker-dark * {
-    scrollbar-color: var(--p-surface-d) transparent;
-}
+    .next-notebook-container {
+        scrollbar-width: thin;
+        scrollbar-color: #a3a6aa transparent transparent;
+    }
 
-.beaker-dark *::-webkit-scrollbar-thumb {
-    background: var(--p-surface-d);
-}
+    .beaker-notebook {
+        scrollbar-width: thin;
+        scrollbar-color: #a3a6aa transparent transparent;
+    }
 
-.beaker-dark *::-webkit-scrollbar-thumb:hover {
-    background: var(--p-surface-d);
-}
+    /* dark mode scrollbar overrides */
+    .beaker-dark * {
+        scrollbar-color: var(--p-surface-d) transparent;
+    }
 
-.beaker-dark .next-notebook-container {
-    scrollbar-color: var(--p-surface-d) transparent transparent;
-}
+    .beaker-dark *::-webkit-scrollbar-thumb {
+        background: var(--p-surface-d);
+    }
 
-.beaker-dark .beaker-notebook {
-    scrollbar-color: var(--p-surface-d) transparent transparent;
-}
+    .beaker-dark *::-webkit-scrollbar-thumb:hover {
+        background: var(--p-surface-d);
+    }
 
-.agent-thinking-indicator-container {
-    background-color: var(--p-surface-b);
-    border-bottom: 1px solid var(--p-surface-border);
-}
+    .beaker-dark .next-notebook-container {
+        scrollbar-color: var(--p-surface-d) transparent transparent;
+    }
 
-.execution-badge, .execution-count-badge {
-    font-size: 0.8rem;
-    height: 1.5rem;
+    .beaker-dark .beaker-notebook {
+        scrollbar-color: var(--p-surface-d) transparent transparent;
+    }
+
+    .agent-thinking-indicator-container {
+        background-color: var(--p-surface-b);
+        border-bottom: 1px solid var(--p-surface-border);
+    }
+
+    .execution-badge,
+    .execution-count-badge {
+        font-size: 0.8rem;
+        height: 1.5rem;
+    }
 }
 </style>

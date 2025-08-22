@@ -4,7 +4,7 @@
         ref="beakerSession"
         @connection-failure="connectionFailure"
     >
-        <div id="page">
+        <div id="page" :class="props.pageClass">
             <header>
                 <slot name="header">
                     <BeakerHeader
@@ -139,6 +139,7 @@ const props = defineProps<{
   savefile?: string;
   headerNav?: any;
   apiKeyPrompt?: boolean;
+  pageClass?: string;
 }>();
 
 const emit = defineEmits([
