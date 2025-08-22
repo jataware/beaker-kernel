@@ -85,7 +85,7 @@ const attachedWorkflow = computed(() => {
     return workflows.value?.[attachedWorkflowId.value]
 })
 
-const placeholder = computed(() => attachedWorkflow.value.example_prompt ? attachedWorkflow.value.example_prompt : "Ask the AI or request an operation.")
+const placeholder = computed(() => attachedWorkflow?.value?.example_prompt ? attachedWorkflow.value.example_prompt : "Ask the AI or request an operation.")
 
 </script>
 

@@ -24,7 +24,7 @@ WORKFLOW_PREAMBLE_PROMPT="""
       - Stop the workflow if they choose to cancel. It may be resumed later.
       - Doing what else the user request takes precedence over the workflow if they request something else.
   - As you finish each major STAGE, present your findings to the user and ask them if it is correct and if they would like to continue.
-    - Ask them with the `ask_user` tool,
+  - At any point, you may ask for clarification from the user.
 
 The workflows you have to offer are as follows:
 
