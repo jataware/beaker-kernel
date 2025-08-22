@@ -530,7 +530,8 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
     async def set_workflow(self, message):
         if (content := message.content["workflow"].lower()) == "none":
             self.attach_workflow(None)
-        self.attach_workflow(content)
+        else:
+            self.attach_workflow(content)
 
 
     @action(default_payload=LinterCodeCellsPayload(notebook_id='nb1', cells=[LinterCodeCellPayload(cell_id='cell1', content='import os\nos.exit(0)')]))
