@@ -550,7 +550,7 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 0.25rem;
     font-weight: 600;
-    min-height: 1.95rem;
+    min-height: 1.8rem;
 
     .query-label-user {
         color: var(--p-green-600);

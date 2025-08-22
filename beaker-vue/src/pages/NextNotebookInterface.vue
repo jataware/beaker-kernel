@@ -26,6 +26,8 @@
                     default-severity=""
                     :saveAvailable="true"
                     :save-as-filename="saveAsFilename"
+                    :truncate-agent-code-cells="truncateAgentCodeCells"
+                    @update-truncate-preference="(value) => { truncateAgentCodeCells = value; }"
                     @notebook-saved="handleNotebookSaved"
                     @open-file="handleLoadNotebook"
                 >
@@ -158,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onBeforeMount, provide } from 'vue';
 import Button from "primevue/button";
 import BaseInterface from './BaseInterface.vue';
 import BeakerAgentQuery from '../components/agent/BeakerAgentQuery.vue';
@@ -176,7 +178,7 @@ import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
-import AgentThinkingIndicator from '../components/misc/AgentThinkingIndicator.vue';
+// import AgentThinkingIndicator from '../components/misc/AgentThinkingIndicator.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
 import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
@@ -237,6 +239,33 @@ const sessionIdFromUrl = urlParams.has("session") ? urlParams.get("session") : "
 const sessionIdFromProps = computed(() => props.sessionId);
 const renderersFromProps = computed(() => props.renderers);
 
+const truncateAgentCodeCells = ref<boolean>(false);
+
+onBeforeMount(() => {
+    const saved = localStorage.getItem('beaker-truncate-agent-code-cells');
+    if (saved !== null) {
+        truncateAgentCodeCells.value = JSON.parse(saved);
+    }
+});
+
+const updateTruncatePreference = () => {
+    localStorage.setItem('beaker-truncate-agent-code-cells', JSON.stringify(truncateAgentCodeCells.value));
+    
+    if (beakerSession.value?.session?.notebook?.cells) {
+        beakerSession.value.session.notebook.cells.forEach(cell => {
+            if (cell.cell_type === 'query' && cell.metadata) {
+                cell.metadata.auto_collapse_code_cells = truncateAgentCodeCells.value;
+            }
+        });
+    }
+};
+
+watch(truncateAgentCodeCells, () => {
+    updateTruncatePreference();
+});
+
+provide('truncateAgentCodeCells', truncateAgentCodeCells);
+
 const getCellComponent = (cell: any) => {
     if (cell.cell_type === 'markdown' && cell.metadata?.beaker_cell_type) {
         const agentCellType = cell.metadata.beaker_cell_type;
@@ -270,7 +299,10 @@ const notebookKeyBindings = createNotebookKeyBindings();
 
 const iopubMessageHandler = createIopubMessageHandler();
 
-const { setupQueryCellFlattening, resetProcessedEvents } = useQueryCellFlattening(() => beakerSession.value);
+const { setupQueryCellFlattening, resetProcessedEvents } = useQueryCellFlattening(
+    () => beakerSession.value, 
+    truncateAgentCodeCells
+);
 
 setupQueryCellFlattening(() => beakerSession.value?.session?.notebook?.cells);
 
@@ -304,6 +336,11 @@ watch(beakerSession, async () => {
 }
 
 .next-notebook-interface {
+
+    .truncate-toggle-container {
+        display: flex;
+    }
+
     .cell-container {
 
         .beaker-cell {
@@ -451,7 +488,7 @@ watch(beakerSession, async () => {
 
     .execution-badge,
     .execution-count-badge {
-        font-size: 0.8rem;
+        // font-size: 0.8rem;
         height: 1.5rem;
     }
 }

@@ -1,7 +1,10 @@
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, type Ref } from 'vue';
 import type { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
 
-export function useQueryCellFlattening(beakerSession: () => BeakerSessionComponentType) {
+export function useQueryCellFlattening(
+    beakerSession: () => BeakerSessionComponentType, 
+    truncateAgentCodeCells: Ref<boolean>
+) {
     const processedQueryEvents = ref<Map<string, Set<number>>>(new Map());
 
     const findCellByMetadata = (parentQueryId: string, eventIndex: number, cellType: 'thought' | 'response' | 'code' | 'user_question' | 'user_answer' | 'error' | 'abort') => {
@@ -116,6 +119,8 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
     };
     
     const createCodeCell = (codeCellId: string, queryCell: any, queryCellId: string, eventIndex: number) => {
+        const currentTruncateValue = truncateAgentCodeCells.value;
+
         if (findCellByMetadata(queryCellId, eventIndex, 'code')) {
             console.warn(`Code cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
@@ -127,8 +132,8 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             return;
         }
 
-        const shouldCollapse = queryCell.metadata?.auto_collapse_code_cells === true;
-
+        const shouldCollapse = currentTruncateValue === true;
+        
         const metadata = createCellMetadata('code', queryCellId, eventIndex, {
             source_cell_id: codeCellId,
             collapsed: shouldCollapse
@@ -145,14 +150,12 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
         if (childCell.last_execution) {
             newCodeCell.last_execution = {
                 ...childCell.last_execution,
-                status: 'ok' // or ... childCell.last_execution.status ...
+                status: 'ok'
             };
         } else if (childCell.outputs && childCell.outputs.length > 0) {
-            // outputs with no execution state => assume it was executed successfully
-            // since this is added by the agent
             newCodeCell.last_execution = {
                 status: 'ok',
-                checkpoint_index: undefined // TODO
+                checkpoint_index: undefined
             };
         }
         
@@ -224,10 +227,10 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
             const updatedContent = `${currentContent}\n\n**User Response:**\n\n${replyContent}`;
             questionCell.source = updatedContent;
             
-            console.log(`updated question cell with reply for query ${queryCellId}, event ${eventIndex}`);
+            console.log(`Updated question cell with reply for query ${queryCellId}, event ${eventIndex}`);
             return questionCell;
         } else {
-            console.warn(`no question cell found for reply in query ${queryCellId}, creating standalone reply cell`);
+            console.warn(`No question cell found for reply in query ${queryCellId}, creating standalone reply cell`);
             return createReplyCell(replyContent, queryCellId, eventIndex);
         }
     };
@@ -261,7 +264,6 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
                         const isCompleted = queryStatus === 'success' || queryStatus === 'failed' || queryStatus === 'aborted';
                         
                         if (isCompleted) {
-                            // console.log(`Query ${cell.id} is completed (${queryStatus}), skipping flattening setup`);
                             continue;
                         }
                         
@@ -290,8 +292,6 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
                                             return;
                                         }
                                         
-                                        console.log(`Processing new event ${eventIndex} of type ${event.type}`);
-                                        
                                         processedEvents.add(eventIndex);
                                         
                                         if (event.type === 'thought' && event.content?.thought) {
@@ -305,7 +305,7 @@ export function useQueryCellFlattening(beakerSession: () => BeakerSessionCompone
                                         } else if (event.type === 'error') {
                                             createErrorCell(event.content, cell.id, eventIndex);
                                         } else if (event.type === 'abort') {
-                                            console.info("Not creating abort cells for now, as the abort state is shown on query cell.")
+                                            // console.info("Not creating abort cells for now, as the abort state is shown on query cell.")
                                         //  createAbortCell(event.content, cell.id, eventIndex);
                                         } else if (event.type === 'user_question') {
                                             createQuestionCell(event.content, cell.id, eventIndex);

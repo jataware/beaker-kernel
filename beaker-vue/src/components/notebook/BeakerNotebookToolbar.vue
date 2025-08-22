@@ -32,6 +32,16 @@
                     :severity="props.defaultSeverity"
                     text
                 />
+                <div class="truncate-toggle-container"
+                        v-tooltip.bottom="{value: 'Auto-truncate agent code cells when added', showDelay: 300}"
+                >
+                    <ToggleSwitch
+                        v-model="truncateAgentCodeCells"
+                        @change="updateTruncatePreference"
+                        inputId="auto-truncate-toggle"
+                    />
+                    <label for="auto-truncate-toggle" class="truncate-label">Auto-truncate</label>
+                </div>
                 <slot name="start-extra"></slot>
             </slot>
         </template>
@@ -119,6 +129,7 @@ import type { BeakerNotebookComponentType } from './BeakerNotebook.vue';
 import contentDisposition from "content-disposition";
 
 import Button from "primevue/button";
+import ToggleSwitch from "primevue/toggleswitch";
 import ChevronDownIcon from '@primevue/icons/chevrondown'
 import type { ButtonProps } from "primevue/button";
 import SplitButton from 'primevue/splitbutton';
@@ -132,7 +143,6 @@ import { useDialog } from "primevue";
 import AnnotationButton from "../misc/buttons/AnnotationButton.vue"
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
 import { downloadFileDOM, getDateTimeString } from '../../util';
-
 import StreamlineExportDialog from "../misc/StreamlineExportDialog.vue"
 
 const session = inject<BeakerSession>('session');
@@ -140,6 +150,32 @@ const notebook = inject<BeakerNotebookComponentType>('notebook');
 const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
 const showOverlay = inject<(contents: string, header?: string) => void>('show_overlay');
 const dialog = useDialog();
+
+interface BeakerNotebookToolbarProps {
+    defaultSeverity?: ButtonProps["badgeSeverity"];
+    saveAvailable?: boolean;
+    saveAsFilename?: string;
+    truncateAgentCodeCells?: boolean;
+}
+
+const props = withDefaults(defineProps<BeakerNotebookToolbarProps>(), {
+    defaultSeverity: "info",
+    saveAvailable: false,
+    truncateAgentCodeCells: false,
+});
+
+const emit = defineEmits([
+    "notebook-saved",
+    "open-file",
+    "update-truncate-preference",
+]);
+
+const truncateAgentCodeCells = computed({
+    get: () => props.truncateAgentCodeCells,
+    set: (value) => {
+        emit('update-truncate-preference', value);
+    }
+});
 
 const addCellMenuItems = computed(() => {
     return Object.entries(cellMapping).map(([name, obj]) => {
@@ -154,22 +190,6 @@ const addCellMenuItems = computed(() => {
             },
         }
     })
-});
-
-const emit = defineEmits([
-    "notebook-saved",
-    "open-file",
-])
-
-interface BeakerNotebookToolbarProps {
-    defaultSeverity?: ButtonProps["badgeSeverity"];
-    saveAvailable?: boolean;
-    saveAsFilename?: string;
-}
-
-const props = withDefaults(defineProps<BeakerNotebookToolbarProps>(), {
-    defaultSeverity: "info",
-    saveAvailable: false,
 });
 
 const saveAsFilename = ref<string>(props.saveAsFilename);
@@ -352,6 +372,21 @@ function downloadNotebook() {
         }
     }
 
+    .truncate-toggle-container {
+        // display: flex;
+        display: none; // don't display in other interfaces
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: 0.75rem;
+        
+        .truncate-label {
+            font-size: 0.875rem;
+            color: var(--p-text-color);
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+    }
 }
 
 .saveas-overlay {

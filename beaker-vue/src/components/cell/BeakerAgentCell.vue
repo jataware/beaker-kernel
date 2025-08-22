@@ -32,7 +32,7 @@
 import { ref, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount} from "vue";
 import { marked } from 'marked';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
+// import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 import Button from 'primevue/button';
 import BrainIconSvg from '../../assets/icon-components/BrainIcon.vue';
 
