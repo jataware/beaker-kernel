@@ -444,7 +444,7 @@ defineExpose({
     flex-direction: row;
     align-items: center;
     background-color: var(--p-surface-border);
-    z-index: 50;
+    z-index: 30;
 
     &:hover {
         cursor: col-resize;
