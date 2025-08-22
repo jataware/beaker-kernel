@@ -66,8 +66,10 @@
                 <SideMenuPanel label="Context Info" icon="pi pi-home">
                     <InfoPanel/>
                 </SideMenuPanel>
-                <SideMenuPanel label="Workflow Info" icon="pi pi-list-check">
-                    <WorkflowPanel></WorkflowPanel>
+                <SideMenuPanel id="workflows" label="Workflow Info" icon="pi pi-list-check">
+                    <WorkflowPanel>
+
+                    </WorkflowPanel>
                 </SideMenuPanel>
                 <SideMenuPanel id="files" label="Files" icon="pi pi-folder" no-overflow :lazy="true">
                     <FilePanel
@@ -320,6 +322,7 @@ const iopubMessage = (msg) => {
         const workflows = beakerSession?.value?.activeContext?.info?.workflows;
         if (workflows) {
             workflows.attached = msg.content;
+            sideMenuRef.value.selectPanel('workflows');
         }
     }
     else if (msg.header.msg_type === "debug_event") {

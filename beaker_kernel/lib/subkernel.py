@@ -151,12 +151,26 @@ async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: 
     if state != 'in_progress' and state != 'finished':
         return "State must be one of `in_progress` or `finished`."
     if stage_name not in agent.context.attached_workflow["progress"]:
-        return f"Stage name not found. Must be one of: {agent.context.attached_workflow["progress"].keys()}"
+        return f"Stage name not found. Must be one of: {agent.context.attached_workflow['progress'].keys()}"
     agent.context.attached_workflow["progress"][stage_name] = WorkflowStageProgress(
             code_cell_id='',
             state=state,
             results_markdown=results,
         )
+
+    # summarize all of the results so far in a final format, if we just finished a step
+    try:
+        if state == 'finished':
+            workflow_prompt = agent.context.workflows[agent.context.attached_workflow["workflow_id"]].output_prompt
+            if workflow_prompt:
+                workflow_results = [
+                    f"### {stage_name}: \n\n{progress}\n\n"
+                    for stage_name,progress in agent.context.attached_workflow["progress"].items()
+                ]
+                agent.context.attached_workflow["final_response"] = await agent.oneshot(workflow_prompt, workflow_results)
+    except Exception as e:
+        logger.error(f"Summarization for the workflow stage failed: {e}")
+
     agent.context.send_response("iopub", "attached_workflow", agent.context.attached_workflow)
     return "Successfully marked stage."
 

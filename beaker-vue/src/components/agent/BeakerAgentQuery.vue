@@ -10,7 +10,7 @@
                     @submit="handleQuery"
                     v-model="query"
                     style="flex: 1; margin-right: 0.75rem"
-                    placeholder="Ask the AI or request an operation."
+                    :placeholder="placeholder"
                 />
 
                 <Button
@@ -27,7 +27,7 @@
 
 
 <script setup lang="ts">
-import { ref, nextTick, inject } from "vue";
+import { ref, nextTick, inject, computed } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
@@ -74,6 +74,18 @@ const handleQuery = (e: any) => {
         beakerSession.findNotebookCellById(cell.id).execute();
     });
 }
+
+const workflows = computed(() => {
+    return beakerSession?.activeContext?.info?.workflows?.workflows;
+})
+const attachedWorkflowId = computed(() => {
+    return beakerSession?.activeContext?.info?.workflows?.attached?.workflow_id;
+})
+const attachedWorkflow = computed(() => {
+    return workflows.value?.[attachedWorkflowId.value]
+})
+
+const placeholder = computed(() => attachedWorkflow.value.example_prompt ? attachedWorkflow.value.example_prompt : "Ask the AI or request an operation.")
 
 </script>
 

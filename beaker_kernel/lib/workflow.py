@@ -2,23 +2,29 @@ from dataclasses import dataclass, field
 from typing import Optional, Any, Self
 
 WORKFLOW_PREAMBLE_PROMPT="""
-You are given a few preselected workflows and processes to work through.
 
-A workflow is a commonly grouped set of tasks to solve an end-to-end problem.
+## Workflows
+- You will be given a few preselected workflows and processes to work through.
+- A workflow is a commonly grouped set of tasks to solve an end-to-end problem.
+- ONE workflow will be ACTIVE and currently ready for use.
+  - You may replace the ACTIVE workflow if the user requests a different workflow, through the `attach_workflow` tool.
+- Workflows are divided into STAGES that contain STEPS.
 
-Workflows are divided into STAGES that contain STEPS.
+- CRITICAL: at the end of each STAGE, you must use the "mark_workflow_stage" tool and you must show the results of each STAGE to the user and then ask them to confirm to continue.
+- CRITICAL: after the user confirms to start the next STAGE, use the "mark_workflow_stage" tool to communicate that the stage is in progress.
+- CRITICAL: do not ever use assumed or example data if data is not available; stop and inform the user and ask how to proceed.
 
-CRITICAL: at the end of each STAGE, you must use the "mark_workflow_stage" tool and you must show the results of each STAGE to the user and then ask them to confirm to continue.
+- IMPORTANT: When using `ask_user` in a workflow, use the `workflow_confirmation` format.
 
-CRITICAL: after the user confirms to start the next STAGE, use the "mark_workflow_stage" tool to communicate that the stage is in progress.
-
-CRITICAL: do not ever use assumed or example data if data is not available; stop and inform the user and ask how to proceed.
-
-When a user asks for something that aligns with a given workflow, you will communicate that it is within your skillset and show them the to-do list that you will work through, letting the user inspect it and okay it before performing the steps in sequence. As you finish each major STAGE, allow the user to confirm with proceeding until it is done.
-
-You will present the workflow as a markdown-formatted list, with empty checkboxes for the things you have not done, and checked boxes for the things you have. You will refer back to the to-do list as you work through the workflow and handle each STAGE and STEP within the STAGES.
-
-ONE workflow will be ACTIVE and currently ready for use. The others may replace the ACTIVE workflow if the user requests, through the `attach_workflow` tool.
+- When a user asks for something that aligns with a given workflow, you will communicate that it is within your skillset
+  - When starting a workflow, use the `display_workflow_panel` tool
+  - Next, use the `ask_user` tool to ask them if this workflow looks correct and if they would like to start it.
+    - The response to `ask_user` will be "continue", "cancel", or something else -- such as a similar investigation or retrying a step.
+      - Proceed if they choose to continue.
+      - Stop the workflow if they choose to cancel. It may be resumed later.
+      - Doing what else the user request takes precedence over the workflow if they request something else.
+  - As you finish each major STAGE, present your findings to the user and ask them if it is correct and if they would like to continue.
+    - Ask them with the `ask_user` tool,
 
 The workflows you have to offer are as follows:
 
@@ -54,11 +60,14 @@ class WorkflowStage:
     name: str
     steps: list[WorkflowStep]
     metadata: Optional[dict[str, Any]] = field(default_factory=lambda: {})
+    # human readable string describing the stage
+    description: Optional[list[str]]
 
     @staticmethod
     def from_yaml(source: dict[str, Any]) -> "WorkflowStage":
         return WorkflowStage(
             name=source["name"],
+            description=source.get("description", None),
             steps=[WorkflowStep.from_yaml(step) for step in source["steps"]],
             metadata=source.get("metadata", {})
         )
@@ -76,6 +85,7 @@ class Workflow:
     is_context_default: Optional[bool] = field(default=False)
     category: Optional[str] = field(default=None)
     metadata: Optional[dict[str, Any]] = field(default_factory=lambda: {})
+    output_prompt: Optional[str] = field(default=None)
 
     @staticmethod
     def from_yaml(source: dict[str, Any]) -> "Workflow":
@@ -91,6 +101,7 @@ class Workflow:
             category=source.get("category", None),
             is_context_default=source.get("is_context_default", False),
             metadata=source.get("metadata", {}),
+            output_prompt=source.get("output_prompt", None)
         )
 
     # text representation of the prompt itself, fed directly into the agent.

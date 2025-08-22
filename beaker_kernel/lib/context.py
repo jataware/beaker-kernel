@@ -56,6 +56,7 @@ class WorkflowStageProgress(TypedDict):
 class AttachedWorkflow(TypedDict):
     workflow_id: str
     progress: dict[str, WorkflowStageProgress | None]
+    final_response: str
 
 class BeakerContext:
     beaker_kernel: "BeakerKernel"
@@ -520,7 +521,8 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             progress={
                 stage.name: None
                 for stage in self.workflows[workflow_id].stages
-            }
+            },
+            final_response=""
         )
         self.send_response("iopub", "attached_workflow", self.attached_workflow)
 
