@@ -23,7 +23,7 @@
     "./src"
   ],
   "repository": {
-    "url": "https://github.com/jataware/beaker-kernel"
+    "url": "git+https://github.com/jataware/beaker-kernel.git"
   },
   "bundleDependencies": [
     "xlsx"

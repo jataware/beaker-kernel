@@ -3,7 +3,7 @@
   "version": "1.13.0",
   "description": "Beaker kernel library",
   "repository": {
-    "url": "https://github.com/jataware/beaker-kernel"
+    "url": "git+https://github.com/jataware/beaker-kernel.git"
   },
   "scripts": {
     "build": "tsc"
