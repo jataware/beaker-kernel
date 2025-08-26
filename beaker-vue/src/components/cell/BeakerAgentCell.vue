@@ -74,6 +74,8 @@ const useBrainIcon = computed(() => {
 });
 
 const showMoreDetailsButton = computed(() => {
+    return false;
+    // TODO add to provide infor to users on LLM work done
     return ["thought", "response", "user_question"].includes(agentCellType.value);
 });
 

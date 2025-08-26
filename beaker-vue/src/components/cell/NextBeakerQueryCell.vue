@@ -202,7 +202,7 @@ const badgeSeverity = computed(() => {
 });
 
 const badgeIcon = computed(() => {
-    if (mockStickyForce.value) return 'pi pi-cog pi-spin';
+    if (mockStickyForce.value) return 'pi pi-spinner pi-spin busy-icon';
     
     const queryStatus = cell.value.metadata?.query_status;
     
@@ -214,7 +214,7 @@ const badgeIcon = computed(() => {
         case 'aborted':
             return 'pi pi-minus';
         case 'in-progress':
-            return 'pi pi-spin pi-cog busy-icon';
+            return 'pi pi-spin pi-spinner busy-icon';
         case 'pending':
             return 'pi pi-clock';
         default:
@@ -431,7 +431,9 @@ onBeforeUnmount(() => {
         z-index: 500 !important;
         // box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
         box-shadow: 0rem 0.25rem 1rem rgba(0, 0, 0, 0.6) !important;
-        border: 2px solid var(--p-purple-400) !important;
+
+       border: 1px solid var(--p-purple-500) !important;
+
         border-radius: 6px !important;
         background-color: var(--p-surface-a) !important;
 

@@ -489,7 +489,7 @@ watch(beakerSession, async () => {
     .execution-badge,
     .execution-count-badge {
         // font-size: 0.8rem;
-        height: 1.5rem;
+        height: 1.75rem;
     }
 }
 </style>
