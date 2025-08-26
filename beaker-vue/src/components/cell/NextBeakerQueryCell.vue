@@ -32,20 +32,6 @@
                         </div>
                         <div class="thought-content">{{ lastThoughtText }}</div>
                     </div>
-
-                    <!-- <div class="query-controls">
-                        <div v-if="showCollapseControl" class="collapse-control">
-                            <Checkbox
-                                v-model="autoCollapseCodeCells"
-                                :binary="true"
-                                :disabled="!isQueryActive"
-                                inputId="auto-collapse-checkbox"
-                            />
-                            <label for="auto-collapse-checkbox" class="collapse-label">
-                                Truncate code cells
-                            </label>
-                        </div>
-                    </div> -->
                 </div>
             </div>
             

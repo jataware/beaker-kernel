@@ -33,14 +33,14 @@
                     text
                 />
                 <div class="truncate-toggle-container"
-                        v-tooltip.bottom="{value: 'Auto-truncate agent code cells when added', showDelay: 300}"
+                        v-tooltip.bottom="{value: 'Collapse agent code cells by default', showDelay: 300}"
                 >
                     <ToggleSwitch
                         v-model="truncateAgentCodeCells"
                         @change="updateTruncatePreference"
                         inputId="auto-truncate-toggle"
                     />
-                    <label for="auto-truncate-toggle" class="truncate-label">Auto-truncate</label>
+                    <label for="auto-truncate-toggle" class="truncate-label">Collapse Agent Code</label>
                 </div>
                 <slot name="start-extra"></slot>
             </slot>
