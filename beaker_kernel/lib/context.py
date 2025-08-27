@@ -147,6 +147,7 @@ class BeakerContext:
         if len(self.workflows) == 0:
             logger.warning("Context has no workflows: disabling tools.")
             self.agent.disable("attach_workflow")
+            self.agent.disable("mark_workflow_stage")
 
     def __init_subclass__(cls):
         subclass_autocontext = getattr(cls, "auto_context", None)
