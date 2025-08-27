@@ -102,6 +102,7 @@ import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type IBeakerTheme } from '../../plugins/theme';
 import SessionStatus from "../session/SessionStatus.vue";
 import { useDialog } from "primevue";
+import { useWorkflows } from '../../composables/useWorkflows';
 
 export interface BeakerHeaderProps {
     title: string;
@@ -159,23 +160,13 @@ const loading = computed(() => {
     return !(beakerSession.activeContext?.slug);
 })
 
-const workflows = computed(() => {
-    return beakerSession?.activeContext?.info?.workflows?.workflows;
-})
+const { workflows, attachedWorkflowId, attachedWorkflow } = useWorkflows(beakerSession);
 
 const showWorkflowDropdown = computed(() => {
-    if (beakerSession?.activeContext?.info?.workflows?.workflows === undefined) {
+    if (workflows.value === undefined) {
         return false;
     }
-    return Object.keys(beakerSession?.activeContext?.info?.workflows?.workflows).length > 0;
-})
-
-const attachedWorkflowId = computed(() => {
-    return beakerSession?.activeContext?.info?.workflows?.attached?.workflow_id;
-})
-
-const attachedWorkflow = computed(() => {
-    return workflows.value?.[attachedWorkflowId.value]
+    return Object.keys(workflows.value).length > 0;
 })
 
 const showContextSelection = computed(() => {

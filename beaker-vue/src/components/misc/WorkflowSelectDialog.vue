@@ -77,6 +77,7 @@ import { computed, inject, ref, watch, type ComputedRef } from "vue";
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { Button, Divider, Card, InputGroup, InputGroupAddon, InputText} from "primevue";
 import { type BeakerSession } from "beaker-kernel";
+import { useWorkflows } from '../../composables/useWorkflows';
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const session = inject<BeakerSession>('session');
@@ -93,17 +94,7 @@ const setWorkflow = (id?: string) => {
 
 const clear = () => setWorkflow(undefined);
 
-const workflows = computed<{[key in string]: any}>(() => {
-    return beakerSession?.activeContext?.info?.workflows?.workflows;
-})
-
-const attachedWorkflowId = computed(() => {
-    return beakerSession?.activeContext?.info?.workflows?.attached?.workflow_id;
-})
-
-const attachedWorkflow = computed(() => {
-    return workflows.value?.[attachedWorkflowId.value]
-})
+const { workflows, attachedWorkflowId, attachedWorkflow } = useWorkflows(beakerSession);
 
 const searchResults = computed<{[key in string]: any}>(() => Object.fromEntries(
     Object.entries(workflows.value).filter(([_, workflow]) =>

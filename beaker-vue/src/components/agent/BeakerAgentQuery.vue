@@ -31,7 +31,7 @@ import { ref, nextTick, inject, computed } from "vue";
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-
+import { useWorkflows } from '../../composables/useWorkflows';
 import { BeakerSession } from 'beaker-kernel';
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
@@ -75,15 +75,7 @@ const handleQuery = (e: any) => {
     });
 }
 
-const workflows = computed(() => {
-    return beakerSession?.activeContext?.info?.workflows?.workflows;
-})
-const attachedWorkflowId = computed(() => {
-    return beakerSession?.activeContext?.info?.workflows?.attached?.workflow_id;
-})
-const attachedWorkflow = computed(() => {
-    return workflows.value?.[attachedWorkflowId.value]
-})
+const { workflows, attachedWorkflowId, attachedWorkflow } = useWorkflows(beakerSession);
 
 const placeholder = computed(() => attachedWorkflow?.value?.example_prompt ? attachedWorkflow.value.example_prompt : "Ask the AI or request an operation.")
 

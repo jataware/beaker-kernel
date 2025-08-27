@@ -57,7 +57,7 @@
 import { ref, computed, inject, watch } from "vue";
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { Stepper, StepItem, Step, StepPanel } from "primevue";
-
+import { useWorkflows } from '../../composables/useWorkflows';
 import { marked } from "marked";
 
 const activeStage = ref<number>(1);
@@ -66,25 +66,7 @@ const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const resultDropdowns = ref<{[key in number]?: boolean}>({});
 
-const workflows = computed(() => {
-    return beakerSession?.activeContext?.info?.workflows?.workflows;
-})
-
-const attachedWorkflowId = computed(() => {
-    return beakerSession?.activeContext?.info?.workflows?.attached?.workflow_id;
-})
-
-const attachedWorkflowProgress = computed<{[key in string]: {
-    code_cell_id: string,
-    state: 'in_progress' | 'finished',
-    results_markdown: string}
-}>(() => {
-    return beakerSession?.activeContext?.info?.workflows?.attached?.progress;
-})
-
-const attachedWorkflow = computed(() => {
-    return workflows.value?.[attachedWorkflowId.value]
-})
+const { workflows, attachedWorkflowId, attachedWorkflow, attachedWorkflowProgress } = useWorkflows(beakerSession);
 
 const parsedResults = computed(() => Object.fromEntries(
     Object.entries(attachedWorkflowProgress?.value ?? {}).map(([name, details]) => {
