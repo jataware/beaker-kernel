@@ -74,7 +74,10 @@ class BeakerAgent(ReActAgent):
 
         info = {
             "name": self.__class__.__name__,
-            "tools": {tool_name.split('.')[-1]: tool_func.__doc__.strip() for tool_name, tool_func in self.tools.items()},
+            "tools": {
+                tool_name.split('.')[-1]: tool_func.__doc__.strip() for tool_name, tool_func in self.tools.items()
+                if not getattr(tool_func, "_disabled", False)
+            },
             "agent_prompt": self.__class__.__doc__.strip(),
         }
         return info
