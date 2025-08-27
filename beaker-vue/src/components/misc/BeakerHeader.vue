@@ -160,7 +160,7 @@ const loading = computed(() => {
     return !(beakerSession.activeContext?.slug);
 })
 
-const { workflows, attachedWorkflowId, attachedWorkflow } = useWorkflows(beakerSession);
+const { workflows, attachedWorkflow } = useWorkflows(beakerSession);
 
 const showWorkflowDropdown = computed(() => {
     if (workflows.value === undefined) {

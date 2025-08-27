@@ -1,14 +1,6 @@
 <template>
     <div class="workflow-container">
-        <div class="header" v-if="attachedWorkflow">
-            <!-- <h4> {{ attachedWorkflow.title }}</h4>
-            <p>
-                {{ attachedWorkflow.human_description }}
-            </p>
-            <p>Example: <i>{{ attachedWorkflow.example_prompt }}</i></p> -->
-        </div>
-
-        <p v-else>
+        <p v-if="!attachedWorkflow">
             No workflow selected. Select one above or ask the agent about which workflow could work for your task.
         </p>
         <Stepper :value="activeStage" v-if="attachedWorkflow">
@@ -49,7 +41,6 @@
                 </StepPanel>
             </StepItem>
         </Stepper>
-        <div class="final-response p-steppanel" v-html="finalResponse"></div>
     </div>
 </template>
 
@@ -66,22 +57,12 @@ const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const resultDropdowns = ref<{[key in number]?: boolean}>({});
 
-const { workflows, attachedWorkflowId, attachedWorkflow, attachedWorkflowProgress } = useWorkflows(beakerSession);
+const { attachedWorkflow, attachedWorkflowProgress } = useWorkflows(beakerSession);
 
 const parsedResults = computed(() => Object.fromEntries(
     Object.entries(attachedWorkflowProgress?.value ?? {}).map(([name, details]) => {
         return [name, {...details, results_markdown: marked.parse(details?.results_markdown ?? "") as string}];
 })))
-
-const finalResponse = computed(() => {
-    // clone
-    let response = `${beakerSession?.activeContext?.info?.workflows?.attached?.final_response}`;
-    console.log(response)
-    response = response.split('\n').filter(line => !line.match(/^[|\s]+$/)).join('\n')
-    return marked.parse(response)
-})
-
-
 
 const parsedSteps = computed(() =>
     (attachedWorkflow?.value?.stages ?? []).map(stage =>
@@ -96,7 +77,6 @@ const parsedDescription = computed(() =>
 const stageBodyHtml = computed(() => parsedSteps.value.map(
     (step, index) => {
         const description = parsedDescription.value?.[index];
-        console.log(description)
         if (description.length === 0) {
             return step;
         } else {
@@ -126,12 +106,9 @@ watch(attachedWorkflowProgress, (newValue) => {
         }
     }
 })
-
 </script>
 
-
 <style lang="scss">
-
 .workflow-container {
     .header {
         h4 {
@@ -147,6 +124,10 @@ watch(attachedWorkflowProgress, (newValue) => {
     div.p-steppanel-content span.p-stepper-separator {
         min-height: 0;
         display: inline-block;
+    }
+
+    span.p-step-title {
+        font-size: 1rem;
     }
 }
 
@@ -194,35 +175,6 @@ watch(attachedWorkflowProgress, (newValue) => {
     h4 { font-size: 1.05rem; }
     br,hr { width: 100%; }
 }
-
-.final-response {
-    h1 { font-size: 1.3rem; }
-    h2 { font-size: 1.2rem; }
-    h3 { font-size: 1.10rem; }
-    h4 { font-size: 1.05rem; }
-    br,hr { width: 100%; }
-    padding: 0.5rem;
-
-    table {
-        table-layout: fixed;
-        margin: 0 auto;
-        border-collapse: collapse;
-        border: 1px solid var(--p-datatable-body-cell-border-color);
-        tbody tr:nth-child(odd) {
-            background-color: var(--p-datatable-row-background);
-        }
-        tbody tr:nth-child(odd) {
-            background-color: var(--p-datatable-row-striped-background);
-        }
-    }
-
-    th,
-    td {
-        padding: 0.2rem;
-        border: 1px solid var(--p-datatable-body-cell-border-color);
-    }
-}
-
 
 .step-separator {
     background-color: var(--p-surface-d);

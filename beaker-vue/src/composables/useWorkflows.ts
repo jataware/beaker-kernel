@@ -38,13 +38,13 @@ interface UseWorkflowsReturn {
     }} | undefined>;
 }
 
-export function useWorkflows(beakerSession: ComputedRef<BeakerSessionComponentType>): UseWorkflowsReturn {
+export function useWorkflows(beakerSession: BeakerSessionComponentType): UseWorkflowsReturn {
     const workflows = computed(() => {
-        return beakerSession.value?.activeContext?.info?.workflows?.workflows;
+        return beakerSession?.activeContext?.info?.workflows?.workflows;
     });
 
     const attachedWorkflowId = computed(() => {
-        return beakerSession.value?.activeContext?.info?.workflows?.attached?.workflow_id;
+        return beakerSession?.activeContext?.info?.workflows?.attached?.workflow_id;
     });
 
     const attachedWorkflow = computed(() => {
@@ -52,7 +52,7 @@ export function useWorkflows(beakerSession: ComputedRef<BeakerSessionComponentTy
     });
 
     const attachedWorkflowProgress = computed(() => {
-        return beakerSession.value?.activeContext?.info?.workflows?.attached?.progress;
+        return beakerSession?.activeContext?.info?.workflows?.attached?.progress;
     });
 
     return {

@@ -515,15 +515,15 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
     def attach_workflow(self, workflow_id: str | None):
         if workflow_id is None:
             self.attached_workflow = None
-            return
-        self.attached_workflow = AttachedWorkflow(
-            workflow_id=workflow_id,
-            progress={
-                stage.name: None
-                for stage in self.workflows[workflow_id].stages
-            },
-            final_response=""
-        )
+        else:
+            self.attached_workflow = AttachedWorkflow(
+                workflow_id=workflow_id,
+                progress={
+                    stage.name: None
+                    for stage in self.workflows[workflow_id].stages
+                },
+                final_response=""
+            )
         self.send_response("iopub", "attached_workflow", self.attached_workflow)
 
     @action()
