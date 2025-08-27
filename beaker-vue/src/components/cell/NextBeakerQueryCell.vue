@@ -32,6 +32,14 @@
                         </div>
                         <div class="thought-content">{{ lastThoughtText }}</div>
                     </div>
+                    
+                    <div v-if="!isSticky && isQueryActive" class="thinking-indicator">
+                        <span class="thought-icon">
+                            <ThinkingIcon/>
+                        </span>
+                        <span class="thinking-text">Assistant Running</span>
+                        <span class="thinking-animation"></span>
+                    </div>
                 </div>
             </div>
             
@@ -54,6 +62,7 @@
 <script setup lang="ts">
 import { inject, computed, onBeforeMount, getCurrentInstance, onBeforeUnmount, watchEffect, ref, nextTick } from "vue";
 import Badge from 'primevue/badge';
+import ThinkingIcon from '../../assets/icon-components/BrainIcon.vue';
 import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import type { BeakerNotebookComponentType } from "../notebook/BeakerNotebook.vue";
 import { useBaseQueryCell } from './BaseQueryCell';
@@ -614,5 +623,72 @@ onBeforeUnmount(() => {
 
 .bolded {
     font-weight: bold;
+}
+
+.thinking-indicator {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: var(--p-surface-b);
+    border-radius: var(--p-surface-border-radius);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    .thought-icon {
+        display: inline-block;
+        height: 1rem;
+        color: var(--p-primary-500);
+        flex-shrink: 0;
+        
+        svg {
+            fill: currentColor;
+            stroke: currentColor;
+            width: 1rem;
+            animation: thinking-pulse 2s ease-in-out infinite;
+        }
+    }
+    
+    .thinking-text {
+        font-size: 0.875rem;
+        color: var(--p-text-color);
+        font-weight: 500;
+    }
+    
+    .thinking-animation {
+        font-size: 1rem;
+        flex-shrink: 0;
+        width: 2.5em;
+        margin-left: auto;
+    }
+}
+
+.thinking-animation:after {
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: bottom;
+    position: relative;
+    animation: thinking-ellipsis 2000ms steps(36, end) infinite;
+    content: "\2026\2026\2026";
+    width: 2.5em;
+}
+
+@keyframes thinking-ellipsis {
+    from {
+        right: 2.5em;
+    }
+    to {
+        right: 0;
+    }
+}
+
+@keyframes thinking-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
 }
 </style>

@@ -58,6 +58,18 @@
                         </div>
                     </template>
                 </BeakerNotebookPanel>
+
+                <div v-if="hasActiveQueryCells" class="follow-scroll-agent">
+                    <Button 
+                        size="large"
+                        icon="pi pi-arrow-down"
+                        severity="secondary" 
+                        rounded 
+                        class="scroll-agent-button"
+                        aria-label="Follow scroll as agent creates cells"
+                        v-tooltip="'Select to toggle auto-scroll when the assistant is working and creating cells'"
+                    />
+                </div>
                 
                 <div class="agent-input-section">
                     
@@ -181,6 +193,7 @@ import DebugPanel from '../components/panels/DebugPanel.vue';
 // import AgentThinkingIndicator from '../components/misc/AgentThinkingIndicator.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
 import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
+import Checkbox from "primevue/checkbox";
 
 import BeakerCodeCellComponent from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCellComponent from '../components/cell/BeakerMarkdownCell.vue';
@@ -298,6 +311,16 @@ const headerNav = computed(() => createHeaderNav('nextgen-notebook'));
 const notebookKeyBindings = createNotebookKeyBindings();
 
 const iopubMessageHandler = createIopubMessageHandler();
+
+const hasActiveQueryCells = computed(() => {
+    if (!beakerSession.value?.session?.notebook?.cells) return false;
+    
+    return beakerSession.value.session.notebook.cells.some(cell => {
+        if (cell.cell_type !== 'query') return false;
+        const queryStatus = cell.metadata?.query_status;
+        return queryStatus === 'in-progress' || queryStatus === 'pending';
+    });
+});
 
 const { setupQueryCellFlattening, resetProcessedEvents } = useQueryCellFlattening(
     () => beakerSession.value, 
@@ -490,6 +513,39 @@ watch(beakerSession, async () => {
     .execution-count-badge {
         // font-size: 0.8rem;
         height: 1.75rem;
+    }
+}
+
+.follow-scroll-agent {
+    position: absolute;
+    bottom: 7rem;
+    right: 1rem;
+    // z-index: 100;
+
+    // padding-left: 1rem;
+    // background-color: var(--p-surface-b);
+    // border-radius: 17.5%;
+    // padding: 0.75rem;
+    // border: 1px solid var(--p-purple-300);
+
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.scroll-agent-button {
+    background-color: var(--p-surface-c);
+    // border-radius: 17.5%;
+    // padding: 0.75rem;
+    // border: 1px solid var(--p-purple-300);
+    border-color: var(--p-purple-300);
+    border-width: 2px;
+    height: 3rem;
+    width: 3rem;
+
+    & > span {
+        font-weight: bold;
+        font-size: 1.25rem;
     }
 }
 </style>

@@ -268,6 +268,11 @@ export function useQueryCellFlattening(
                         }
                         
                         if (isInProgress) {
+                            if (!cell.metadata) {
+                                cell.metadata = {};
+                            }
+                            cell.metadata.isFlattened = true;
+                            
                             if (!processedQueryEvents.value.has(cell.id)) {
                                 processedQueryEvents.value.set(cell.id, new Set());
                             }
