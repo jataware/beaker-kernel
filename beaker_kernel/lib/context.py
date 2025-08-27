@@ -5,11 +5,9 @@ import json
 import logging
 import os.path
 from pathlib import Path
-from re import S
 import urllib.parse
 from uuid import uuid4
 import requests
-import uuid
 import itertools
 from dataclasses import asdict
 from functools import wraps
