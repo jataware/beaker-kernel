@@ -6,7 +6,7 @@
         @click="handleCellClick"
         @wheel="handleWheelEvent"
     >
-        <div v-if="isDevelopment && isSelected" class="mock-controls">
+        <div v-if="forceMock && isSelected" class="mock-controls">
             <button @click="toggleMockSticky" class="mock-button">
                 {{ mockStickyForce ? 'Disable' : 'Enable' }} Sticky Test
             </button>
@@ -92,8 +92,9 @@ const isSticky = ref(false);
 
 const mockStickyForce = ref(false);
 
-const isDevelopment = computed(() => {
-    return true;
+const forceMock = computed(() => {
+    return false;
+    // return true;
 });
 
 const isSelected = computed(() => {

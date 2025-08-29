@@ -41,13 +41,6 @@
                     </template>
                 </BeakerNotebookToolbar>
 
-                <!-- <div class="agent-thinking-indicator-container">
-                    <AgentThinkingIndicator 
-                        :active-query-cells="activeQueryCells"
-                        @scroll-to-query="scrollToCell"
-                    />
-                </div> -->
-
                 <BeakerNotebookPanel
                     :selected-cell="beakerNotebookRef?.selectedCellId"
                     v-autoscroll
@@ -356,10 +349,10 @@ watch(beakerSession, async () => {
     display: flex;
     height: 100%;
     max-width: 100%;
+    position: relative;
 }
 
 .next-notebook-interface {
-
     .truncate-toggle-container {
         display: flex;
     }

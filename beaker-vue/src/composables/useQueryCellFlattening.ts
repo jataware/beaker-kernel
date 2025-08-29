@@ -205,7 +205,7 @@ export function useQueryCellFlattening(
             return;
         }
 
-        const markdownContent = `**Agent Question:**\n\n${questionContent}`;
+        const markdownContent = `**Assistant Question:**\n\n${questionContent}`;
         const metadata = createCellMetadata('user_question', queryCellId, eventIndex);
         
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);

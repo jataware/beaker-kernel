@@ -67,7 +67,7 @@ const notebookOutputs = computed(() => {
 
     const getOutputs = (cell: IBeakerCell) => {
         const outputs = [];
-        if (cell.cell_type === 'query') {
+        if (cell.cell_type === 'query' && !cell.metadata?.isFlattened) {
             for (const child of (cell as BeakerQueryCell)?.children ?? []) {
                 outputs.push(...getOutputs(child));
             }
