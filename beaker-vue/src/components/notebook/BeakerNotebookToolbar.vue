@@ -314,7 +314,7 @@ const processNotebookForExport = (notebookData: any) => {
     if (clonedNotebook.cells && Array.isArray(clonedNotebook.cells)) {
         clonedNotebook.cells = clonedNotebook.cells.map((cell: any) => {
             // handle query cells with flattened=true metadata - remove events array
-            if (cell.cell_type === 'query' && cell.metadata?.isFlattened === true) {
+            if (cell.cell_type === 'query' && cell.metadata?.is_flattened === true) {
                 const { events, ...cellWithoutEvents } = cell;
                 return {
                     ...cellWithoutEvents,
@@ -331,7 +331,7 @@ const processNotebookForExport = (notebookData: any) => {
     if (clonedNotebook.content && clonedNotebook.content.cells && Array.isArray(clonedNotebook.content.cells)) {
         clonedNotebook.content.cells = clonedNotebook.content.cells.map((cell: any) => {
             // handle query cells with flattened=true metadata - remove events array
-            if (cell.cell_type === 'query' && cell.metadata?.isFlattened === true) {
+            if (cell.cell_type === 'query' && cell.metadata?.is_flattened === true) {
                 const { events, ...cellWithoutEvents } = cell;
                 return {
                     ...cellWithoutEvents,

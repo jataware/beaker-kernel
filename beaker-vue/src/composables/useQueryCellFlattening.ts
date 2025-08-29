@@ -271,7 +271,7 @@ export function useQueryCellFlattening(
                             if (!cell.metadata) {
                                 cell.metadata = {};
                             }
-                            cell.metadata.isFlattened = true;
+                            cell.metadata.is_flattened = true;
                             
                             if (!processedQueryEvents.value.has(cell.id)) {
                                 processedQueryEvents.value.set(cell.id, new Set());

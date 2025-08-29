@@ -77,7 +77,7 @@ const {
   cell,
   events,
   execute,
-  enter,
+//   enter,
   exit,
   clear,
 } = useBaseQueryCell(props);
@@ -372,7 +372,7 @@ let cleanupSticky: (() => void) | undefined;
 
 defineExpose({
     execute,
-    enter,
+    enter: () => {},
     exit,
     clear,
     cell,

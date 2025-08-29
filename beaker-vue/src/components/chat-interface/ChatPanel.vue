@@ -9,9 +9,9 @@
             <slot name="help-text"></slot>
         </span>
         <component
-            v-for="(cell, index) in session.notebook.cells"
+            v-for="(cell, index) in chatCompatibleCells"
             :cell="cell"
-            :key="index"
+            :key="cell.id || index"
             :is="props.cellMap[cell.cell_type]"
             class="beaker-chat-cell"
         />
@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, inject } from 'vue';
+import { ref, inject, computed } from 'vue';
 import { BeakerSession } from 'beaker-kernel';
 
 const session = inject<BeakerSession>('session');
@@ -27,6 +27,14 @@ const session = inject<BeakerSession>('session');
 const props = defineProps([
     "cellMap"
 ])
+
+/**
+ * New notebook interface flattens and exposes query cells children as top-level sibling cells.
+ * Do not show these on the chat interface, as those cells are shown as part of the AgentActivity pane. 
+ */
+const chatCompatibleCells = computed(() => {
+    return session.notebook.cells.filter(cell => !cell.metadata?.parent_query_cell)
+})
 
 </script>
 
