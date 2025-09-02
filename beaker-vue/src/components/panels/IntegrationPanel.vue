@@ -66,7 +66,7 @@
                                 style:
                                     'transition: background-color 150ms linear;' +
                                     (hoveredIntegration === integration.uuid
-                                        ? 'background-color: var(--p-surface-c); cursor: pointer;'
+                                        ? 'background-color: var(--p-surface-100); cursor: pointer;'
                                         : '')
                             }
                         }"

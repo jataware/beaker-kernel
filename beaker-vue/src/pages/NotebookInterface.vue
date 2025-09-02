@@ -63,9 +63,20 @@
                 initialWidth="25vi"
                 :maximized="isMaximized"
             >
+                <SideMenuPanel
+                    id="workflow-steps"
+                    label="Workflow Steps"
+                    icon="pi pi-list-check"
+                    v-if="attachedWorkflow"
+                >
+                    <WorkflowStepPanel>
+                    </WorkflowStepPanel>
+                </SideMenuPanel>
+
                 <SideMenuPanel label="Context Info" icon="pi pi-home">
                     <InfoPanel/>
                 </SideMenuPanel>
+
                 <SideMenuPanel id="files" label="Files" icon="pi pi-folder" no-overflow :lazy="true">
                     <FilePanel
                         ref="filePanelRef"
@@ -113,6 +124,15 @@
                 initialWidth="25vi"
                 :maximized="isMaximized"
             >
+                <SideMenuPanel
+                    id="workflow-output"
+                    label="Workflow Output"
+                    icon="pi pi-list-check"
+                    v-if="attachedWorkflow"
+                >
+                    <WorkflowOutputPanel>
+                    </WorkflowOutputPanel>
+                </SideMenuPanel>
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
@@ -181,6 +201,10 @@ import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 import DebugPanel from '../components/panels/DebugPanel.vue'
 import { listIntegrations, type IntegrationMap } from '../util/integration';
+
+import WorkflowStepPanel from '@/components/panels/WorkflowStepPanel.vue';
+import WorkflowOutputPanel from '@/components/panels/WorkflowOutputPanel.vue';
+import { useWorkflows } from '@/composables/useWorkflows';
 
 const beakerNotebookRef = ref<BeakerNotebookComponentType>();
 const beakerInterfaceRef = ref();
@@ -289,6 +313,9 @@ const beakerSession = computed<BeakerSessionComponentType>(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
 
+const workflowRoot = computed(() => beakerSession?.value?.activeContext?.info?.workflow_info);
+const attachedWorkflow = computed(() => workflowRoot.value?.workflows[workflowRoot?.value?.state?.workflow_id]);
+
 const integrations = ref<IntegrationMap>({})
 watch(beakerSession, async () => {
     integrations.value = await listIntegrations(sessionId);
@@ -311,6 +338,14 @@ const iopubMessage = (msg) => {
     }
     else if (msg.header.msg_type === "kernel_state_info") {
         kernelStateInfo.value = msg.content;
+    }
+    else if (msg.header.msg_type === "update_workflow_state") {
+        const workflows = beakerSession?.value?.activeContext?.info?.workflow_info;
+        if (workflows) {
+            workflows.state = msg.content;
+            sideMenuRef.value.selectPanel('workflow-steps');
+            rightSideMenuRef.value.selectPanel('workflow-output');
+        }
     }
     else if (msg.header.msg_type === "debug_event") {
         debugLogs.value.push({
