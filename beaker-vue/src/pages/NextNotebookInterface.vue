@@ -236,6 +236,7 @@ const {
     scrollToCell,
     beakerApp,
     restartSession,
+    chatHistory,
 } = useNotebookInterface();
 
 beakerApp.setPage("nextgen-notebook");
@@ -327,7 +328,6 @@ const handleLoadNotebook = (notebookJSON: any, filename: string) => {
     loadNotebook(notebookJSON, filename);
 };
 
-const chatHistory = ref<IChatHistory>();
 const integrations = ref<IntegrationMap>({});
 const previewVisible = ref<boolean>(false);
 

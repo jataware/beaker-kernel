@@ -74,7 +74,10 @@ class BeakerAgent(ReActAgent):
 
         info = {
             "name": self.__class__.__name__,
-            "tools": {tool_name.split('.')[-1]: tool_func.__doc__.strip() for tool_name, tool_func in self.tools.items()},
+            "tools": {
+                tool_name.split('.')[-1]: tool_func.__doc__.strip() for tool_name, tool_func in self.tools.items()
+                if not getattr(tool_func, "_disabled", False)
+            },
             "agent_prompt": self.__class__.__doc__.strip(),
         }
         return info
@@ -117,18 +120,23 @@ class BeakerAgent(ReActAgent):
 
     @tool()
     async def ask_user(
-        self, query: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef,
+        self, query: str, format: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef,
     ) -> str:
+        # format cases for ask_user are defined in prompt_user.
         """
         Sends a query to the user and returns their response
 
         Args:
             query (str): A fully grammatically correct question for the user.
+            format (Optional[str]): The type of display to show the user for the query.
+                                    Unless a specific case listed below matches the intent of the query, omit this field (None)
+                                    The list of specific cases are:
+                                      - 'workflow-confirmation': confirmation specificially when operating within a workflow.
 
         Returns:
             str: The user's response to the query.
         """
-        return await self.context.beaker_kernel.prompt_user(query, parent_message=react_context.get("message", None))
+        return await self.context.beaker_kernel.prompt_user(query, format=format, parent_message=react_context.get("message", None)) # type: ignore
 
 # Provided for backwards compatibility
 BaseAgent = BeakerAgent

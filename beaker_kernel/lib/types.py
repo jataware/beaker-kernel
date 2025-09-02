@@ -1,9 +1,8 @@
-import re
 import typing
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from uuid import uuid4
-
+from beaker_kernel.lib.utils import slugify
 
 IntegrationTypes: typing.TypeAlias = typing.Literal["api", "database", "dataset"]
 
@@ -58,8 +57,7 @@ class Integration:
 
     @classmethod
     def slugify(cls, name: str):
-        slug = "_".join(re.split(r"\W", name.lower()))
-        return slug
+        return slugify(name)
 
     def __post_init__(self):
         if self.slug is None:

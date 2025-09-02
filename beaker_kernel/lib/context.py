@@ -4,22 +4,24 @@ import inspect
 import json
 import logging
 import os.path
+from pathlib import Path
 import urllib.parse
-from attr import dataclass
+from uuid import uuid4
 import requests
-import uuid
 import itertools
 from dataclasses import asdict
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, ClassVar, Awaitable, TypedDict, Literal, TypeAlias
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
+import yaml
 
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execution_context, get_parent_message, ExecutionError, ensure_async
 from beaker_kernel.lib.config import config as beaker_config
 from beaker_kernel.lib.integrations.base import BaseIntegrationProvider
 from beaker_kernel.lib.types import Integration
+from beaker_kernel.lib.workflow import Workflow, WorkflowState, WorkflowStageProgress, create_available_workflows_prompt
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -55,6 +57,10 @@ class BeakerContext:
     intercepts: List[Tuple[str, Callable, str]]
     jinja_env: Optional[Environment]
     templates: Dict[str, Template]
+
+    workflows: Dict[str, Workflow]
+    current_workflow_state: Optional[WorkflowState]
+
     preview_function_name: str = "generate_preview"
     kernel_state_function_name: str = "send_kernel_state"
 
@@ -71,6 +77,8 @@ class BeakerContext:
         self.integrations = integrations if integrations is not None else []
         self.jinja_env = None
         self.templates = {}
+        self.workflows = {}
+        self.current_workflow_state = None
         self.beaker_kernel = beaker_kernel
         self.config = config
         self.subkernel = self.get_subkernel()
@@ -114,6 +122,20 @@ class BeakerContext:
                 except UnicodeDecodeError:
                     # For templates, this indicates a binary file which can't be a template, so throw a warning and skip.
                     logger.warning(f"File '{template_name}' in context '{self.__class__.__name__}' is not a valid template file as it cannot be decoded to a unicode string.")
+
+        workflows_dir = os.path.join(os.path.dirname(class_dir), "workflows")
+        if os.path.exists(workflows_dir):
+            for workflow_yaml in Path(workflows_dir).glob("*.yaml"):
+                workflow = Workflow.from_yaml(yaml.safe_load(workflow_yaml.read_text()))
+                # lives as long as the session does
+                workflow_id = str(uuid4())
+                self.workflows[workflow_id] = workflow
+                if workflow.is_context_default:
+                    self.attach_workflow(workflow_id)
+        if not self.workflows:
+            logger.warning("Context has no workflows: disabling tools.")
+            self.agent.disable("attach_workflow")
+            self.agent.disable("mark_workflow_stage")
 
     def __init_subclass__(cls):
         subclass_autocontext = getattr(cls, "auto_context", None)
@@ -201,6 +223,13 @@ field "beaker_cell_type" = "query". If a cell has metadata field "parent_cell", 
 part of the ReAct loop associated with that query. As such, cells that follow a query may have occured while the ReAact
 loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
 """)
+
+        if self.workflows:
+            parts.append(create_available_workflows_prompt(
+                list(self.workflows.values()),
+                self.attached_workflow)
+            )
+
         if self.integrations:
             parts.append("Here are integrations that you have access to:")
             integration_prompts = [
@@ -306,12 +335,21 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         else:
             agent_details = None
 
+        workflow_info = {
+            "state": self.current_workflow_state,
+            "workflows": {
+                uuid: asdict(workflow)
+                for uuid, workflow in self.workflows.items()
+            }
+        }
+
         payload = {
             "language": self.subkernel.DISPLAY_NAME,
             "subkernel": self.subkernel.KERNEL_NAME,
             "actions": action_details,
             "custom_messages": custom_messages,
             "procedures": list(self.templates.keys()),
+            "workflow_info": workflow_info,
             "agent": agent_details,
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
@@ -463,6 +501,23 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         """
         return await self.preview()
 
+    @property
+    def attached_workflow(self) -> Workflow | None:
+        return self.workflows.get(self.current_workflow_state["workflow_id"], None) if self.current_workflow_state else None
+
+    def attach_workflow(self, workflow_id: str | None):
+        if workflow_id is None:
+            self.current_workflow_state = None
+        else:
+            self.current_workflow_state = WorkflowState.from_workflow(
+                workflow_id=workflow_id,
+                workflow=self.workflows[workflow_id]
+            )
+        self.send_response("iopub", "update_workflow_state", self.current_workflow_state)
+
+    @action()
+    async def set_workflow(self, message):
+        self.attach_workflow(message.content["workflow"])
 
     @action(default_payload=LinterCodeCellsPayload(notebook_id='nb1', cells=[LinterCodeCellPayload(cell_id='cell1', content='import os\nos.exit(0)')]))
     async def lint_code(self, message):

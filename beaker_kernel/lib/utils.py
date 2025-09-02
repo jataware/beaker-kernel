@@ -4,6 +4,7 @@ import os
 import inspect
 import json
 import logging
+import re
 import sys
 import traceback
 import typing
@@ -339,3 +340,7 @@ async def ensure_async(fn: Coroutine|Callable):
         return await fn
     else:
         return fn
+
+def slugify(name: str):
+    slug = "_".join(re.split(r"\W", name.lower()))
+    return slug

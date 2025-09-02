@@ -15,7 +15,7 @@
                     @submit="handleSubmit"
                     v-model="inputValue"
                     style="flex: 1; margin-right: 0.75rem"
-                    :placeholder="isAwaitingInput ? 'Reply to the agent' : 'Ask the AI or request an operation.'"
+                    :placeholder="isAwaitingInput ? 'Reply to the agent' : placeholder"
                 />
 
                 <Button
@@ -33,9 +33,10 @@
 
 <script setup lang="ts">
 import { ref, nextTick, inject, computed, watch } from "vue";
+import Card from 'primevue/card';
 import Button from 'primevue/button';
 import ContainedTextArea from '../misc/ContainedTextArea.vue';
-
+import { useWorkflows } from '../../composables/useWorkflows';
 import { BeakerSession } from 'beaker-kernel';
 import { type BeakerSessionComponentType } from '../session/BeakerSession.vue';
 import { type BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
@@ -139,6 +140,9 @@ watch(isAwaitingInput, (newValue) => {
         }, 50);
     }
 });
+const { workflows, attachedWorkflowId, attachedWorkflow } = useWorkflows(beakerSession);
+
+const placeholder = computed(() => attachedWorkflow?.value?.example_prompt ? attachedWorkflow.value.example_prompt : "Ask the AI or request an operation.")
 
 </script>
 

@@ -296,8 +296,16 @@ export function useNotebookInterface() {
                 body: msg.content.body,
                 timestamp: msg.header.date,
             });
+        } else if (msg.header.msg_type === "update_workflow_state") {
+            const workflows = beakerSession?.value?.activeContext?.info?.workflow_info;
+            if (workflows) {
+                workflows.state = msg.content;
+                sideMenuRef.value.selectPanel('workflow-steps');
+                rightSideMenuRef.value.selectPanel('workflow-output');
+            }
         } else if (msg.header.msg_type === "chat_history") {
             chatHistory.value = msg.content;
+            console.log(msg.content);
         } else if (msg.header.msg_type === "context_setup_response" || msg.header.msg_type === "context_info_response") {
             let incomingIntegrations;
             if (msg.header.msg_type === "context_setup_response") {
