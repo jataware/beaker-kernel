@@ -82,14 +82,11 @@ const handleSubmit = (e: any) => {
 }
 
 const handleQuery = () => {
-    console.log("handleQuery called", { queryValue: query.value });
-
     if (!query.value.trim()) {
-        console.log("Query value is empty, returning");
         return;
     }
 
-    // Remove the top cell if it is blank/not used.
+    // remove the top cell if it is blank/not used.
     if (notebook.notebook.cells.length === 1) {
         const existingCell = notebook.notebook.cells[0];
         if (
@@ -118,6 +115,7 @@ const handleResponse = () => {
 }
 
 const focusTextArea = () => {
+    // auto-focus textarea when awaiting user input from an agent question
     if (!textAreaRef.value) {
         return false;
     }
@@ -128,7 +126,6 @@ const focusTextArea = () => {
         return true;
     }
     
-    console.log('No focusable element found');
     return false;
 };
 

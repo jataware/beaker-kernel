@@ -85,12 +85,12 @@ export function useQueryCellFlattening(
     
     const createThoughtCell = (thoughtContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'thought')) {
-            console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            // console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
         }
 
         if(thoughtContent.length === 0 || thoughtContent === null || thoughtContent === "Thinking...") {
-            console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} is practically empty, skipping`);
+            // console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} is practically empty, skipping`);
             return;
         }
 
@@ -102,7 +102,7 @@ export function useQueryCellFlattening(
     
     const createResponseCell = (responseContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'response')) {
-            console.warn(`Response cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            // console.warn(`Response cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
         }
 
@@ -122,13 +122,13 @@ export function useQueryCellFlattening(
         const currentTruncateValue = truncateAgentCodeCells.value;
 
         if (findCellByMetadata(queryCellId, eventIndex, 'code')) {
-            console.warn(`code cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            // console.warn(`code cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
         }
 
         const childCell = queryCell.children?.find(child => child.id === codeCellId);
         if (!childCell) {
-            console.warn(`code cell ${codeCellId} not found in query cell children`);
+            // console.warn(`code cell ${codeCellId} not found in query cell children`);
             return;
         }
 
@@ -164,7 +164,7 @@ export function useQueryCellFlattening(
 
     const createErrorCell = (errorContent: any, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'error')) {
-            console.warn(`Error cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            // console.warn(`Error cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
         }
 
@@ -189,7 +189,7 @@ export function useQueryCellFlattening(
 
     const createQuestionCell = (questionContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'user_question')) {
-            console.warn(`Question cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            // console.warn(`Question cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
         }
 
@@ -217,18 +217,18 @@ export function useQueryCellFlattening(
             if (!alreadyContainsReply) {
                 const updatedContent = `${currentContent}\n\n**User Response:**\n\n${replyContent}`;
                 questionCell.source = updatedContent;
-                console.log(`Updated question cell with reply for query ${queryCellId}, event ${eventIndex}`);
+                // console.log(`Updated question cell with reply for query ${queryCellId}, event ${eventIndex}`);
             }
             return questionCell;
         } else {
-            console.warn(`No question cell found for reply in query ${queryCellId}, creating standalone reply cell`);
+            // console.warn(`No question cell found for reply in query ${queryCellId}, creating standalone reply cell`);
             return createReplyCell(replyContent, queryCellId, eventIndex);
         }
     };
 
     const createReplyCell = (replyContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'user_answer')) {
-            console.warn(`User answer cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            // console.warn(`User answer cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
         }
 
@@ -279,7 +279,7 @@ export function useQueryCellFlattening(
                                         ['response', 'error', 'abort'].includes(events[events.length - 1].type);
                                         
                                     if (isCompleted && processedEvents.size === events.length) {
-                                        console.log(`Query ${cell.id} is completed and all events processed, skipping`);
+                                        // console.log(`Query ${cell.id} is completed and all events processed, skipping`);
                                         return;
                                     }
                                     
@@ -310,7 +310,7 @@ export function useQueryCellFlattening(
                                 { deep: true, immediate: true }
                             );
                         } else {
-                            console.log(`query ${cell.id} is not in progress (${queryStatus}), skipping flattening setup`);
+                            // console.log(`query ${cell.id} is not in progress (${queryStatus}), skipping flattening setup`);
                         }
                     }
                 }

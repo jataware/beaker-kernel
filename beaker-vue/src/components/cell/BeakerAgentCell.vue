@@ -94,8 +94,7 @@ const renderedMarkdown = computed(() => {
 });
 
 const showMoreDetails = () => {
-    // TODO implement
-    console.log('Show more details for cell:', props.cell.id);
+    // TODO implement me
 };
 
 const execute = () => {
