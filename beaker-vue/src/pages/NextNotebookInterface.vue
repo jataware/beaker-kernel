@@ -273,6 +273,17 @@ watch(truncateAgentCodeCells, () => {
 provide('truncateAgentCodeCells', truncateAgentCodeCells);
 
 const cellComponentMapping = (cell: any) => {
+
+    const standardMap = {
+        'code': BeakerCodeCellComponent,
+        'markdown': BeakerMarkdownCellComponent,
+        'raw': BeakerRawCell,
+    };
+
+    if (!cell) {
+        return standardMap;
+    }
+    
     if (cell.cell_type === 'query') {
         return NextGenBeakerQueryCell;
     }
@@ -284,12 +295,6 @@ const cellComponentMapping = (cell: any) => {
         }
     }
     
-    const standardMap = {
-        'code': BeakerCodeCellComponent,
-        'markdown': BeakerMarkdownCellComponent,
-        'raw': BeakerRawCell,
-    };
-    
     return standardMap[cell.cell_type] || standardMap['code'];
 };
 
@@ -300,6 +305,7 @@ const notebookKeyBindings = createNotebookKeyBindings();
 const iopubMessageHandler = createIopubMessageHandler();
 
 const hasActiveQueryCells = computed(() => {
+    return false;
     if (!beakerSession.value?.session?.notebook?.cells) return false;
     
     return beakerSession.value.session.notebook.cells.some(cell => {

@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
+import { ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick, watch } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
@@ -213,6 +213,40 @@ onBeforeMount(() => {
 onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
+
+// sync execution_count for derived cells from query cell flattening
+const isFlattenedCell = computed(() => {
+    return cell.value.metadata?.source_cell_id && 
+           cell.value.metadata?.beaker_cell_type === 'code';
+});
+const needsExecutionCountSync = computed(() => {
+    return isFlattenedCell.value && 
+           (cell.value.execution_count === null || cell.value.execution_count === undefined);
+});
+
+watch(
+    () => {
+        if (!needsExecutionCountSync.value) return null;
+        
+        const sourceCellId = cell.value.metadata?.source_cell_id;
+        const parentQueryCellId = cell.value.metadata?.parent_query_cell;
+        
+        if (sourceCellId && parentQueryCellId) {
+            const queryCell = beakerSession.session.notebook.cells.find(c => c.id === parentQueryCellId);
+            if (queryCell && queryCell.children) {
+                const sourceCell = queryCell.children.find(child => child.id === sourceCellId);
+                return sourceCell?.execution_count;
+            }
+        }
+        return null;
+    },
+    (newExecutionCount) => {
+        if (newExecutionCount !== null && newExecutionCount !== undefined) {
+            cell.value.execution_count = newExecutionCount;
+        }
+    },
+    { immediate: true }
+);
 
 </script>
 

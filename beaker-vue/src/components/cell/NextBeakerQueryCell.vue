@@ -326,15 +326,18 @@ const handleQueryCompletion = async () => {
     
     isSticky.value = false;
     
-    if (queryCellRef.value) {
-        const beakerCell = queryCellRef.value.closest('.beaker-cell') as HTMLElement;
-        if (beakerCell) {
-            beakerCell.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
-            });
-        }
-    }
+    // This would scroll back to the query cell when it's completed
+    // but we may not want that. We may want to scroll to the assistant response cell,
+    // or not at all. Leaving this in commented, as an option, for now.
+    // if (queryCellRef.value) {
+    //     const beakerCell = queryCellRef.value.closest('.beaker-cell') as HTMLElement;
+    //     if (beakerCell) {
+    //         beakerCell.scrollIntoView({ 
+    //             behavior: 'smooth', 
+    //             block: 'start' 
+    //         });
+    //     }
+    // }
 };
 
 watchEffect(() => {

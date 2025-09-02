@@ -37,7 +37,6 @@
                 >
                     <ToggleSwitch
                         v-model="truncateAgentCodeCells"
-                        @change="updateTruncatePreference"
                         inputId="auto-truncate-toggle"
                     />
                     <label for="auto-truncate-toggle" class="truncate-label">Collapse Agent Code</label>
@@ -148,7 +147,7 @@ import StreamlineExportDialog from "../misc/StreamlineExportDialog.vue"
 
 const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
-const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
+const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}} | ((cell: any) => {[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}})>('cell-component-mapping');
 const showOverlay = inject<(contents: string, header?: string) => void>('show_overlay');
 const dialog = useDialog();
 
@@ -179,7 +178,8 @@ const truncateAgentCodeCells = computed({
 });
 
 const addCellMenuItems = computed(() => {
-    return Object.entries(cellMapping).map(([name, obj]) => {
+    const cellMap = typeof cellMapping === 'function' ? cellMapping(null) : cellMapping;
+    return Object.entries(cellMap).map(([name, obj]) => {
         return {
             label: `${capitalize(name)} Cell`,
             icon: obj.icon,

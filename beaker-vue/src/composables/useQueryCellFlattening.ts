@@ -122,13 +122,13 @@ export function useQueryCellFlattening(
         const currentTruncateValue = truncateAgentCodeCells.value;
 
         if (findCellByMetadata(queryCellId, eventIndex, 'code')) {
-            console.warn(`Code cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
+            console.warn(`code cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
         }
 
         const childCell = queryCell.children?.find(child => child.id === codeCellId);
         if (!childCell) {
-            console.warn(`Code cell ${codeCellId} not found in query cell children`);
+            console.warn(`code cell ${codeCellId} not found in query cell children`);
             return;
         }
 
@@ -187,18 +187,6 @@ export function useQueryCellFlattening(
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
 
-    const createAbortCell = (abortContent: string, queryCellId: string, eventIndex: number) => {
-        if (findCellByMetadata(queryCellId, eventIndex, 'abort')) {
-            console.warn(`Abort cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
-            return;
-        }
-
-        const markdownContent = `**Request Aborted:**\n\n${abortContent}`;
-        const metadata = createCellMetadata('abort', queryCellId, eventIndex);
-        
-        return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
-    };
-
     const createQuestionCell = (questionContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'user_question')) {
             console.warn(`Question cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
@@ -221,13 +209,16 @@ export function useQueryCellFlattening(
             questionCell = findCellByMetadata(queryCellId, questionEventIndex, 'user_question');
             questionEventIndex--;
         }
-        
+
         if (questionCell) {
             const currentContent = questionCell.source;
-            const updatedContent = `${currentContent}\n\n**User Response:**\n\n${replyContent}`;
-            questionCell.source = updatedContent;
-            
-            console.log(`Updated question cell with reply for query ${queryCellId}, event ${eventIndex}`);
+            const alreadyContainsReply = currentContent.includes(`**User Response:**`);
+            // prevents responses from being added twice when reloading the page on intermediate states:
+            if (!alreadyContainsReply) {
+                const updatedContent = `${currentContent}\n\n**User Response:**\n\n${replyContent}`;
+                questionCell.source = updatedContent;
+                console.log(`Updated question cell with reply for query ${queryCellId}, event ${eventIndex}`);
+            }
             return questionCell;
         } else {
             console.warn(`No question cell found for reply in query ${queryCellId}, creating standalone reply cell`);
@@ -309,9 +300,6 @@ export function useQueryCellFlattening(
                                             createResponseCell(event.content, cell.id, eventIndex);
                                         } else if (event.type === 'error') {
                                             createErrorCell(event.content, cell.id, eventIndex);
-                                        } else if (event.type === 'abort') {
-                                            // console.info("Not creating abort cells for now, as the abort state is shown on query cell.")
-                                        //  createAbortCell(event.content, cell.id, eventIndex);
                                         } else if (event.type === 'user_question') {
                                             createQuestionCell(event.content, cell.id, eventIndex);
                                         } else if (event.type === 'user_answer') {
@@ -322,7 +310,7 @@ export function useQueryCellFlattening(
                                 { deep: true, immediate: true }
                             );
                         } else {
-                            console.log(`Query ${cell.id} is not in progress (${queryStatus}), skipping flattening setup`);
+                            console.log(`query ${cell.id} is not in progress (${queryStatus}), skipping flattening setup`);
                         }
                     }
                 }
@@ -341,7 +329,6 @@ export function useQueryCellFlattening(
         resetProcessedEvents,
         initializeProcessedEvents,
         // createErrorCell,
-        // createAbortCell,
         // createQuestionCell,
         // createReplyCell,
         // createThoughtCell,

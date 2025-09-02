@@ -51,7 +51,7 @@
                             class="cell-type-selector overlay-menu-button"
                             :model-value="cell.cell_type"
                             @update:model-value="(value) => {notebook.convertCellType(cell, value); hoverMenuRef.hide();}"
-                            :options="Object.keys(cellMap || {})"
+                            :options="Object.keys(typeof cellMap === 'function' ? cellMap(null) : cellMap || {})"
                             :dropdown-icon="cellIcon"
                             :label-style="{display: 'none'}"
                             append-to="self"
