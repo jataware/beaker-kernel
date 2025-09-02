@@ -12,7 +12,7 @@ import requests
 from archytas.tool_utils import AgentRef, tool, LoopControllerRef, ReactContextRef
 
 from .autodiscovery import autodiscover
-from .utils import env_enabled, action, ExecutionTask
+from .utils import env_enabled, action, ExecutionTask, slugify
 from .jupyter_kernel_proxy import ProxyKernelClient
 from .config import config
 from .context import BeakerContext, WorkflowStageProgress
@@ -92,7 +92,7 @@ async def run_code_summarizer(message: "ToolMessage", chat_history: "ChatHistory
     message.artifact["summarized"] = True
 
 @tool()
-async def attach_workflow(workflow: str, agent: AgentRef):
+async def attach_workflow(workflow_title: str, agent: AgentRef):
     """
     Chooses a relevant workflow to the user's request and attaches it to the context.
 
@@ -103,8 +103,8 @@ async def attach_workflow(workflow: str, agent: AgentRef):
     If they describe what they want to do, choose the most relevant workflow based on their query.
 
     Args:
-        workflow (str): The title of the workflow that you have access to, most relevant to their query.
-                        This is "none" if the user wants to detachm remove, or unset the workflow.
+        workflow_title (str): The title of the workflow that you have access to, most relevant to their query.
+                        This is "none" if the user wants to detach, remove, or unset the workflow.
 
     Returns:
         str: A summary of what was done
@@ -114,18 +114,16 @@ async def attach_workflow(workflow: str, agent: AgentRef):
             return "No workflows attached to context."
     except Exception as e:
         return f"Failed to get workflows on context. {e}"
-    def canonicalize_title(title: str) -> str:
-        return title.strip().lower().replace(" ", "_")
-    desired = canonicalize_title(workflow)
+    desired = slugify(workflow_title)
     titles = {
-        canonicalize_title(workflow.title): uuid
+        slugify(workflow.title): uuid
         for uuid, workflow in agent.context.workflows.items()
     }
     if desired not in titles:
         return f"Failed to find `{desired}` in `{titles}`: invalid tool input."
     agent.context.attach_workflow(titles[desired])
-    agent.context.send_response("iopub", "attached_workflow", agent.context.attached_workflow)
-    return f"Successfully set the attached workflow to {workflow}."
+    agent.context.send_response("iopub", "update_workflow_state", agent.context.current_workflow_state)
+    return f"Successfully set the attached workflow to {workflow_title}."
 
 @tool()
 async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: AgentRef):
@@ -150,9 +148,9 @@ async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: 
     """
     if state != 'in_progress' and state != 'finished':
         return "State must be one of `in_progress` or `finished`."
-    if stage_name not in agent.context.attached_workflow["progress"]:
-        return f"Stage name not found. Must be one of: {agent.context.attached_workflow['progress'].keys()}"
-    agent.context.attached_workflow["progress"][stage_name] = WorkflowStageProgress(
+    if stage_name not in agent.context.current_workflow_state["progress"]:
+        return f"Stage name not found. Must be one of: {agent.context.current_workflow_state['progress'].keys()}"
+    agent.context.current_workflow_state["progress"][stage_name] = WorkflowStageProgress(
             code_cell_id='',
             state=state,
             results_markdown=results,
@@ -161,17 +159,17 @@ async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: 
     # summarize all of the results so far in a final format, if we just finished a step
     try:
         if state == 'finished':
-            workflow_prompt = agent.context.workflows[agent.context.attached_workflow["workflow_id"]].output_prompt
+            workflow_prompt = agent.context.workflows[agent.context.current_workflow_state["workflow_id"]].output_prompt
             if workflow_prompt:
                 workflow_results = [
                     f"### {stage_name}: \n\n{progress}\n\n"
-                    for stage_name,progress in agent.context.attached_workflow["progress"].items()
+                    for stage_name,progress in agent.context.current_workflow_state["progress"].items()
                 ]
-                agent.context.attached_workflow["final_response"] = await agent.oneshot(workflow_prompt, workflow_results)
+                agent.context.current_workflow_state["final_response"] = await agent.oneshot(workflow_prompt, workflow_results)
     except Exception as e:
         logger.error(f"Summarization for the workflow stage failed: {e}")
 
-    agent.context.send_response("iopub", "attached_workflow", agent.context.attached_workflow)
+    agent.context.send_response("iopub", "update_workflow_state", agent.context.current_workflow_state)
     return "Successfully marked stage."
 
 @tool(autosummarize=True, summarizer=run_code_summarizer)

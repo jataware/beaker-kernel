@@ -16,10 +16,10 @@ import { useWorkflows } from '../../composables/useWorkflows';
 import { marked } from "marked";
 
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
-const { attachedWorkflow } = useWorkflows(beakerSession);
+const { attachedWorkflow, attachedWorkflowFinalResponse } = useWorkflows(beakerSession);
 
 const finalResponse = computed(() => {
-    const workflow_response = beakerSession?.activeContext?.info?.workflows?.attached?.final_response;
+    const workflow_response = attachedWorkflowFinalResponse.value;
     // clone the response before filtering empty rows on markdown tables
     let response = `${workflow_response}`;
     if (response === "") {

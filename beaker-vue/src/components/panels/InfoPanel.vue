@@ -134,8 +134,8 @@ const contextNodes = computed<TreeNode[]>(() => {
     ]
     }];
 
-    if (context?.info?.workflows && Object.keys(context?.info?.workflows?.workflows ?? []).length > 0) {
-        const { workflows, attached } = context.info.workflows;
+    if (context?.info?.workflow_info && Object.keys(context?.info?.workflow_info?.workflows ?? []).length > 0) {
+        const { workflows, state } = context.info.workflow_info;
         displayableNodes.push({
             key: "5",
             label: 'Workflows',
@@ -143,7 +143,7 @@ const contextNodes = computed<TreeNode[]>(() => {
             expanded: true,
             children: Object.keys(workflows).map((workflow_id) => ({
                 key: `5-${workflow_id}`,
-                label: `${workflows[workflow_id].title}${attached?.workflow_id === workflow_id ? " (Active)" : ""}`,
+                label: `${workflows[workflow_id].title}${state?.workflow_id === workflow_id ? " (Active)" : ""}`,
             }))
         });
     }

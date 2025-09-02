@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Any, Self
+from typing import Literal, Optional, Any, TypedDict
 
 WORKFLOW_PREAMBLE_PROMPT="""
 
@@ -112,6 +112,30 @@ class Workflow:
                 for stage in self.stages
             ]
         )
+
+
+class WorkflowStageProgress(TypedDict):
+    state: Literal['in_progress', 'finished']
+    code_cell_id: str
+    results_markdown: str
+
+
+class WorkflowState(TypedDict):
+    workflow_id: str
+    progress: dict[str, WorkflowStageProgress | None]
+    final_response: str
+
+    @classmethod
+    def from_workflow(cls, workflow_id: str, workflow: Workflow) -> "WorkflowState": # type: ignore
+        return cls(
+            workflow_id=workflow_id,
+            progress={
+                stage.name: None
+                for stage in workflow.stages
+            },
+            final_response=""
+        )
+
 
 def create_available_workflows_prompt(
     workflows: list[Workflow],

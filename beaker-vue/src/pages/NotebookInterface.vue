@@ -313,8 +313,8 @@ const beakerSession = computed<BeakerSessionComponentType>(() => {
     return beakerInterfaceRef?.value?.beakerSession;
 });
 
-const workflowRoot = computed(() => beakerSession?.value?.activeContext?.info?.workflows);
-const attachedWorkflow = computed(() => workflowRoot.value?.workflows[workflowRoot?.value?.attached?.workflow_id]);
+const workflowRoot = computed(() => beakerSession?.value?.activeContext?.info?.workflow_info);
+const attachedWorkflow = computed(() => workflowRoot.value?.workflows[workflowRoot?.value?.state?.workflow_id]);
 
 const integrations = ref<IntegrationMap>({})
 watch(beakerSession, async () => {
@@ -339,10 +339,10 @@ const iopubMessage = (msg) => {
     else if (msg.header.msg_type === "kernel_state_info") {
         kernelStateInfo.value = msg.content;
     }
-    else if (msg.header.msg_type === "attached_workflow") {
-        const workflows = beakerSession?.value?.activeContext?.info?.workflows;
+    else if (msg.header.msg_type === "update_workflow_state") {
+        const workflows = beakerSession?.value?.activeContext?.info?.workflow_info;
         if (workflows) {
-            workflows.attached = msg.content;
+            workflows.state = msg.content;
             sideMenuRef.value.selectPanel('workflow-steps');
             rightSideMenuRef.value.selectPanel('workflow-output');
         }

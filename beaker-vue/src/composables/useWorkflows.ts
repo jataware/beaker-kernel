@@ -14,7 +14,7 @@ export interface WorkflowStage {
     description?: string[] | null;
 }
 
-export interface Workflow {
+export interface BeakerWorkflow {
     title: string;
     agent_description: string;
     human_description: string;
@@ -28,23 +28,24 @@ export interface Workflow {
 }
 
 interface UseWorkflowsReturn {
-    workflows: ComputedRef<{[key: string]: Workflow} | undefined>;
+    workflows: ComputedRef<{[key: string]: BeakerWorkflow} | undefined>;
     attachedWorkflowId: ComputedRef<string | undefined>;
-    attachedWorkflow: ComputedRef<Workflow | undefined>;
+    attachedWorkflow: ComputedRef<BeakerWorkflow | undefined>;
     attachedWorkflowProgress: ComputedRef<{[key: string]: {
         code_cell_id: string,
         state: 'in_progress' | 'finished',
         results_markdown: string
     }} | undefined>;
+    attachedWorkflowFinalResponse: ComputedRef<string | undefined>;
 }
 
 export function useWorkflows(beakerSession: BeakerSessionComponentType): UseWorkflowsReturn {
     const workflows = computed(() => {
-        return beakerSession?.activeContext?.info?.workflows?.workflows;
+        return beakerSession?.activeContext?.info?.workflow_info?.workflows;
     });
 
     const attachedWorkflowId = computed(() => {
-        return beakerSession?.activeContext?.info?.workflows?.attached?.workflow_id;
+        return beakerSession?.activeContext?.info?.workflow_info?.state?.workflow_id;
     });
 
     const attachedWorkflow = computed(() => {
@@ -52,13 +53,18 @@ export function useWorkflows(beakerSession: BeakerSessionComponentType): UseWork
     });
 
     const attachedWorkflowProgress = computed(() => {
-        return beakerSession?.activeContext?.info?.workflows?.attached?.progress;
+        return beakerSession?.activeContext?.info?.workflow_info?.state?.progress;
     });
+
+    const attachedWorkflowFinalResponse = computed(() => {
+        return beakerSession?.activeContext?.info?.workflow_info?.state?.final_response;
+    })
 
     return {
         workflows,
         attachedWorkflowId,
         attachedWorkflow,
         attachedWorkflowProgress,
+        attachedWorkflowFinalResponse
     };
 }

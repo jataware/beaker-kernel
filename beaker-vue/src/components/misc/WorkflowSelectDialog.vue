@@ -88,11 +88,12 @@ const hoveredCard = ref<undefined|string>(undefined);
 const searchText = ref<undefined|string>(undefined);
 
 const setWorkflow = (id?: string) => {
-    session.executeAction('set_workflow', {workflow: id ? id : "none"});
+    // convert undefined to null as well so undefined doesn't get in json body
+    session.executeAction('set_workflow', {workflow: id ? id : null});
     dialogRef.value.close();
 }
 
-const clear = () => setWorkflow(undefined);
+const clear = () => setWorkflow(null);
 
 const { workflows, attachedWorkflowId, attachedWorkflow } = useWorkflows(beakerSession);
 

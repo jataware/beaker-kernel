@@ -21,7 +21,7 @@ from beaker_kernel.lib.utils import action, get_socket, ExecutionTask, get_execu
 from beaker_kernel.lib.config import config as beaker_config
 from beaker_kernel.lib.integrations.base import BaseIntegrationProvider
 from beaker_kernel.lib.types import Integration
-from beaker_kernel.lib.workflow import Workflow, create_available_workflows_prompt
+from beaker_kernel.lib.workflow import Workflow, WorkflowState, WorkflowStageProgress, create_available_workflows_prompt
 
 
 from .jupyter_kernel_proxy import InterceptionFilter, JupyterMessage
@@ -46,16 +46,6 @@ class LinterCodeCellsPayload(TypedDict):
     notebook_id: str
     cells: list[LinterCodeCellPayload]
 
-class WorkflowStageProgress(TypedDict):
-    state: Literal['in_progress'] | Literal['finished']
-    code_cell_id: str
-    results_markdown: str
-
-class AttachedWorkflow(TypedDict):
-    workflow_id: str
-    progress: dict[str, WorkflowStageProgress | None]
-    final_response: str
-
 class BeakerContext:
     beaker_kernel: "BeakerKernel"
     subkernel: "BeakerSubkernel"
@@ -69,7 +59,7 @@ class BeakerContext:
     templates: Dict[str, Template]
 
     workflows: Dict[str, Workflow]
-    attached_workflow: Optional[AttachedWorkflow]
+    current_workflow_state: Optional[WorkflowState]
 
     preview_function_name: str = "generate_preview"
     kernel_state_function_name: str = "send_kernel_state"
@@ -88,7 +78,7 @@ class BeakerContext:
         self.jinja_env = None
         self.templates = {}
         self.workflows = {}
-        self.attached_workflow = None
+        self.current_workflow_state = None
         self.beaker_kernel = beaker_kernel
         self.config = config
         self.subkernel = self.get_subkernel()
@@ -142,7 +132,7 @@ class BeakerContext:
                 self.workflows[workflow_id] = workflow
                 if workflow.is_context_default:
                     self.attach_workflow(workflow_id)
-        if len(self.workflows) == 0:
+        if not self.workflows:
             logger.warning("Context has no workflows: disabling tools.")
             self.agent.disable("attach_workflow")
             self.agent.disable("mark_workflow_stage")
@@ -234,10 +224,10 @@ part of the ReAct loop associated with that query. As such, cells that follow a 
 loop was running and chronologically fit "inside" the query cell, as opposed to having been run afterwards.\
 """)
 
-        if len(self.workflows) > 0:
+        if self.workflows:
             parts.append(create_available_workflows_prompt(
                 list(self.workflows.values()),
-                self.workflows.get(self.attached_workflow["workflow_id"], None) if self.attached_workflow else None)
+                self.attached_workflow)
             )
 
         if self.integrations:
@@ -345,8 +335,8 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         else:
             agent_details = None
 
-        workflows = {
-            "attached": self.attached_workflow,
+        workflow_info = {
+            "state": self.current_workflow_state,
             "workflows": {
                 uuid: asdict(workflow)
                 for uuid, workflow in self.workflows.items()
@@ -359,7 +349,7 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             "actions": action_details,
             "custom_messages": custom_messages,
             "procedures": list(self.templates.keys()),
-            "workflows": workflows,
+            "workflow_info": workflow_info,
             "agent": agent_details,
             "debug": self.beaker_kernel.debug_enabled,
             "verbose": self.beaker_kernel.verbose,
@@ -511,27 +501,23 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         """
         return await self.preview()
 
+    @property
+    def attached_workflow(self) -> Workflow | None:
+        return self.workflows.get(self.current_workflow_state["workflow_id"], None) if self.current_workflow_state else None
+
     def attach_workflow(self, workflow_id: str | None):
         if workflow_id is None:
-            self.attached_workflow = None
+            self.current_workflow_state = None
         else:
-            self.attached_workflow = AttachedWorkflow(
+            self.current_workflow_state = WorkflowState.from_workflow(
                 workflow_id=workflow_id,
-                progress={
-                    stage.name: None
-                    for stage in self.workflows[workflow_id].stages
-                },
-                final_response=""
+                workflow=self.workflows[workflow_id]
             )
-        self.send_response("iopub", "attached_workflow", self.attached_workflow)
+        self.send_response("iopub", "update_workflow_state", self.current_workflow_state)
 
     @action()
     async def set_workflow(self, message):
-        if (content := message.content["workflow"].lower()) == "none":
-            self.attach_workflow(None)
-        else:
-            self.attach_workflow(content)
-
+        self.attach_workflow(message.content["workflow"])
 
     @action(default_payload=LinterCodeCellsPayload(notebook_id='nb1', cells=[LinterCodeCellPayload(cell_id='cell1', content='import os\nos.exit(0)')]))
     async def lint_code(self, message):
