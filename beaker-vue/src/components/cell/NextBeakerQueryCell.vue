@@ -273,7 +273,7 @@ const setupStickyBehavior = () => {
                 const cellRect = beakerCell.getBoundingClientRect();
                 const containerRect = cellContainer.getBoundingClientRect();
                 
-                if (cellRect.top < containerRect.top && !isSticky.value) {
+                if (cellRect.top < (containerRect.top - 30) && !isSticky.value) {
                     isSticky.value = true;
                     updateStickyPosition();
                     
