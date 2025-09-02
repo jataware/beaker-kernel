@@ -272,31 +272,25 @@ watch(truncateAgentCodeCells, () => {
 
 provide('truncateAgentCodeCells', truncateAgentCodeCells);
 
-const getCellComponent = (cell: any) => {
+const cellComponentMapping = (cell: any) => {
+    if (cell.cell_type === 'query') {
+        return NextGenBeakerQueryCell;
+    }
+    
     if (cell.cell_type === 'markdown' && cell.metadata?.beaker_cell_type) {
         const agentCellType = cell.metadata.beaker_cell_type;
         if (['thought', 'response', 'user_question', 'error', 'abort'].includes(agentCellType)) {
-            return BeakerAgentCell; // Your custom component
+            return BeakerAgentCell;
         }
     }
     
-    const defaultMapping = {
+    const standardMap = {
         'code': BeakerCodeCellComponent,
         'markdown': BeakerMarkdownCellComponent,
-        'query': NextGenBeakerQueryCell,
         'raw': BeakerRawCell,
     };
     
-    return defaultMapping[cell.cell_type] || BeakerMarkdownCellComponent;
-};
-
-const cellComponentMapping = {
-    'code': BeakerCodeCellComponent,
-    'markdown': BeakerMarkdownCellComponent,
-    'query': NextGenBeakerQueryCell,
-    'raw': BeakerRawCell,
-    
-    getCellComponent
+    return standardMap[cell.cell_type] || standardMap['code'];
 };
 
 const headerNav = computed(() => createHeaderNav('nextgen-notebook'));

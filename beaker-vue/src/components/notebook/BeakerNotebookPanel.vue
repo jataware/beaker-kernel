@@ -28,7 +28,7 @@
             @dragend="handleDragEnd"
         >
             <component
-                :is="cellMap.getCellComponent ? cellMap.getCellComponent(cell) : cellMap[cell.cell_type]"
+                :is="typeof cellMap === 'function' ? cellMap(cell) : cellMap[cell.cell_type]"
                 :cell="cell"
             />
         </BeakerCell>

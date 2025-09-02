@@ -68,6 +68,7 @@ const headerIconClass = computed(() => {
     return iconClasses[agentCellType.value] || 'pi pi-comment';
 });
 
+// Not using for now
 const useBrainIcon = computed(() => {
     return false;
     return ['thought', 'response'].includes(agentCellType.value);
@@ -75,7 +76,7 @@ const useBrainIcon = computed(() => {
 
 const showMoreDetailsButton = computed(() => {
     return false;
-    // TODO add to provide infor to users on LLM work done
+    // TODO add to provide info to users on LLM work done
     return ["thought", "response", "user_question"].includes(agentCellType.value);
 });
 
