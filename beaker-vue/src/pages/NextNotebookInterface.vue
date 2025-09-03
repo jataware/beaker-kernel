@@ -183,10 +183,8 @@ import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
 import DebugPanel from '../components/panels/DebugPanel.vue';
-// import AgentThinkingIndicator from '../components/misc/AgentThinkingIndicator.vue';
 import MediaPanel from '../components/panels/MediaPanel.vue';
 import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
-import Checkbox from "primevue/checkbox";
 
 import BeakerCodeCellComponent from '../components/cell/BeakerCodeCell.vue';
 import BeakerMarkdownCellComponent from '../components/cell/BeakerMarkdownCell.vue';
@@ -222,7 +220,6 @@ const {
     kernelStateInfo,
     beakerSession,
     defaultRenderers,
-    activeQueryCells,
     awaitingInputCell,
     awaitingInputQuestion,
     createHeaderNav,
@@ -233,7 +230,6 @@ const {
     statusChangedHandler,
     loadNotebook,
     handleNotebookSaved,
-    scrollToCell,
     beakerApp,
     restartSession,
     chatHistory,
