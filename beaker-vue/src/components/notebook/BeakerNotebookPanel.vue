@@ -154,6 +154,8 @@ defineExpose({
     position: relative;
     flex: 1;
     background-color: var(--p-surface-b);
+    // This z property is important, ensures the nice Beaker logo svg backdrop
+    // is visible (on top of the notebook)
     z-index: 50;
     overflow: auto;
     width: 100%;

@@ -487,7 +487,6 @@ function downloadNotebook() {
     }
 
     .truncate-toggle-container {
-        // display: flex;
         display: none; // don't display in other interfaces
         align-items: center;
         gap: 0.5rem;
