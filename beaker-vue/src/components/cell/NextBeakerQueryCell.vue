@@ -92,6 +92,10 @@ const isSticky = ref(false);
 
 const mockStickyForce = ref(false);
 
+/**
+ * Forces mocking sticky/active mode on a query cell. It doesn't set the metadata.query_status
+ * but still it iseful to try, debug or tweak the sticky-mode behavior and styling.
+ */
 const forceMock = computed(() => {
     return false;
     // return true;
@@ -125,7 +129,7 @@ const shouldShowThought = computed(() => {
 
 const toggleMockSticky = () => {
     mockStickyForce.value = !mockStickyForce.value;
-    console.log('Mock sticky force:', mockStickyForce.value);
+    // console.log('Mock sticky force:', mockStickyForce.value);
 };
 
 const isQueryActive = computed(() => {
@@ -154,10 +158,8 @@ watchEffect(() => {
     
     if (currentStatus === 'busy' && currentQueryStatus === 'pending') {
         cell.value.metadata.query_status = 'in-progress'
-        console.log('Transitioning to in-progress');
     } else if (currentStatus === 'failed') {
         cell.value.metadata.query_status = 'failed';
-        console.log('Transitioning to failed');
     } else if (currentStatus === 'idle' && currentEvents.length >= 0 && currentQueryStatus === 'in-progress') {
         if (currentLastExecution?.status === 'abort') {
             cell.value.metadata.query_status = 'aborted';
@@ -373,8 +375,15 @@ const handleWheelEvent = (event: WheelEvent) => {
 
 let cleanupSticky: (() => void) | undefined;
 
+const executeOnce = (...args: any[]) => {
+    if (['success', 'failed', 'in-progress'].includes(cell.value.metadata?.query_status)) {
+        return;
+    }
+    execute.call(this, args);
+}
+
 defineExpose({
-    execute,
+    execute: executeOnce,
     enter: () => {},
     exit,
     clear,
