@@ -66,7 +66,6 @@ import ThinkingIcon from '../../assets/icon-components/BrainIcon.vue';
 import type { BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import type { BeakerNotebookComponentType } from "../notebook/BeakerNotebook.vue";
 import { useBaseQueryCell } from './BaseQueryCell';
-// import Checkbox from 'primevue/checkbox';
 
 const props = defineProps([
     'index',
@@ -77,7 +76,6 @@ const {
   cell,
   events,
   execute,
-//   enter,
   exit,
   clear,
 } = useBaseQueryCell(props);
@@ -136,7 +134,7 @@ const isQueryActive = computed(() => {
     if (mockStickyForce.value) return true; // Force active for testing
     
     const queryStatus = cell.value.metadata?.query_status;
-    return queryStatus === 'in-progress' || queryStatus === 'pending';
+    return queryStatus === 'in-progress';
 });
 
 // const showCollapseControl = computed(() => {
