@@ -1,0 +1,38 @@
+---
+name: Beaker Kernel
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+    paths:
+      - 'beaker_kernel/lib/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test:
+    name: Run Python Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install hatch
+        run: pip install hatch
+
+      - name: Run tests
+        run: hatch run test
