@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 console.log("Extracting routes...")
 
@@ -27,7 +27,7 @@ globalThis.window = <any>{
 };
 globalThis.location = globalThis.window.location;
 
-const createRouter = (await import('./src/router'))?.default;
+const createRouter = (await import('../src/router'))?.default;
 const router = createRouter({});
 const routes = router.getRoutes();
 

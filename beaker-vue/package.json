@@ -7,7 +7,7 @@
     "serve": "vite",
     "build": "run-p type-check \"build-only {@}\" --; run-p routes --",
     "build-and-serve": "run-s serve",
-    "routes": "NODE_ENV=production vite-node extractRoutes.ts",
+    "routes": "NODE_ENV=production vite-node utils/extractRoutes.ts",
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
@@ -15,7 +15,8 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
-    "lock": "rm -f package-lock.json && npm i --os=linux --os=darwin --os=win32 --cpu=x64 --cpu=arm --cpu=arm64 --cpu=ia32 --package-lock-only"
+    "lock": "rm -f package-lock.json && npm i --userconfig lock.npmrc --package-lock-only",
+    "lock-check": "vite-node utils/lock-check.ts"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
