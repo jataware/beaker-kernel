@@ -24,11 +24,11 @@ jobs:
       - name: Typecheck beaker-ts
         run: tsc --noEmit --strict
         working-directory: ./beaker-ts
-      - name: Check beaker-vue lock file
-        run: npm run lock-check
-        working-directory: ./beaker-vue
       - name: Install beaker-vue requirements
         run: npm ci
+        working-directory: ./beaker-vue
+      - name: Check beaker-vue lock file
+        run: npm run lock-check
         working-directory: ./beaker-vue
       - name: Check beaker-vue types
         run: npm run build
