@@ -1,0 +1,35 @@
+name: Typescript tests
+on:
+  pull_request:
+    paths:
+      - 'beaker-vue/**'
+      - 'beaker-ts/**'
+jobs:
+  typescript-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - name: Install beaker-ts requirements
+        run: npm ci
+        working-directory: ./beaker-ts
+      - name: Build beaker-ts
+        run: npm run build
+        working-directory: ./beaker-ts
+      - name: Typecheck beaker-ts
+        run: tsc --noEmit --strict
+        working-directory: ./beaker-ts
+      - name: Install beaker-vue requirements
+        run: npm ci
+        working-directory: ./beaker-vue
+      - name: Check beaker-vue lock file
+        run: npm run lock-check
+        working-directory: ./beaker-vue
+      - name: Check beaker-vue types
+        run: npm run build
+        working-directory: ./beaker-vue
