@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick, inject } from 'vue';
+import { ref, computed, watch, nextTick, inject, type Ref, type ComputedRef } from 'vue';
 import { JupyterMimeRenderer } from 'beaker-kernel';
 import type { IBeakerCell, IMimeRenderer } from 'beaker-kernel';
 import type { BeakerNotebookComponentType } from '../components/notebook/BeakerNotebook.vue';
@@ -10,7 +10,58 @@ import { standardRendererFactories } from '@jupyterlab/rendermime';
 import type { IBeakerTheme } from '../plugins/theme';
 import type { IChatHistory } from '../components/panels/ChatHistoryPanel';
 
-export function useNotebookInterface() {
+interface UseNotebookInterfaceReturn {
+    // refs
+    beakerNotebookRef: Ref<BeakerNotebookComponentType | undefined>;
+    beakerInterfaceRef: Ref;
+    filePanelRef: Ref<any>;
+    configPanelRef: Ref<any>;
+    sideMenuRef: Ref<any>;
+    rightSideMenuRef: Ref<any>;
+    agentQueryRef: Ref<any>;
+    
+    // state
+    connectionStatus: Ref<string>;
+    debugLogs: Ref<object[]>;
+    rawMessages: Ref<object[]>;
+    saveAsFilename: Ref<string | null>;
+    isMaximized: Ref<boolean>;
+    chatHistory: Ref<IChatHistory | undefined>;
+    integrations: Ref<any[]>;
+    contextPreviewData: Ref<any>;
+    kernelStateInfo: Ref<any>;
+    copiedCell: Ref<IBeakerCell | null>;
+    
+    // computed
+    activeQueryCells: ComputedRef<Array<{
+        id: string;
+        source: string;
+        status: string;
+    }>>;
+    awaitingInputCell: ComputedRef<any>;
+    awaitingInputQuestion: ComputedRef<string | null>;
+    beakerSession: ComputedRef<BeakerSessionComponentType>;
+    defaultRenderers: IMimeRenderer<BeakerRenderOutput>[];
+    
+    // functions
+    createHeaderNav: (currentPage: string) => NavOption[];
+    createNotebookKeyBindings: Function;
+    createIopubMessageHandler: () => (msg: any) => void;
+    anyMessageHandler: (msg: any, direction: string) => void;
+    unhandledMessageHandler: (msg: any) => void;
+    statusChangedHandler: (newStatus: string) => void;
+    loadNotebook: (notebookJSON: any, filename: string) => void;
+    handleNotebookSaved: (path: string) => Promise<void>;
+    scrollToCell: (cellId: string) => void;
+    restartSession: () => Promise<void>;
+    
+    // injections
+    theme: any;
+    toggleDarkMode: () => void;
+    beakerApp: any;
+}
+
+export function useNotebookInterface(): UseNotebookInterfaceReturn {
     const beakerNotebookRef = ref<BeakerNotebookComponentType>();
     const beakerInterfaceRef = ref();
     const filePanelRef = ref();
