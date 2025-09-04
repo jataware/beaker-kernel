@@ -1,6 +1,6 @@
 <template>
     <BaseInterface
-        :title="$tmpl._('short_title', 'Beaker Next')"
+        :title="$tmpl._('short_title', 'Beaker Notebook')"
         :title-extra="saveAsFilename"
         :header-nav="headerNav"
         ref="beakerInterfaceRef"
@@ -235,7 +235,7 @@ const {
     chatHistory,
 } = useNotebookInterface();
 
-beakerApp.setPage("nextgen-notebook");
+beakerApp.setPage("notebook");
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionIdFromUrl = urlParams.has("session") ? urlParams.get("session") : "nextgen_notebook_dev_session";
@@ -295,7 +295,7 @@ const cellComponentMapping = (cell: any) => {
     return standardMap[cell.cell_type] || standardMap['code'];
 };
 
-const headerNav = computed(() => createHeaderNav('nextgen-notebook'));
+const headerNav = computed(() => createHeaderNav('notebook'));
 
 const notebookKeyBindings = createNotebookKeyBindings();
 

@@ -11,6 +11,7 @@
         @iopub-msg="iopubMessage"
         @open-file="loadNotebook"
         :style-overrides="['chat']"
+        pageClass="chat-interface"
     >
         <div class="chat-layout">
             <div class="chat-container">
@@ -267,8 +268,8 @@ const headerNav = computed((): NavOption[] => {
         }
 
     ];
-    if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "next"))) {
-        const href = "/" + (beakerApp?.config?.pages?.notebook?.default ? '' : 'next') + window.location.search;
+    if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "notebook"))) {
+        const href = "/" + (beakerApp?.config?.pages?.notebook?.default ? '' : 'notebook') + window.location.search;
         nav.push(
             {
                 type: 'link',

@@ -1,6 +1,6 @@
 <template>
     <div
-        class="cell-container"
+        class="panel-cell-container"
     >
         <div class="flex-background">
             <slot name="notebook-background" />
@@ -39,7 +39,7 @@ const chatCompatibleCells = computed(() => {
 </script>
 
 <style lang="scss">
-.cell-container {
+.panel-cell-container {
     position: relative;
     display: flex;
     flex: 1;

@@ -26,12 +26,13 @@ export type Routes = { [key: Slug]: Route }
 const defaultRouteMap: Routes = {
     "notebook": {
       "path": "/notebook",
-      "component": () => import('@/pages/NotebookInterface.vue'),
+      "component": () => import('@/pages/NextNotebookInterface.vue'),
       "role": "home",
     },
     "next-notebook": {
-      "path": "/next", 
-      "component": () => import('@/pages/NextNotebookInterface.vue'),
+      "path": "/legacy", 
+      "component": () => import('@/pages/NotebookInterface.vue'),
+      "role": "alt",
     },
     "chat": {
       "path": "/chat",

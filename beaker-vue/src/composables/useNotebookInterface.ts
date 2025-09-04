@@ -139,12 +139,12 @@ export function useNotebookInterface(): UseNotebookInterfaceReturn {
             });
         }
         
-        if (currentPage !== 'nextgen-notebook') {
+        if (currentPage !== 'notebook') {
             nav.push({
                 type: 'link',
-                href: '/nextgen-notebook' + window.location.search,
+                href: '/notebook' + window.location.search,
                 icon: 'sparkles',
-                label: 'Navigate to NextGen notebook view',
+                label: 'Navigate to notebook view',
             });
         }
         

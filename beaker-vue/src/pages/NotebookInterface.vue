@@ -258,7 +258,7 @@ const rightMenu = ref<typeof SideMenuPanel>();
 const { theme, toggleDarkMode } = inject<IBeakerTheme>('theme');
 const beakerApp = inject<any>("beakerAppConfig");
 
-beakerApp.setPage("notebook");
+beakerApp.setPage("legacy-notebook");
 
 const contextPreviewData = ref<any>();
 const kernelStateInfo = ref();
