@@ -134,12 +134,15 @@ import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
 import { downloadFileDOM, getDateTimeString } from '../../util';
 
 import StreamlineExportDialog from "../misc/StreamlineExportDialog.vue"
+import { type BeakerSessionComponentType } from "../session/BeakerSession.vue";
 
 const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
 const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
 const showOverlay = inject<(contents: string, header?: string) => void>('show_overlay');
 const dialog = useDialog();
+
+const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 
 const addCellMenuItems = computed(() => {
     return Object.entries(cellMapping).map(([name, obj]) => {
@@ -281,7 +284,19 @@ const analyzeCells = async () => {
 
 const resetNotebook = async () => {
     if (window.confirm(`This will reset your entire session, clearing the notebook and removing any updates to the environment. Proceed?`)) {
+        const currentContextPayload = {
+            context: beakerSession.activeContext?.slug,
+            language: beakerSession.activeContext?.language?.slug,
+            context_info: beakerSession?.activeContext?.config ?? {},
+            debug: beakerSession?.activeContext?.info?.debug,
+            verbose: beakerSession?.activeContext?.info?.verbose,
+        };
+
         toRaw(session).reset();
+
+        await session.sessionReady;
+        beakerSession.setContext(currentContextPayload)
+
         saveAsFilename.value = undefined;
         emit("notebook-saved", undefined);
         if (notebook.cellCount <= 0) {
