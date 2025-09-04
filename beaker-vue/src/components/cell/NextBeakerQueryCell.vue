@@ -6,7 +6,7 @@
         @click="handleCellClick"
         @wheel="handleWheelEvent"
     >
-        <div v-if="forceMock && isSelected" class="mock-controls">
+        <div v-if="enableStickyDebug && isSelected" class="mock-controls">
             <button @click="toggleMockSticky" class="mock-button">
                 {{ mockStickyForce ? 'Disable' : 'Enable' }} Sticky Test
             </button>
@@ -93,10 +93,7 @@ const mockStickyForce = ref(false);
  * Forces mocking sticky/active mode on a query cell. It doesn't set the metadata.query_status
  * but still it iseful to try, debug or tweak the sticky-mode behavior and styling.
  */
-const forceMock = computed(() => {
-    return false;
-    // return true;
-});
+const enableStickyDebug = false;
 
 const isSelected = computed(() => {
     return cell.value.id === notebook?.selectedCellId;

@@ -47,7 +47,7 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
             if (typeof cell === 'string') {
                 newCellId = cell;
             }
-            else if (Object.prototype.hasOwnProperty.call(cell, "cell")) {
+            else if (Object.hasOwn(cell, "cell")) {
                 newCellId = (cell as IBeakerCellComponent).cell.id;
             }
             else {
