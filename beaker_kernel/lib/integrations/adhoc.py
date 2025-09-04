@@ -383,6 +383,8 @@ class AdhocIntegrationProvider(MutableBaseIntegrationProvider):
         agent_details = {spec.slug: spec.description for spec in self.specifications}
         delimiter = "```"
         parts = [
+            self.prompt_instructions if self.prompt_instructions else "",
+            ""
             f"{self.display_name}:",
             "You have access to the following integrations to use with the `draft_integration_code` and `consult_integration_docs` tools,",
             "as well as their descriptions for when and why you should use the given integration, delimited in three backticks.",
