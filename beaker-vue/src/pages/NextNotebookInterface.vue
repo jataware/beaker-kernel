@@ -53,19 +53,19 @@
                 </BeakerNotebookPanel>
 
                 <div v-if="hasActiveQueryCells" class="follow-scroll-agent">
-                    <Button 
+                    <Button
                         size="large"
                         icon="pi pi-arrow-down"
-                        severity="secondary" 
-                        rounded 
+                        severity="secondary"
+                        rounded
                         class="scroll-agent-button"
                         aria-label="Follow scroll as agent creates cells"
                         v-tooltip="'Select to toggle auto-scroll when the assistant is working and creating cells'"
                     />
                 </div>
-                
+
                 <div class="agent-input-section">
-                    
+
                     <BeakerAgentQuery
                         ref="agentQueryRef"
                         class="agent-query-container"
@@ -85,6 +85,16 @@
                 initialWidth="25vi"
                 :maximized="isMaximized"
             >
+                <SideMenuPanel
+                    id="workflow-steps"
+                    label="Workflow Steps"
+                    icon="pi pi-list-check"
+                    v-if="attachedWorkflow"
+                >
+                    <WorkflowStepPanel>
+                    </WorkflowStepPanel>
+                </SideMenuPanel>
+
                 <SideMenuPanel label="Context Info" icon="pi pi-home">
                     <InfoPanel/>
                 </SideMenuPanel>
@@ -136,6 +146,15 @@
                 initialWidth="25vi"
                 :maximized="isMaximized"
             >
+                <SideMenuPanel
+                    id="workflow-output"
+                    label="Workflow Output"
+                    icon="pi pi-list-check"
+                    v-if="attachedWorkflow"
+                >
+                    <WorkflowOutputPanel>
+                    </WorkflowOutputPanel>
+                </SideMenuPanel>
                 <SideMenuPanel label="Preview" icon="pi pi-eye" no-overflow>
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
@@ -196,9 +215,13 @@ import { useNotebookInterface } from '../composables/useNotebookInterface';
 import { useQueryCellFlattening } from '../composables/useQueryCellFlattening';
 import { listIntegrations, type IntegrationMap } from '../util/integration';
 
+import WorkflowStepPanel from '@/components/panels/WorkflowStepPanel.vue';
+import WorkflowOutputPanel from '@/components/panels/WorkflowOutputPanel.vue';
+import { useWorkflows } from '@/composables/useWorkflows';
+
 const props = defineProps([
     "config",
-    "connectionSettings", 
+    "connectionSettings",
     "sessionName",
     "sessionId",
     "defaultKernel",
@@ -244,6 +267,9 @@ const renderersFromProps = computed(() => props.renderers);
 
 const truncateAgentCodeCells = ref<boolean>(false);
 
+// ensures that attached workflow is kept current with the fact that beakerSession.value.activeContext might not be connected yet
+const attachedWorkflow = computed(() => useWorkflows(beakerSession.value).attachedWorkflow.value)
+
 onBeforeMount(() => {
     const saved = localStorage.getItem('beaker-truncate-agent-code-cells');
     if (saved !== null) {
@@ -253,7 +279,7 @@ onBeforeMount(() => {
 
 const updateTruncatePreference = () => {
     localStorage.setItem('beaker-truncate-agent-code-cells', JSON.stringify(truncateAgentCodeCells.value));
-    
+
     if (beakerSession.value?.session?.notebook?.cells) {
         beakerSession.value.session.notebook.cells.forEach(cell => {
             if (cell.cell_type === 'query' && cell.metadata) {
@@ -280,18 +306,18 @@ const cellComponentMapping = (cell: any) => {
     if (!cell) {
         return standardMap;
     }
-    
+
     if (cell.cell_type === 'query') {
         return NextGenBeakerQueryCell;
     }
-    
+
     if (cell.cell_type === 'markdown' && cell.metadata?.beaker_cell_type) {
         const agentCellType = cell.metadata.beaker_cell_type;
         if (['thought', 'response', 'user_question', 'error', 'abort'].includes(agentCellType)) {
             return BeakerAgentCell;
         }
     }
-    
+
     return standardMap[cell.cell_type] || standardMap['code'];
 };
 
@@ -304,7 +330,7 @@ const iopubMessageHandler = createIopubMessageHandler();
 const hasActiveQueryCells = computed(() => {
     return false;
     if (!beakerSession.value?.session?.notebook?.cells) return false;
-    
+
     return beakerSession.value.session.notebook.cells.some(cell => {
         if (cell.cell_type !== 'query') return false;
         const queryStatus = cell.metadata?.query_status;
@@ -313,7 +339,7 @@ const hasActiveQueryCells = computed(() => {
 });
 
 const { setupQueryCellFlattening, resetProcessedEvents } = useQueryCellFlattening(
-    () => beakerSession.value, 
+    () => beakerSession.value,
     truncateAgentCodeCells
 );
 

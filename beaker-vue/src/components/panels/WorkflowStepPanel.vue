@@ -96,7 +96,7 @@ const createHeader = (name) => {
 
 // autoselector
 watch(attachedWorkflowProgress, (newValue) => {
-    for (const [stageName, progress] of Object.entries(newValue)) {
+    for (const [stageName, progress] of Object.entries(newValue ?? {})) {
         if (progress?.state === 'in_progress') {
             const newestStep = attachedWorkflow.value.stages.findIndex((stage) => stage?.name === stageName)
             if (newestStep !== undefined) {
