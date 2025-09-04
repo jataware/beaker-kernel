@@ -1,33 +1,34 @@
 import { ref, watch, nextTick, type Ref } from 'vue';
 import type { BeakerSessionComponentType } from '../components/session/BeakerSession.vue';
+import type { IBeakerQueryThoughtEvent } from 'beaker-kernel';
 
 export function useQueryCellFlattening(
-    beakerSession: () => BeakerSessionComponentType, 
+    beakerSession: () => BeakerSessionComponentType,
     truncateAgentCodeCells: Ref<boolean>
 ) {
     const processedQueryEvents = ref<Map<string, Set<number>>>(new Map());
 
     const findCellByMetadata = (parentQueryId: string, eventIndex: number, cellType: 'thought' | 'response' | 'code' | 'user_question' | 'user_answer' | 'error' | 'abort') => {
         const notebook = beakerSession().session.notebook;
-        return notebook.cells.find(cell => 
+        return notebook.cells.find(cell =>
             cell.metadata?.parent_query_cell === parentQueryId &&
             cell.metadata?.query_event_index === eventIndex &&
             cell.metadata?.beaker_cell_type === cellType
         );
     };
-    
+
     // scan existing cells
     const initializeProcessedEvents = () => {
         const notebook = beakerSession()?.session?.notebook;
         if (!notebook) return;
-        
+
         processedQueryEvents.value.clear();
-        
+
         for (const cell of notebook.cells) {
             if (cell.metadata?.parent_query_cell && cell.metadata?.query_event_index !== undefined) {
                 const parentQueryId = cell.metadata.parent_query_cell;
                 const eventIndex = cell.metadata.query_event_index;
-                
+
                 if (!processedQueryEvents.value.has(parentQueryId)) {
                     processedQueryEvents.value.set(parentQueryId, new Set());
                 }
@@ -35,20 +36,20 @@ export function useQueryCellFlattening(
             }
         }
     };
-    
+
     // insert position after a query cell
     const findInsertionPosition = (queryCellId: string): number => {
         const notebook = beakerSession().session.notebook;
         const queryCellIndex = notebook.cells.findIndex(cell => cell.id === queryCellId);
         if (queryCellIndex === -1) return notebook.cells.length; // append at end if not found
-        
+
         // last cell that's related the query
         let insertIndex = queryCellIndex + 1;
-        while (insertIndex < notebook.cells.length && 
+        while (insertIndex < notebook.cells.length &&
                notebook.cells[insertIndex].metadata?.parent_query_cell === queryCellId) {
             insertIndex++;
         }
-        
+
         return insertIndex;
     };
 
@@ -82,24 +83,23 @@ export function useQueryCellFlattening(
         moveCellToPosition(beakerSession().session.notebook.cells.length - 1, insertPosition);
         return codeCell;
     };
-    
-    const createThoughtCell = (thoughtContent: string, queryCellId: string, eventIndex: number) => {
+
+    const createThoughtCell = (thoughtContent: IBeakerQueryThoughtEvent["content"], queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'thought')) {
             // console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
             return;
         }
 
-        if(thoughtContent.length === 0 || thoughtContent === null || thoughtContent === "Thinking...") {
+        if(thoughtContent?.thought === null || thoughtContent?.thought.length === 0 || thoughtContent.thought === "Thinking...") {
             // console.warn(`Thought cell for query ${queryCellId}, event ${eventIndex} is practically empty, skipping`);
             return;
         }
 
-        const metadata = createCellMetadata('thought', queryCellId, eventIndex);
-        const markdownContent = `**Beaker Agent:**\n\n${thoughtContent}`;
-        
+        const metadata = createCellMetadata('thought', queryCellId, eventIndex, {thought: thoughtContent});
+        const markdownContent = `**Beaker Agent:**\n\n${thoughtContent.thought}`;
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
-    
+
     const createResponseCell = (responseContent: string, queryCellId: string, eventIndex: number) => {
         if (findCellByMetadata(queryCellId, eventIndex, 'response')) {
             // console.warn(`Response cell for query ${queryCellId}, event ${eventIndex} exists, skipping`);
@@ -114,10 +114,10 @@ export function useQueryCellFlattening(
         }
 
         const metadata = createCellMetadata('response', queryCellId, eventIndex);
-        
+
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
-    
+
     const createCodeCell = (codeCellId: string, queryCell: any, queryCellId: string, eventIndex: number) => {
         const currentTruncateValue = truncateAgentCodeCells.value;
 
@@ -133,19 +133,19 @@ export function useQueryCellFlattening(
         }
 
         const shouldCollapse = currentTruncateValue === true;
-        
+
         const metadata = createCellMetadata('code', queryCellId, eventIndex, {
             source_cell_id: codeCellId,
             collapsed: shouldCollapse
         });
 
         const newCodeCell = createAndPositionCodeCell(
-            childCell.source, 
-            queryCellId, 
-            metadata, 
+            childCell.source,
+            queryCellId,
+            metadata,
             childCell.outputs || []
         );
-        
+
         newCodeCell.execution_count = childCell.execution_count;
         if (childCell.last_execution) {
             newCodeCell.last_execution = {
@@ -158,7 +158,7 @@ export function useQueryCellFlattening(
                 checkpoint_index: undefined
             };
         }
-        
+
         return newCodeCell;
     };
 
@@ -183,7 +183,7 @@ export function useQueryCellFlattening(
         }
 
         const metadata = createCellMetadata('error', queryCellId, eventIndex);
-        
+
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
 
@@ -195,7 +195,7 @@ export function useQueryCellFlattening(
 
         const markdownContent = `**Agent Question:**\n\n${questionContent}`;
         const metadata = createCellMetadata('user_question', queryCellId, eventIndex);
-        
+
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
 
@@ -203,7 +203,7 @@ export function useQueryCellFlattening(
         // the question should be in a previous event index
         let questionCell = null;
         let questionEventIndex = eventIndex - 1;
-        
+
         // look backwards for the most recent question cell
         while (questionEventIndex >= 0 && !questionCell) {
             questionCell = findCellByMetadata(queryCellId, questionEventIndex, 'user_question');
@@ -234,64 +234,64 @@ export function useQueryCellFlattening(
 
         const markdownContent = `**User Response:**\n\n${replyContent}`;
         const metadata = createCellMetadata('user_answer', queryCellId, eventIndex);
-        
+
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
-    
+
     const setupQueryCellFlattening = (cells: () => any[]) => {
         watch(
             cells,
             (cellsArray) => {
                 if (!cellsArray) return;
-                
+
                 if (processedQueryEvents.value.size === 0) {
                     initializeProcessedEvents();
                 }
-                
+
                 for (const cell of cellsArray) {
                     if (cell.cell_type === 'query') {
                         const queryStatus = cell.metadata?.query_status;
                         const isInProgress = queryStatus === 'in-progress' || queryStatus === 'pending';
                         const isCompleted = queryStatus === 'success' || queryStatus === 'failed' || queryStatus === 'aborted';
-                        
+
                         if (isCompleted) {
                             continue;
                         }
-                        
+
                         if (isInProgress) {
                             if (!cell.metadata) {
                                 cell.metadata = {};
                             }
                             cell.metadata.is_flattened = true;
-                            
+
                             if (!processedQueryEvents.value.has(cell.id)) {
                                 processedQueryEvents.value.set(cell.id, new Set());
                             }
-                            
+
                             watch(
                                 () => cell.events,
                                 (events) => {
                                     if (!events || events.length === 0) return;
-                                    
+
                                     const processedEvents = processedQueryEvents.value.get(cell.id);
-                                    
-                                    const isCompleted = events.length > 0 && 
+
+                                    const isCompleted = events.length > 0 &&
                                         ['response', 'error', 'abort'].includes(events[events.length - 1].type);
-                                        
+
                                     if (isCompleted && processedEvents.size === events.length) {
                                         // console.log(`Query ${cell.id} is completed and all events processed, skipping`);
                                         return;
                                     }
-                                    
+
                                     events.forEach((event, eventIndex) => {
                                         if (processedEvents.has(eventIndex)) {
                                             return;
                                         }
-                                        
+
                                         processedEvents.add(eventIndex);
-                                        
+
                                         if (event.type === 'thought' && event.content?.thought) {
-                                            createThoughtCell(event.content.thought, cell.id, eventIndex);
+                                            createThoughtCell(event.content, cell.id, eventIndex);
                                         } else if (event.type === 'code_cell' && event.content?.cell_id) {
                                             nextTick(() => {
                                                 createCodeCell(event.content.cell_id, cell, cell.id, eventIndex);
@@ -318,11 +318,11 @@ export function useQueryCellFlattening(
             { deep: true, immediate: true }
         );
     };
-    
+
     const resetProcessedEvents = () => {
         processedQueryEvents.value.clear();
     };
-    
+
     return {
         processedQueryEvents,
         setupQueryCellFlattening,

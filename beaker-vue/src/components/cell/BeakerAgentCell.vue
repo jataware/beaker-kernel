@@ -2,29 +2,51 @@
     <div class="agent-cell">
         <div class="agent-cell-header">
             <div class="agent-cell-title">
-                <div v-if="useBrainIcon" 
-                     class="agent-cell-icon brain-icon" 
+                <div v-if="useBrainIcon"
+                     class="agent-cell-icon brain-icon"
                      >
                      <BrainIconSvg />
                 </div>
-                <i v-else 
-                   :class="headerIconClass" 
+                <i v-else
+                   :class="headerIconClass"
                    class="agent-cell-icon">
                 </i>
                 <span class="agent-cell-label">{{ cellTypeLabel }}</span>
             </div>
             <div class="agent-cell-actions">
-                <Button v-if="showMoreDetailsButton" 
-                        @click="showMoreDetails" 
-                        size="small" 
+                <ToggleButton
+                    v-if="toolCall && !ignoredTools.includes(toolCall.toolName)"
+                    class="agent-cell-toolcall-toggle execution-badge"
+                    v-model="showToolInfo"
+                >
+                    <span class="pi pi-wrench"></span>
+                </ToggleButton>
+                <Button v-if="showMoreDetailsButton"
+                        @click="showMoreDetails"
+                        size="small"
                         severity="secondary"
                         text>
                     More Details
                 </Button>
             </div>
         </div>
-        
         <div class="agent-cell-content" v-html="renderedMarkdown"></div>
+        <div v-if="showToolInfo" class="tool-info-display">
+            <div class="tool-info-header">Tool name: <span style="font-family: monospace; margin-left: 4rem;">{{ toolCall.toolName }}</span></div>
+            <div class="tool-info-arguments">
+                <div class="tool-info-header">Tool arguments:</div>
+                <DataTable
+                    showGridlines
+                    stripedRows
+                    size="small"
+                    class="tool-info-argument-datatable"
+                    :value="Object.entries(toolCall.toolInput).map(([key, value]) => ({key, value}))"
+                >
+                    <Column field="key" header="Parameter"></Column>
+                    <Column field="value" header="Value"></Column>
+                </DataTable>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -32,6 +54,9 @@
 import { ref, inject, computed, nextTick, onBeforeMount, getCurrentInstance, onBeforeUnmount} from "vue";
 import { marked } from 'marked';
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
+import ToggleButton from "primevue/togglebutton";
+import DataTable from "primevue/datatable";
+import Column from "primevue/column";
 // import type { BeakerNotebookComponentType } from '../notebook/BeakerNotebook.vue';
 import Button from 'primevue/button';
 import BrainIconSvg from '../../assets/icon-components/BrainIcon.vue';
@@ -43,6 +68,12 @@ const props = defineProps([
 const instance = getCurrentInstance();
 const beakerSession = inject<BeakerSessionComponentType>("beakerSession");
 const cell = ref(props.cell);
+const showToolInfo = ref(false);
+
+const ignoredTools = [
+    'run_code',
+    'ask_user',
+]
 
 const agentCellType = computed(() => props.cell?.metadata?.beaker_cell_type);
 
@@ -55,6 +86,18 @@ const cellTypeLabel = computed(() => {
         'abort': 'Aborted'
     };
     return labels[agentCellType.value] || 'Beaker Agent';
+});
+
+const toolCall = computed(() => {
+    const thought = cell.value?.metadata?.thought;
+    return (
+        thought?.tool_name
+        ? {
+            toolName: thought.tool_name,
+            toolInput: thought.tool_input,
+        }
+        : null
+    );
 });
 
 const headerIconClass = computed(() => {
@@ -84,10 +127,10 @@ const renderedMarkdown = computed(() => {
     if (typeof props.cell === 'object' && props.cell) {
         const { source } = props.cell;
         const cellSource = Array.isArray(source) ? source.join("") : source;
-        
+
         const cleanedSource = cellSource
             .replace(/^\*\*[^*]+\*\*\n\n/, '');
-            
+
         return marked.parse(cleanedSource);
     }
     return "";
@@ -164,7 +207,7 @@ export default {
 
 .agent-cell-content {
     padding-right: 2rem;
-    
+
     img {
         max-width: 100%;
     }
@@ -178,7 +221,7 @@ export default {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    
+
     svg {
         width: 1.2em;
         height: 1.2em;
@@ -189,6 +232,48 @@ export default {
     .brain-svg-path {
         fill: var(--p-primary-500);
     }
+}
+
+.agent-cell-toolcall-toggle {
+    aspect-ratio: 1;
+
+    background-color: unset;
+    border: unset;
+
+    &:hover {
+        background-color: var(--p-togglebutton-background);
+    }
+
+    &.p-togglebutton-checked {
+        color: var(--p-primary-500);
+        background-color: var(--p-primary-100);
+
+        &:hover {
+            color: var(--p-primary-600);
+            background-color: var(--p-primary-200);
+        }
+    }
+
+    span {
+        padding: 0;
+        background-color: inherit;
+        color: inherit;
+    }
+}
+
+.tool-info-display {
+    margin-top: 1rem;
+    border-top: 1px solid var(--p-primary-200);
+
+    .tool-info-header {
+        padding-top: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+    }
+}
+
+.tool-info-argument-datatable .p-datatable-header-cell {
+    background-color: var(--p-primary-50);
 }
 
 </style>
