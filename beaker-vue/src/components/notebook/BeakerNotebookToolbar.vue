@@ -10,6 +10,14 @@
                     :severity="props.defaultSeverity"
                     :model="addCellMenuItems"
                     text
+                    :pt="{
+                        pcButton: {
+                            root: {
+                                title: 'Add code cell after selection',
+                                'aria-label': 'Add code cell after selection'
+                            },
+                        }
+                    }"
                 />
                 <Button
                     @click="notebook.removeCell()"

@@ -79,16 +79,6 @@ export function useNotebookInterface() {
     const createHeaderNav = (currentPage: string): NavOption[] => {
         const nav = [];
         
-        // navigation, other interfaces
-        if (currentPage !== 'notebook') {
-            nav.push({
-                type: 'link',
-                href: '/notebook' + window.location.search,
-                icon: 'book',
-                label: 'Navigate to regular notebook view',
-            });
-        }
-        
         if (currentPage !== 'chat') {
             nav.push({
                 type: 'link',

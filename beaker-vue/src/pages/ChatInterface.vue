@@ -267,8 +267,8 @@ const headerNav = computed((): NavOption[] => {
         }
 
     ];
-    if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "notebook"))) {
-        const href = "/" + (beakerApp?.config?.pages?.notebook?.default ? '' : 'notebook') + window.location.search;
+    if (!(beakerApp?.config?.pages) || (Object.hasOwn(beakerApp.config.pages, "next"))) {
+        const href = "/" + (beakerApp?.config?.pages?.notebook?.default ? '' : 'next') + window.location.search;
         nav.push(
             {
                 type: 'link',
