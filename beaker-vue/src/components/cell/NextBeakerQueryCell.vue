@@ -1,6 +1,6 @@
 <template>
-    <div 
-        class="next-query-cell" 
+    <div
+        class="next-query-cell"
         ref="queryCellRef"
         :class="{ 'sticky-query': isSticky }"
         @click="handleCellClick"
@@ -11,11 +11,11 @@
                 {{ mockStickyForce ? 'Disable' : 'Enable' }} Sticky Test
             </button>
             <span class="status-debug">
-                Mock: {{ mockStickyForce ? 'ON' : 'OFF' }} | 
+                Mock: {{ mockStickyForce ? 'ON' : 'OFF' }} |
                 Status: {{ cell.metadata?.query_status || 'undefined' }}
             </span>
         </div>
-        
+
         <div class="query-cell-grid">
             <div class="query-content">
                 <div class="query-prompt">
@@ -24,7 +24,7 @@
                         <span class="query-label-user">User</span>
                     </div>
                     <div class="query-text">{{ cell.source }}</div>
-                    
+
                     <div v-if="shouldShowThought && lastThoughtText" class="last-thought">
                         <div class="thought-label">
                             <span class="pi pi-robot thought-icon"></span>
@@ -32,7 +32,7 @@
                         </div>
                         <div class="thought-content">{{ lastThoughtText }}</div>
                     </div>
-                    
+
                     <div v-if="!isSticky && isQueryActive" class="thinking-indicator">
                         <span class="thought-icon">
                             <ThinkingIcon/>
@@ -42,7 +42,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="state-info">
                 <div>
                     <Badge
@@ -106,9 +106,9 @@ const isSelected = computed(() => {
 const lastThoughtText = computed(() => {
     const thoughtEvents = events.value.filter(event => event.type === 'thought');
     if (thoughtEvents.length === 0) return null;
-    
+
     const lastThought = thoughtEvents[thoughtEvents.length - 1];
-    
+
     if (typeof lastThought.content === 'string') {
         return lastThought.content;
     } else if (typeof lastThought.content === 'object' && lastThought.content?.thought) {
@@ -117,7 +117,7 @@ const lastThoughtText = computed(() => {
         const content = lastThought.content;
         return content.thought || content.text || content.message || JSON.stringify(content);
     }
-    
+
     return null;
 });
 
@@ -132,7 +132,7 @@ const toggleMockSticky = () => {
 
 const isQueryActive = computed(() => {
     if (mockStickyForce.value) return true; // Force active for testing
-    
+
     const queryStatus = cell.value.metadata?.query_status;
     return queryStatus === 'in-progress';
 });
@@ -153,7 +153,7 @@ watchEffect(() => {
     const currentQueryStatus = cell?.value?.metadata?.query_status;
     const currentEvents = events.value;
     const currentLastExecution = cell.value.last_execution;
-    
+
     if (currentStatus === 'busy' && currentQueryStatus === 'pending') {
         cell.value.metadata.query_status = 'in-progress'
     } else if (currentStatus === 'failed') {
@@ -163,13 +163,13 @@ watchEffect(() => {
             cell.value.metadata.query_status = 'aborted';
             return;
         }
-        
+
         const hasAbortEvent = currentEvents.some(event => event.type === 'abort');
         if (hasAbortEvent) {
             cell.value.metadata.query_status = 'aborted';
             return;
         }
-        
+
         const hasResponseEvent = currentEvents.some(event => event.type === 'response');
         if (hasResponseEvent && currentEvents.length > 0) {
             cell.value.metadata.query_status = 'success';
@@ -179,9 +179,9 @@ watchEffect(() => {
 
 const badgeSeverity = computed(() => {
     if (mockStickyForce.value) return 'info';
-    
+
     const queryStatus = cell.value.metadata?.query_status;
-    
+
     switch (queryStatus) {
         case 'success':
             return 'success';
@@ -199,9 +199,9 @@ const badgeSeverity = computed(() => {
 
 const badgeIcon = computed(() => {
     if (mockStickyForce.value) return 'pi pi-spinner pi-spin busy-icon';
-    
+
     const queryStatus = cell.value.metadata?.query_status;
-    
+
     switch (queryStatus) {
         case 'success':
             return 'pi pi-check bolded';
@@ -220,9 +220,9 @@ const badgeIcon = computed(() => {
 
 const badgeTooltip = computed(() => {
     if (mockStickyForce.value) return 'Mock sticky mode active';
-    
+
     const queryStatus = cell.value.metadata?.query_status;
-    
+
     switch (queryStatus) {
         case 'success':
             return 'Query completed successfully';
@@ -249,7 +249,7 @@ const setupStickyBehavior = () => {
 
     const updateStickyPosition = () => {
         if (!queryCellRef.value || !isSticky.value) return;
-        
+
         const containerRect = cellContainer.getBoundingClientRect();
         queryCellRef.value.style.setProperty('--sticky-top', `${containerRect.top}px`);
         queryCellRef.value.style.setProperty('--sticky-left', `${containerRect.left}px`);
@@ -272,21 +272,21 @@ const setupStickyBehavior = () => {
 
                 const cellRect = beakerCell.getBoundingClientRect();
                 const containerRect = cellContainer.getBoundingClientRect();
-                
+
                 if (cellRect.top < (containerRect.top - 30) && !isSticky.value) {
                     isSticky.value = true;
                     updateStickyPosition();
-                    
+
                 } else if (cellRect.top >= containerRect.top && isSticky.value) {
                     isSticky.value = false;
-                    
+
                     queryCellRef.value.style.removeProperty('--sticky-top');
                     queryCellRef.value.style.removeProperty('--sticky-left');
                     queryCellRef.value.style.removeProperty('--sticky-right');
                 } else if (isSticky.value) {
                     updateStickyPosition();
                 }
-                
+
                 ticking = false;
             });
             ticking = true;
@@ -304,7 +304,7 @@ const setupStickyBehavior = () => {
     }
 
     cellContainer.addEventListener('scroll', handleScroll, { passive: true });
-    
+
     return () => {
         cellContainer.removeEventListener('scroll', handleScroll);
         if (resizeObserver) {
@@ -315,26 +315,26 @@ const setupStickyBehavior = () => {
 
 const handleQueryCompletion = async () => {
     if (!isSticky.value) return;
-    
+
     await nextTick();
-    
+
     if (queryCellRef.value) {
         queryCellRef.value.style.removeProperty('--sticky-top');
         queryCellRef.value.style.removeProperty('--sticky-left');
         queryCellRef.value.style.removeProperty('--sticky-right');
     }
-    
+
     isSticky.value = false;
-    
+
     // This would scroll back to the query cell when it's completed
     // but we may not want that. We may want to scroll to the assistant response cell,
     // or not at all. Leaving this in commented, as an option, for now.
     // if (queryCellRef.value) {
     //     const beakerCell = queryCellRef.value.closest('.beaker-cell') as HTMLElement;
     //     if (beakerCell) {
-    //         beakerCell.scrollIntoView({ 
-    //             behavior: 'smooth', 
-    //             block: 'start' 
+    //         beakerCell.scrollIntoView({
+    //             behavior: 'smooth',
+    //             block: 'start'
     //         });
     //     }
     // }
@@ -342,7 +342,7 @@ const handleQueryCompletion = async () => {
 
 watchEffect(() => {
     if (mockStickyForce.value) return;
-    
+
     const queryStatus = cell.value.metadata?.query_status;
     if (queryStatus === 'success' || queryStatus === 'failed' || queryStatus === 'aborted') {
         if (isSticky.value) {
@@ -362,7 +362,7 @@ const handleWheelEvent = (event: WheelEvent) => {
     if (isSticky.value) {
         event.preventDefault();
         event.stopPropagation();
-        
+
         const cellContainer = queryCellRef.value?.closest('.cell-container') as HTMLElement;
         if (cellContainer) {
             cellContainer.scrollTop += event.deltaY;
@@ -398,11 +398,11 @@ onBeforeMount(() => {
             cell.value.metadata.query_status = 'pending';
         }
     }
-    
+
     if (cell.value.metadata?.auto_collapse_code_cells !== undefined) {
         autoCollapseCodeCells.value = cell.value.metadata.auto_collapse_code_cells;
     }
-    
+
     nextTick(() => {
         cleanupSticky = setupStickyBehavior();
     });
@@ -413,7 +413,7 @@ onBeforeUnmount(() => {
     if (cleanupSticky) {
         cleanupSticky();
     }
-    
+
     if (queryCellRef.value) {
         queryCellRef.value.style.removeProperty('--sticky-top');
         queryCellRef.value.style.removeProperty('--sticky-left');
@@ -428,7 +428,7 @@ onBeforeUnmount(() => {
     background-color: var(--p-surface-a);
     border-radius: var(--p-surface-border-radius);
     position: relative;
-    
+
     &.sticky-query {
         position: fixed !important;
         top: var(--sticky-top, 0) !important;
@@ -445,17 +445,17 @@ onBeforeUnmount(() => {
 
         padding: 8px 12px !important;
         margin: 0.5rem !important;
-        
+
         pointer-events: auto !important;
-        
+
         .query-cell-grid {
             margin: 0 !important;
         }
-        
+
         .query-content {
             margin: 0.1rem 0.25rem 0.33rem 0rem !important;
         }
-        
+
         animation: stickySlideDown 0.2s ease-out;
     }
 }
@@ -479,7 +479,7 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     gap: 8px;
-    
+
     .mock-button {
         background: var(--p-orange-500);
         color: white;
@@ -489,13 +489,13 @@ onBeforeUnmount(() => {
         font-size: 12px;
         cursor: pointer;
         opacity: 0.8;
-        
+
         &:hover {
             opacity: 1;
             background: var(--p-orange-600);
         }
     }
-    
+
     .status-debug {
         font-size: 10px;
         color: var(--p-text-color-secondary);
@@ -511,7 +511,7 @@ onBeforeUnmount(() => {
     padding: 0.5rem;
     background-color: var(--p-surface-b);
     border-radius: var(--p-surface-border-radius);
-    
+
     .thought-label {
         display: flex;
         align-items: center;
@@ -520,13 +520,13 @@ onBeforeUnmount(() => {
         font-weight: 600;
         color: var(--p-text-color-secondary);
         margin-bottom: 0.25rem;
-        
+
         .thought-icon {
             color: var(--p-primary-500);
             font-size: 0.875rem;
         }
     }
-    
+
     .thought-content {
         font-size: 0.875rem;
         color: var(--p-text-color);
@@ -602,7 +602,7 @@ onBeforeUnmount(() => {
     aspect-ratio: 1/1;
     border-radius: 15%;
     position: relative;
-    
+
     &.secondary {
         background-color: var(--p-surface-e);
     }
@@ -621,7 +621,7 @@ onBeforeUnmount(() => {
 .brain-icon {
     width: 1rem;
     height: 1rem;
-    
+
     svg {
         width: 100%;
         height: 100%;
@@ -644,13 +644,13 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    
+
     .thought-icon {
         display: inline-block;
         height: 1rem;
         color: var(--p-primary-500);
         flex-shrink: 0;
-        
+
         svg {
             fill: currentColor;
             stroke: currentColor;
@@ -658,18 +658,19 @@ onBeforeUnmount(() => {
             animation: thinking-pulse 2s ease-in-out infinite;
         }
     }
-    
+
     .thinking-text {
         font-size: 0.875rem;
         color: var(--p-text-color);
         font-weight: 500;
     }
-    
+
     .thinking-animation {
         font-size: 1rem;
         flex-shrink: 0;
         width: 2.5em;
         margin-left: auto;
+        clip-path: view-box;
     }
 }
 
@@ -685,10 +686,10 @@ onBeforeUnmount(() => {
 
 @keyframes thinking-ellipsis {
     from {
-        right: 2.5em;
+        right: 100%;
     }
     to {
-        right: 0;
+        right: -100%;
     }
 }
 
