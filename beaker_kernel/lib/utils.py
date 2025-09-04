@@ -342,5 +342,5 @@ async def ensure_async(fn: Coroutine|Callable):
         return fn
 
 def slugify(name: str):
-    slug = "_".join(re.split(r"\W", name.lower()))
+    slug = "_".join(re.split(r"\W", name.lower().strip()))
     return slug
