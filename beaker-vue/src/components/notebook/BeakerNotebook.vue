@@ -207,11 +207,13 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
                 console.warn("attempted to convert cell not found in parent cell in place; cell not found");
                 return;
             }
-            if (!Object.keys(this.cellMap).includes(cellType)) {
+            const cellMap = typeof this.cellMap === 'function' ? this.cellMap(null) : this.cellMap;
+            const availableConversions = Object.keys(cellMap);
+            if (!availableConversions.includes(cellType)) {
                 console.warn("invalid cell type provided for conversion target");
                 return;
             }
-            const newCell = new this.cellMap[cellType].modelClass({...cell});
+            const newCell = new cellMap[cellType].modelClass({...cell});
             newCell.cell_type = cellType;
             this.notebook.cells.splice(cellIndex, 1, newCell);
         }
@@ -219,8 +221,9 @@ export const BeakerNotebookComponent: DefineComponent<any, any, any>  = defineCo
 
     computed: {
         defaultCellModel(): typeof BeakerBaseCell {
-            if (this.cellMap && this.cellMap.length > 0) {
-                const modelClass = (Object.values(this.cellMap)[0] as any).modelClass;
+            const cellMap = typeof this.cellMap === 'function' ? this.cellMap(null) : this.cellMap;
+            if (cellMap && Object.keys(cellMap).length > 0) {
+                const modelClass = (Object.values(cellMap)[0] as any).modelClass;
                 return modelClass as typeof modelClass;
             }
             else {

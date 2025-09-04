@@ -11,6 +11,7 @@
         @iopub-msg="iopubMessage"
         @open-file="loadNotebook"
         :style-overrides="['chat']"
+        pageClass="chat-interface"
     >
         <div class="chat-layout">
             <div class="chat-container">

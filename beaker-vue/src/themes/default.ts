@@ -31,7 +31,7 @@ const BeakerTheme: Preset = definePreset(Aura, {
                 }
 
             },
-            // Allow defualt dark palette generation from light version.
+            // Allow default dark palette generation from light version.
             dark: {
                 surface: <PaletteDesignToken>{
                     ...lightSurfacePalette,
@@ -90,7 +90,24 @@ const BeakerTheme: Preset = definePreset(Aura, {
             borderColor: `solid 1px ${dt('content.border.color')}`,
         },
     },
-        css: ({dt}) => `
+    css: ({dt}) => `
+:root {
+    /* Define missing CSS custom properties for backward compatibility */
+    --highlight-text-color: ${dt('primary.color')};
+    --text-color: ${dt('text.color')};
+    --text-color-secondary: ${dt('text.muted.color')};
+}
+
+/* Light mode specific variables */
+:root:not(.beaker-dark) {
+    --text-color-secondary: #6b7280; /* Gray-500 for better contrast in light mode */
+}
+
+/* Dark mode specific variables */
+:root.beaker-dark {
+    --text-color-secondary: #9ca3af; /* Gray-400 for better contrast in dark mode */
+}
+
 .p-panel-content {
     border-radius: ${dt('panel.contentBorderRadius')};
 }
@@ -105,7 +122,7 @@ const BeakerTheme: Preset = definePreset(Aura, {
     border-bottom-left-radius: inherit;
     border-bottom-right-radius: inherit;
 }
-        `,
+    `,
 });
 
 export default BeakerTheme;

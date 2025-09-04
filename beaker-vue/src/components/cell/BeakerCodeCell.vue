@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick } from "vue";
+import { ref, shallowRef, computed, inject, getCurrentInstance, onBeforeMount, onBeforeUnmount, nextTick, watch } from "vue";
 import CodeCellOutput from "./BeakerCodeCellOutput.vue";
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
@@ -214,6 +214,43 @@ onBeforeUnmount(() => {
     delete beakerSession.cellRegistry[cell.value.id];
 });
 
+/* Sync execution_count for derived cells from query cell flattening
+ * This is needed as cells may be created immediately and returned, while flattening,
+ but the kernel may not be ready yet to report the source code cell execution results/count.
+ The watcher is smart enough to break early if needsExecutionCountSync is falsey which will
+ be a lot more efficient when that's the case.
+ */
+const isFlattenedCell = computed(() => {
+    return cell.value.metadata?.source_cell_id && 
+           cell.value.metadata?.beaker_cell_type === 'code';
+});
+const needsExecutionCountSync = computed(() => {
+    return isFlattenedCell.value && 
+           (cell.value.execution_count === null || cell.value.execution_count === undefined);
+});
+watch(
+    () => {
+        if (!needsExecutionCountSync.value) return null;
+
+        const sourceCellId = cell.value.metadata?.source_cell_id;
+        const parentQueryCellId = cell.value.metadata?.parent_query_cell;
+        
+        if (sourceCellId && parentQueryCellId) {
+            const queryCell = beakerSession.session.notebook.cells.find(c => c.id === parentQueryCellId);
+            if (queryCell && queryCell.children) {
+                const sourceCell = queryCell.children.find(child => child.id === sourceCellId);
+                return sourceCell?.execution_count;
+            }
+        }
+        return null;
+    },
+    (newExecutionCount) => {
+        if (newExecutionCount !== null && newExecutionCount !== undefined) {
+            cell.value.execution_count = newExecutionCount;
+        }
+    }
+);
+
 </script>
 
 <script lang="ts">
@@ -248,7 +285,7 @@ export default {
     }
     .cm-focused {
         outline: none;
-        border: 1px solid var(--purple-200);
+        border: 1px solid var(--p-primary-200);
     }
     &.dark-mode {
         .cm-focused {

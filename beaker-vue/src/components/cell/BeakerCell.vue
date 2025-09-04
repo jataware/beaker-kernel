@@ -6,6 +6,7 @@
         ref="beakerCellRef"
         :class="{collapsed}"
         :cell-id="cell.id"
+        :style="collapsed ? { '--dynamic-collapse-height': collapseHeight } : {}"
     >
         <div class="collapse-box" @click.prevent="collapseCell"></div>
         <div
@@ -44,13 +45,13 @@
                     @pointerenter="overlayMenuHoverHandler"
                     @pointerleave="overlayMenuHoverHandler"
                 >
-                    <div v-tooltip.left="'Change Cell Type'">
+                    <div v-tooltip.left="'Change Cell Type'" v-if="!shouldHideCellTypeAndExecuteButtons">
                         <Select
                             :name="`${cell.id}-celltype`"
                             class="cell-type-selector overlay-menu-button"
                             :model-value="cell.cell_type"
                             @update:model-value="(value) => {notebook.convertCellType(cell, value); hoverMenuRef.hide();}"
-                            :options="Object.keys(cellMap || {})"
+                            :options="Object.keys(typeof cellMap === 'function' ? cellMap(null) : cellMap || {})"
                             :dropdown-icon="cellIcon"
                             :label-style="{display: 'none'}"
                             append-to="self"
@@ -69,6 +70,7 @@
                     </div>
                     <Button
                         v-tooltip.left="'Execute cell'"
+                        v-if="!shouldHideCellTypeAndExecuteButtons"
                         @click="beakerSession.findNotebookCellById(cell.id).execute(); hoverMenuRef.hide();"
                         icon="pi pi-play"
                         size="small"
@@ -155,6 +157,20 @@ const collapsed = computed(() => {
     return metadata.value?.collapsed || false;
 });
 
+const collapseHeight = computed(() => {
+    if (!collapsed.value || !beakerCellRef.value) {
+        return 'auto';
+    }
+    
+    const cellElement = beakerCellRef.value;
+    const naturalHeight = cellElement.scrollHeight;
+    if (naturalHeight < 250) {
+        return '3.5em';
+    } else {
+        return '250px';
+    }
+});
+
 const cellIconMap = {
     "code": "pi pi-code",
     "markdown": "pi pi-pencil",
@@ -164,14 +180,42 @@ const cellIconMap = {
 
 const cellIcon = computed(() => cellIconMap[props.cell.cell_type]);
 
+const isThoughtCell = computed(() => {
+    return props.cell.cell_type === 'markdown' && 
+           props.cell.metadata?.beaker_cell_type === 'thought';
+});
+
+const isResponseCell = computed(() => {
+    return props.cell.cell_type === 'markdown' && 
+           props.cell.metadata?.beaker_cell_type === 'response';
+});
+
+const isQuestionCell = computed(() => {
+    return props.cell.cell_type === 'markdown' && 
+           props.cell.metadata?.beaker_cell_type === 'user_question';
+});
+
+const isErrorCell = computed(() => {
+    return props.cell.cell_type === 'markdown' && 
+           props.cell.metadata?.beaker_cell_type === 'error';
+});
+
+const isAbortCell = computed(() => {
+    return props.cell.cell_type === 'markdown' && 
+           props.cell.metadata?.beaker_cell_type === 'abort';
+});
+
+const shouldHideCellTypeAndExecuteButtons = computed(() => {
+    return isThoughtCell.value || isResponseCell.value || isQuestionCell.value || isErrorCell.value || isAbortCell.value || 
+    props.cell.cell_type === 'query';
+});
+
 enum CellState {
     Success = 'success',
     Modified = 'modified',
     Error = 'error',
     Pending = 'pending',
 }
-
-const cellState = ref<CellState>(CellState.Pending);
 
 const collapseCell = (evt) => {
     if (metadata.value) {
@@ -224,6 +268,7 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
     position: relative;
     background-color: var(--p-surface-a);
     --collapsed-height: 3.5em;
+    --dynamic-collapse-height: var(--collapsed-height);
     min-height: 3.5em;
 
     grid:
@@ -252,24 +297,12 @@ const overlayMenuHoverHandler = (event: PointerEvent) => {
     }
 
     &.collapsed {
-
-        // filter: drop-shadow(0 0.5rem 0.3rem crimson);
         overflow: hidden;
 
         .cm-editor {
-            max-height: var(--collapsed-height);
+            max-height: var(--dynamic-collapse-height);
         }
-        max-height: var(--collapsed-height);
-
-        // &:after {
-        //     content: "";
-        //     position: absolute;
-        //     bottom: -4px;
-        //     left: 0;
-        //     right: 0;
-        //     height: 16px;
-        //     box-shadow: inset 0 -10px 8px -4px var(--p-surface-border);
-        // }
+        max-height: var(--dynamic-collapse-height);
     }
 
     &.selected.collapsed .collapse-box {

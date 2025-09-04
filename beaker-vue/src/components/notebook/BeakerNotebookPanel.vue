@@ -10,6 +10,8 @@
             :index="index"
             :key="`outercell-${cell.id}`"
             class="beaker-cell"
+            :hide-cell-type-selector="cell.cell_type === 'query'"
+            :hide-execute-button="cell.cell_type === 'query'"
             :class="{
                 selected: (cell.id === notebook.selectedCellId),
                 'drag-source': (index == dragSourceIndex),
@@ -26,7 +28,7 @@
             @dragend="handleDragEnd"
         >
             <component
-                :is="cellMap[cell.cell_type]"
+                :is="typeof cellMap === 'function' ? cellMap(cell) : cellMap[cell.cell_type]"
                 :cell="cell"
             />
         </BeakerCell>
@@ -152,6 +154,9 @@ defineExpose({
     position: relative;
     flex: 1;
     background-color: var(--p-surface-b);
+    // This z property is important, ensures the nice Beaker logo svg backdrop
+    // is visible (on top of the notebook)
+    z-index: 50;
     overflow: auto;
     width: 100%;
     height: 100%;
