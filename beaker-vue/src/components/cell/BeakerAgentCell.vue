@@ -48,13 +48,13 @@ const agentCellType = computed(() => props.cell?.metadata?.beaker_cell_type);
 
 const cellTypeLabel = computed(() => {
     const labels = {
-        'thought': 'Assistant',
-        'response': 'Assistant',
-        'user_question': 'Assistant',
+        'thought': 'Beaker Agent',
+        'response': 'Beaker Agent',
+        'user_question': 'Beaker Agent',
         'error': 'Error',
         'abort': 'Aborted'
     };
-    return labels[agentCellType.value] || 'Assistant';
+    return labels[agentCellType.value] || 'Beaker Agent';
 });
 
 const headerIconClass = computed(() => {

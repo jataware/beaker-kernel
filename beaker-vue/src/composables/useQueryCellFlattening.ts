@@ -95,7 +95,7 @@ export function useQueryCellFlattening(
         }
 
         const metadata = createCellMetadata('thought', queryCellId, eventIndex);
-        const markdownContent = `**Assistant:**\n\n${thoughtContent}`;
+        const markdownContent = `**Beaker Agent:**\n\n${thoughtContent}`;
         
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
     };
@@ -108,7 +108,7 @@ export function useQueryCellFlattening(
 
         let markdownContent = '';
         if (typeof responseContent === 'string') {
-            markdownContent = `**Assistant:**\n\n${responseContent}`;
+            markdownContent = `**Beaker Agent:**\n\n${responseContent}`;
         } else if (responseContent && typeof responseContent === 'object') {
             markdownContent = `\`\`\`json\n${JSON.stringify(responseContent, null, 2)}\n\`\`\``;
         }
@@ -193,7 +193,7 @@ export function useQueryCellFlattening(
             return;
         }
 
-        const markdownContent = `**Assistant Question:**\n\n${questionContent}`;
+        const markdownContent = `**Agent Question:**\n\n${questionContent}`;
         const metadata = createCellMetadata('user_question', queryCellId, eventIndex);
         
         return createAndPositionMarkdownCell(markdownContent, queryCellId, metadata);
