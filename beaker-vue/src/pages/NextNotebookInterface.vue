@@ -430,69 +430,6 @@ watch(beakerSession, async () => {
         font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace;
     }
 
-    /* global scrollbar styling */
-    * {
-        /* firefox */
-        scrollbar-width: thin;
-        scrollbar-color: #a3a6aa transparent;
-    }
-
-    /* webkit (chrome/safari/edge) */
-    *::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-
-    *::-webkit-scrollbar-track {
-        background: transparent;
-        border: none;
-    }
-
-    *::-webkit-scrollbar-thumb {
-        background: #a3a6aa;
-        border-radius: 4px;
-        border: none;
-    }
-
-    *::-webkit-scrollbar-thumb:hover {
-        background: #a3a6aa;
-    }
-
-    *::-webkit-scrollbar-corner {
-        background: transparent;
-    }
-
-    .next-notebook-container {
-        scrollbar-width: thin;
-        scrollbar-color: #a3a6aa transparent transparent;
-    }
-
-    .beaker-notebook {
-        scrollbar-width: thin;
-        scrollbar-color: #a3a6aa transparent transparent;
-    }
-
-    /* dark mode scrollbar overrides */
-    .beaker-dark * {
-        scrollbar-color: var(--p-surface-d) transparent;
-    }
-
-    .beaker-dark *::-webkit-scrollbar-thumb {
-        background: var(--p-surface-d);
-    }
-
-    .beaker-dark *::-webkit-scrollbar-thumb:hover {
-        background: var(--p-surface-d);
-    }
-
-    .beaker-dark .next-notebook-container {
-        scrollbar-color: var(--p-surface-d) transparent transparent;
-    }
-
-    .beaker-dark .beaker-notebook {
-        scrollbar-color: var(--p-surface-d) transparent transparent;
-    }
-
     .agent-thinking-indicator-container {
         background-color: var(--p-surface-b);
         border-bottom: 1px solid var(--p-surface-border);
