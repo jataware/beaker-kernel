@@ -10,6 +10,14 @@
                     :severity="props.defaultSeverity"
                     :model="addCellMenuItems"
                     text
+                    :pt="{
+                        pcButton: {
+                            root: {
+                                title: 'Add code cell after selection',
+                                'aria-label': 'Add code cell after selection'
+                            },
+                        }
+                    }"
                 />
                 <Button
                     @click="notebook.removeCell()"
@@ -32,6 +40,15 @@
                     :severity="props.defaultSeverity"
                     text
                 />
+                <div class="truncate-toggle-container"
+                        v-tooltip.bottom="{value: 'Collapse agent code cells by default', showDelay: 300}"
+                >
+                    <ToggleSwitch
+                        v-model="truncateAgentCodeCells"
+                        inputId="auto-truncate-toggle"
+                    />
+                    <label for="auto-truncate-toggle" class="truncate-label">Collapse Agent Code</label>
+                </div>
                 <slot name="start-extra"></slot>
             </slot>
         </template>
@@ -115,10 +132,12 @@ import { computed, inject, ref, capitalize, watch, onBeforeMount, toRaw } from "
 import { PageConfig } from '@jupyterlab/coreutils';
 import { URLExt } from '@jupyterlab/coreutils';
 import type { BeakerSession, BeakerBaseCell } from 'beaker-kernel';
+import { BeakerNotebook, BeakerCodeCell, BeakerMarkdownCell, BeakerRawCell, BeakerQueryCell } from 'beaker-kernel';
 import type { BeakerNotebookComponentType } from './BeakerNotebook.vue';
 import contentDisposition from "content-disposition";
 
 import Button from "primevue/button";
+import ToggleSwitch from "primevue/toggleswitch";
 import ChevronDownIcon from '@primevue/icons/chevrondown'
 import type { ButtonProps } from "primevue/button";
 import SplitButton from 'primevue/splitbutton';
@@ -132,17 +151,43 @@ import { useDialog } from "primevue";
 import AnnotationButton from "../misc/buttons/AnnotationButton.vue"
 import OpenNotebookButton from "../misc/OpenNotebookButton.vue";
 import { downloadFileDOM, getDateTimeString } from '../../util';
-
 import StreamlineExportDialog from "../misc/StreamlineExportDialog.vue"
 
 const session = inject<BeakerSession>('session');
 const notebook = inject<BeakerNotebookComponentType>('notebook');
-const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}}>('cell-component-mapping');
+const cellMapping = inject<{[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}} | ((cell: any) => {[key: string]: {icon: string, modelClass: typeof BeakerBaseCell}})>('cell-component-mapping');
 const showOverlay = inject<(contents: string, header?: string) => void>('show_overlay');
 const dialog = useDialog();
 
+interface BeakerNotebookToolbarProps {
+    defaultSeverity?: ButtonProps["badgeSeverity"];
+    saveAvailable?: boolean;
+    saveAsFilename?: string;
+    truncateAgentCodeCells?: boolean;
+}
+
+const props = withDefaults(defineProps<BeakerNotebookToolbarProps>(), {
+    defaultSeverity: "info",
+    saveAvailable: false,
+    truncateAgentCodeCells: false,
+});
+
+const emit = defineEmits([
+    "notebook-saved",
+    "open-file",
+    "update-truncate-preference",
+]);
+
+const truncateAgentCodeCells = computed({
+    get: () => props.truncateAgentCodeCells,
+    set: (value) => {
+        emit('update-truncate-preference', value);
+    }
+});
+
 const addCellMenuItems = computed(() => {
-    return Object.entries(cellMapping).map(([name, obj]) => {
+    const cellMap = typeof cellMapping === 'function' ? cellMapping(null) : cellMapping;
+    return Object.entries(cellMap).map(([name, obj]) => {
         return {
             label: `${capitalize(name)} Cell`,
             icon: obj.icon,
@@ -154,22 +199,6 @@ const addCellMenuItems = computed(() => {
             },
         }
     })
-});
-
-const emit = defineEmits([
-    "notebook-saved",
-    "open-file",
-])
-
-interface BeakerNotebookToolbarProps {
-    defaultSeverity?: ButtonProps["badgeSeverity"];
-    saveAvailable?: boolean;
-    saveAsFilename?: string;
-}
-
-const props = withDefaults(defineProps<BeakerNotebookToolbarProps>(), {
-    defaultSeverity: "info",
-    saveAvailable: false,
 });
 
 const saveAsFilename = ref<string>(props.saveAsFilename);
@@ -184,14 +213,41 @@ const exportAsTypes = ref<MenuItem[]>([
 ]);
 
 const handleExport = (format: string, mimetype: string) => {
+
     const url = URLExt.join(PageConfig.getBaseUrl(), 'export', format);
+
+    // process the notebook first by cloning and removing events from flattened query cells
+    // then create a new BeakerNotebook instance and populate it with processed data
+    const processedNotebookData = processNotebookForExport(notebook.notebook);
+    const tempNotebook = new BeakerNotebook();
+    tempNotebook.fromJSON(processedNotebookData);
+    
+    // ensure all cells are proper BeakerBaseCell instances before calling toIPynb
+    if (tempNotebook.content.cells && Array.isArray(tempNotebook.content.cells)) {
+        tempNotebook.content.cells = tempNotebook.content.cells.map((cell: any) => {
+            if (cell.cell_type === 'raw') {
+                return new BeakerRawCell(cell);
+            } else if (cell.cell_type === 'code') {
+                return new BeakerCodeCell(cell);
+            } else if (cell.cell_type === 'query') {
+                return new BeakerQueryCell(cell);
+            } else if (cell.cell_type === 'markdown') {
+                return new BeakerMarkdownCell(cell);
+            } else {
+                return new BeakerRawCell(cell);
+            }
+        });
+    }
+    
+    const exportNotebook = tempNotebook.toIPynb();
+    
     fetch(
         url,
         {
             "method": "POST",
             "body": JSON.stringify({
                 name: saveAsFilename.value,
-                content: notebook.notebook.toIPynb()
+                content: exportNotebook
             }),
             "headers": {
                 "Content-Type": "application/json;charset=UTF-8"
@@ -217,12 +273,36 @@ const exportAction = (format: string, mimetype: string) => {
         resetSaveAsFilename();
     }
     if (format === "streamline") {
+        // process the notebook first by cloning and removing events from flattened query cells
+        // then create a new BeakerNotebook instance and populate it with processed data
+        const processedNotebookData = processNotebookForExport(notebook.notebook);
+        const tempNotebook = new BeakerNotebook();
+        tempNotebook.fromJSON(processedNotebookData);
+        
+        if (tempNotebook.content.cells && Array.isArray(tempNotebook.content.cells)) {
+            tempNotebook.content.cells = tempNotebook.content.cells.map((cell: any) => {
+                if (cell.cell_type === 'raw') {
+                    return new BeakerRawCell(cell);
+                } else if (cell.cell_type === 'code') {
+                    return new BeakerCodeCell(cell);
+                } else if (cell.cell_type === 'query') {
+                    return new BeakerQueryCell(cell);
+                } else if (cell.cell_type === 'markdown') {
+                    return new BeakerMarkdownCell(cell);
+                } else {
+                    return new BeakerRawCell(cell);
+                }
+            });
+        }
+        
+        const exportNotebook = tempNotebook.toIPynb();
+        
         dialog.open(
             StreamlineExportDialog,
             {
                 data: {
                     saveAsFilename: saveAsFilename.value,
-                    notebook: notebook.notebook.toIPynb(),
+                    notebook: exportNotebook,
                 },
                 props: {
                     modal: true,
@@ -234,8 +314,47 @@ const exportAction = (format: string, mimetype: string) => {
     else {
         handleExport(format, mimetype);
     }
-
 }
+
+const processNotebookForExport = (notebookData: any) => {
+    const clonedNotebook = JSON.parse(JSON.stringify(notebookData));
+
+    if (clonedNotebook.cells && Array.isArray(clonedNotebook.cells)) {
+        clonedNotebook.cells = clonedNotebook.cells.map((cell: any) => {
+            // handle query cells with flattened=true metadata - remove events array
+            if (cell.cell_type === 'query' && cell.metadata?.is_flattened === true) {
+                const { events, ...cellWithoutEvents } = cell;
+                return {
+                    ...cellWithoutEvents,
+                    metadata: {
+                        ...cell.metadata,
+                        events: undefined
+                    }
+                };
+            }
+            return cell;
+        });
+    }
+    
+    if (clonedNotebook.content && clonedNotebook.content.cells && Array.isArray(clonedNotebook.content.cells)) {
+        clonedNotebook.content.cells = clonedNotebook.content.cells.map((cell: any) => {
+            // handle query cells with flattened=true metadata - remove events array
+            if (cell.cell_type === 'query' && cell.metadata?.is_flattened === true) {
+                const { events, ...cellWithoutEvents } = cell;
+                return {
+                    ...cellWithoutEvents,
+                    metadata: {
+                        ...cell.metadata,
+                        events: undefined
+                    }
+                };
+            }
+            return cell;
+        });
+    }
+
+    return clonedNotebook;
+};
 
 const refreshExportTypes = async () => {
     const ignoredFormats = new Set(["custom", "qtpdf", "qtpng", "webpdf"]);
@@ -317,7 +436,30 @@ async function saveAs() {
 }
 
 function downloadNotebook() {
-    const data = JSON.stringify(session.notebook.toIPynb(), null, 2);
+    const processedNotebookData = processNotebookForExport(notebook.notebook);
+    const tempNotebook = new BeakerNotebook();
+    tempNotebook.fromJSON(processedNotebookData);
+    
+    if (tempNotebook.content.cells && Array.isArray(tempNotebook.content.cells)) {
+        tempNotebook.content.cells = tempNotebook.content.cells.map((cell: any) => {
+            if (cell.cell_type === 'raw') {
+                return new BeakerRawCell(cell);
+            } else if (cell.cell_type === 'code') {
+                return new BeakerCodeCell(cell);
+            } else if (cell.cell_type === 'query') {
+                return new BeakerQueryCell(cell);
+            } else if (cell.cell_type === 'markdown') {
+                return new BeakerMarkdownCell(cell);
+            } else {
+                return new BeakerRawCell(cell);
+            }
+        });
+    }
+
+    const exportNotebook = tempNotebook.toIPynb();
+
+    const data = JSON.stringify(exportNotebook, null, 2);
+
     const filename = `Beaker-Notebook_${getDateTimeString()}.ipynb`;
     const mimeType = 'application/x-ipynb+json';
     downloadFileDOM(data, filename, mimeType);
@@ -352,6 +494,20 @@ function downloadNotebook() {
         }
     }
 
+    .truncate-toggle-container {
+        display: none; // don't display in other interfaces
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: 0.75rem;
+        
+        .truncate-label {
+            font-size: 0.875rem;
+            color: var(--p-text-color);
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+    }
 }
 
 .saveas-overlay {

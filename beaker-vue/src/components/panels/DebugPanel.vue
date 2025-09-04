@@ -2,8 +2,8 @@
     <div class="debug-panel-wrapper">
         <div class="debug-log-container">
             <div class="debug-flex-container">
-                <div
-                    class="p-input-icon-left"
+                <span
+                    class="p-input-icon-right"
                     style="padding: 0; margin: 0;"
                 >
                     <i class="pi pi-search" />
@@ -12,7 +12,7 @@
                         size="small"
                         placeholder="Type"
                     />
-                </div>
+            </span>
 
                 <div class="debug-sort-actions p-buttonset">
                     <Button @click="sortDirection = 'asc'" v-tooltip.bottom="'Sort Asc'" outlined size="small" icon="pi pi-sort-numeric-down" aria-label="Sort Time Asc" />
@@ -142,6 +142,25 @@ const filteredLogs = computed(() => {
     .p-button {
         border-color: var(--p-surface-d);
     }
+}
+
+.debug-flex-container {
+  .p-input-icon-right {
+    padding: 0px;
+    margin: 0px;
+    // padding-right: 0.5rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    position: relative;
+
+    & > i.pi-search {
+      position: absolute;
+      right: 0.5rem;
+      color: var(--p-primary-color);
+      pointer-events: none;
+    }
+  }
 }
 
 </style>

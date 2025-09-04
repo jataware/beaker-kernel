@@ -67,7 +67,9 @@ const notebookOutputs = computed(() => {
 
     const getOutputs = (cell: IBeakerCell) => {
         const outputs = [];
-        if (cell.cell_type === 'query') {
+        // The flattened check ensures we don't duplicate the outputs of the query cell children
+        // on new notebook interface
+        if (cell.cell_type === 'query' && !cell.metadata?.is_flattened) {
             for (const child of (cell as BeakerQueryCell)?.children ?? []) {
                 outputs.push(...getOutputs(child));
             }
