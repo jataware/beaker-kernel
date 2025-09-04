@@ -27,7 +27,6 @@
 
                     <div v-if="shouldShowThought && lastThoughtText" class="last-thought">
                         <div class="thought-label">
-                            <span class="pi pi-robot thought-icon"></span>
                             <span class="thought-label-text">Beaker Agent</span>
                         </div>
                         <div class="thought-content">{{ lastThoughtText }}</div>
