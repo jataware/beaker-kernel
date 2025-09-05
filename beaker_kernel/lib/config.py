@@ -436,6 +436,9 @@ class Config(ConfigClass):
 
         if provider_id:
             config_obj = self.providers.get(provider_id, None)
+            if config_obj:
+                # Copying config so it doesn't get changed globally if modified in the model instance
+                config_obj = deepcopy(config_obj)
             if isinstance(config_obj, dict) and isinstance(model_config, dict):
                 config_obj.update(model_config)
         elif isinstance(model_config, dict):
@@ -443,8 +446,8 @@ class Config(ConfigClass):
 
         # Fetch config if model_config is None or empty.
         if not config_obj:
-            # Get model from config
-            config_obj: dict = self.providers.get(self.provider, {})
+            # Get model from config,opying config so it doesn't get changed globally if modified in the model instance
+            config_obj: dict = deepcopy(self.providers.get(self.provider, {}))
 
             # Update config with passed in overrides
             config_obj.update(config_overrides)
@@ -461,8 +464,6 @@ class Config(ConfigClass):
         if not "import_path" in config_obj:
             return None
 
-        # Copying config so it doesn't get changed globally if modified in the model instance
-        config_obj = deepcopy(config_obj)
         if "model_name" not in config_obj and "default_model_name" in config_obj:
             config_obj["model_name"] = config_obj["default_model_name"]
 
