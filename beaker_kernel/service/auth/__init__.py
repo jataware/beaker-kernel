@@ -21,10 +21,26 @@ class BeakerIdentityProvider(IdentityProvider):
 
     beaker_kernel_header = Unicode(
         "X-AUTH-BEAKER",
-        config=True,
+        help="Header name for Beaker kernel authentication",
+        config=True
     )
 
     async def _is_authorized_beaker_kernel(self, handler: web.RequestHandler):
+        """Validate Beaker kernel authentication token.
+
+        Checks for a valid Beaker kernel authentication token in the request
+        headers and validates it against the kernel's session key using MD5 hash.
+
+        Parameters
+        ----------
+        handler : web.RequestHandler
+            The Tornado request handler containing the authentication headers
+
+        Returns
+        -------
+        bool
+            True if the token is valid, False otherwise
+        """
         auth_token = handler.request.headers.get(self.beaker_kernel_header, None)
         if not auth_token:
             return False
@@ -48,6 +64,21 @@ class BeakerIdentityProvider(IdentityProvider):
 
     @classmethod
     def beaker_kernel_auth_wrapper(cls, fn):
+        """Decorator for Beaker kernel authentication wrapper.
+
+        Wraps the get_user method to check for Beaker kernel authentication
+        before falling back to the original authentication method.
+
+        Parameters
+        ----------
+        fn : callable
+            The original get_user method to wrap
+
+        Returns
+        -------
+        callable
+            Wrapped get_user method with Beaker kernel auth
+        """
         @wraps(fn)
         async def get_user(self: BeakerIdentityProvider, handler: web.RequestHandler):
             is_beaker = await self._is_authorized_beaker_kernel(handler)
@@ -66,6 +97,16 @@ class BeakerIdentityProvider(IdentityProvider):
         return get_user
 
     def __init_subclass__(cls, **kwargs):
+        """Setup authentication wrapper for subclasses.
+
+        Automatically applies the Beaker kernel authentication wrapper
+        to the get_user method of subclasses.
+
+        Parameters
+        ----------
+        **kwargs
+            Additional keyword arguments for subclass initialization
+        """
         super().__init_subclass__(**kwargs)
         get_user = cls.beaker_kernel_auth_wrapper(cls.get_user)
         update_wrapper(get_user, cls.get_user)
@@ -81,12 +122,32 @@ class BeakerUser(User):
     home_dir: Optional[str] = field(default=None)
 
     def __post_init__(self):
+        """Initialize home directory if not provided.
+
+        Automatically generates a sanitized home directory path
+        based on the username if not explicitly set.
+        """
         if self.home_dir is None:
             self.home_dir = self._sanitize_homedir(self.username)
         return super().__post_init__()
 
     @staticmethod
     def _sanitize_homedir(path_string: str):
+        """Sanitize username for use as directory path.
+
+        Removes invalid characters and creates a unique directory name
+        by combining sanitized username with SHA1 hash.
+
+        Parameters
+        ----------
+        path_string : str
+            Original username string
+
+        Returns
+        -------
+        str
+            Sanitized directory path
+        """
         # Characters invalid for a path
         invalid_chars = r'<>:"/\|?*@\'' + os.sep
         # Remove any whitespace or invalid characters from the start or end of path.

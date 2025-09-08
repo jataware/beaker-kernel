@@ -5,10 +5,10 @@ import os
 import traceback
 import uuid
 import urllib.parse
-from typing import get_origin, get_args
+from importlib.metadata import entry_points, EntryPoints, EntryPoint
+from typing import get_origin, get_args, Optional
 from dataclasses import is_dataclass
 from pathlib import Path
-from typing import get_origin, get_args
 from types import UnionType
 
 from jupyter_server.auth.decorator import authorized
@@ -271,6 +271,7 @@ class ConfigHandler(ExtensionHandlerMixin, JupyterHandler):
             "wsUrl": os.environ.get("JUPYTER_WS_URL", ws_url),
             "token": config.jupyter_token,
             "config_type": config.config_type,
+            "defaultKernel": self.kernel_spec_manager.get_default_kernel_name(),
             "extra": {}
         }
         if hasattr(config, "send_notebook_state"):
@@ -293,6 +294,24 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
     """
     Provide information about llm contexts via an endpoint
     """
+    provisioners: EntryPoints
+
+    def __init__(self, application, request, **kwargs):
+        super().__init__(application, request, **kwargs)
+        self.provisioners = entry_points(group="jupyter_client.kernel_provisioners")
+
+    def get_spec_provisioner(self, spec: dict) -> type:
+        provisioner_dict: dict = spec.get("metadata", {}).get("kernel_provisioner", None)
+        if not provisioner_dict:
+            return None
+
+        name = provisioner_dict.get("provisioner_name", None)
+
+        if not name or name == "local-provisioner":
+            return None
+
+        prov_entry_point: EntryPoint = self.provisioners[name]
+        return prov_entry_point.load()
 
     def get(self):
         """Get the main page for the application's interface."""
@@ -300,27 +319,75 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
         contexts: dict[str, BeakerContext] = autodiscover("contexts")
         possible_subkernels: dict[str, BeakerSubkernel] = autodiscover("subkernels")
         subkernel_by_kernel_index = {subkernel.KERNEL_NAME: subkernel for subkernel in possible_subkernels.values()}
-        installed_kernels = [
-            subkernel_by_kernel_index[kernel_name] for kernel_name in ksm.find_kernel_specs().keys()
-            if kernel_name in subkernel_by_kernel_index
-        ]
+        subkernel_by_language_index = {subkernel.JUPYTER_LANGUAGE: subkernel for subkernel in possible_subkernels.values()}
+        kernels = ksm.get_all_specs()
+
+        installed_kernels = {}
+        for kernel_long_name, kernel_details in kernels.items():
+            kernelspec = kernel_details.get("spec", {})
+            kernel_name = kernelspec.get("name", kernel_long_name)
+            kernel_language = kernelspec.get("language", kernel_name)
+            provisioner_cls = self.get_spec_provisioner(kernelspec)
+            if provisioner_cls:
+                provisioner_display_name: Optional[str] = getattr(provisioner_cls, "display_name", getattr(provisioner_cls, "__name__", None))
+                if provisioner_display_name and provisioner_display_name.endswith("Provisioner"):
+                    provisioner_display_name = provisioner_display_name[:-11]
+                provisioner_info = {
+                    "name": provisioner_display_name,
+                    "import_str": f"{provisioner_cls.__module__}.{provisioner_cls.__name__}",
+                    "cls": provisioner_cls,
+                }
+            else:
+                provisioner_info = None
+
+            if kernel_language in subkernel_by_language_index:
+                installed_kernels[kernel_long_name] = {
+                    "kernelspec": kernel_details,
+                    "subkernel": subkernel_by_language_index[kernel_language],
+                    "provisioner": provisioner_info,
+                }
+
         contexts = sorted(contexts.items(), key=lambda item: (item[1].WEIGHT, item[0]))
 
         # Extract data from auto-discovered contexts and subkernels to provide options
-        context_data = {
-            context_slug: {
+        context_data = {}
+        for context_slug, context in contexts:
+            acceptable_subkernels = context.available_subkernels()
+            available_subkernels = [
+                subkernel
+                for subkernel in acceptable_subkernels
+                if subkernel in set(
+                    subkernel["subkernel"].SLUG for subkernel in installed_kernels.values()
+                )
+            ]
+
+            context_data[context_slug] = {
                 "languages": [
                     {
                         "slug": subkernel_slug,
-                        "subkernel": getattr(possible_subkernels.get(subkernel_slug), "KERNEL_NAME")
+                        "subkernel": subkernel_slug,
+                        "display": None,
                     }
-                    for subkernel_slug in context.available_subkernels()
-                    if subkernel_slug in set(subkernel.SLUG for subkernel in installed_kernels)
+                    for subkernel_slug in available_subkernels
                 ],
-                "defaultPayload": context.default_payload()
+                "subkernels": {},
+                "defaultPayload": context.default_payload(),
             }
-            for context_slug, context in contexts
-        }
+            subkernels = context_data[context_slug]["subkernels"]
+            for kernel_name, kernel_info in installed_kernels.items():
+                if kernel_info["subkernel"].SLUG in acceptable_subkernels:
+                    display_name = kernel_info["subkernel"].DISPLAY_NAME
+                    provisioner_info = kernel_info.get("provisioner", None)
+                    if provisioner_info:
+                        display_name += f" ({provisioner_info['name']})"
+                    subkernels[kernel_name] = {
+                        "language": kernel_info["kernelspec"]["spec"]["language"],
+                        "slug": kernel_info["subkernel"].SLUG,
+                        "display_name": display_name,
+                        "weight": kernel_info["subkernel"].WEIGHT,
+                    }
+
+
         return self.write(context_data)
 
 

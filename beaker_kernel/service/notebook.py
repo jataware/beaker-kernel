@@ -11,12 +11,16 @@ def _jupyter_server_extension_points():
 
 class BeakerNotebookApp(BaseBeakerServerApp):
 
-    app_traits = {
+    _default_app_traits = {
         "authorizer_class": NotebookAuthorizer,
         "identity_provider_class": NotebookIdentityProvider,
     }
 
     def __init__(self, **kwargs):
+        """Initialize BeakerNotebookApp
+
+        Sets up the Jupyter token from configuration for notebook authentication.
+        """
         os.environ.setdefault("JUPYTER_TOKEN", config.jupyter_token)
         super().__init__(**kwargs)
 

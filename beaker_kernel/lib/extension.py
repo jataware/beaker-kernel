@@ -9,10 +9,10 @@ class BeakerExtension:
     keybindings: "BeakerExtensionKeybindings"
     components: "BeakerExtensionComponents"
 
-    def initialize(self):
+    def initialize(self, *args, **kwargs):
         pass
 
-    def activate(self):
+    def activate(self, *args, **kwargs):
         pass
 
     def deactivate(self):
@@ -22,11 +22,14 @@ class BeakerExtension:
 class BeakerExtensionSettings:
     pass
 
+
 class BeakerExtensionKeybindings:
     pass
 
+
 class BeakerExtensionComponents:
     pass
+
 
 class BeakerCLICommands(click.Group):
     slug: ClassVar[str]

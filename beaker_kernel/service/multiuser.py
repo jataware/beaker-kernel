@@ -3,6 +3,7 @@ import os
 from beaker_kernel.service.base import BaseBeakerServerApp
 # from beaker_kernel.service.auth.cognito import CognitoAuthorizer, CognitoHeadersIdentityProvider
 from beaker_kernel.service.auth.dummy import DummyAuthorizer, DummyIdentityProvider
+from traitlets import Bool
 
 
 def _jupyter_server_extension_points():
@@ -10,8 +11,9 @@ def _jupyter_server_extension_points():
 
 
 class BeakerMultiUserServerApp(BaseBeakerServerApp):
-    log_requests = True
-    app_traits = {
+    log_requests = Bool(True, help="Enable request logging", config=True)
+    
+    _default_app_traits = {
         "allow_root": True,
         "ip": "0.0.0.0",
         "authorizer_class": DummyAuthorizer,

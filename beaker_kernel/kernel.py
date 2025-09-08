@@ -335,7 +335,7 @@ class BeakerKernel(KernelProxyManager):
         with open(self.connection_file, "w") as connection_file:
             json.dump(run_info, connection_file, indent=2)
 
-    async def set_context(self, context_name, context_info, language="python3", parent_header={}):
+    async def set_context(self, context_name, context_info, language="python3", subkernel=None, parent_header={}):
 
         context_cls = AVAILABLE_CONTEXTS.get(context_name, None)
         if not context_cls:
@@ -354,14 +354,16 @@ class BeakerKernel(KernelProxyManager):
 
         context_config = {
             "language": language,
+            "subkernel": subkernel,
             "context_info": context_info
         }
         self.context = context_cls(beaker_kernel=self, config=context_config)
         await self.context.setup(context_info=context_info, parent_header=parent_header)
         subkernel = self.context.subkernel
         kernel_setup_func = getattr(subkernel, "setup", None)
-        with execution_context(type="setup", name=context_name, parent_header=parent_header):
-            await ensure_async(kernel_setup_func())
+        if kernel_setup_func is not None:
+            with execution_context(type="setup", name=context_name, parent_header=parent_header):
+                await ensure_async(kernel_setup_func())
         await self.update_connection_file(context={"name": context_name, "config": context_info})
         await self.send_preview(parent_header=parent_header)
         await self.send_kernel_state_info(parent_header=parent_header)
@@ -677,6 +679,7 @@ class BeakerKernel(KernelProxyManager):
         context_name = content.get("context")
         context_info = content.get("context_info", {})
         language = content.get("language", "python3")
+        subkernel = content.get("subkernel", None)
         enable_debug = content.get("debug", None)
         verbose = content.get("verbose", None)
 
@@ -690,7 +693,13 @@ class BeakerKernel(KernelProxyManager):
 
         parent_header = copy.deepcopy(message.header)
         if content:
-            await self.set_context(context_name, context_info, language=language, parent_header=parent_header)
+            await self.set_context(
+                context_name,
+                context_info,
+                language=language,
+                subkernel=subkernel,
+                parent_header=parent_header
+            )
 
         # Send context_response
         context_response_content = await self.context.get_info()

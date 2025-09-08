@@ -5,7 +5,7 @@
         :header-nav="headerNav"
         ref="beakerInterfaceRef"
         :connectionSettings="props.config"
-        defaultKernel="beaker_kernel"
+        :defaultKernel="props.config.defaultKernel || 'beaker_kernel'"
         :sessionId="sessionId"
         :renderers="renderers"
         :savefile="saveAsFilename"

@@ -17,13 +17,14 @@
                 :options="contextOptions"
                 option-label="slug"
                 option-value="slug"
+                @update:model-value="contextChanged"
             />
 
             <Select
-                v-model="selectedLanguage"
-                :options="languageOptions"
-                option-label="slug"
-                option-value="subkernel"
+                v-model="selectedSubkernel"
+                :options="subkernelOptions"
+                option-label="display_name"
+                option-value="key"
             />
         </InputGroup>
 
@@ -68,7 +69,7 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted, computed, watch, inject } from "vue";
+import { ref, onMounted, computed, watch, inject, nextTick } from "vue";
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputGroup from 'primevue/inputgroup';
@@ -94,7 +95,7 @@ const emit = defineEmits([
 ]);
 
 const selectedContextSlug = ref<string>();
-const selectedLanguage = ref<string | undefined>(undefined);
+const selectedSubkernel = ref<string | undefined>(undefined);
 const contextPayloadData = ref({});
 
 
@@ -108,6 +109,14 @@ interface IBeakerContext {
         slug: string,
         kernel: string,
         subkernel: string,
+    }[],
+    subkernels: {
+        [key: string]: {
+            display_name: string,
+            language: string,
+            slug: string,
+            weight?: number,
+        }
     }[],
     defaultPayload: string,
 }
@@ -130,6 +139,22 @@ const selectedContext = computed<IBeakerContext | undefined>(() => {
         return undefined;
     }
 });
+
+const subkernelOptions = computed(() => {
+    if (!contextData.value || selectedContext.value === undefined) {
+        return [];
+    }
+    const options = Object.entries(selectedContext.value.subkernels).map(([key, value]) => ({key, ...value}));
+    options.sort((a, b) => {
+        const weightOffset = (a.weight-b.weight);
+        if (weightOffset == 0) {
+            return a.display_name.localeCompare(b.display_name);
+        }
+        return weightOffset;
+    })
+    return options;
+});
+
 const languageOptions = computed<{slug: string, kernel: string, subkernel: string}[]>(() => {
     if (!contextData.value || selectedContext.value === undefined) {
         return [];
@@ -137,75 +162,97 @@ const languageOptions = computed<{slug: string, kernel: string, subkernel: strin
     return selectedContext.value.languages;
 });
 
+const contextChanged = (newValue) => {
+    if (newValue == beakerSession.activeContext?.slug) {
+        // Select the currently running subkernel is the currently running context is selected.
+        selectedSubkernel.value = beakerSession.activeContext.info.subkernel_kernel;
+    }
+    else {
+        // Select the highest priority (first) subkernel
+        selectedSubkernel.value = subkernelOptions.value[0].key;
+    }
+}
+
+
 // When selectedContextSlug dropdown changes, the selected
 // language might not be available in the new languageOptions/context
 // Ensure to default the selected language for that context to 1st option available
-watch(selectedContextSlug, (newSelectedContextSlug: string) => {
-    const langOpts = languageOptions.value;
-    const currentLanguage = selectedLanguage.value;
+// watch(selectedContextSlug, (newSelectedContextSlug: string) => {
+//     const langOpts = languageOptions.value;
+//     const currentLanguage = selectedSubkernel.value;
 
-    if(!currentLanguage) {
-        return;
-    }
+//     if(!currentLanguage) {
+//         return;
+//     }
 
-    if (Array.isArray(langOpts) && langOpts.length) {
-        const isSelectedAvailable = langOpts
-           .map(i => i.subkernel)
-           .includes(currentLanguage);
+//     if (Array.isArray(langOpts) && langOpts.length) {
+//         const isSelectedAvailable = langOpts
+//            .map(i => i.subkernel)
+//            .includes(currentLanguage);
 
-        if (!isSelectedAvailable) {
-            selectedLanguage.value = langOpts[0].subkernel;
-        }
+//         if (!isSelectedAvailable) {
+//             selectedSubkernel.value = langOpts[0].subkernel;
+//         }
 
 
-        // When changing from active context slug to a different one, set default payload
-        // if user has not modified it before (payload data is still empty)
-        const existingContextPayload = contextPayloadData.value[newSelectedContextSlug];
+//         // When changing from active context slug to a different one, set default payload
+//         // if user has not modified it before (payload data is still empty)
+//         // const existingContextPayload = customContextPayloadData.value[newSelectedContextSlug];
 
-        if (!existingContextPayload) {
-            contextPayloadData.value[newSelectedContextSlug] = contextData.value[selectedContextSlug.value].defaultPayload;
-        }
-    }
-});
+//         // if (!existingContextPayload) {
+//         //     let defaultPayload = contextData.value[selectedContextSlug.value].defaultPayload;
+//         //     // alert(defaultPayload);
+//         //     try {
+//         //         defaultPayload = JSON.parse(defaultPayload);
+//         //         // defaultPayload = JSON.stringify(defaultPayload, undefined, 2);
+//         //         // alert(defaultPayload);
+//         //     }
+//         //     catch {}
+
+//         //     // alert(defaultPayload);
+//         //     customContextPayloadData.value[newSelectedContextSlug] = defaultPayload;
+//         // }
+//     }
+// });
 
 // TODO clean this once we understand how checkboxes state work..
-watch(() => props.isOpen, (open /*, oldValue*/) => {
+// watch(() => props.isOpen, (open /*, oldValue*/) => {
 
-    // Only setup saved context state when opening the dialog (not closing).
-    if (open) {
+//     // Only setup saved context state when opening the dialog (not closing).
+//     if (open) {
 
-        if (beakerSession.activeContext.language) {
-            // Panel just opened and activeContext data available:
-            selectedLanguage.value = beakerSession.activeContext.language.subkernel;
-            selectedContextSlug.value = beakerSession.activeContext.slug;
+//         if (beakerSession.activeContext.language) {
+//             // Panel just opened and activeContext data available:
+//             selectedSubkernel.value = beakerSession.activeContext.language.subkernel;
+//             selectedContextSlug.value = beakerSession.activeContext.slug;
 
-            // First time we open, if payload empty, load from active context
-            const existingContextPayload = contextPayloadData.value[selectedContextSlug.value];
-            if (!existingContextPayload) {
-                contextPayloadData.value[selectedContextSlug.value] = JSON.stringify(beakerSession.activeContext.config);
-            }
-        }
+//             // First time we open, if payload empty, load from active context
+//             // const existingContextPayload = customContextPayloadData.value[selectedContextSlug.value];
+//             // if (!existingContextPayload) {
+//             //     customContextPayloadData.value[selectedContextSlug.value] = JSON.stringify(beakerSession.activeContext.config);
+//             // }
+//         }
 
-        if (beakerSession.activeContext.info) {
-        // Panel just opened and activeContext info available (verbose/debug checks)
-            const strDebugValue = beakerSession.activeContext.info.debug.toString();
+//         if (beakerSession.activeContext.info) {
+//         // Panel just opened and activeContext info available (verbose/debug checks)
+//             const strDebugValue = beakerSession.activeContext.info.debug.toString();
 
-            if (logDebug.value.length) {
-                logDebug.value[0] = strDebugValue;
-            } else {
-                logDebug.value.push(strDebugValue);
-            }
-            const strVerboseValue = beakerSession.activeContext.info.verbose.toString();
+//             if (logDebug.value.length) {
+//                 logDebug.value[0] = strDebugValue;
+//             } else {
+//                 logDebug.value.push(strDebugValue);
+//             }
+//             const strVerboseValue = beakerSession.activeContext.info.verbose.toString();
 
-            if (logVerbose.value.length) {
-                logVerbose.value[0] = strVerboseValue;
-            } else {
-                logVerbose.value.push(strVerboseValue);
-            }
+//             if (logVerbose.value.length) {
+//                 logVerbose.value[0] = strVerboseValue;
+//             } else {
+//                 logVerbose.value.push(strVerboseValue);
+//             }
 
-        }
-    }
-});
+//         }
+//     }
+// });
 
 const setContext = async () => {
     // TODO determine if there's a better way to work with primevue's checkbox state
@@ -216,7 +263,7 @@ const setContext = async () => {
 
     const contextMessageContent = {
       context: selectedContextSlug.value,
-      language: selectedLanguage.value,
+      subkernel: selectedSubkernel.value,
       context_info: JSON.parse(contextInfo || ''),
       debug: isDebug,
       verbose: isVerbose,
@@ -240,6 +287,10 @@ onMounted(async () => {
     if(contexts) {
         contextData.value = contexts;
         selectedContextSlug.value = Object.keys(contexts)[0];
+        contextPayloadData.value = Object.fromEntries(
+            Object.entries(contexts).map(([slug, context]) => [slug, context.defaultPayload])
+        )
+        nextTick(() => {contextChanged(selectedContextSlug)});
     }
 })
 </script>
