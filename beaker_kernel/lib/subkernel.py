@@ -184,7 +184,7 @@ async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: 
                 
                 try:
                     final_response = await agent.oneshot(workflow_prompt, workflow_results)
-                    logger.info(f"WORKFLOW DEBUG: agent.oneshot() completed successfully, response length: {len(final_response) if final_response else 0}")
+                    logger.info(f"WORKFLOW DEBUG: agent.oneshot() completed successfully: {final_response}")
                     agent.context.current_workflow_state["final_response"] = final_response
                     logger.info(f"WORKFLOW DEBUG: final_response set in workflow state")
                 except Exception as oneshot_error:
