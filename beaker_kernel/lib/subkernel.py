@@ -179,7 +179,17 @@ async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: 
                     f"### {stage_name}: \n\n{progress}\n\n"
                     for stage_name,progress in agent.context.current_workflow_state["progress"].items()
                 ]
-                agent.context.current_workflow_state["final_response"] = await agent.oneshot(workflow_prompt, workflow_results)
+                logger.info(f"WORKFLOW DEBUG: About to call agent.oneshot() with {len(workflow_results)} results")
+                logger.info(f"WORKFLOW DEBUG: workflow_results preview: {str(workflow_results)[:200]}...")
+                
+                try:
+                    final_response = await agent.oneshot(workflow_prompt, workflow_results)
+                    logger.info(f"WORKFLOW DEBUG: agent.oneshot() completed successfully, response length: {len(final_response) if final_response else 0}")
+                    agent.context.current_workflow_state["final_response"] = final_response
+                    logger.info(f"WORKFLOW DEBUG: final_response set in workflow state")
+                except Exception as oneshot_error:
+                    logger.error(f"WORKFLOW DEBUG: agent.oneshot() failed: {oneshot_error}")
+                    raise
     except Exception as e:
         logger.error(f"Summarization for the workflow stage failed: {e}")
 
