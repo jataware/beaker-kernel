@@ -159,7 +159,21 @@ async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: 
     # summarize all of the results so far in a final format, if we just finished a step
     try:
         if state == 'finished':
-            workflow_prompt = agent.context.workflows[agent.context.current_workflow_state["workflow_id"]].output_prompt
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            workflow_id = agent.context.current_workflow_state["workflow_id"]
+            workflow = agent.context.workflows[workflow_id]
+            workflow_prompt = workflow.output_prompt
+            
+            logger.info(f"WORKFLOW DEBUG: workflow_id={workflow_id}, title={workflow.title}")
+            logger.info(f"WORKFLOW DEBUG: output_prompt exists={workflow_prompt is not None}")
+            if workflow_prompt:
+                truncated_prompt = workflow_prompt[:200] + "..." if len(workflow_prompt) > 200 else workflow_prompt
+                logger.info(f"WORKFLOW DEBUG: output_prompt preview: {repr(truncated_prompt)}")
+            else:
+                logger.warning(f"WORKFLOW DEBUG: output_prompt is None/empty for workflow {workflow.title}")
+            
             if workflow_prompt:
                 workflow_results = [
                     f"### {stage_name}: \n\n{progress}\n\n"

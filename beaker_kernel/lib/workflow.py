@@ -89,9 +89,23 @@ class Workflow:
 
     @staticmethod
     def from_yaml(source: dict[str, Any]) -> "Workflow":
+        import logging
+        logger = logging.getLogger(__name__)
+        
         stages = [WorkflowStage.from_yaml(stage) for stage in source.get("stages", [])]
+        title = source["title"]
+        output_prompt = source.get("output_prompt", None)
+        
+        logger.info(f"WORKFLOW LOAD: Loading workflow '{title}'")
+        logger.info(f"WORKFLOW LOAD: output_prompt exists={output_prompt is not None}")
+        if output_prompt:
+            truncated_prompt = output_prompt[:150] + "..." if len(output_prompt) > 150 else output_prompt
+            logger.info(f"WORKFLOW LOAD: output_prompt preview: {repr(truncated_prompt)}")
+        else:
+            logger.warning(f"WORKFLOW LOAD: output_prompt is None/empty for workflow '{title}'")
+        
         return Workflow(
-            title=source["title"],
+            title=title,
             agent_description=source["agent_description"],
             human_description=source["human_description"],
             example_prompt=source["example_prompt"],
@@ -101,7 +115,7 @@ class Workflow:
             category=source.get("category", None),
             is_context_default=source.get("is_context_default", False),
             metadata=source.get("metadata", {}),
-            output_prompt=source.get("output_prompt", None)
+            output_prompt=output_prompt
         )
 
     # text representation of the prompt itself, fed directly into the agent.
