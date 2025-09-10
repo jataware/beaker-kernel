@@ -261,6 +261,7 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
             headers={"Authorization": f"token {config.jupyter_token}"},
         )
         kernel_info = res.json()
+
         self.beaker_kernel.update_running_kernels()
         kernels = self.beaker_kernel.kernels
         subkernel_id = kernel_info["id"]

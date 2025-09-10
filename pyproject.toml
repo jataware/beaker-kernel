@@ -269,7 +269,8 @@ extra-dependencies = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 
 [project.entry-points."nbconvert.exporters"]
 streamline = "beaker_kernel.lib.exporters.streamline:StreamlineExporter"

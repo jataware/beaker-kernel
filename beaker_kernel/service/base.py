@@ -98,7 +98,6 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
 
 
 class BeakerKernelMappingManager(AsyncMappingKernelManager):
-    # kernel_manager_class = BeakerKernelManager
     kernel_manager_class = "beaker_kernel.service.base.BeakerKernelManager"
     connection_dir = os.path.join(config.beaker_run_path, "kernelfiles")
 

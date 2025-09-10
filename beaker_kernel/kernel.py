@@ -425,7 +425,7 @@ class BeakerKernel(KernelProxyManager):
         self._interrupt(interrupt_subkernel=False)
 
     def _interrupt(self, interrupt_subkernel=True):
-        if interrupt_subkernel:
+        if interrupt_subkernel and self.context and self.context.subkernel:
             try:
                 subkernel_id = self.context.subkernel.jupyter_id
                 print(f"Interrupting connected subkernel: {subkernel_id}")
