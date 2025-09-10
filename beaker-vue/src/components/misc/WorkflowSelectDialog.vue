@@ -92,11 +92,11 @@
                             </div>
                             
                             <Divider v-if="selectedWorkflow.stages?.length" />
-                            <div v-if="selectedWorkflow.stages?.length" class="mb-4">
-                                <h4 class="text-lg font-semibold mb-3">Workflow Stages</h4>
+                            <div v-if="selectedWorkflow.stages?.length" class="section">
+                                <h4>Workflow Stages</h4>
                                 <div class="stages-list">
                                     <div v-for="(stage, index) in selectedWorkflow.stages" :key="index" class="stage-item">
-                                        <div class="stage-number">{{ index + 1 }}</div>
+                                        <span class="stage-number">{{ index + 1 }}</span>
                                         <span class="stage-name">{{ stage.name }}</span>
                                     </div>
                                 </div>
@@ -279,6 +279,23 @@ const searchResults = computed<{[key in string]: any}>(() => {
     color: var(--p-text-color-secondary);
 }
 
+.section {
+    margin-bottom: 1.5rem;
+}
+
+.section h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--p-text-color);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.section p {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--p-text-color-secondary);
+}
+
 .stages-list {
     display: flex;
     flex-direction: column;
@@ -289,22 +306,22 @@ const searchResults = computed<{[key in string]: any}>(() => {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem;
+    padding: 0.5rem;
     background: var(--p-surface-50);
-    border-radius: 8px;
-    border-left: 4px solid var(--p-primary-300);
+    border-radius: 4px;
+    border-left: 3px solid var(--p-primary-300);
 }
 
 .stage-number {
     background: var(--p-primary-color);
     color: white;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 1.5rem;
+    height: 1.5rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     font-weight: 600;
     flex-shrink: 0;
 }
