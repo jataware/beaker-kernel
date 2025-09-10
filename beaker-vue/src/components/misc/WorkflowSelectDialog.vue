@@ -53,18 +53,16 @@
                     @mouseleave="hoveredCard = undefined"
                     @mouseenter="hoveredCard = id"
                 >
-                    <template #title>
-                        <div class="card-title">
-                            {{ workflow.title }}
-                            <span v-if="id === attachedWorkflowId" class="current-badge">Current</span>
-                            <span v-if="workflow.category" class="category-badge">{{ workflow.category }}</span>
+                    <template #title>{{ workflow.title }}</template>
+                    <template #subtitle>
+                        <div class="card-badges">
+                            <Badge v-if="id === attachedWorkflowId" value="Current" severity="success" />
+                            <Chip v-if="workflow.category" :label="workflow.category" class="p-chip-sm" />
                         </div>
                     </template>
                     <template #content>
-                        <p class="card-description">{{ workflow.human_description }}</p>
-                        <div class="card-meta">
-                            <span class="stages-count">{{ workflow.stages?.length || 0 }} stages</span>
-                        </div>
+                        <p>{{ workflow.human_description }}</p>
+                        <small class="text-muted">{{ workflow.stages?.length || 0 }} stages</small>
                     </template>
                 </Card>
             </div>
@@ -73,9 +71,9 @@
                 <Card class="preview-card">
                     <template #title>{{ selectedWorkflow.title }}</template>
                     <template #subtitle>
-                        <div class="preview-badges">
-                            <span v-if="selectedWorkflow.category" class="category-badge large">{{ selectedWorkflow.category }}</span>
-                            <span class="stages-badge">{{ selectedWorkflow.stages?.length || 0 }} stages</span>
+                        <div class="flex gap-2 mt-2">
+                            <Chip v-if="selectedWorkflow.category" :label="selectedWorkflow.category" />
+                            <Badge :value="`${selectedWorkflow.stages?.length || 0} stages`" severity="info" />
                         </div>
                     </template>
                     <template #content>
@@ -85,17 +83,22 @@
                                 <p>{{ selectedWorkflow.human_description }}</p>
                             </div>
                             
-                            <div class="section" v-if="selectedWorkflow.example_prompt">
-                                <h4>Example Usage</h4>
-                                <div class="example-prompt">{{ selectedWorkflow.example_prompt }}</div>
+                            <Divider v-if="selectedWorkflow.example_prompt" />
+                            <div v-if="selectedWorkflow.example_prompt" class="mb-4">
+                                <h4 class="text-lg font-semibold mb-2">Example Usage</h4>
+                                <div class="bg-surface-100 border border-surface-200 rounded p-3 font-mono text-sm">
+                                    {{ selectedWorkflow.example_prompt }}
+                                </div>
                             </div>
                             
-                            <div class="section" v-if="selectedWorkflow.stages?.length">
-                                <h4>Workflow Stages</h4>
-                                <div class="stages-list">
-                                    <div v-for="(stage, index) in selectedWorkflow.stages" :key="index" class="stage-item">
-                                        <span class="stage-number">{{ index + 1 }}</span>
-                                        <span class="stage-name">{{ stage.name }}</span>
+                            <Divider v-if="selectedWorkflow.stages?.length" />
+                            <div v-if="selectedWorkflow.stages?.length" class="mb-4">
+                                <h4 class="text-lg font-semibold mb-3">Workflow Stages</h4>
+                                <div class="flex flex-col gap-2">
+                                    <div v-for="(stage, index) in selectedWorkflow.stages" :key="index" 
+                                         class="flex items-center gap-3 p-2 bg-surface-50 rounded border-l-4 border-primary-300">
+                                        <Badge :value="index + 1" severity="contrast" class="w-6 h-6 rounded-full" />
+                                        <span class="font-medium">{{ stage.name }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -132,7 +135,7 @@
 <script lang="ts" setup>
 import { computed, inject, ref, watch, type ComputedRef } from "vue";
 import type { BeakerSessionComponentType } from '../session/BeakerSession.vue';
-import { Button, Divider, Card, InputGroup, InputGroupAddon, InputText} from "primevue";
+import { Button, Divider, Card, InputGroup, InputGroupAddon, InputText, Chip, Badge } from "primevue";
 import { type BeakerSession } from "beaker-kernel";
 import { useWorkflows } from '../../composables/useWorkflows';
 
@@ -185,263 +188,144 @@ const searchResults = computed<{[key in string]: any}>(() => {
 
 </script>
 
-<style>
+<style scoped>
 .workflow-dialog {
     width: 80vw;
     max-width: 1200px;
     height: 80vh;
     max-height: 800px;
-    display: flex;
-    flex-direction: column;
-
-    p {
-        margin-top: 0.75rem;
-    }
-
-    .attached-workflow {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 0rem;
-        .attached-workflow-inner {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-    }
-    
-    .attached-label {
-        font-weight: 600;
-    }
-    
-    .workflow-content {
-        display: flex;
-        flex: 1;
-        gap: 1.5rem;
-        min-height: 0;
-    }
-    
-    .workflow-list {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        overflow-y: auto;
-        padding-right: 0.5rem;
-        min-width: 0;
-    }
-    
-    .workflow-card {
-        cursor: pointer;
-        transition: all 150ms ease;
-        border: 2px solid transparent;
-        
-        &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        &.selected-card {
-            border-color: var(--p-primary-color);
-            background: var(--p-primary-50);
-        }
-        
-        &.current-card {
-            border-color: var(--p-green-500);
-            background: var(--p-green-50);
-        }
-    }
-    
-    .card-title {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        font-size: 1.1rem;
-        font-weight: 600;
-    }
-    
-    .current-badge {
-        background: var(--p-green-500);
-        color: white;
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    
-    .category-badge {
-        background: var(--p-surface-200);
-        color: var(--p-surface-700);
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        
-        &.large {
-            font-size: 0.85rem;
-            padding: 0.3rem 0.7rem;
-        }
-    }
-    
-    .card-description {
-        margin: 0.5rem 0;
-        line-height: 1.4;
-        color: var(--p-text-color-secondary);
-    }
-    
-    .card-meta {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 0.5rem;
-    }
-    
-    .stages-count {
-        font-size: 0.85rem;
-        color: var(--p-text-color-secondary);
-        font-weight: 500;
-    }
-    
-    .workflow-preview {
-        flex: 1.2;
-        min-width: 400px;
-    }
-    
-    .preview-card {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .preview-badges {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        margin-top: 0.5rem;
-    }
-    
-    .stages-badge {
-        background: var(--p-primary-100);
-        color: var(--p-primary-700);
-        padding: 0.3rem 0.7rem;
-        border-radius: 4px;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-    
-    .preview-content {
-        flex: 1;
-    }
-    
-    .section {
-        margin-bottom: 1.5rem;
-        
-        h4 {
-            margin: 0 0 0.5rem 0;
-            color: var(--p-text-color);
-            font-size: 1rem;
-            font-weight: 600;
-        }
-        
-        p {
-            margin: 0;
-            line-height: 1.5;
-            color: var(--p-text-color-secondary);
-        }
-    }
-    
-    .example-prompt {
-        background: var(--p-surface-100);
-        border: 1px solid var(--p-surface-200);
-        border-radius: 6px;
-        padding: 0.75rem;
-        font-family: var(--p-font-family-monospace, monospace);
-        font-size: 0.9rem;
-        line-height: 1.4;
-        color: var(--p-text-color);
-    }
-    
-    .stages-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .stage-item {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.5rem;
-        background: var(--p-surface-50);
-        border-radius: 4px;
-        border-left: 3px solid var(--p-primary-300);
-    }
-    
-    .stage-number {
-        background: var(--p-primary-color);
-        color: white;
-        width: 1.5rem;
-        height: 1.5rem;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-        font-weight: 600;
-        flex-shrink: 0;
-    }
-    
-    .stage-name {
-        font-weight: 500;
-        color: var(--p-text-color);
-    }
-    
-    .preview-actions {
-        display: flex;
-        justify-content: flex-end;
-        padding-top: 1rem;
-    }
-    
-    .select-button {
-        min-width: 200px;
-    }
-    
-    .empty-preview .preview-card {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .empty-state {
-        text-align: center;
-        color: var(--p-text-color-secondary);
-        
-        p {
-            margin-top: 0.5rem;
-            font-size: 1rem;
-        }
-    }
 }
 
-/* Responsive design */
+.attached-workflow {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.attached-workflow-inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.attached-label {
+    font-weight: 600;
+}
+
+.workflow-content {
+    display: flex;
+    flex: 1;
+    gap: 1.5rem;
+    min-height: 0;
+}
+
+.workflow-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.workflow-card {
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 2px solid transparent;
+}
+
+.workflow-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.workflow-card.selected-card {
+    border-color: var(--p-primary-color);
+    background: var(--p-primary-50);
+}
+
+.workflow-card.current-card {
+    border-color: var(--p-green-500);
+    background: var(--p-green-50);
+}
+
+.card-badges {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: 0.25rem;
+}
+
+.workflow-preview {
+    flex: 1.2;
+    min-width: 400px;
+}
+
+.preview-card {
+    height: 100%;
+}
+
+.preview-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1rem;
+}
+
+.select-button {
+    min-width: 200px;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--p-text-color-secondary);
+}
+
+/* Responsive */
 @media (max-width: 1000px) {
     .workflow-dialog {
         width: 95vw;
         height: 90vh;
-        
-        .workflow-content {
-            flex-direction: column;
-        }
-        
-        .workflow-list {
-            max-height: 40vh;
-        }
-        
-        .workflow-preview {
-            min-width: unset;
-            flex: 1;
-        }
+    }
+    
+    .workflow-content {
+        flex-direction: column;
+    }
+    
+    .workflow-list {
+        max-height: 40vh;
+    }
+    
+    .workflow-preview {
+        min-width: unset;
     }
 }
+
+/* Utility classes (if not available in PrimeVue) */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.items-center { align-items: center; }
+.mt-2 { margin-top: 0.5rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 0.75rem; }
+.mb-4 { margin-bottom: 1rem; }
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 0.75rem; }
+.rounded { border-radius: 0.375rem; }
+.border { border-width: 1px; }
+.border-l-4 { border-left-width: 4px; }
+.font-mono { font-family: monospace; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.text-sm { font-size: 0.875rem; }
+.text-lg { font-size: 1.125rem; }
+.text-muted { color: var(--p-text-color-secondary); }
+.w-6 { width: 1.5rem; }
+.h-6 { height: 1.5rem; }
+.rounded-full { border-radius: 9999px; }
+.bg-surface-50 { background-color: var(--p-surface-50); }
+.bg-surface-100 { background-color: var(--p-surface-100); }
+.border-surface-200 { border-color: var(--p-surface-200); }
+.border-primary-300 { border-color: var(--p-primary-300); }
 </style>
