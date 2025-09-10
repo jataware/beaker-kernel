@@ -94,11 +94,10 @@
                             <Divider v-if="selectedWorkflow.stages?.length" />
                             <div v-if="selectedWorkflow.stages?.length" class="mb-4">
                                 <h4 class="text-lg font-semibold mb-3">Workflow Stages</h4>
-                                <div class="flex flex-col gap-2">
-                                    <div v-for="(stage, index) in selectedWorkflow.stages" :key="index" 
-                                         class="flex items-center gap-3 p-2 bg-surface-50 rounded border-l-4 border-primary-300">
-                                        <Badge :value="index + 1" severity="contrast" class="w-6 h-6 rounded-full" />
-                                        <span class="font-medium">{{ stage.name }}</span>
+                                <div class="stages-list">
+                                    <div v-for="(stage, index) in selectedWorkflow.stages" :key="index" class="stage-item">
+                                        <div class="stage-number">{{ index + 1 }}</div>
+                                        <span class="stage-name">{{ stage.name }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -278,6 +277,41 @@ const searchResults = computed<{[key in string]: any}>(() => {
 .empty-state {
     text-align: center;
     color: var(--p-text-color-secondary);
+}
+
+.stages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.stage-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--p-surface-50);
+    border-radius: 8px;
+    border-left: 4px solid var(--p-primary-300);
+}
+
+.stage-number {
+    background: var(--p-primary-color);
+    color: white;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.stage-name {
+    font-weight: 500;
+    color: var(--p-text-color);
 }
 
 /* Responsive */
