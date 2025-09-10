@@ -103,23 +103,23 @@
                                         </div>
                                     </div>
                                 </div>
+                                <!-- Add some bottom padding to ensure content doesn't get hidden behind floating button -->
+                                <div style="height: 80px;"></div>
                             </div>
                         </template>
                     </Card>
                 </div>
                 
-                <!-- Fixed footer that never scrolls -->
-                <div class="sticky-footer-flex">
-                    <div class="preview-actions">
-                        <Button 
-                            :label="selectedWorkflowId === attachedWorkflowId ? 'Already Active' : `Start ${selectedWorkflow.title}`"
-                            :disabled="selectedWorkflowId === attachedWorkflowId"
-                            @click="confirmSelection"
-                            icon="pi pi-play"
-                            class="select-button"
-                            size="large"
-                        />
-                    </div>
+                <!-- Floating action gutter - positioned absolutely within the preview panel -->
+                <div class="floating-action-gutter">
+                    <Button 
+                        :label="selectedWorkflowId === attachedWorkflowId ? 'Already Active' : `Start ${selectedWorkflow.title}`"
+                        :disabled="selectedWorkflowId === attachedWorkflowId"
+                        @click="confirmSelection"
+                        icon="pi pi-play"
+                        class="select-button"
+                        size="large"
+                    />
                 </div>
             </div>
             
@@ -265,32 +265,28 @@ const searchResults = computed<{[key in string]: any}>(() => {
 .workflow-preview {
     flex: 1.2;
     min-width: 400px;
-    display: flex;
-    flex-direction: column;
+    position: relative;
 }
 
 .preview-content-scrollable {
-    flex: 1;
+    height: 100%;
     overflow-y: auto;
-    min-height: 0;
 }
 
 .preview-card {
     height: auto;
 }
 
-.sticky-footer-flex {
-    flex-shrink: 0;
+.floating-action-gutter {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 10;
     background: var(--p-surface-0);
     padding: 1rem;
-    border-top: 1px solid var(--p-surface-200);
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-}
-
-
-.preview-actions {
-    display: flex;
-    justify-content: flex-end;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--p-surface-200);
 }
 
 .select-button {
