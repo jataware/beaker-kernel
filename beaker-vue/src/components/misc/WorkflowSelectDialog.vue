@@ -109,7 +109,6 @@
                     </div>
                     
                     <div class="sticky-footer">
-                        <Divider />
                         <div class="preview-actions">
                             <Button 
                                 :label="selectedWorkflowId === attachedWorkflowId ? 'Already Active' : `Start ${selectedWorkflow.title}`"
@@ -117,6 +116,7 @@
                                 @click="confirmSelection"
                                 icon="pi pi-play"
                                 class="select-button"
+                                size="large"
                             />
                         </div>
                     </div>
@@ -288,11 +288,9 @@ const searchResults = computed<{[key in string]: any}>(() => {
     background: var(--p-surface-0);
     padding: 1rem;
     border-top: 1px solid var(--p-surface-200);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.sticky-footer .p-divider {
-    margin: 0 0 1rem 0;
-}
 
 .preview-actions {
     display: flex;
