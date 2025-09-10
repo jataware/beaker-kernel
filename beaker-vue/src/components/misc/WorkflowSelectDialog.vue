@@ -68,42 +68,48 @@
             </div>
             
             <div class="workflow-preview" v-if="selectedWorkflow">
-                <Card class="preview-card">
-                    <template #title>{{ selectedWorkflow.title }}</template>
-                    <template #subtitle>
-                        <div class="flex gap-2 mt-2">
-                            <Chip v-if="selectedWorkflow.category" :label="selectedWorkflow.category" />
-                            <Badge :value="`${selectedWorkflow.stages?.length || 0} stages`" severity="info" />
-                        </div>
-                    </template>
-                    <template #content>
-                        <div class="preview-content">
-                            <div class="section">
-                                <h4>Description</h4>
-                                <p>{{ selectedWorkflow.human_description }}</p>
-                            </div>
-                            
-                            <Divider v-if="selectedWorkflow.example_prompt" />
-                            <div v-if="selectedWorkflow.example_prompt" class="mb-4">
-                                <h4 class="text-lg font-semibold mb-2">Example Usage</h4>
-                                <div class="bg-surface-100 border border-surface-200 rounded p-3 font-mono text-sm">
-                                    {{ selectedWorkflow.example_prompt }}
+                <div class="preview-container">
+                    <div class="preview-content-scrollable">
+                        <Card class="preview-card">
+                            <template #title>{{ selectedWorkflow.title }}</template>
+                            <template #subtitle>
+                                <div class="flex gap-2 mt-2">
+                                    <Chip v-if="selectedWorkflow.category" :label="selectedWorkflow.category" />
+                                    <Badge :value="`${selectedWorkflow.stages?.length || 0} stages`" severity="info" />
                                 </div>
-                            </div>
-                            
-                            <Divider v-if="selectedWorkflow.stages?.length" />
-                            <div v-if="selectedWorkflow.stages?.length" class="section">
-                                <h4>Workflow Stages</h4>
-                                <div class="stages-list">
-                                    <div v-for="(stage, index) in selectedWorkflow.stages" :key="index" class="stage-item">
-                                        <span class="stage-number">{{ index + 1 }}</span>
-                                        <span class="stage-name">{{ stage.name }}</span>
+                            </template>
+                            <template #content>
+                                <div class="preview-content">
+                                    <div class="section">
+                                        <h4>Description</h4>
+                                        <p>{{ selectedWorkflow.human_description }}</p>
+                                    </div>
+                                    
+                                    <Divider v-if="selectedWorkflow.example_prompt" />
+                                    <div v-if="selectedWorkflow.example_prompt" class="mb-4">
+                                        <h4 class="text-lg font-semibold mb-2">Example Usage</h4>
+                                        <div class="bg-surface-100 border border-surface-200 rounded p-3 font-mono text-sm">
+                                            {{ selectedWorkflow.example_prompt }}
+                                        </div>
+                                    </div>
+                                    
+                                    <Divider v-if="selectedWorkflow.stages?.length" />
+                                    <div v-if="selectedWorkflow.stages?.length" class="section">
+                                        <h4>Workflow Stages</h4>
+                                        <div class="stages-list">
+                                            <div v-for="(stage, index) in selectedWorkflow.stages" :key="index" class="stage-item">
+                                                <span class="stage-number">{{ index + 1 }}</span>
+                                                <span class="stage-name">{{ stage.name }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </template>
-                    <template #footer>
+                            </template>
+                        </Card>
+                    </div>
+                    
+                    <div class="sticky-footer">
+                        <Divider />
                         <div class="preview-actions">
                             <Button 
                                 :label="selectedWorkflowId === attachedWorkflowId ? 'Already Active' : `Start ${selectedWorkflow.title}`"
@@ -113,8 +119,8 @@
                                 class="select-button"
                             />
                         </div>
-                    </template>
-                </Card>
+                    </div>
+                </div>
             </div>
             
             <div class="workflow-preview empty-preview" v-else>
@@ -216,6 +222,7 @@ const searchResults = computed<{[key in string]: any}>(() => {
     flex: 1;
     gap: 1.5rem;
     min-height: 0;
+    height: 60vh;
 }
 
 .workflow-list {
@@ -260,14 +267,36 @@ const searchResults = computed<{[key in string]: any}>(() => {
     min-width: 400px;
 }
 
-.preview-card {
+.preview-container {
     height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-content-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.preview-card {
+    height: auto;
+}
+
+.sticky-footer {
+    flex-shrink: 0;
+    background: var(--p-surface-0);
+    padding: 1rem;
+    border-top: 1px solid var(--p-surface-200);
+}
+
+.sticky-footer .p-divider {
+    margin: 0 0 1rem 0;
 }
 
 .preview-actions {
     display: flex;
     justify-content: flex-end;
-    padding-top: 1rem;
 }
 
 .select-button {
@@ -348,6 +377,11 @@ const searchResults = computed<{[key in string]: any}>(() => {
     
     .workflow-preview {
         min-width: unset;
+        flex: 1;
+    }
+    
+    .sticky-footer {
+        padding: 0.75rem;
     }
 }
 
