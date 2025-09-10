@@ -278,10 +278,10 @@ const searchResults = computed<{[key in string]: any}>(() => {
 }
 
 .floating-action-gutter {
-    position: absolute;
-    bottom: 1rem;
-    right: 1rem;
-    z-index: 10;
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 1000;
     background: var(--p-surface-0);
     padding: 1rem;
     border-radius: 8px;
