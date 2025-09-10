@@ -103,22 +103,26 @@
                                             </div>
                                         </div>
                                     </div>
+                                    
+                                    <!-- Add bottom padding to prevent content from hiding behind sticky footer -->
+                                    <div style="height: 80px;"></div>
                                 </div>
                             </template>
                         </Card>
                     </div>
-                    
-                    <div class="sticky-footer">
-                        <div class="preview-actions">
-                            <Button 
-                                :label="selectedWorkflowId === attachedWorkflowId ? 'Already Active' : `Start ${selectedWorkflow.title}`"
-                                :disabled="selectedWorkflowId === attachedWorkflowId"
-                                @click="confirmSelection"
-                                icon="pi pi-play"
-                                class="select-button"
-                                size="large"
-                            />
-                        </div>
+                </div>
+                
+                <!-- Sticky footer completely outside the scrollable area -->
+                <div class="sticky-footer-absolute">
+                    <div class="preview-actions">
+                        <Button 
+                            :label="selectedWorkflowId === attachedWorkflowId ? 'Already Active' : `Start ${selectedWorkflow.title}`"
+                            :disabled="selectedWorkflowId === attachedWorkflowId"
+                            @click="confirmSelection"
+                            icon="pi pi-play"
+                            class="select-button"
+                            size="large"
+                        />
                     </div>
                 </div>
             </div>
@@ -265,6 +269,7 @@ const searchResults = computed<{[key in string]: any}>(() => {
 .workflow-preview {
     flex: 1.2;
     min-width: 400px;
+    position: relative;
 }
 
 .preview-container {
@@ -283,12 +288,16 @@ const searchResults = computed<{[key in string]: any}>(() => {
     height: auto;
 }
 
-.sticky-footer {
-    flex-shrink: 0;
+.sticky-footer-absolute {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     background: var(--p-surface-0);
     padding: 1rem;
     border-top: 1px solid var(--p-surface-200);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
 }
 
 
@@ -378,7 +387,7 @@ const searchResults = computed<{[key in string]: any}>(() => {
         flex: 1;
     }
     
-    .sticky-footer {
+    .sticky-footer-absolute {
         padding: 0.75rem;
     }
 }
