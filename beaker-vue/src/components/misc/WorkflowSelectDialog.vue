@@ -68,52 +68,48 @@
             </div>
             
             <div class="workflow-preview" v-if="selectedWorkflow">
-                <div class="preview-container">
-                    <div class="preview-content-scrollable">
-                        <Card class="preview-card">
-                            <template #title>{{ selectedWorkflow.title }}</template>
-                            <template #subtitle>
-                                <div class="flex gap-2 mt-2">
-                                    <Chip v-if="selectedWorkflow.category" :label="selectedWorkflow.category" />
-                                    <Badge :value="`${selectedWorkflow.stages?.length || 0} stages`" severity="info" />
+                <!-- Scrollable content area -->
+                <div class="preview-content-scrollable">
+                    <Card class="preview-card">
+                        <template #title>{{ selectedWorkflow.title }}</template>
+                        <template #subtitle>
+                            <div class="flex gap-2 mt-2">
+                                <Chip v-if="selectedWorkflow.category" :label="selectedWorkflow.category" />
+                                <Badge :value="`${selectedWorkflow.stages?.length || 0} stages`" severity="info" />
+                            </div>
+                        </template>
+                        <template #content>
+                            <div class="preview-content">
+                                <div class="section">
+                                    <h4>Description</h4>
+                                    <p>{{ selectedWorkflow.human_description }}</p>
                                 </div>
-                            </template>
-                            <template #content>
-                                <div class="preview-content">
-                                    <div class="section">
-                                        <h4>Description</h4>
-                                        <p>{{ selectedWorkflow.human_description }}</p>
+                                
+                                <Divider v-if="selectedWorkflow.example_prompt" />
+                                <div v-if="selectedWorkflow.example_prompt" class="mb-4">
+                                    <h4 class="text-lg font-semibold mb-2">Example Usage</h4>
+                                    <div class="bg-surface-100 border border-surface-200 rounded p-3 font-mono text-sm">
+                                        {{ selectedWorkflow.example_prompt }}
                                     </div>
-                                    
-                                    <Divider v-if="selectedWorkflow.example_prompt" />
-                                    <div v-if="selectedWorkflow.example_prompt" class="mb-4">
-                                        <h4 class="text-lg font-semibold mb-2">Example Usage</h4>
-                                        <div class="bg-surface-100 border border-surface-200 rounded p-3 font-mono text-sm">
-                                            {{ selectedWorkflow.example_prompt }}
+                                </div>
+                                
+                                <Divider v-if="selectedWorkflow.stages?.length" />
+                                <div v-if="selectedWorkflow.stages?.length" class="section">
+                                    <h4>Workflow Stages</h4>
+                                    <div class="stages-list">
+                                        <div v-for="(stage, index) in selectedWorkflow.stages" :key="index" class="stage-item">
+                                            <span class="stage-number">{{ index + 1 }}</span>
+                                            <span class="stage-name">{{ stage.name }}</span>
                                         </div>
                                     </div>
-                                    
-                                    <Divider v-if="selectedWorkflow.stages?.length" />
-                                    <div v-if="selectedWorkflow.stages?.length" class="section">
-                                        <h4>Workflow Stages</h4>
-                                        <div class="stages-list">
-                                            <div v-for="(stage, index) in selectedWorkflow.stages" :key="index" class="stage-item">
-                                                <span class="stage-number">{{ index + 1 }}</span>
-                                                <span class="stage-name">{{ stage.name }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Add bottom padding to prevent content from hiding behind sticky footer -->
-                                    <div style="height: 80px;"></div>
                                 </div>
-                            </template>
-                        </Card>
-                    </div>
+                            </div>
+                        </template>
+                    </Card>
                 </div>
                 
-                <!-- Sticky footer completely outside the scrollable area -->
-                <div class="sticky-footer-absolute">
+                <!-- Fixed footer that never scrolls -->
+                <div class="sticky-footer-flex">
                     <div class="preview-actions">
                         <Button 
                             :label="selectedWorkflowId === attachedWorkflowId ? 'Already Active' : `Start ${selectedWorkflow.title}`"
@@ -269,11 +265,6 @@ const searchResults = computed<{[key in string]: any}>(() => {
 .workflow-preview {
     flex: 1.2;
     min-width: 400px;
-    position: relative;
-}
-
-.preview-container {
-    height: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -288,16 +279,12 @@ const searchResults = computed<{[key in string]: any}>(() => {
     height: auto;
 }
 
-.sticky-footer-absolute {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+.sticky-footer-flex {
+    flex-shrink: 0;
     background: var(--p-surface-0);
     padding: 1rem;
     border-top: 1px solid var(--p-surface-200);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-    z-index: 10;
 }
 
 
