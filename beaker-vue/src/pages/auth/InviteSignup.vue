@@ -4,83 +4,123 @@
       <div v-if="!submitted">
 
         <div class="auth-header">
+          <div class="auth-header-logo">
+          <BeakerLogo :size="48" />
           <h1 class="auth-title">BeakerHub</h1>
+          </div>
           <p class="auth-subtitle">Interactive coding assistant for scientific research</p>
         </div>
 
         <Card class="auth-card">
           <template #content>
             <div class="form-header">
-              <div class="signup-icon">
-                <i class="pi pi-user-plus"></i>
+              <div class="invite-icon">
               </div>
-              <h2 class="form-title">Sign Up</h2>
-              <p class="form-subtitle">Join to get access to BeakerHub</p>
+              <h2 class="form-title">Join by Invitation</h2>
+              <p class="form-subtitle">Complete your account setup with your invitation code</p>
             </div>
 
             <form @submit.prevent="handleSubmit" class="form-content">
+              <div class="form-grid">
+                <div class="form-column">
+                  <div class="form-field">
+                    <label for="email" class="field-label">Email Address</label>
+                    <div class="input-wrapper">
+                      <InputText
+                        id="email"
+                        v-model="formData.email"
+                        type="email"
+                        placeholder="your.email@example.com"
+                        class="input-with-icon"
+                        :disabled="emailFromInvite"
+                        required
+                      />
+                      <i class="pi pi-envelope input-icon"></i>
+                    </div>
+                    <small v-if="emailFromInvite" class="field-help">Email pre-filled from your invitation</small>
+                  </div>
 
-              <div class="form-field">
-                <label for="email" class="field-label">Email Address</label>
-                <div class="input-wrapper">
-                  <InputText
-                    id="email"
-                    v-model="formData.email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    class="input-with-icon"
-                    required
-                  />
-                  <i class="pi pi-envelope input-icon"></i>
+                  <div class="form-field">
+                    <label for="password" class="field-label">Password</label>
+                    <div class="input-wrapper password-wrapper">
+                      <Password
+                        id="password"
+                        v-model="formData.password"
+                        placeholder="Create a password"
+                        class="password-input"
+                        :feedback="false"
+                        toggleMask
+                        required
+                      />
+                      <i class="pi pi-lock password-icon"></i>
+                    </div>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="confirmPassword" class="field-label">Confirm Password</label>
+                    <div class="input-wrapper password-wrapper">
+                      <Password
+                        id="confirmPassword"
+                        v-model="formData.confirmPassword"
+                        placeholder="Confirm your password"
+                        class="password-input"
+                        :feedback="false"
+                        toggleMask
+                        required
+                      />
+                      <i class="pi pi-lock password-icon"></i>
+                    </div>
+                    <small v-if="passwordMismatch" class="field-error">Passwords do not match</small>
+                  </div>
                 </div>
-              </div>
 
-              <div class="form-field">
-                <label for="useCase" class="field-label">Primary Use Case</label>
-                <Select
-                  id="useCase"
-                  v-model="formData.useCase"
-                  :options="useCases"
-                  option-label="label"
-                  option-value="value"
-                  placeholder="Select your primary use case..."
-                  class="w-full"
-                  required
-                />
-                <small class="field-help">Help us understand how you plan to use BeakerHub</small>
-              </div>
+                <div class="form-column">
+                  <div class="form-field">
+                    <label for="inviteCode" class="field-label">Invitation Code</label>
+                    <div class="input-wrapper">
+                      <InputText
+                        id="inviteCode"
+                        v-model="formData.inviteCode"
+                        type="text"
+                        placeholder="Enter your invitation code"
+                        class="input-with-icon"
+                        required
+                      />
+                      <i class="pi pi-ticket input-icon"></i>
+                    </div>
+                    <small class="field-help">Check your invitation email for this code</small>
+                  </div>
 
-              <div class="form-field">
-                <label for="password" class="field-label">Password</label>
-                <div class="input-wrapper password-wrapper">
-                  <Password
-                    id="password"
-                    v-model="formData.password"
-                    placeholder="Create a password"
-                    class="password-input"
-                    :feedback="false"
-                    toggleMask
-                    required
-                  />
-                  <i class="pi pi-lock password-icon"></i>
+                  <div class="form-field">
+                    <label for="organization" class="field-label">Organization</label>
+                    <div class="input-wrapper">
+                      <InputText
+                        id="organization"
+                        v-model="formData.organization"
+                        type="text"
+                        placeholder="Your organization or institution"
+                        class="input-with-icon"
+                      />
+                      <i class="pi pi-building input-icon"></i>
+                    </div>
+                    <small class="field-help">Optional - helps us understand your use case</small>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="useCase" class="field-label">Primary Use Case</label>
+                    <Select
+                      id="useCase"
+                      v-model="formData.useCase"
+                      :options="useCases"
+                      option-label="label"
+                      option-value="value"
+                      placeholder="Select your primary use case..."
+                      class="w-full"
+                      required
+                    />
+                    <small class="field-help">Help us understand how you plan to use BeakerHub</small>
+                  </div>
                 </div>
-              </div>
-
-              <div class="form-field">
-                <label for="confirmPassword" class="field-label">Confirm Password</label>
-                <div class="input-wrapper password-wrapper">
-                  <Password
-                    id="confirmPassword"
-                    v-model="formData.confirmPassword"
-                    placeholder="Confirm your password"
-                    class="password-input"
-                    :feedback="false"
-                    toggleMask
-                    required
-                  />
-                  <i class="pi pi-lock password-icon"></i>
-                </div>
-                <small v-if="passwordMismatch" class="field-error">Passwords do not match</small>
               </div>
 
               <Button
@@ -90,20 +130,20 @@
                 class="submit-button"
                 size="large"
               >
-                {{ isSubmitting ? 'Submitting...' : 'Sign Up' }}
+                {{ isSubmitting ? 'Creating Account...' : 'Create Account' }}
               </Button>
             </form>
 
             <Divider />
 
             <div class="signin-link">
-              <span class="signin-text">Already have access? </span>
+              <span class="signin-text">Already have an account? </span>
               <a href="/auth/login" class="signin-link-text">Log In</a>
             </div>
 
-            <div class="invite-link">
-              <span class="invite-text">Have an invitation? </span>
-              <a href="/auth/invite" class="invite-link-text">Join by Invite</a>
+            <div class="signup-link">
+              <span class="signup-text">Don't have an invitation? </span>
+              <a href="/auth/signup" class="signup-link-text">Request Access</a>
             </div>
 
             <div class="hub-link">
@@ -118,29 +158,30 @@
           <div class="success-header">
             <i class="pi pi-check-circle success-icon"></i>
             <h2 class="success-title">Welcome to BeakerHub!</h2>
-            <p class="success-subtitle">Thank you for signing up for our beta program.</p>
+            <p class="success-subtitle">Your account has been created successfully.</p>
           </div>
 
-          <Message severity="info" class="success-message">
+          <Message severity="success" class="success-message">
             <template #messageicon>
               <i class="pi pi-info-circle"></i>
             </template>
             <div>
-              <h3 class="message-title">What's Next?</h3>
+              <h3 class="message-title">You're all set!</h3>
               <ul class="message-list">
-                <li>We'll review your application within 24-48 hours</li>
-                <li>You'll receive an email with access instructions</li>
+                <li>Your invitation has been accepted</li>
+                <li>Full access to BeakerHub features</li>
+                <li>Start creating computational notebooks</li>
+                <li>Collaborate with your team</li>
               </ul>
             </div>
           </Message>
 
-          <p class="contact-text">
-            Questions? Email us at 
-            <a href="mailto:support@beakerhub.com" class="contact-link">support@beakerhub.com</a>
+          <p class="welcome-text">
+            Welcome to the BeakerHub community!
           </p>
 
-          <Button @click="goHome" class="continue-button" size="large">
-            Continue to BeakerHub
+          <Button @click="goToDashboard" class="continue-button" size="large">
+            Get Started
           </Button>
         </template>
       </Card>
@@ -149,7 +190,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import Card from 'primevue/card';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
@@ -157,23 +199,30 @@ import Select from 'primevue/select';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Divider from 'primevue/divider';
+import BeakerLogo from '@/components/BeakerLogo.vue';
 
 interface FormData {
+  inviteCode: string;
   email: string;
+  organization: string;
   useCase: string;
   password: string;
   confirmPassword: string;
 }
 
+const route = useRoute();
 const formData = ref<FormData>({
-  email: '',
-  useCase: '',
+  inviteCode: 'BEAKER-2024-RESEARCH-AB7X9',
+  email: 'dr.sarah.chen@university-research.edu',
+  organization: 'University Research Institute',
+  useCase: 'health-research',
   password: '',
   confirmPassword: ''
 });
 
 const isSubmitting = ref(false);
 const submitted = ref(false);
+const emailFromInvite = ref(false);
 
 const useCases = [
   { value: 'health-research', label: 'Health & Medical Research' },
@@ -187,6 +236,23 @@ const useCases = [
   { value: 'other', label: 'Other (please specify in beta feedback)' }
 ];
 
+onMounted(() => {
+  const codeFromQuery = route.query.code as string;
+  const emailFromQuery = route.query.email as string;
+  
+  if (codeFromQuery) {
+    formData.value.inviteCode = codeFromQuery;
+  }
+  
+  if (emailFromQuery) {
+    formData.value.email = emailFromQuery;
+    emailFromInvite.value = true;
+  } else {
+    // Using mock data, so set flag to true
+    emailFromInvite.value = true;
+  }
+});
+
 const passwordMismatch = computed(() => {
   return formData.value.password && 
          formData.value.confirmPassword && 
@@ -194,7 +260,8 @@ const passwordMismatch = computed(() => {
 });
 
 const isFormValid = computed(() => {
-  return formData.value.email && 
+  return formData.value.inviteCode && 
+         formData.value.email && 
          formData.value.useCase &&
          formData.value.password &&
          formData.value.confirmPassword &&
@@ -208,12 +275,12 @@ const handleSubmit = async () => {
   
   await new Promise(resolve => setTimeout(resolve, 2000));
   
-  console.log('Signup data:', formData.value);
+  console.log('Invite signup data:', formData.value);
   submitted.value = true;
   isSubmitting.value = false;
 };
 
-const goHome = () => {
+const goToDashboard = () => {
   window.location.href = '/';
 };
 </script>
@@ -235,23 +302,27 @@ const goHome = () => {
 
 .auth-content {
   width: 100%;
-  max-width: 28rem;
-  margin-top: max(1.5rem, 8vh);
+  max-width: 48rem;
+  margin-top: max(1rem, 6vh);
 }
 
 .auth-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .auth-title {
   font-size: 2.25rem;
   font-weight: bold;
   color: var(--p-text-color);
-  margin-bottom: 0.5rem;
+  /* margin-bottom: 0.5rem; */
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .auth-subtitle {
   color: var(--p-text-muted-color);
+  margin-top: 0.25rem;
+  margin-bottom: 0;
 }
 
 .auth-card {
@@ -263,20 +334,11 @@ const goHome = () => {
   margin-bottom: 1.5rem;
 }
 
-.signup-icon {
+.invite-icon {
   margin: 0 auto 0.75rem;
-  width: 3rem;
-  height: 3rem;
-  background-color: var(--p-primary-color);
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.signup-icon i {
-  font-size: 1.5rem;
-  color: var(--p-surface-0);
 }
 
 .form-title {
@@ -297,6 +359,24 @@ const goHome = () => {
   gap: 1.5rem;
 }
 
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form-field {
   display: flex;
   flex-direction: column;
@@ -315,68 +395,27 @@ const goHome = () => {
   margin-top: 0.25rem;
 }
 
-.terms-agreement {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
-.terms-label {
-  font-size: 0.875rem;
-  line-height: 1.6;
-  color: var(--p-text-muted-color);
-}
-
-.terms-link {
-  color: var(--p-primary-color);
-  text-decoration: none;
-}
-
-.terms-link:hover {
-  text-decoration: underline;
-}
-
 .submit-button {
   width: 100%;
 }
 
-.signin-link {
+.signin-link, .signup-link {
   text-align: center;
 }
 
-.signin-text {
+.signin-text, .signup-text {
   font-size: 0.875rem;
   color: var(--p-text-muted-color);
 }
 
-.signin-link-text {
+.signin-link-text, .signup-link-text {
   color: var(--p-primary-color);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.875rem;
 }
 
-.signin-link-text:hover {
-  text-decoration: underline;
-}
-
-.invite-link {
-  text-align: center;
-}
-
-.invite-text {
-  font-size: 0.875rem;
-  color: var(--p-text-muted-color);
-}
-
-.invite-link-text {
-  color: var(--p-primary-color);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.875rem;
-}
-
-.invite-link-text:hover {
+.signin-link-text:hover, .signup-link-text:hover {
   text-decoration: underline;
 }
 
@@ -404,12 +443,12 @@ const goHome = () => {
 
 @media (max-height: 700px) {
   .auth-content {
-    margin-top: 0.5rem;
+    margin-top: 0.65rem;
     margin-bottom: 0.5rem;
   }
   
   .auth-header {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
   }
 }
 
@@ -544,23 +583,24 @@ const goHome = () => {
   margin-bottom: 0.25rem;
 }
 
-.contact-text {
+.welcome-text {
   font-size: 0.875rem;
   color: var(--p-text-muted-color);
-  margin-bottom: 1rem;
-}
-
-.contact-link {
-  color: var(--p-primary-color);
-  text-decoration: none;
-}
-
-.contact-link:hover {
-  text-decoration: underline;
+  margin-bottom: 1.5rem;
+  font-style: italic;
 }
 
 .continue-button {
   width: 100%;
+}
+
+.auth-header-logo {
+  display: flex;
+  align-items: center;
+  justify-self: flex-start;
+  justify-content: center;
+  margin-bottom: 0;
+  /* gap: 0.25rem; */
 }
 
 </style>

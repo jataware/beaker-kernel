@@ -1,7 +1,7 @@
 <template>
   <div class="auth-container">
     <div class="auth-content">
-      <div v-if="!loggedIn">
+      <div v-if="!validated">
         <div class="auth-header">
           <h1 class="auth-title">BeakerHub</h1>
           <p class="auth-subtitle">Interactive coding assistant for scientific research</p>
@@ -10,11 +10,11 @@
         <Card class="auth-card">
           <template #content>
             <div class="form-header">
-              <div class="login-icon">
-                <i class="pi pi-sign-in"></i>
+              <div class="validation-icon">
+                <i class="pi pi-shield"></i>
               </div>
-              <h2 class="form-title">Welcome Back</h2>
-              <p class="form-subtitle">Log in to access your BeakerHub workspaces</p>
+              <h2 class="form-title">Verify Your Email</h2>
+              <p class="form-subtitle">Enter the verification code sent to your email address</p>
             </div>
 
             <form @submit.prevent="handleSubmit" class="form-content">
@@ -34,23 +34,20 @@
               </div>
 
               <div class="form-field">
-                <label for="password" class="field-label">Password</label>
-                <div class="input-wrapper password-wrapper">
-                  <Password
-                    id="password"
-                    v-model="formData.password"
-                    placeholder="Enter your password"
-                    class="password-input"
-                    :feedback="false"
-                    toggleMask
+                <label for="code" class="field-label">Verification Code</label>
+                <div class="input-wrapper">
+                  <InputText
+                    id="code"
+                    v-model="formData.code"
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    class="input-with-icon code-input"
+                    maxlength="6"
                     required
                   />
-                  <i class="pi pi-lock password-icon"></i>
+                  <i class="pi pi-key input-icon"></i>
                 </div>
-              </div>
-
-              <div class="forgot-password">
-                <a href="/auth/reset" class="forgot-link">Forgot your password?</a>
+                <small class="field-help">Check your email for the 6-digit verification code</small>
               </div>
 
               <Button
@@ -60,15 +57,24 @@
                 class="submit-button"
                 size="large"
               >
-                {{ isSubmitting ? 'Logging in...' : 'Log In' }}
+                {{ isSubmitting ? 'Verifying...' : 'Verify Email' }}
               </Button>
             </form>
 
+            <div class="resend-section">
+              <p class="resend-text">
+                Didn't receive a code? 
+                <button @click="resendCode" class="resend-link" :disabled="resendCooldown > 0">
+                  {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code' }}
+                </button>
+              </p>
+            </div>
+
             <Divider />
 
-            <div class="signup-link">
-              <span class="signup-text">New to BeakerHub? </span>
-              <a href="/auth/signup" class="signup-link-text">Sign Up</a>
+            <div class="login-link">
+              <span class="login-text">Already verified? </span>
+              <a href="/auth/login" class="login-link-text">Log In</a>
             </div>
 
             <div class="hub-link">
@@ -82,8 +88,8 @@
         <template #content>
           <div class="success-header">
             <i class="pi pi-check-circle success-icon"></i>
-            <h2 class="success-title">Welcome back!</h2>
-            <p class="success-subtitle">You have successfully logged in to BeakerHub.</p>
+            <h2 class="success-title">Email Verified!</h2>
+            <p class="success-subtitle">Your email address has been successfully verified</p>
           </div>
 
           <Message severity="success" class="success-message">
@@ -91,17 +97,17 @@
               <i class="pi pi-info-circle"></i>
             </template>
             <div>
-              <h3 class="message-title">Getting Started</h3>
+              <h3 class="message-title">What's Next?</h3>
               <ul class="message-list">
-                <li>Access your previous notebooks and sessions</li>
-                <li>Create new computational environments</li>
-                <li>Continue your research where you left off</li>
+                <li>Your account is now fully activated</li>
+                <li>You can access all BeakerHub features</li>
+                <li>Start creating your first notebook</li>
               </ul>
             </div>
           </Message>
 
-          <Button @click="goToDashboard" class="continue-button" size="large">
-            Go to Dashboard
+          <Button @click="goToLogin" class="continue-button" size="large">
+            Continue to Login
           </Button>
         </template>
       </Card>
@@ -110,29 +116,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRoute } from 'vue-router';
 import Card from 'primevue/card';
 import InputText from 'primevue/inputtext';
-import Password from 'primevue/password';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Divider from 'primevue/divider';
 
 interface FormData {
   email: string;
-  password: string;
+  code: string;
 }
 
+const route = useRoute();
 const formData = ref<FormData>({
   email: '',
-  password: ''
+  code: ''
 });
 
 const isSubmitting = ref(false);
-const loggedIn = ref(false);
+const validated = ref(false);
+const resendCooldown = ref(0);
+let resendInterval: number | null = null;
 
 const isFormValid = computed(() => {
-  return formData.value.email && formData.value.password;
+  return formData.value.email && formData.value.code && formData.value.code.length === 6;
+});
+
+onMounted(() => {
+  const emailFromQuery = route.query.email as string;
+  if (emailFromQuery) {
+    formData.value.email = emailFromQuery;
+  }
 });
 
 const handleSubmit = async () => {
@@ -142,14 +158,35 @@ const handleSubmit = async () => {
   
   await new Promise(resolve => setTimeout(resolve, 2000));
   
-  console.log('Login data:', formData.value);
-  loggedIn.value = true;
+  console.log('Email validation data:', formData.value);
+  validated.value = true;
   isSubmitting.value = false;
 };
 
-const goToDashboard = () => {
-  window.location.href = '/';
+const resendCode = async () => {
+  if (!formData.value.email) return;
+  
+  console.log('Resending verification code to:', formData.value.email);
+  
+  resendCooldown.value = 60;
+  resendInterval = window.setInterval(() => {
+    resendCooldown.value--;
+    if (resendCooldown.value <= 0 && resendInterval) {
+      clearInterval(resendInterval);
+      resendInterval = null;
+    }
+  }, 1000);
 };
+
+const goToLogin = () => {
+  window.location.href = '/auth/login';
+};
+
+onUnmounted(() => {
+  if (resendInterval) {
+    clearInterval(resendInterval);
+  }
+});
 </script>
 
 <style scoped>
@@ -196,7 +233,7 @@ const goToDashboard = () => {
   margin-bottom: 1.5rem;
 }
 
-.login-icon {
+.validation-icon {
   margin: 0 auto 0.75rem;
   width: 3rem;
   height: 3rem;
@@ -207,7 +244,7 @@ const goToDashboard = () => {
   justify-content: center;
 }
 
-.login-icon i {
+.validation-icon i {
   font-size: 1.5rem;
   color: var(--p-surface-0);
 }
@@ -242,6 +279,12 @@ const goToDashboard = () => {
   color: var(--p-text-color);
 }
 
+.field-help {
+  color: var(--p-text-muted-color);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
 .input-wrapper {
   position: relative;
   width: 100%;
@@ -250,6 +293,13 @@ const goToDashboard = () => {
 .input-with-icon {
   width: 100%;
   padding-left: 2.5rem;
+}
+
+.code-input {
+  text-align: center;
+  font-family: monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.2rem;
 }
 
 .input-icon {
@@ -263,67 +313,55 @@ const goToDashboard = () => {
   z-index: 1;
 }
 
-.password-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.password-input {
-  width: 100%;
-}
-
-.password-input :deep(.p-password-input) {
-  width: 100%;
-  padding-left: 2.5rem;
-}
-
-.password-icon {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--p-text-muted-color);
-  opacity: 0.6;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.forgot-password {
-  text-align: right;
-  margin-top: -0.5rem;
-}
-
-.forgot-link {
-  font-size: 0.875rem;
-  color: var(--p-primary-color);
-  text-decoration: none;
-}
-
-.forgot-link:hover {
-  text-decoration: underline;
-}
-
 .submit-button {
   width: 100%;
 }
 
-.signup-link {
+.resend-section {
   text-align: center;
+  margin-top: 1rem;
 }
 
-.signup-text {
+.resend-text {
   font-size: 0.875rem;
   color: var(--p-text-muted-color);
 }
 
-.signup-link-text {
+.resend-link {
+  color: var(--p-primary-color);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.resend-link:hover:not(:disabled) {
+  color: var(--p-primary-600);
+}
+
+.resend-link:disabled {
+  color: var(--p-text-muted-color);
+  cursor: not-allowed;
+}
+
+.login-link {
+  text-align: center;
+}
+
+.login-text {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.login-link-text {
   color: var(--p-primary-color);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.875rem;
 }
 
-.signup-link-text:hover {
+.login-link-text:hover {
   text-decoration: underline;
 }
 

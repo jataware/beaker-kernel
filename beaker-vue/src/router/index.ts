@@ -63,6 +63,18 @@ const defaultRouteMap: Routes = {
       "path": "/auth/login",
       "component": () => import('@/pages/auth/Login.vue'),
     },
+    "reset-password": {
+      "path": "/auth/reset",
+      "component": () => import('@/pages/auth/ResetPassword.vue'),
+    },
+    "email-validation": {
+      "path": "/auth/verify",
+      "component": () => import('@/pages/auth/EmailValidation.vue'),
+    },
+    "invite-signup": {
+      "path": "/auth/invite",
+      "component": () => import('@/pages/auth/InviteSignup.vue'),
+    },
 }
 
 const reformatRoutes = (routeMap: Routes) => {

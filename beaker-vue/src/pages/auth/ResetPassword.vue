@@ -1,7 +1,7 @@
 <template>
   <div class="auth-container">
     <div class="auth-content">
-      <div v-if="!loggedIn">
+      <div v-if="!submitted">
         <div class="auth-header">
           <h1 class="auth-title">BeakerHub</h1>
           <p class="auth-subtitle">Interactive coding assistant for scientific research</p>
@@ -10,11 +10,11 @@
         <Card class="auth-card">
           <template #content>
             <div class="form-header">
-              <div class="login-icon">
-                <i class="pi pi-sign-in"></i>
+              <div class="reset-icon">
+                <i class="pi pi-key"></i>
               </div>
-              <h2 class="form-title">Welcome Back</h2>
-              <p class="form-subtitle">Log in to access your BeakerHub workspaces</p>
+              <h2 class="form-title">Reset Password</h2>
+              <p class="form-subtitle">Enter your email to receive a password reset link</p>
             </div>
 
             <form @submit.prevent="handleSubmit" class="form-content">
@@ -33,26 +33,6 @@
                 </div>
               </div>
 
-              <div class="form-field">
-                <label for="password" class="field-label">Password</label>
-                <div class="input-wrapper password-wrapper">
-                  <Password
-                    id="password"
-                    v-model="formData.password"
-                    placeholder="Enter your password"
-                    class="password-input"
-                    :feedback="false"
-                    toggleMask
-                    required
-                  />
-                  <i class="pi pi-lock password-icon"></i>
-                </div>
-              </div>
-
-              <div class="forgot-password">
-                <a href="/auth/reset" class="forgot-link">Forgot your password?</a>
-              </div>
-
               <Button
                 type="submit"
                 :disabled="!isFormValid || isSubmitting"
@@ -60,11 +40,16 @@
                 class="submit-button"
                 size="large"
               >
-                {{ isSubmitting ? 'Logging in...' : 'Log In' }}
+                {{ isSubmitting ? 'Sending...' : 'Send Reset Link' }}
               </Button>
             </form>
 
             <Divider />
+
+            <div class="back-to-login">
+              <span class="back-text">Remember your password? </span>
+              <a href="/auth/login" class="back-link-text">Back to Login</a>
+            </div>
 
             <div class="signup-link">
               <span class="signup-text">New to BeakerHub? </span>
@@ -81,27 +66,34 @@
       <Card v-else class="auth-card success-card">
         <template #content>
           <div class="success-header">
-            <i class="pi pi-check-circle success-icon"></i>
-            <h2 class="success-title">Welcome back!</h2>
-            <p class="success-subtitle">You have successfully logged in to BeakerHub.</p>
+            <i class="pi pi-envelope success-icon"></i>
+            <h2 class="success-title">Check Your Email</h2>
+            <p class="success-subtitle">We've sent a password reset link to {{ formData.email }}</p>
           </div>
 
-          <Message severity="success" class="success-message">
+          <Message severity="info" class="success-message">
             <template #messageicon>
               <i class="pi pi-info-circle"></i>
             </template>
             <div>
-              <h3 class="message-title">Getting Started</h3>
+              <h3 class="message-title">What's Next?</h3>
               <ul class="message-list">
-                <li>Access your previous notebooks and sessions</li>
-                <li>Create new computational environments</li>
-                <li>Continue your research where you left off</li>
+                <li>Check your email for the reset link</li>
+                <li>Click the link to create a new password</li>
+                <li>The link will expire in 24 hours</li>
               </ul>
             </div>
           </Message>
 
-          <Button @click="goToDashboard" class="continue-button" size="large">
-            Go to Dashboard
+          <p class="resend-text">
+            Didn't receive an email? 
+            <button @click="resendEmail" class="resend-link" :disabled="resendCooldown > 0">
+              {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend' }}
+            </button>
+          </p>
+
+          <Button @click="goToLogin" class="continue-button" size="large" severity="secondary">
+            Back to Login
           </Button>
         </template>
       </Card>
@@ -110,29 +102,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 import Card from 'primevue/card';
 import InputText from 'primevue/inputtext';
-import Password from 'primevue/password';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Divider from 'primevue/divider';
 
 interface FormData {
   email: string;
-  password: string;
 }
 
 const formData = ref<FormData>({
-  email: '',
-  password: ''
+  email: ''
 });
 
 const isSubmitting = ref(false);
-const loggedIn = ref(false);
+const submitted = ref(false);
+const resendCooldown = ref(0);
+let resendInterval: number | null = null;
 
 const isFormValid = computed(() => {
-  return formData.value.email && formData.value.password;
+  return formData.value.email;
 });
 
 const handleSubmit = async () => {
@@ -142,14 +133,33 @@ const handleSubmit = async () => {
   
   await new Promise(resolve => setTimeout(resolve, 2000));
   
-  console.log('Login data:', formData.value);
-  loggedIn.value = true;
+  console.log('Reset password data:', formData.value);
+  submitted.value = true;
   isSubmitting.value = false;
 };
 
-const goToDashboard = () => {
-  window.location.href = '/';
+const resendEmail = async () => {
+  console.log('Resending reset email to:', formData.value.email);
+  
+  resendCooldown.value = 30;
+  resendInterval = window.setInterval(() => {
+    resendCooldown.value--;
+    if (resendCooldown.value <= 0 && resendInterval) {
+      clearInterval(resendInterval);
+      resendInterval = null;
+    }
+  }, 1000);
 };
+
+const goToLogin = () => {
+  window.location.href = '/auth/login';
+};
+
+onUnmounted(() => {
+  if (resendInterval) {
+    clearInterval(resendInterval);
+  }
+});
 </script>
 
 <style scoped>
@@ -196,7 +206,7 @@ const goToDashboard = () => {
   margin-bottom: 1.5rem;
 }
 
-.login-icon {
+.reset-icon {
   margin: 0 auto 0.75rem;
   width: 3rem;
   height: 3rem;
@@ -207,7 +217,7 @@ const goToDashboard = () => {
   justify-content: center;
 }
 
-.login-icon i {
+.reset-icon i {
   font-size: 1.5rem;
   color: var(--p-surface-0);
 }
@@ -263,67 +273,27 @@ const goToDashboard = () => {
   z-index: 1;
 }
 
-.password-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.password-input {
-  width: 100%;
-}
-
-.password-input :deep(.p-password-input) {
-  width: 100%;
-  padding-left: 2.5rem;
-}
-
-.password-icon {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--p-text-muted-color);
-  opacity: 0.6;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.forgot-password {
-  text-align: right;
-  margin-top: -0.5rem;
-}
-
-.forgot-link {
-  font-size: 0.875rem;
-  color: var(--p-primary-color);
-  text-decoration: none;
-}
-
-.forgot-link:hover {
-  text-decoration: underline;
-}
-
 .submit-button {
   width: 100%;
 }
 
-.signup-link {
+.back-to-login, .signup-link {
   text-align: center;
 }
 
-.signup-text {
+.back-text, .signup-text {
   font-size: 0.875rem;
   color: var(--p-text-muted-color);
 }
 
-.signup-link-text {
+.back-link-text, .signup-link-text {
   color: var(--p-primary-color);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.875rem;
 }
 
-.signup-link-text:hover {
+.back-link-text:hover, .signup-link-text:hover {
   text-decoration: underline;
 }
 
@@ -355,7 +325,7 @@ const goToDashboard = () => {
 
 .success-icon {
   font-size: 4rem;
-  color: var(--p-green-400);
+  color: var(--p-primary-color);
   margin-bottom: 1rem;
   display: block;
 }
@@ -389,6 +359,30 @@ const goToDashboard = () => {
 
 .message-list li {
   margin-bottom: 0.25rem;
+}
+
+.resend-text {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+  margin-bottom: 1rem;
+}
+
+.resend-link {
+  color: var(--p-primary-color);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.resend-link:hover:not(:disabled) {
+  color: var(--p-primary-600);
+}
+
+.resend-link:disabled {
+  color: var(--p-text-muted-color);
+  cursor: not-allowed;
 }
 
 .continue-button {
