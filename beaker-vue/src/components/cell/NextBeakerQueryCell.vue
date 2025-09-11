@@ -46,11 +46,11 @@
                 <div>
                     <Badge
                         class="execution-badge"
-                        :class="{secondary: badgeSeverity === 'secondary'}"
-                        :severity="badgeSeverity"
+                        :class="{secondary: badgeData.severity === 'secondary'}"
+                        :severity="badgeData.severity"
                         value=" "
-                        v-tooltip.top="badgeTooltip">
-                        <i :class="badgeIcon"></i>
+                        v-tooltip.top="badgeData.tooltip">
+                        <i :class="badgeData.icon"></i>
                     </Badge>
                 </div>
             </div>
@@ -130,7 +130,7 @@ const isQueryActive = computed(() => {
     if (mockStickyForce.value) return true; // Force active for testing
 
     const queryStatus = cell.value.metadata?.query_status;
-    return queryStatus === 'in-progress';
+    return queryStatus === 'in-progress' && ['busy', 'awaiting_input'].includes(cell.value.status);
 });
 
 // const showCollapseControl = computed(() => {
@@ -173,66 +173,55 @@ watchEffect(() => {
     }
 });
 
-const badgeSeverity = computed(() => {
-    if (mockStickyForce.value) return 'info';
+const badgeData = computed(() => {
+    // Handle mock sticky mode first
+    if (mockStickyForce.value) {
+        return {
+            severity: 'info',
+            icon: 'pi pi-spinner pi-spin busy-icon',
+            tooltip: 'Mock sticky mode active'
+        };
+    }
 
     const queryStatus = cell.value.metadata?.query_status;
+    const cellStatus = cell.value.status;
+    const isActive = ['busy', 'awaiting_input'].includes(cellStatus);
 
-    switch (queryStatus) {
-        case 'success':
-            return 'success';
-        case 'failed':
-            return 'danger';
-        case 'aborted':
-            return 'warn';
-        case 'in-progress':
-            return 'info';
-        case 'pending':
-        default:
-            return 'secondary';
-    }
-});
+    // Define badge configurations for each status
+    const statusConfigs = {
+        success: {
+            severity: 'success',
+            icon: 'pi pi-check bolded',
+            tooltip: 'Query completed successfully'
+        },
+        failed: {
+            severity: 'danger',
+            icon: 'pi pi-times',
+            tooltip: 'Query failed with error'
+        },
+        aborted: {
+            severity: 'warn',
+            icon: 'pi pi-minus',
+            tooltip: 'Query was aborted'
+        },
+        'in-progress': {
+            severity: isActive ? 'info' : 'danger',
+            icon: isActive ? 'pi pi-spin pi-spinner busy-icon' : 'pi pi-times',
+            tooltip: isActive ? 'Query is active' : 'Query failed with error'
+        },
+        pending: {
+            severity: 'secondary',
+            icon: 'pi pi-clock',
+            tooltip: 'Query is waiting to start'
+        }
+    };
 
-const badgeIcon = computed(() => {
-    if (mockStickyForce.value) return 'pi pi-spinner pi-spin busy-icon';
-
-    const queryStatus = cell.value.metadata?.query_status;
-
-    switch (queryStatus) {
-        case 'success':
-            return 'pi pi-check bolded';
-        case 'failed':
-            return 'pi pi-times';
-        case 'aborted':
-            return 'pi pi-minus';
-        case 'in-progress':
-            return 'pi pi-spin pi-spinner busy-icon';
-        case 'pending':
-            return 'pi pi-clock';
-        default:
-            return null;
-    }
-});
-
-const badgeTooltip = computed(() => {
-    if (mockStickyForce.value) return 'Mock sticky mode active';
-
-    const queryStatus = cell.value.metadata?.query_status;
-
-    switch (queryStatus) {
-        case 'success':
-            return 'Query completed successfully';
-        case 'failed':
-            return 'Query failed with error';
-        case 'aborted':
-            return 'Query was aborted';
-        case 'in-progress':
-            return 'Query is active';
-        case 'pending':
-            return 'Query is waiting to start';
-        default:
-            return 'Query status unknown';
-    }
+    // Return the configuration for the current status, or default for unknown status
+    return statusConfigs[queryStatus] || {
+        severity: 'secondary',
+        icon: null,
+        tooltip: 'Query status unknown'
+    };
 });
 
 const setupStickyBehavior = () => {
@@ -321,19 +310,6 @@ const handleQueryCompletion = async () => {
     }
 
     isSticky.value = false;
-
-    // This would scroll back to the query cell when it's completed
-    // but we may not want that. We may want to scroll to the assistant response cell,
-    // or not at all. Leaving this in commented, as an option, for now.
-    // if (queryCellRef.value) {
-    //     const beakerCell = queryCellRef.value.closest('.beaker-cell') as HTMLElement;
-    //     if (beakerCell) {
-    //         beakerCell.scrollIntoView({
-    //             behavior: 'smooth',
-    //             block: 'start'
-    //         });
-    //     }
-    // }
 };
 
 watchEffect(() => {
@@ -431,10 +407,9 @@ onBeforeUnmount(() => {
         left: var(--sticky-left, 0) !important;
         right: var(--sticky-right, 0) !important;
         z-index: 500 !important;
-        // box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
         box-shadow: 0rem 0.25rem 1rem rgba(0, 0, 0, 0.6) !important;
 
-       border: 1px solid var(--p-purple-500) !important;
+        border: 1px solid var(--p-purple-500) !important;
 
         border-radius: 6px !important;
         background-color: var(--p-surface-a) !important;

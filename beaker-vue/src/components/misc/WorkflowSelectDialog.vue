@@ -114,7 +114,7 @@ const searchResults = computed<{[key in string]: any}>(() => Object.fromEntries(
     width: 48rem;
 
     p {
-        margin-top: 0.2rem;
+        margin-top: 0.75rem;
     }
 
     .attached-workflow {
@@ -130,7 +130,6 @@ const searchResults = computed<{[key in string]: any}>(() => Object.fromEntries(
     }
     .attached-label {
         font-weight: 600;
-        flex-shrink: 0;
     }
     .card-container {
         display: flex;
