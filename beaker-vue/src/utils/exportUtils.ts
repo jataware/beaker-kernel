@@ -1,5 +1,6 @@
 import html2canvas from 'html2canvas';
-import { Document, Packer, Paragraph, ImageRun, LevelFormat, HeadingLevel, TextRun, IImageOptions, AlignmentType, convertInchesToTwip, INumberingOptions, Table, TableRow, TableCell, WidthType, TableLayoutType } from 'docx';
+import { Document, Packer, Paragraph, ImageRun, LevelFormat, HeadingLevel, TextRun, AlignmentType, convertInchesToTwip, Table, TableRow, TableCell, TableLayoutType } from 'docx';
+import type { IImageOptions, INumberingOptions } from 'docx';
 
 export class DocumentExporter {
 
@@ -286,16 +287,14 @@ export class DocumentExporter {
         const tableCells: TableCell[] = [];
         
         cells.forEach(cell => {
-          const cellRuns = this.extractFormattedTextRuns(cell);
+          // headers: use simpler approach that allows bold formatting
+          const cellText = this.extractTextFromElement(cell);
+          const cellRuns = this.createFormattedCellRuns(cell, true); // true = bold headers
+          
           tableCells.push(new TableCell({
             children: [new Paragraph({
-              children: cellRuns.length > 0 ? cellRuns.map(run => 
-                new TextRun({
-                  ...run,
-                  bold: true,
-                })
-              ) : [new TextRun({
-                text: this.extractTextFromElement(cell),
+              children: cellRuns.length > 0 ? cellRuns : [new TextRun({
+                text: cellText,
                 font: "Calibri",
                 size: 22,
                 bold: true,
@@ -319,7 +318,8 @@ export class DocumentExporter {
         const tableCells: TableCell[] = [];
         
         cells.forEach(cell => {
-          const cellRuns = this.extractFormattedTextRuns(cell);
+          const cellRuns = this.createFormattedCellRuns(cell, false); // false = not bold
+          
           tableCells.push(new TableCell({
             children: [new Paragraph({
               children: cellRuns.length > 0 ? cellRuns : [new TextRun({
@@ -419,6 +419,55 @@ export class DocumentExporter {
     const textRuns: TextRun[] = [];
     this.processTextNodes(element, textRuns);
     return textRuns;
+  }
+
+  private createFormattedCellRuns(element: Element, forceBold: boolean = false): TextRun[] {
+    const textRuns: TextRun[] = [];
+    this.processCellTextNodes(element, textRuns, forceBold);
+    return textRuns;
+  }
+
+  private processCellTextNodes(node: Node, textRuns: TextRun[], forceBold: boolean): void {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || '';
+      if (text.trim()) {
+        textRuns.push(new TextRun({
+          text: text,
+          font: "Calibri",
+          size: 22,
+          bold: forceBold,
+        }));
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as Element;
+      const tagName = element.tagName.toLowerCase();
+
+      if (tagName === 'br') {
+        textRuns.push(new TextRun({
+          text: '',
+          break: 1,
+        }));
+        return;
+      }
+
+      const text = element.textContent || '';
+      if (text.trim() && (tagName === 'strong' || tagName === 'b' || tagName === 'em' || tagName === 'i')) {
+        const isBold = forceBold || tagName === 'strong' || tagName === 'b';
+        const isItalic = tagName === 'em' || tagName === 'i';
+
+        textRuns.push(new TextRun({
+          text: text,
+          font: "Calibri",
+          size: 22,
+          bold: isBold,
+          italics: isItalic,
+        }));
+      } else {
+        Array.from(element.childNodes).forEach(child => {
+          this.processCellTextNodes(child, textRuns, forceBold);
+        });
+      }
+    }
   }
 
   private processTextNodes(node: Node, textRuns: TextRun[]): void {
