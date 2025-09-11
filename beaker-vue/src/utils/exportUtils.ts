@@ -286,11 +286,16 @@ export class DocumentExporter {
         const tableCells: TableCell[] = [];
         
         cells.forEach(cell => {
-          const cellText = this.extractTextFromElement(cell);
+          const cellRuns = this.extractFormattedTextRuns(cell);
           tableCells.push(new TableCell({
             children: [new Paragraph({
-              children: [new TextRun({
-                text: cellText,
+              children: cellRuns.length > 0 ? cellRuns.map(run => 
+                new TextRun({
+                  ...run,
+                  bold: true,
+                })
+              ) : [new TextRun({
+                text: this.extractTextFromElement(cell),
                 font: "Calibri",
                 size: 22,
                 bold: true,
@@ -314,11 +319,11 @@ export class DocumentExporter {
         const tableCells: TableCell[] = [];
         
         cells.forEach(cell => {
-          const cellText = this.extractTextFromElement(cell);
+          const cellRuns = this.extractFormattedTextRuns(cell);
           tableCells.push(new TableCell({
             children: [new Paragraph({
-              children: [new TextRun({
-                text: cellText,
+              children: cellRuns.length > 0 ? cellRuns : [new TextRun({
+                text: this.extractTextFromElement(cell),
                 font: "Calibri",
                 size: 22,
               })],
