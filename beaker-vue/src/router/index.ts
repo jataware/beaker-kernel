@@ -55,6 +55,14 @@ const defaultRouteMap: Routes = {
       "path": "/playground",
       "component": () => import('@/pages/PlaygroundInterface.vue'),
     },
+    "signup": {
+      "path": "/auth/signup",
+      "component": () => import('@/pages/auth/SignUp.vue'),
+    },
+    "login": {
+      "path": "/auth/login",
+      "component": () => import('@/pages/auth/Login.vue'),
+    },
 }
 
 const reformatRoutes = (routeMap: Routes) => {
