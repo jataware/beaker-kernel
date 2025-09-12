@@ -7,7 +7,7 @@
             <BeakerLogo />
             <h1 class="auth-title">BeakerHub</h1>
           </div>
-          <p class="auth-subtitle">AI-powered Interactive notebook environments</p>
+          <p class="auth-subtitle">AI-Powered Interactive Notebook Environments</p>
         </div>
 
         <Card class="auth-card">
