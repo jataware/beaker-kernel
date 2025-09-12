@@ -5,10 +5,10 @@
 
         <div class="auth-header">
           <div class="auth-header-logo">
-          <BeakerLogo :size="48" />
+          <BeakerLogo />
           <h1 class="auth-title">BeakerHub</h1>
           </div>
-          <p class="auth-subtitle">Interactive coding assistant for scientific research</p>
+          <p class="auth-subtitle">AI-powered Interactive notebook environments</p>
         </div>
 
         <Card class="auth-card">
@@ -147,7 +147,7 @@
             </div>
 
             <div class="hub-link">
-              <a href="/hub" class="hub-link-text">← Back to BeakerHub</a>
+              <a href="/hub" class="hub-link-text">← Back to Site</a>
             </div>
           </template>
         </Card>
@@ -303,11 +303,11 @@ const goToDashboard = () => {
 .auth-content {
   width: 100%;
   max-width: 48rem;
-  margin-top: max(1rem, 6vh);
+  margin-top: max(1rem, 13vh);
 }
 
 .auth-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .auth-title {
@@ -323,6 +323,7 @@ const goToDashboard = () => {
   color: var(--p-text-muted-color);
   margin-top: 0.25rem;
   margin-bottom: 0;
+  font-size: 1.125rem;
 }
 
 .auth-card {
@@ -596,11 +597,10 @@ const goToDashboard = () => {
 
 .auth-header-logo {
   display: flex;
-  align-items: center;
-  justify-self: flex-start;
-  justify-content: center;
+  align-items: flex-end;
+  /* justify-self: flex-start; */
+  /* justify-content: center; */
   margin-bottom: 0;
-  /* gap: 0.25rem; */
 }
 
 </style>

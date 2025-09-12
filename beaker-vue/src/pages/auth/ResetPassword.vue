@@ -3,8 +3,11 @@
     <div class="auth-content">
       <div v-if="!submitted">
         <div class="auth-header">
-          <h1 class="auth-title">BeakerHub</h1>
-          <p class="auth-subtitle">Interactive coding assistant for scientific research</p>
+          <div class="auth-header-logo">
+            <BeakerLogo />
+            <h1 class="auth-title">BeakerHub</h1>
+          </div>
+          <p class="auth-subtitle">AI-powered Interactive notebook environments</p>
         </div>
 
         <Card class="auth-card">
@@ -57,7 +60,7 @@
             </div>
 
             <div class="hub-link">
-              <a href="/hub" class="hub-link-text">← Back to BeakerHub</a>
+              <a href="/hub" class="hub-link-text">← Back to Site</a>
             </div>
           </template>
         </Card>
@@ -108,6 +111,7 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Divider from 'primevue/divider';
+import BeakerLogo from '@/components/BeakerLogo.vue';
 
 interface FormData {
   email: string;
@@ -179,22 +183,32 @@ onUnmounted(() => {
 .auth-content {
   width: 100%;
   max-width: 28rem;
-  margin-top: max(1.5rem, 10vh);
+  margin-top: max(1.5rem, 15vh);
 }
 
 .auth-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .auth-title {
   font-size: 2.25rem;
   font-weight: bold;
   color: var(--p-text-color);
-  margin-bottom: 0.5rem;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .auth-subtitle {
   color: var(--p-text-muted-color);
+  margin-top: 0.25rem;
+  font-size: 1.125rem;
+  margin-bottom: 0;
+}
+
+.auth-header-logo {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 0;
 }
 
 .auth-card {
@@ -210,7 +224,7 @@ onUnmounted(() => {
   margin: 0 auto 0.75rem;
   width: 3rem;
   height: 3rem;
-  background-color: var(--p-primary-color);
+  background-color: var(--p-purple-600);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -325,7 +339,7 @@ onUnmounted(() => {
 
 .success-icon {
   font-size: 4rem;
-  color: var(--p-primary-color);
+  color: var(--p-purple-600);
   margin-bottom: 1rem;
   display: block;
 }
