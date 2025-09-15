@@ -75,6 +75,14 @@ const defaultRouteMap: Routes = {
       "path": "/auth/invite",
       "component": () => import('@/pages/auth/InviteSignup.vue'),
     },
+    "hub-splash": {
+      "path": "/hub",
+      "component": () => import('@/pages/hub/SplashPage.vue'),
+    },
+    "dashboard": {
+      "path": "/dashboard",
+      "component": () => import('@/pages/hub/Dashboard.vue'),
+    },
 }
 
 const reformatRoutes = (routeMap: Routes) => {

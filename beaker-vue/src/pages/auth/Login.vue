@@ -90,7 +90,7 @@
           </div>
 
           <Message severity="success" class="success-message">
-            <template #messageicon>
+            <template #icon>
               <i class="pi pi-info-circle"></i>
             </template>
             <div>
@@ -120,7 +120,7 @@ import Password from 'primevue/password';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Divider from 'primevue/divider';
-import BeakerLogo from '@/components/BeakerLogo.vue';
+import BeakerLogo from '@/components/BeakerHubLogo.vue';
 
 interface FormData {
   email: string;
