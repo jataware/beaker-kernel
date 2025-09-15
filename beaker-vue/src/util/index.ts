@@ -131,3 +131,7 @@ export function atEndOfInput(input: object) {
     }
     return false;
 }
+
+export * from './annotations';
+export * from './autocomplete';
+export * from './integration';

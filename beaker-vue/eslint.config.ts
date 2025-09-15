@@ -16,7 +16,7 @@ export default defineConfigWithVueTs(
     files: ['**/*.{ts,mts,tsx,vue}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**', 'extractRoutes.ts']),
+  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
 
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
@@ -39,5 +39,14 @@ export default defineConfigWithVueTs(
       'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
       'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     },
+  },
+
+  {
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      "ts(80005)": "off",
+    },
+    files: ['utils/**/*.ts']
   }
+
 )

@@ -116,7 +116,7 @@ const lastSaveChecksum = ref<string>();
 const mainRef = ref();
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
-interface ShowToastOptions {
+export interface ShowToastOptions {
     title: string;
     detail: string;
     life?: number;
