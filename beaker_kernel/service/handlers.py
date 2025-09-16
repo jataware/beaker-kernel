@@ -349,6 +349,11 @@ class DownloadHandler(RequestHandler):
         else:
             raise HTTPError(404)
 
+def normalize_cells_source(nb):
+    for cell in nb.cells:
+        if isinstance(cell.source, list):
+            cell.source = "".join(cell.source)
+    return nb
 
 class ExportAsHandler(JupyterHandler):
     SUPPORTED_METHODS = ("POST", )
@@ -366,6 +371,9 @@ class ExportAsHandler(JupyterHandler):
         assert model is not None
         name = model.get("name", "notebook.ipynb")
         nbnode = from_dict(model["content"])
+        
+        # normalize cell sources from string[] to string for nbconvert compatibility
+        nbnode = normalize_cells_source(nbnode)
 
         try:
             # attach additional options for export from json body to streamlined notebook exporter

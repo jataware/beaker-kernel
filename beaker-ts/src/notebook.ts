@@ -299,9 +299,9 @@ export class BeakerMarkdownCell extends BeakerBaseCell implements nbformat.IMark
     constructor(content: Partial<nbformat.ICell>) {
         super({ ...content});
         Object.assign(this, content)
-        // if (Array.isArray(this.source)) {
-        //     this.source = this.source.join("");
-        // }
+        if (Array.isArray(this.source)) {
+            this.source = this.source.join("");
+        }
     }
 
 
