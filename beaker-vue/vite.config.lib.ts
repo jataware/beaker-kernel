@@ -5,6 +5,7 @@ import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import vue from '@vitejs/plugin-vue';
 import vueJsx from '@vitejs/plugin-vue-jsx';
+import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
 import topLevelAwait from 'vite-plugin-top-level-await';
 import { globSync } from 'glob';
 
@@ -24,6 +25,7 @@ export default defineConfig({
   plugins: [
     vue(),
     vueJsx(),
+    cssInjectedByJsPlugin(),
     topLevelAwait(),
     dts({
       tsconfigPath: "tsconfig.lib.json",
@@ -89,6 +91,7 @@ export default defineConfig({
     target: 'esnext',
     minify: false,
     outDir: 'dist/lib',
+    cssCodeSplit: false,
     rollupOptions: {
       onwarn(warning, warn) {
         // Custom warning suppression for known issues that are not a concern
