@@ -42,6 +42,8 @@ export default defineConfigWithVueTs(
   },
 
   {
+    // Ignore errors/warnings around using require() to import since the .ts files in utils/
+    // are actually node scripts rather than intended for bundling.
     rules: {
       "@typescript-eslint/no-require-imports": "off",
       "ts(80005)": "off",

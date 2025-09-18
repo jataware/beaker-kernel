@@ -1,24 +1,37 @@
 import { fileURLToPath, URL } from 'node:url';
 import path from 'path';
 
-import { defineConfig } from 'vite';
+import { defineConfig, UserConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import vueJsx from '@vitejs/plugin-vue-jsx';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import { globSync } from 'glob';
 
-export const entryPoints = Object.fromEntries(
-  globSync("src/**/*.{vue,ts}").map(file => [
-    path.relative(
+export const entryPoints: {[key: string]: string} = Object.fromEntries(
+  globSync("src/**/*.{vue,ts}").flatMap(file => {
+    const importPath = path.relative(
       'src',
       file.slice(0, file.length - path.extname(file).length)
-    ),
-    fileURLToPath(new URL(file, import.meta.url))
-  ])
+    );
+    const filePath = fileURLToPath(new URL(file, import.meta.url))
+    const result = [
+      [
+        importPath, filePath
+      ]
+    ];
+    if (/\.vue\b/.test(file)) {
+      const vuePath = `${importPath}.vue`;
+      result.push(
+        [
+          vuePath, filePath,
+        ]
+      )
+    }
+    return result;
+  })
 );
 
-
-export default defineConfig({
+export const baseConfig: UserConfig = {
   plugins: [
     vue(),
     vueJsx(),
@@ -40,4 +53,6 @@ export default defineConfig({
       'path': path.resolve(require.resolve('path-browserify'), '..'),
     },
   }
-});
+};
+
+export default defineConfig(baseConfig);

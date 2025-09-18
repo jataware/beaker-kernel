@@ -26,7 +26,7 @@
   },
 
   "include": [
-    //"node_modules/vue/jsx.d.ts",
+    "node_modules/vue/jsx.d.ts",
     "env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",

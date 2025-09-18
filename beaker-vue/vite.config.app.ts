@@ -1,18 +1,14 @@
 import { fileURLToPath, URL } from 'node:url';
-import path from 'path';
 
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
-import vueJsx from '@vitejs/plugin-vue-jsx';
+import { defineConfig, type UserConfig } from 'vite';
 import vueDevTools from 'vite-plugin-vue-devtools';
-import topLevelAwait from 'vite-plugin-top-level-await';
+import { baseConfig } from './vite.config';
 
-let chunkNum: number = 0;
 const ProxyHost = `${process.env.PROXY || 'http://localhost:8888'}`;
 
 // https://vite.dev/config/
-export default defineConfig({
-
+export const appConfig: UserConfig = {
+  ...baseConfig,
   server: {
     host: '0.0.0.0',
     port: 8080,
@@ -35,60 +31,9 @@ export default defineConfig({
     },
   },
   plugins: [
-    vue(),
-    vueJsx(),
+    ...(baseConfig.plugins ?? []),
     vueDevTools(),
-    topLevelAwait(),
-    {
-      name: "sanitize-eval",
-      transform(src, id) {
-        // Custom inline plugin to replace 'eval()' calls with 'console.debug()'.
-        if (id.includes("@jupyterlab/coreutils/lib/pageconfig")) {
-          return src.replaceAll(/\beval\b/g, 'console.debug');
-        }
-      }
-    }
   ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      'node-fetch': path.resolve(require.resolve('isomorphic-fetch'), '..'),
-      'path': path.resolve(require.resolve('path-browserify'), '..'),
-      // Allows automatic updating when beaker-ts is updated, but will use the dist version of beaker-ts/beaker-kernel
-      // when building or running in production mode.
-      'beaker-kernel': (
-        process.env.NODE_ENV === "development"
-        ? fileURLToPath(new URL('../beaker-ts/src', import.meta.url))
-        : 'beaker-kernel'
-      ),
-    },
-    dedupe: [
-      'vue',
-      'primevue',
-      '@primevue/themes',
-      '@primevue/icons',
-      '@primeuix/styled',
-      '@primeuix/themes',
-      '@primeuix/utils',
-      '@lumino',
-      '@lumino/widgets',
-      '@lumino/algorithm',
-      '@lumino/coreutils',
-      '@lumino/polling',
-      '@lumino/signaling',
-      '@jupyterlab',
-      '@jupyterlab/ui-components',
-      '@jupyterlab/services',
-      '@jupyterlab/apputils',
-      '@jupyterlab/translation',
-      '@jupyterlab/statedb',
-      'react-dom',
-      'xlsx',
-      '@jupyterlab/coreutils',
-      '@jupyterlab/mathjax-extension',
-      '@jupyterlab/rendermime',
-    ],
-  },
   build: {
     target: 'esnext',
     assetsDir: 'static/',
@@ -123,16 +68,6 @@ export default defineConfig({
           ],
           pdfjs: ['pdfjs-dist'],
         },
-        // chunkFileNames: (chunkInfo) => {
-        //   if (/\.vue_vue/.test(chunkInfo.name)) {
-        //     const name = `lib-${chunkNum}-[hash].js`;
-        //     chunkNum++;
-        //     return name;
-        //   }
-        //   else {
-        //     return "[name]-[hash].js";
-        //   }
-        // },
       }
     }
   },
@@ -140,5 +75,47 @@ export default defineConfig({
     esbuildOptions: {
       target: 'esnext',
     },
+  },
+  resolve: {
+    ...(baseConfig.resolve),
+    alias: {
+      ...(baseConfig.resolve?.alias),
+      // Allows automatic updating when beaker-ts is updated, but will use the dist version of beaker-ts/beaker-kernel
+      // when building or running in production mode.
+      'beaker-kernel': (
+        process.env.NODE_ENV === "development"
+        ? fileURLToPath(new URL('../beaker-ts/src', import.meta.url))
+        : 'beaker-kernel'
+      ),
+    },
+    dedupe: [
+      ...(baseConfig.resolve?.dedupe ?? []),
+      'vue',
+      'primevue',
+      '@primevue/themes',
+      '@primevue/icons',
+      '@primeuix/styled',
+      '@primeuix/themes',
+      '@primeuix/utils',
+      '@lumino',
+      '@lumino/widgets',
+      '@lumino/algorithm',
+      '@lumino/coreutils',
+      '@lumino/polling',
+      '@lumino/signaling',
+      '@jupyterlab',
+      '@jupyterlab/ui-components',
+      '@jupyterlab/services',
+      '@jupyterlab/apputils',
+      '@jupyterlab/translation',
+      '@jupyterlab/statedb',
+      'react-dom',
+      'xlsx',
+      '@jupyterlab/coreutils',
+      '@jupyterlab/mathjax-extension',
+      '@jupyterlab/rendermime',
+    ]
   }
-})
+};
+
+export default defineConfig(appConfig);

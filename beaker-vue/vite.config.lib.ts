@@ -1,48 +1,15 @@
-import { fileURLToPath, URL } from 'node:url';
-import path from 'path';
-
-import { defineConfig } from 'vite';
+import { defineConfig, type UserConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import vue from '@vitejs/plugin-vue';
-import vueJsx from '@vitejs/plugin-vue-jsx';
 import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
-import topLevelAwait from 'vite-plugin-top-level-await';
-import { globSync } from 'glob';
+import { entryPoints, baseConfig } from './vite.config';
 
-// Vite configuration for library build
-const entryPoints = Object.fromEntries(
-  globSync("src/**/*.{vue,ts}").flatMap(file => {
-    const importPath = path.relative(
-      'src',
-      file.slice(0, file.length - path.extname(file).length)
-    );
-    const filePath = fileURLToPath(new URL(file, import.meta.url))
-    const result = [
-      [
-        importPath, filePath
-      ]
-    ];
-    if (/\.vue\b/.test(file)) {
-      const vuePath = `${importPath}.vue`;
-      result.push(
-        [
-          vuePath, filePath,
-        ]
-      )
-    }
-    return result;
-  })
-);
-
-
-export default defineConfig({
+export const libConfig: UserConfig = {
+  ...baseConfig,
   plugins: [
-    vue(),
-    vueJsx(),
+    ...(baseConfig.plugins ?? []),
     cssInjectedByJsPlugin({
       relativeCSSInjection: true,
     }),
-    topLevelAwait(),
     dts({
       tsconfigPath: "tsconfig.lib.json",
       insertTypesEntry: true,
@@ -50,15 +17,6 @@ export default defineConfig({
       outDir: "./dist",
       logLevel: "error",
     }),
-    {
-      name: "sanitize-eval",
-      transform(src, id) {
-        // Custom inline plugin to replace 'eval()' calls with 'console.debug()'.
-        if (id.includes("@jupyterlab/coreutils/lib/pageconfig")) {
-          return src.replaceAll(/\beval\b/g, 'console.debug');
-        }
-      }
-    },
     {
       name: "export-exports",
       buildStart(options) {
@@ -84,14 +42,8 @@ export default defineConfig({
       }
     }
   ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      'node-fetch': path.resolve(require.resolve('isomorphic-fetch'), '..'),
-      'path': path.resolve(require.resolve('path-browserify'), '..'),
-    },
-  },
   build: {
+    ...baseConfig.build,
     target: 'esnext',
     minify: false,
     outDir: 'dist',
@@ -104,7 +56,6 @@ export default defineConfig({
       },
 
     },
-    // modulePreload: false,
     rollupOptions: {
       onwarn(warning, warn) {
         // Custom warning suppression for known issues that are not a concern
@@ -143,15 +94,8 @@ export default defineConfig({
         /^vue/,
       ],
       preserveEntrySignatures: "allow-extension",
-      // input: entryPoints,
-      // output: {
-      //   format: "es",
-      //   preserveModules: true,
-      //   preserveModulesRoot: "src/",
-      //   entryFileNames: (chunk) => {
-      //     return `${chunk.name}.js`;
-      //   }
-      // }
     },
   }
-});
+};
+
+export default defineConfig(libConfig);
