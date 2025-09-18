@@ -7,7 +7,7 @@
     "serve": "vite",
     "prebuild": "npm run type-check",
     "build": "run-s clean build-all routes",
-    "build-ui": "vite build",
+    "build-ui": "vite build --config vite.config.app.ts",
     "build-lib": "vite build --config vite.config.lib.ts",
     "build-all": "run-p type-check build-ui build-lib",
     "build-and-serve": "run-s build serve",
@@ -20,7 +20,7 @@
     "type-check": "vue-tsc --build --noEmit",
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
-    "clean": "rimraf dist/"
+    "clean": "rimraf dist/* html/*"
   },
   "main": "./dist/lib/index.js",
   "module": "./dist/lib/index.mjs",

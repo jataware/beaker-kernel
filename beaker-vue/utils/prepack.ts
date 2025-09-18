@@ -8,7 +8,7 @@ fs.copyFileSync(packageFile, backupPackageFile);
 
 // Read in both json files
 const pkg = JSON.parse(fs.readFileSync(packageFile).toString());
-const exportData = JSON.parse(fs.readFileSync(path.join(distDir, "lib/exports.json")).toString());
+const exportData = JSON.parse(fs.readFileSync(path.join(distDir, "exports.json")).toString());
 
 // Update exports in package.json data
 pkg["exports"] = exportData;

@@ -11,13 +11,27 @@ import { globSync } from 'glob';
 
 // Vite configuration for library build
 const entryPoints = Object.fromEntries(
-  globSync("src/**/*.{vue,ts}").map(file => [
-    path.relative(
+  globSync("src/**/*.{vue,ts}").flatMap(file => {
+    const importPath = path.relative(
       'src',
       file.slice(0, file.length - path.extname(file).length)
-    ),
-    fileURLToPath(new URL(file, import.meta.url))
-  ])
+    );
+    const filePath = fileURLToPath(new URL(file, import.meta.url))
+    const result = [
+      [
+        importPath, filePath
+      ]
+    ];
+    if (/\.vue\b/.test(file)) {
+      const vuePath = `${importPath}.vue`;
+      result.push(
+        [
+          vuePath, filePath,
+        ]
+      )
+    }
+    return result;
+  })
 );
 
 
@@ -25,13 +39,15 @@ export default defineConfig({
   plugins: [
     vue(),
     vueJsx(),
-    cssInjectedByJsPlugin(),
+    cssInjectedByJsPlugin({
+      relativeCSSInjection: true,
+    }),
     topLevelAwait(),
     dts({
       tsconfigPath: "tsconfig.lib.json",
       insertTypesEntry: true,
       declarationOnly: false,
-      outDir: "./dist/lib",
+      outDir: "./dist",
       logLevel: "error",
     }),
     {
@@ -46,30 +62,18 @@ export default defineConfig({
     {
       name: "export-exports",
       buildStart(options) {
-        const prefix = './dist/lib/';
+        const prefix = './dist/';
         const exportObject = Object.fromEntries(
-          Object.entries(entryPoints).flatMap(([key, srcPath]) => {
+          Object.keys(entryPoints).map((key) => {
             const importPath = ('./' + key.replace(/(^|\/)index/, '')).replace(/\/$/, '');
-            const result = [
-              [
-                importPath, {
+            return [
+                importPath,
+                {
                   import: `${prefix}${key}.js`,
                   types: `${prefix}${key}.d.ts`
                 }
               ]
-            ];
-            if (/\.vue\b/.test(srcPath)) {
-              const vuePath = `${importPath}.vue`;
-              result.push(
-                [
-                  vuePath, {
-                      import: prefix + path.normalize(`${vuePath}.js`),
-                      types: prefix + path.normalize(`${vuePath}.d.ts`)
-                  }
-                ]
-              )
-            }
-            return result;
+            ;
           })
         );
         this.emitFile({
@@ -90,8 +94,17 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: false,
-    outDir: 'dist/lib',
-    cssCodeSplit: false,
+    outDir: 'dist',
+    cssCodeSplit: true,
+    lib: {
+      entry: entryPoints,
+      formats: ["es"],
+      fileName: (format, entryName) => {
+        return `${entryName}.js`
+      },
+
+    },
+    // modulePreload: false,
     rollupOptions: {
       onwarn(warning, warn) {
         // Custom warning suppression for known issues that are not a concern
@@ -129,16 +142,16 @@ export default defineConfig({
         "uuid",
         /^vue/,
       ],
-      preserveEntrySignatures: "exports-only",
-      input: entryPoints,
-      output: {
-        format: "es",
-        preserveModules: true,
-        preserveModulesRoot: "src/",
-        entryFileNames: (chunk) => {
-          return `${chunk.name}.js`;
-        }
-      }
+      preserveEntrySignatures: "allow-extension",
+      // input: entryPoints,
+      // output: {
+      //   format: "es",
+      //   preserveModules: true,
+      //   preserveModulesRoot: "src/",
+      //   entryFileNames: (chunk) => {
+      //     return `${chunk.name}.js`;
+      //   }
+      // }
     },
   }
 });
