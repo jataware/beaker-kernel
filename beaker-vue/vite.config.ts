@@ -9,6 +9,11 @@ import topLevelAwait from 'vite-plugin-top-level-await';
 
 let chunkNum: number = 0;
 const ProxyHost = `${process.env.PROXY || 'http://localhost:8888'}`;
+const proxyConfig = {
+  target: `${ProxyHost}/`,
+  xfwd: true,
+  changeOrigin: false,
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -16,19 +21,19 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 8080,
+
     proxy: {
       '/api': {
-        target: `${ProxyHost}/`,
+        ...proxyConfig,
         ws: true,
-        xfwd: true,
-        rewriteWsOrigin: true,
+        rewriteWsOrigin: false,
       },
-      '/beaker': `${ProxyHost}/`,
-      '/appconfig.js': `${ProxyHost}/`,
-      '/files': `${ProxyHost}/`,
-      '/config': `${ProxyHost}/`,
-      '/contexts': `${ProxyHost}/`,
-      '/assets': `${ProxyHost}/`,
+      '/beaker': proxyConfig,
+      '/appconfig.js': proxyConfig,
+      '/files': proxyConfig,
+      '/config': proxyConfig,
+      '/contexts': proxyConfig,
+      '/assets': proxyConfig,
     },
     fs: {
       allow: [".."]
