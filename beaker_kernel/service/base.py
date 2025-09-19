@@ -14,6 +14,7 @@ from traitlets import Unicode, Integer, Float
 from traitlets.config.application import Application, ClassesType
 from traitlets.config.configurable import Configurable
 from traitlets.config.loader import ConfigFileNotFound
+from traitlets.utils.text import indent, wrap_paragraphs
 
 from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
 from jupyter_client import kernelspec
@@ -688,6 +689,57 @@ class BaseBeakerApp(ServerApp):
 
         config_classes = list(self._classes_with_config_traits(classes))
         config_classes.sort(key=class_sort_key)
+        added = set()
         for cls in config_classes:
-            lines.append(cls.class_config_section(config_classes))
+            lines.append(self.generate_config_section(cls, config_classes, added))
         return "\n".join(lines)
+
+    def generate_config_section(self, cls, classes, added):
+        def c(s: str) -> str:
+            """return a commented, wrapped block."""
+            s = "\n\n".join(wrap_paragraphs(s, 78))
+
+            return "## " + s.replace("\n", "\n#  ")
+        adding = set()
+
+        # section header
+        breaker = "#" + "-" * 78
+        parent_classes = ", ".join(p.__name__ for p in cls.__bases__ if issubclass(p, Configurable))
+
+        s = f"# {cls.__name__}({parent_classes}) configuration"
+        lines = [breaker, s, breaker]
+        # get the description trait
+        desc = cls.class_traits().get("description")
+        if desc:
+            desc = desc.default_value
+        if not desc:
+            # no description from trait, use __doc__
+            desc = getattr(cls, "__doc__", "")  # type:ignore[arg-type]
+        if desc:
+            lines.append(c(desc))  # type:ignore[arg-type]
+            lines.append("")
+
+        for name, trait in sorted(cls.class_traits(config=True).items()):
+            default_repr = trait.default_value_repr()
+            if trait in added:
+                continue
+
+
+            if trait.help:
+                if 'deprecated' in trait.help.lower():
+                    continue
+                lines.append(c(trait.help))
+            if "Enum" in type(trait).__name__:
+                # include Enum choices
+                lines.append("#  Choices: %s" % trait.info())
+            lines.append("#  Default: %s" % default_repr)
+
+            lines.append(f"# c.{cls.__name__}.{name} = {default_repr}")
+            lines.append("")
+            adding.add(trait)
+
+        if adding:
+            added.update(adding)
+            return "\n".join(lines)
+        else:
+            return ""
