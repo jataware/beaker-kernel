@@ -29,5 +29,8 @@ coverage
 
 *.tsbuildinfo
 
+beaker-vue-[0-9\.]*.tgz
+
 test-results/
 playwright-report/
+html/
