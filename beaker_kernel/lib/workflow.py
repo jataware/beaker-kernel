@@ -3,42 +3,54 @@ from typing import Literal, Optional, Any, TypedDict
 
 WORKFLOW_PREAMBLE_PROMPT="""
 
-## Workflows
+<workflows>
+
+# Workflows
+
 - You will be given a few preselected workflows and processes to work through.
 - A workflow is a commonly grouped set of tasks to solve an end-to-end problem.
 - ONE workflow will be ACTIVE and currently ready for use.
   - You may replace the ACTIVE workflow if the user requests a different workflow, through the `attach_workflow` tool.
 - Workflows are divided into STAGES that contain STEPS.
 
-- CRITICAL: at the end of each STAGE, you must use the "mark_workflow_stage" tool and you must show the results of each STAGE to the user and then ask them to confirm to continue.
-- CRITICAL: after the user confirms to start the next STAGE, use the "mark_workflow_stage" tool to communicate that the stage is in progress.
+IMPORTANT: To execute a workflow, you will do each step in order. Upon finishing the last step, the STAGE is COMPLETE.
+
+- CRITICAL: when a STAGE is COMPLETE, do all three of the following tasks in order, start to finish:
+    1) use the "update_workflow_stage" tool and you must show the results of each STAGE to the user
+    2) use the "update_workflow_output" to show the in-progress results to the user according to the `<workflow-result-formatting-instructions>` block of the active workflow.
+    3) ask the user to confirm to continue, after you have called "update_workflow_output"
+        - The response to `ask_user` will be "continue", "cancel", or something else -- such as a similar investigation or retrying a step.
+        - Proceed if they choose to continue.
+        - Stop the workflow if they choose to cancel. It may be resumed later.
+        - Doing what else the user request takes precedence over the workflow if they request something else.
+- The correct workflow pattern is: Complete stage → call update_workflow_stage → call update_workflow_output → call ask_user for confirmation → repeat
+
+- CRITICAL: after the user confirms to start the next STAGE, use the "update_workflow_stage" tool to communicate that the stage is in progress.
 - CRITICAL: do not ever use assumed or example data if data is not available; stop and inform the user and ask how to proceed.
+
+- CRITICAL: when new important information is gathered from the user, such as retrying a task, or from completing a workflow stage, you must use the "update_workflow_output" tool.
 
 - IMPORTANT: When using `ask_user` in a workflow, use the `workflow_confirmation` format.
 
 - When a user asks for something that aligns with a given workflow, you will communicate that it is within your skillset
-  - When starting a workflow, use the `display_workflow_panel` tool
-  - Next, use the `ask_user` tool to ask them if this workflow looks correct and if they would like to start it.
-    - The response to `ask_user` will be "continue", "cancel", or something else -- such as a similar investigation or retrying a step.
-      - Proceed if they choose to continue.
-      - Stop the workflow if they choose to cancel. It may be resumed later.
-      - Doing what else the user request takes precedence over the workflow if they request something else.
-  - As you finish each major STAGE, present your findings to the user and ask them if it is correct and if they would like to continue.
-  - At any point, you may ask for clarification from the user.
+    - Next, use the `ask_user` tool to ask them if this workflow looks correct and if they would like to start it.
+- When starting a workflow, use the `display_workflow_panel` tool
+
 
 The workflows you have to offer are as follows:
 
-```
+<workflows-list>
 {workflow_synopsis}
-```
+</workflows-list>
 
-- - -
 
 The current ACTIVE workflow is
 
-```
+<active-workflow>
 {attached_workflow}
-```
+</active-workflow>
+
+</workflows>
 """
 
 @dataclass(kw_only=True)
@@ -110,6 +122,10 @@ class Workflow:
             [
                 (f"{stage.name}:\n" + ('\n'.join([step.prompt for step in stage.steps])))
                 for stage in self.stages
+            ] + [
+                "<workflow-result-formatting-instructions>",
+                self.output_prompt or "Format the result as markdown.",
+                "</workflow-result-formatting-instructions>"
             ]
         )
 
