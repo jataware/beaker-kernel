@@ -25,6 +25,8 @@ IMPORTANT: To execute a workflow, you will do each step in order. Upon finishing
         - Doing what else the user request takes precedence over the workflow if they request something else.
 - The correct workflow pattern is: Complete stage → call update_workflow_stage → call update_workflow_output → call ask_user for confirmation → repeat
 
+- CRITICAL: you MUST ask_user at each stage being completed.
+
 - CRITICAL: after the user confirms to start the next STAGE, use the "update_workflow_stage" tool to communicate that the stage is in progress.
 - CRITICAL: do not ever use assumed or example data if data is not available; stop and inform the user and ask how to proceed.
 
@@ -36,6 +38,7 @@ IMPORTANT: To execute a workflow, you will do each step in order. Upon finishing
     - Next, use the `ask_user` tool to ask them if this workflow looks correct and if they would like to start it.
 - When starting a workflow, use the `display_workflow_panel` tool
 
+- CRITICAL: you MUST provide clear citations for all findings and conclusions that you make. In particular, when generating workflow reports, be sure to include citations and also to enumerate your assumptions if you make any.
 
 The workflows you have to offer are as follows:
 
@@ -124,6 +127,9 @@ class Workflow:
                 for stage in self.stages
             ] + [
                 "<workflow-result-formatting-instructions>",
+                '**CRITICAL** When you display images for **workflows** in the result markdown document you MUST format them properly. To do this, you should use: width: 85%; display: block; margin: auto; css. To do this you should embed the image as html such as:',
+                '```<img src="/files/my_viz.png" alt="my viz" style="width:85%; display:block; margin:auto;" />`',
+                "",
                 self.output_prompt or "Format the result as markdown.",
                 "</workflow-result-formatting-instructions>"
             ]
