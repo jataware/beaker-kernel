@@ -40,6 +40,10 @@ IMPORTANT: To execute a workflow, you will do each step in order. Upon finishing
 
 - CRITICAL: you MUST provide clear citations for all findings and conclusions that you make. In particular, when generating workflow reports, be sure to include citations and also to enumerate your assumptions if you make any.
 
+- NOTE: if the correct workflow that you want to attach is already attached, you do not need to attach it again.
+
+- IMPORTANT: if you restart or redo a stage, make sure to `update_workflow_output` with the new results.
+
 The workflows you have to offer are as follows:
 
 <workflows-list>
@@ -121,17 +125,30 @@ class Workflow:
 
     # text representation of the prompt itself, fed directly into the agent.
     def to_prompt(self) -> str:
+        formatted_stages = [
+            "\n".join([
+                "<stage>",
+                f"<name>{stage.name}</name>",
+                "<steps>",
+                ('\n'.join([step.prompt for step in stage.steps])),
+                "</steps>",
+                "</stage>"
+            ])
+            for stage in self.stages
+        ]
         return "\n\n".join(
             [
-                (f"{stage.name}:\n" + ('\n'.join([step.prompt for step in stage.steps])))
-                for stage in self.stages
-            ] + [
+                f"<title>{self.title}</title>",
+                "<stages>",
+                *formatted_stages,
+                "</stages>"
+                "",
                 "<workflow-result-formatting-instructions>",
                 '**CRITICAL** When you display images for **workflows** in the result markdown document you MUST format them properly. To do this, you should use: width: 85%; display: block; margin: auto; css. To do this you should embed the image as html such as:',
                 '```<img src="/files/my_viz.png" alt="my viz" style="width:85%; display:block; margin:auto;" />`',
-                "",
                 self.output_prompt or "Format the result as markdown.",
-                "</workflow-result-formatting-instructions>"
+                "</workflow-result-formatting-instructions>",
+                "",
             ]
         )
 
@@ -168,7 +185,10 @@ def create_available_workflows_prompt(
     if any, of them is active.
     """
     workflow_synopsis = "\n\n".join([
-        f"{workflow.title}: {workflow.agent_description}"
+        f"""<workflow>
+    <title>{workflow.title}</title>
+    <description>{workflow.agent_description}</description>
+</workflow>"""
         for workflow in workflows
     ])
 
