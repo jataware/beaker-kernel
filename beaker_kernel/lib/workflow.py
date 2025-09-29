@@ -136,7 +136,7 @@ class Workflow:
             ])
             for stage in self.stages
         ]
-        return "\n\n".join(
+        return "\n".join(
             [
                 f"<title>{self.title}</title>",
                 "<stages>",
@@ -145,7 +145,9 @@ class Workflow:
                 "",
                 "<workflow-result-formatting-instructions>",
                 '**CRITICAL** When you display images for **workflows** in the result markdown document you MUST format them properly. To do this, you should use: width: 85%; display: block; margin: auto; css. To do this you should embed the image as html such as:',
-                '```<img src="/files/my_viz.png" alt="my viz" style="width:85%; display:block; margin:auto;" />`',
+                '`<img src="/files/my_viz.png" alt="my viz" style="width:85%; display:block; margin:auto;" />`',
+                'CRITICAL: Paths relative to the agent working directory are served at /files; if you save to ./my_viz.png, the src attribute should be "/files/my_viz.png"'
+                "",
                 self.output_prompt or "Format the result as markdown.",
                 "</workflow-result-formatting-instructions>",
                 "",
