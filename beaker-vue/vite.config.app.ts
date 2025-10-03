@@ -25,6 +25,7 @@ export const appConfig: UserConfig = {
       '/config': `${ProxyHost}/`,
       '/contexts': `${ProxyHost}/`,
       '/assets': `${ProxyHost}/`,
+      '/export': `${ProxyHost}/`,
     },
     fs: {
       allow: [".."]
