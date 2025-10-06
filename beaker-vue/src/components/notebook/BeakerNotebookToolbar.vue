@@ -474,7 +474,7 @@ function downloadNotebook() {
 
     const exportNotebook = tempNotebook.toIPynb();
 
-    const data = JSON.stringify(exportNotebook, null, 2);
+    const data = new Blob([JSON.stringify(exportNotebook, null, 2)]);
 
     const filename = `Beaker-Notebook_${getDateTimeString()}.ipynb`;
     const mimeType = 'application/x-ipynb+json';
