@@ -119,19 +119,24 @@ class BeakerSessionManager(SessionManager):
         dict
             Session information from parent class
         """
-        if kernel_name == "beaker_kernel":
-            user: BeakerUser = current_user.get()
-            if user:
-                path = os.path.join(user.home_dir, path)
-                virtual_home_root = self.kernel_manager.root_dir
-                virtual_home_dir = os.path.join(virtual_home_root, user.home_dir)
+        user: BeakerUser = current_user.get()
+        if user:
+            virtual_home_root = self.kernel_manager.root_dir
+            virtual_home_dir = os.path.join(virtual_home_root, user.home_dir)
 
-                subkernel_user = self.parent.subkernel_user
-                if not os.path.isdir(virtual_home_dir):
-                    os.makedirs(virtual_home_dir, exist_ok=True)
-                    shutil.chown(virtual_home_dir, user=subkernel_user, group=subkernel_user)
-                path = os.path.join(os.path.relpath(virtual_home_dir, self.kernel_manager.root_dir), name)
-        return await super().start_kernel_for_session(session_id, path, name, type, kernel_name)
+            subkernel_user = self.parent.subkernel_user
+            if not os.path.isdir(virtual_home_dir):
+                os.makedirs(virtual_home_dir, exist_ok=True)
+                shutil.chown(virtual_home_dir, user=subkernel_user, group=subkernel_user)
+            path = os.path.relpath(virtual_home_dir, self.kernel_manager.root_dir)
+
+        kernel_env = self.get_kernel_env(path, name)
+        kernel_id = await self.kernel_manager.start_kernel(
+            path=path,
+            kernel_name=kernel_name,
+            env=kernel_env,
+        )
+        return cast(str, kernel_id)
 
 
 class BeakerKernelSpecManager(kernelspec.KernelSpecManager):
@@ -372,7 +377,6 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
         if os.getuid() == 0 or os.geteuid() == 0:
             kw["group"] = user_info.pw_gid
             kw["extra_groups"] = group_list[1:]
-        kw["cwd"] = self.app.working_dir
 
         # Update keyword args that are passed to Popen()
         kw["env"] = env
@@ -395,7 +399,7 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
 
 
 class BeakerKernelMappingManager(AsyncMappingKernelManager):
-    kernel_manager_class = "beaker_kernel.service.base.BeakerKernelManager"
+    kernel_manager_class = traitlets.DottedObjectName("beaker_kernel.service.base.BeakerKernelManager")
     connection_dir = Unicode(
         os.path.join(config.beaker_run_path, "kernelfiles"),
         help="Directory for kernel connection files",
@@ -472,11 +476,22 @@ class BaseBeakerApp(ServerApp):
     name = traitlets.Unicode("beaker", config=True)
     app_slug = traitlets.Unicode(config=True)
 
-    kernel_manager_class = BeakerKernelMappingManager
-    session_manager_class = BeakerSessionManager
-    reraise_server_extension_failures = True
-    contents_manager_class = BeakerContentsManager
-    kernel_spec_manager_class = BeakerKernelSpecManager
+    kernel_manager_class = traitlets.Type(
+        f"{__module__}.BeakerKernelMappingManager",
+        config=True
+    )
+    session_manager_class = traitlets.Type(
+        f"{__module__}.BeakerSessionManager",
+        config=True
+    )
+    contents_manager_class = traitlets.Type(
+        f"{__module__}.BeakerContentsManager",
+        config=True
+    )
+    kernel_spec_manager_class = traitlets.Type(
+        f"{__module__}.BeakerKernelSpecManager",
+        config=True
+    )
 
     kernel_spec_include_local = traitlets.Bool(True, help="Include local kernel specs", config=True)
     kernel_spec_managers = traitlets.Dict(help="Kernel specification managers indexed by extension name", config=True)
@@ -525,7 +540,7 @@ class BaseBeakerApp(ServerApp):
     @traitlets.default("config_file_name")
     def _default_config_file_name(self):
         if self.app_slug:
-            return f"beaker_{self.name}_config"
+            return f"beaker_{self.app_slug}_config"
         else:
             return f"beaker_config"
 
@@ -559,13 +574,14 @@ class BaseBeakerApp(ServerApp):
         self.web_app.add_handlers(".*", self.handlers)
 
     def load_config_file(self, suppress_errors = True):
-        default_config_file_name = self._default_config_file_name()
+        default_config_files = (self._default_config_file_name(), "beaker_config")
         try:
-            # Load default configuration file first
-            try:
-                Application.load_config_file(self, default_config_file_name, path=self.beaker_config_path)
-            except ConfigFileNotFound:
-                self.log.debug("Config file not found, skipping: %s", self.config_file_name)
+            # Load default configuration files first
+            for default_config_file_name in default_config_files:
+                try:
+                    Application.load_config_file(self, default_config_file_name, path=self.beaker_config_path)
+                except ConfigFileNotFound:
+                    self.log.debug("Config file not found, skipping: %s", self.config_file_name)
 
             # If another configuration file is defined, load it second so it overrides any defaults
             if self.config_file_name != default_config_file_name:
