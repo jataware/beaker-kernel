@@ -71,3 +71,22 @@ test('Code Cell: Execute Python (Toolbar Button)', async ({ sessionPage }) => {
   await expect(sessionPage.locator(".code-cell-output-box"))
     .toContainText(testString, {timeout: 20_000});
 });
+
+test('File Browser: Show README.md with metadata', async ({ sessionPage }) => {
+  const filesTabButton = sessionPage.locator('.sidemenu .left .button-panel > button').nth(1);
+  await expect(filesTabButton).toBeVisible();
+  await filesTabButton.click();
+
+  const filePanel = sessionPage.locator('.file-container');
+  await expect(filePanel).toBeVisible({timeout: 10_000});
+
+  const fileTable = sessionPage.locator('.file-table');
+  await expect(fileTable).toBeVisible();
+
+  const readmeRow = fileTable.getByRole('row', { name: /README\.md/ });
+  await expect(readmeRow).toBeVisible();
+
+  await expect(readmeRow).toContainText(/\d+\s+(second|minute|hour|day|month|year)s?\s+ago|just now|a (second|minute|hour|day|month|year) ago|last (week|month)/i, {timeout: 5_000});
+
+  await expect(readmeRow).toContainText(/\d+\.?\d*\s?(B|KB|MB|GB)/i);
+});
