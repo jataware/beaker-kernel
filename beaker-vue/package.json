@@ -3,8 +3,8 @@
   "version": "1.13.0",
   "declaration": true,
   "scripts": {
-    "dev": "vite",
-    "serve": "vite",
+    "dev": "vite --config vite.config.app.ts",
+    "serve": "vite --config vite.config.app.ts",
     "prebuild": "npm run type-check",
     "build": "run-s clean build-all routes",
     "build-ui": "vite build --config vite.config.app.ts",
