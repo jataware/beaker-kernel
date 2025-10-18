@@ -565,6 +565,20 @@ class BaseBeakerApp(ServerApp):
 
     def initialize(self, argv = None, find_extensions = False, new_httpserver = True, starter_extension = None):
         super().initialize(argv, find_extensions, new_httpserver, starter_extension)
+        beaker_app_slug = os.environ.get("BEAKER_APP", self.config.get("beaker_app", None))
+        if beaker_app_slug:
+            app_cls: type[BeakerApp] = import_dotted_class(beaker_app_slug)
+            beaker_app: BeakerApp = app_cls()
+
+            self.config.update({
+                "app_cls": app_cls,
+                "app": beaker_app,
+            })
+        else:
+            self.config.update({
+                "app_cls": None,
+                "app": None,
+            })
         self.initialize_handlers()
 
     def initialize_handlers(self):
