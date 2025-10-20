@@ -362,7 +362,8 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
         if self.kernel_name == "beaker_kernel":
             kernel_user = self.app.agent_user
             home_dir = os.path.expanduser(f"~{kernel_user}")
-            kw["cwd"] = self.app.working_dir
+            kw["cwd"] = home_dir
+            env["HOME"] = home_dir
         else:
             kernel_user = self.app.subkernel_user
             home_dir = kw.get("cwd")
