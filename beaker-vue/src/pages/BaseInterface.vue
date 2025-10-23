@@ -243,15 +243,19 @@ const connectionFailure = (error: Error) => {
 onMounted(async () => {
     const session: Session = beakerSession.value.session;
     await session.sessionReady;  // Ensure content service is up
+    const sessionId = session.sessionId;
 
     var notebookData: {[key: string]: any};
     try {
-        notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
+        notebookData = await fetch(`/beaker/notebook/?session=${session.sessionId}`).then(res => res.json()) || {};
+        console.log("1", notebookData);
     }
     catch (e) {
+        console.log("2", notebookData);
         console.error(e);
         notebookData = {};
     }
+    console.log("2", notebookData);
 
     // Connect listener for authentication message
     session.session.ready.then(() => {
@@ -259,9 +263,9 @@ onMounted(async () => {
         sessionContext.iopubMessage.connect(iopubMessage);
     });
 
-    const sessionId = session.sessionId;
 
-    const sessionData = notebookData[sessionId];
+    const sessionData = notebookData;
+    sessionData["data"] = sessionData["content"]
     if (sessionData) {
         nextTick(async () => {
             if (sessionData.filename !== undefined) {
@@ -312,22 +316,23 @@ onUnmounted(() => {
 });
 
 const snapshot = async () => {
-    var notebookData: {[key: string]: any};
-    try {
-        notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
-    }
-    catch (e) {
-        console.error(e);
-        notebookData = {};
-    }
+    // var notebookData: {[key: string]: any};
+    // try {
+    //     notebookData = JSON.parse(localStorage.getItem("notebookData")) || {};
+    // }
+    // catch (e) {
+    //     console.error(e);
+    //     notebookData = {};
+    // }
 
     const session: Session = beakerSession.value.session;
     const sessionId = session.sessionId ;
 
-    if (!Object.keys(notebookData).includes(sessionId)) {
-        notebookData[sessionId] = {};
-    }
-    const sessionData = notebookData[sessionId];
+    // if (!Object.keys(notebookData).includes(sessionId)) {
+    //     notebookData[sessionId] = {};
+    // }
+    // const sessionData = notebookData[sessionId];
+    const sessionData: {[key: string]: any} = {};
 
     // Only save state if there is state to save
     if (session.notebook) {
@@ -368,7 +373,7 @@ const snapshot = async () => {
             sessionData['data'] = notebookContent;
             sessionData['checksum'] = notebookChecksum;
         }
-        localStorage.setItem("notebookData", JSON.stringify(notebookData));
+        // localStorage.setItem("notebookData", JSON.stringify(notebookData));
     }
 };
 

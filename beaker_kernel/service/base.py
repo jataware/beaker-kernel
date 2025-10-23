@@ -18,7 +18,6 @@ from traitlets.utils.text import indent, wrap_paragraphs
 
 from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
 from jupyter_client import kernelspec
-from jupyter_server.services.contents.largefilemanager import AsyncLargeFileManager
 from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
 from jupyter_server.services.sessions.sessionmanager import SessionManager
 from jupyter_server.serverapp import ServerApp
@@ -35,26 +34,6 @@ logger = logging.getLogger("beaker_server")
 HERE = os.path.dirname(__file__)
 
 version = "1.0.0"
-
-
-class BeakerContentsManager(AsyncLargeFileManager):
-    def _get_os_path(self, path):
-        """Override path resolution to use user-specific home directory.
-
-        Parameters
-        ----------
-        path : str
-            Relative path to resolve
-
-        Returns
-        -------
-        str
-            Absolute path within user's home directory
-        """
-        user: BeakerUser = current_user.get()
-        if user:
-            path = os.path.join(user.home_dir, path)
-        return super()._get_os_path(path)
 
 
 class BeakerSessionManager(SessionManager):
@@ -478,19 +457,23 @@ class BaseBeakerApp(ServerApp):
     app_slug = traitlets.Unicode(config=True)
 
     kernel_manager_class = traitlets.Type(
-        f"{__module__}.BeakerKernelMappingManager",
+        f"{__package__}.base.BeakerKernelMappingManager",
         config=True
     )
     session_manager_class = traitlets.Type(
-        f"{__module__}.BeakerSessionManager",
+        f"{__package__}.base.BeakerSessionManager",
         config=True
     )
     contents_manager_class = traitlets.Type(
-        f"{__module__}.BeakerContentsManager",
+        f"{__package__}.storage.base.BeakerLocalContentsManager",
         config=True
     )
     kernel_spec_manager_class = traitlets.Type(
-        f"{__module__}.BeakerKernelSpecManager",
+        f"{__package__}.base.BeakerKernelSpecManager",
+        config=True
+    )
+    notebook_manager_class = traitlets.Type(
+        f"{__package__}.storage.notebook.NotebookFileManager",
         config=True
     )
 
@@ -563,6 +546,12 @@ class BaseBeakerApp(ServerApp):
 
             kwargs.update(defaults)
         super().__init__(**kwargs)
+
+    def init_configurables(self):
+        # Initialize configurables first to ensure config is loaded before other initializations
+        super().init_configurables()
+
+        self.notebook_manager = self.notebook_manager_class(parent=self, contents_manager=self.contents_manager)
 
     def initialize(self, argv = None, find_extensions = False, new_httpserver = True, starter_extension = None):
         super().initialize(argv, find_extensions, new_httpserver, starter_extension)
