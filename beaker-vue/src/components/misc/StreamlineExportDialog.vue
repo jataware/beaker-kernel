@@ -125,7 +125,7 @@ const handleStreamlineExport = (format: string, mimetype: string, options?: obje
         }
     ).then(async (result) => {
         if (result.status === 200) {
-            const data = await result.text();
+            const data = new Blob([await result.text()]);
             const dispositionHeader = result.headers.get("content-disposition")
             const disposition = contentDisposition.parse(dispositionHeader);
             const filename = disposition.parameters.filename;

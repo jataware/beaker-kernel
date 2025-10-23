@@ -225,7 +225,7 @@ const handleExport = (format: string, mimetype: string) => {
     const processedNotebookData = processNotebookForExport(notebook.notebook);
     const tempNotebook = new BeakerNotebook();
     tempNotebook.fromJSON(processedNotebookData);
-    
+
     // ensure all cells are proper BeakerBaseCell instances before calling toIPynb
     if (tempNotebook.content.cells && Array.isArray(tempNotebook.content.cells)) {
         tempNotebook.content.cells = tempNotebook.content.cells.map((cell: any) => {
@@ -242,9 +242,9 @@ const handleExport = (format: string, mimetype: string) => {
             }
         });
     }
-    
+
     const exportNotebook = tempNotebook.toIPynb();
-    
+
     fetch(
         url,
         {
@@ -259,7 +259,7 @@ const handleExport = (format: string, mimetype: string) => {
         }
     ).then(async (result) => {
         if (result.status === 200) {
-            const data = await result.text();
+            const data = await result.blob();
             const dispositionHeader = result.headers.get("content-disposition")
             const disposition = contentDisposition.parse(dispositionHeader);
             const filename = disposition.parameters.filename;
@@ -282,7 +282,7 @@ const exportAction = (format: string, mimetype: string) => {
         const processedNotebookData = processNotebookForExport(notebook.notebook);
         const tempNotebook = new BeakerNotebook();
         tempNotebook.fromJSON(processedNotebookData);
-        
+
         if (tempNotebook.content.cells && Array.isArray(tempNotebook.content.cells)) {
             tempNotebook.content.cells = tempNotebook.content.cells.map((cell: any) => {
                 if (cell.cell_type === 'raw') {
@@ -298,9 +298,9 @@ const exportAction = (format: string, mimetype: string) => {
                 }
             });
         }
-        
+
         const exportNotebook = tempNotebook.toIPynb();
-        
+
         dialog.open(
             StreamlineExportDialog,
             {
@@ -339,7 +339,7 @@ const processNotebookForExport = (notebookData: any) => {
             return cell;
         });
     }
-    
+
     if (clonedNotebook.content && clonedNotebook.content.cells && Array.isArray(clonedNotebook.content.cells)) {
         clonedNotebook.content.cells = clonedNotebook.content.cells.map((cell: any) => {
             // handle query cells with flattened=true metadata - remove events array
@@ -455,7 +455,7 @@ function downloadNotebook() {
     const processedNotebookData = processNotebookForExport(notebook.notebook);
     const tempNotebook = new BeakerNotebook();
     tempNotebook.fromJSON(processedNotebookData);
-    
+
     if (tempNotebook.content.cells && Array.isArray(tempNotebook.content.cells)) {
         tempNotebook.content.cells = tempNotebook.content.cells.map((cell: any) => {
             if (cell.cell_type === 'raw') {
@@ -474,7 +474,7 @@ function downloadNotebook() {
 
     const exportNotebook = tempNotebook.toIPynb();
 
-    const data = JSON.stringify(exportNotebook, null, 2);
+    const data = new Blob([JSON.stringify(exportNotebook, null, 2)]);
 
     const filename = `Beaker-Notebook_${getDateTimeString()}.ipynb`;
     const mimeType = 'application/x-ipynb+json';
@@ -515,7 +515,7 @@ function downloadNotebook() {
         align-items: center;
         gap: 0.5rem;
         margin-left: 0.75rem;
-        
+
         .truncate-label {
             font-size: 0.875rem;
             color: var(--p-text-color);

@@ -126,12 +126,18 @@ async def attach_workflow(workflow_title: str, agent: AgentRef):
     return f"Successfully set the attached workflow to {workflow_title}."
 
 @tool()
-async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: AgentRef):
+async def update_workflow_stage(stage_name: str, state: str, results: str, agent: AgentRef):
     """
     Updates the information about a workflow stage.
 
-    This should be used directly after finishing each stage of a workflow,
+    This must be used directly after finishing each stage of a workflow,
     and at the start of a new stage.
+
+    You may additionally use this if the user requests redoing a stage after providing additional information,
+    such as: "Try that again, but with..." or "That didn't quite work, please fix it"
+    that would impact the result of a stage of the workflow that has already completed.
+    After following the user's request, ensure to provide the new results when updating the stage to be
+    "finished" again.
 
     Args:
         stage_name (str): The name of the stage to mark as completed to the user.
@@ -156,21 +162,33 @@ async def mark_workflow_stage(stage_name: str, state: str, results: str, agent: 
             results_markdown=results,
         )
 
-    # summarize all of the results so far in a final format, if we just finished a step
-    try:
-        if state == 'finished':
-            workflow_prompt = agent.context.workflows[agent.context.current_workflow_state["workflow_id"]].output_prompt
-            if workflow_prompt:
-                workflow_results = [
-                    f"### {stage_name}: \n\n{progress}\n\n"
-                    for stage_name,progress in agent.context.current_workflow_state["progress"].items()
-                ]
-                agent.context.current_workflow_state["final_response"] = await agent.oneshot(workflow_prompt, workflow_results)
-    except Exception as e:
-        logger.error(f"Summarization for the workflow stage failed: {e}")
-
     agent.context.send_response("iopub", "update_workflow_state", agent.context.current_workflow_state)
     return "Successfully marked stage."
+
+@tool()
+async def update_workflow_output(results: str, agent: AgentRef):
+    """
+    Updates the overall output of the workflow.
+
+    This tool must be called whenever a workflow stage completes, or whenever
+    redoing a task would impact the "final output" of a workflow.
+
+    The final output of the workflow must be formatted according to the
+    `<workflow-result-formatting-instructions></workflow-result-formatting-instructions>`
+    block of the active workflow.
+
+    Args:
+        results (str): The results of the entire workflow, all stages included, given
+                       the state of the notebook and user operations as well -
+                       which should be formatted according to the
+                       `<workflow-result-formatting-instructions></workflow-result-formatting-instructions>` block of the active workflow.
+
+    Returns:
+        str: Information about the operation.
+    """
+    agent.context.current_workflow_state["final_response"] = results
+    agent.context.send_response("iopub", "update_workflow_state", agent.context.current_workflow_state)
+    return "Successfully set workflow output."
 
 @tool(autosummarize=True, summarizer=run_code_summarizer)
 async def run_code(code: str, agent: AgentRef, loop: LoopControllerRef, react_context: ReactContextRef) -> str:
@@ -349,7 +367,8 @@ class BeakerSubkernel(abc.ABC):
         # if the lambda below contains self -- self.context.workflows won't be
         # populated at the check time in tools(self)... so checking in context makes more sense.
         (attach_workflow, lambda: True),
-        (mark_workflow_stage, lambda: True)
+        (update_workflow_stage, lambda: True),
+        (update_workflow_output, lambda: True)
     ]
 
     FETCH_STATE_CODE: str = ""
