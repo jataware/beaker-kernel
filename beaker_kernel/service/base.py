@@ -473,7 +473,8 @@ class BaseBeakerApp(ServerApp):
         config=True
     )
     notebook_manager_class = traitlets.Type(
-        f"{__package__}.storage.notebook.NotebookFileManager",
+        f"{__package__}.storage.notebook.BaseNotebookManager",
+        # default_value=f"{__package__}.storage.notebook.FileNotebookManager",
         config=True
     )
 
@@ -536,13 +537,24 @@ class BaseBeakerApp(ServerApp):
     def _default_app_slug(self):
         return self._app_slug()
 
+    @traitlets.default("notebook_manager_class")
+    def _default_notebook_manager_class(self):
+        from beaker_kernel.service.storage.notebook import FileNotebookManager
+        return FileNotebookManager
+
     def __init__(self, **kwargs):
         # Apply defaults from defaults classvar
         defaults = getattr(self.__class__, "defaults", None)
         if defaults and isinstance(defaults, dict):
             from traitlets.config import Config
-            config = Config(**defaults)
-            self.config.update(config)
+
+            if config.jupyter_token:
+                identity_dict = defaults.get("IdentityProvider", {})
+                identity_dict.setdefault("token", config.jupyter_token)
+                defaults["IdentityProvider"] = identity_dict
+
+            trait_config = Config(**defaults)
+            self.config.update(trait_config)
 
             kwargs.update(defaults)
         super().__init__(**kwargs)
@@ -551,7 +563,10 @@ class BaseBeakerApp(ServerApp):
         # Initialize configurables first to ensure config is loaded before other initializations
         super().init_configurables()
 
-        self.notebook_manager = self.notebook_manager_class(parent=self, contents_manager=self.contents_manager)
+        self.notebook_manager = self.notebook_manager_class(
+            parent=self,
+            # contents_manager=self.contents_manager
+        )
 
     def initialize(self, argv = None, find_extensions = False, new_httpserver = True, starter_extension = None):
         super().initialize(argv, find_extensions, new_httpserver, starter_extension)

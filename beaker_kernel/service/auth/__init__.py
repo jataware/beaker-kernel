@@ -121,6 +121,7 @@ class BeakerAuthorizer(Authorizer):
 @dataclass
 class BeakerUser(User):
     home_dir: Optional[str] = field(default=None)
+    config: Optional[dict] = field(default=None)
 
     def __post_init__(self):
         """Initialize home directory if not provided.
@@ -130,6 +131,9 @@ class BeakerUser(User):
         """
         if self.home_dir is None:
             self.home_dir = self._sanitize_homedir(self.username)
+        if self.config is None:
+            # TODO: Fetch config from somewhere
+            self.config = {}
         return super().__post_init__()
 
     @staticmethod
@@ -157,6 +161,18 @@ class BeakerUser(User):
         sanitized_path = "".join(char if char not in invalid_chars else '_' for char in stripped_path_string)
         full_path = '_'.join((sanitized_path, hashlib.sha1(path_string.encode()).hexdigest()))
         return full_path
+
+
+@dataclass
+class BeakerPermission:
+    name: str
+    description: str = ""
+
+@dataclass
+class BeakerRole:
+    name: str
+    config: dict = field(default_factory=lambda: {})
+    permissions: list[str] = field(default_factory=lambda: [])
 
 
 @dataclass
