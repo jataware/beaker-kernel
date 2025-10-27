@@ -216,7 +216,7 @@ const exportAsTypes = ref<MenuItem[]>([
     }
 ]);
 
-const handleExport = (format: string, mimetype: string) => {
+const handleExport = async (format: string, mimetype: string) => {
 
     const url = URLExt.join(PageConfig.getBaseUrl(), 'export', format);
 
@@ -241,6 +241,14 @@ const handleExport = (format: string, mimetype: string) => {
                 return new BeakerRawCell(cell);
             }
         });
+    }
+
+    if (format === "full_context_notebook") {
+        const history = await session.executeAction("get_agent_history", {}).done;
+        console.log(history);
+        tempNotebook.content.metadata.message_history = {
+            full_history: history.content.return
+        }
     }
 
     const exportNotebook = tempNotebook.toIPynb();
@@ -272,7 +280,7 @@ const handleExport = (format: string, mimetype: string) => {
     }).catch((reason) => console.error(reason));
 }
 
-const exportAction = (format: string, mimetype: string) => {
+const exportAction = async (format: string, mimetype: string) => {
     if (!saveAsFilename.value) {
         resetSaveAsFilename();
     }
@@ -316,7 +324,7 @@ const exportAction = (format: string, mimetype: string) => {
         );
     }
     else {
-        handleExport(format, mimetype);
+        await handleExport(format, mimetype);
     }
 }
 
@@ -370,7 +378,7 @@ const refreshExportTypes = async () => {
         return true
     }).map(([format, formatInfo]) => {
         const mimetype = formatInfo.output_mimetype;
-        const label = format === "streamline" ? "notebook (AI ✨)" : format;
+        const label = format === "streamline" ? "notebook (AI ✨)" : format === "full_context_notebook" ? "notebook (full agent context)" : format;
         return {
             label,
             tooltip: mimetype,

@@ -489,13 +489,59 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         """
         Returns all of the history for the LLM agent.
         """
-        kernel_state_future = self.get_subkernel_state()
-        notebook_state_future = self.beaker_kernel.request_notebook_state(parent_message=message)
-        kernel_state, notebook_state = await asyncio.gather(kernel_state_future, notebook_state_future)
-        with self.prepare_state(kernel_state, notebook_state):
-            agent_messages = await self.agent.all_messages()
-            json_messages = [msg.model_dump_json() for msg in agent_messages]
-            return json_messages
+        from langchain_core.messages import AIMessage
+        from langchain_core.load import dumps
+        from copy import deepcopy
+
+        # kernel_state_future = self.get_subkernel_state()
+        # notebook_state_future = self.beaker_kernel.request_notebook_state(parent_message=message)
+        # kernel_state, notebook_state = await asyncio.gather(kernel_state_future, notebook_state_future)
+        # with self.prepare_state(kernel_state, notebook_state):
+
+        # auto_context will be set by the agent - only rehydrate system + user/AI messages
+        # otherwise `await self.agent.all_messages()` would be easy here
+        messages = []
+        if self.agent.chat_history.system_message:
+            messages.append(dumps(self.agent.chat_history.system_message.message))
+
+        for record in self.agent.chat_history.raw_records:
+            message = record.message
+            if isinstance(message, AIMessage):
+                # langchain `loads`` fails on unexpected fields of the typeddict ToolCall
+                # _orig_code is added during summarization (see run_code_summarizer, subkernel.py:42)
+                message = deepcopy(message)
+                for tool_call in message.tool_calls:
+                    tool_call.pop("_orig_code", None)
+                    # tool_call.pop("orig_code", None)
+            messages.append(dumps(message))
+
+        return messages
+    get_agent_history._default_payload = '{}'
+
+    @action()
+    async def set_agent_history(self, message):
+        """
+        Sets the message history of the agent to the contents of the message,
+        updating chat history as well.
+        """
+        from langchain_core.load import loads
+        from archytas.chat_history import ChatHistory
+
+        system = message.content.pop(0)
+        messages = [loads(message) for message in message.content]
+
+        self.agent.chat_history = ChatHistory(messages)
+        self.agent.chat_history.set_system_message(loads(system))
+
+        if getattr(self, "auto_context", None) is not None:
+            self.agent.set_auto_context("Default context", self.auto_context)
+            self.agent.chat_history.auto_context_message._model = self.agent.model
+            # ensure hashes don't align and content updates
+            self.agent.chat_history.auto_context_message.content = ""
+            await self.agent.chat_history.auto_context_message.update_content()
+        await self.agent.chat_history.token_estimate(model=self.agent.model)
+        await self.beaker_kernel.send_chat_history(parent_header=message.header)
+
     get_agent_history._default_payload = '{}'
 
 
