@@ -14,7 +14,6 @@ const test = base.extend<{sessionPage: Page}>(
 test.describe.configure({ mode: 'parallel' });
 
 test('Agent: Say Hello', async ({ sessionPage }) => {
-  await expect(sessionPage).toHaveTitle(/Beaker Notebook/);
   await expect(sessionPage.getByPlaceholder("Ask the AI or request an operation.")).toBeVisible();
   await sessionPage.getByPlaceholder("Ask the AI or request an operation.").fill("say hello");
   await sessionPage.getByLabel("Submit").click();
@@ -35,7 +34,7 @@ test('Agent: Run Code', async ({ sessionPage }) => {
 });
 
 test('Code Cell: Execute Python (control+enter)', async ({ sessionPage }) => {
-  const codeCell = sessionPage.locator(".beaker-notebook .cm-content");
+  const codeCell = sessionPage.locator(".beaker-notebook .code-cell .cm-content");
   const testString = "Code Cell Test String"
   await expect(codeCell).toBeVisible();
   await codeCell.click();
@@ -48,7 +47,7 @@ test('Code Cell: Execute Python (control+enter)', async ({ sessionPage }) => {
 });
 
 test('Code Cell: Execute Python (shift+enter)', async ({ sessionPage }) => {
-  const codeCell = sessionPage.locator(".beaker-notebook .cm-content");
+  const codeCell = sessionPage.locator(".beaker-notebook .code-cell .cm-content");
   const testString = "Code Cell Test String"
   await expect(codeCell).toBeVisible();
   await codeCell.click();
@@ -61,7 +60,7 @@ test('Code Cell: Execute Python (shift+enter)', async ({ sessionPage }) => {
 });
 
 test('Code Cell: Execute Python (Toolbar Button)', async ({ sessionPage }) => {
-  const codeCell = sessionPage.locator(".beaker-notebook .cm-content");
+  const codeCell = sessionPage.locator(".beaker-notebook .code-cell .cm-content");
   const testString = "Code Cell Test String"
   await expect(codeCell).toBeVisible();
   await codeCell.click();

@@ -388,8 +388,11 @@ export function useNotebookInterface(): UseNotebookInterfaceReturn {
 
         const notebook = beakerNotebookRef.value;
         beakerSession.value?.session.loadNotebook(notebookJSON);
-        if (notebookJSON?.metadata?.message_history?.full_history) {
-            beakerSession.value?.session.executeAction("set_agent_history", notebookJSON?.metadata?.message_history?.full_history)
+        if (notebookJSON?.metadata?.chat_history) {
+            beakerSession.value?.session.executeAction(
+                "set_agent_history",
+                notebookJSON?.metadata?.chat_history
+            );
         }
         saveAsFilename.value = filename;
 

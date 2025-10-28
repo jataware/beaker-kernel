@@ -245,10 +245,7 @@ const handleExport = async (format: string, mimetype: string) => {
 
     if (format === "full_context_notebook") {
         const history = await session.executeAction("get_agent_history", {}).done;
-        console.log(history);
-        tempNotebook.content.metadata.message_history = {
-            full_history: history.content.return
-        }
+        tempNotebook.content.metadata.chat_history = history.content.return;
     }
 
     const exportNotebook = tempNotebook.toIPynb();
@@ -378,7 +375,11 @@ const refreshExportTypes = async () => {
         return true
     }).map(([format, formatInfo]) => {
         const mimetype = formatInfo.output_mimetype;
-        const label = format === "streamline" ? "notebook (AI ✨)" : format === "full_context_notebook" ? "notebook (full agent context)" : format;
+        const labelMap = {
+            streamline: "notebook (AI ✨)",
+            full_context_notebook: "notebook (full agent context)",
+        }
+        const label = labelMap[format] ?? format;
         return {
             label,
             tooltip: mimetype,
