@@ -9,7 +9,7 @@
     "build": "run-s clean build-all routes",
     "build-ui": "vite build --config vite.config.app.ts",
     "build-lib": "vite build --config vite.config.lib.ts",
-    "build-all": "run-p build-ui build-lib",
+    "build-all": "run-s build-ui build-lib",
     "build-and-serve": "run-s build serve",
     "routes": "NODE_ENV=production vite-node utils/extractRoutes.ts",
     "preview": "vite preview",
