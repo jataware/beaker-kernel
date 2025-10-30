@@ -45,14 +45,14 @@ jobs:
       run: npx playwright install --with-deps
     # run beaker
     - name: Run Beaker
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
         beaker notebook &
         sleep 15
     # with beaker listening on localhost:8888, run tests
     - name: Run Playwright tests
       working-directory: beaker-vue
-      env:
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: npx playwright test
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
