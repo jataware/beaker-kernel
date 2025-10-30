@@ -70,7 +70,6 @@ async def run_code_summarizer(message: "ToolMessage", chat_history: "ChatHistory
         code_excision_end = code_len - (size_threshold - code_excision_start - len(code_excision_text))
 
         message.additional_kwargs["orig_code"] = code
-        tool_call["_orig_code"] = code
         shortened_code = "".join([
             code[:code_excision_start],
             code_excision_text,
