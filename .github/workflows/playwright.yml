@@ -51,6 +51,8 @@ jobs:
     # with beaker listening on localhost:8888, run tests
     - name: Run Playwright tests
       working-directory: beaker-vue
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: npx playwright test
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
