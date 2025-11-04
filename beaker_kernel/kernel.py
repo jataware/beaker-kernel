@@ -34,7 +34,7 @@ MESSAGE_STREAMS = {
     "stream": "iopub",
 }
 
-AVAILABLE_CONTEXTS = autodiscover_contexts()
+AVAILABLE_CONTEXTS = {k: v for k, v in autodiscover_contexts().items() if v is not None}
 
 
 class BeakerKernel(KernelProxyManager):
@@ -109,7 +109,10 @@ class BeakerKernel(KernelProxyManager):
             except json.JSONDecodeError:
                 default_context_payload = {}
         if not default_context:
-            sorted_contexts = sorted(autodiscover_contexts().items(), key=lambda item: item[1].WEIGHT)
+            sorted_contexts = sorted(
+                ((k, v) for k, v in autodiscover_contexts().items() if v is not None),
+                key=lambda item: item[1].WEIGHT
+            )
             first_context = sorted_contexts[0]
             default_context, context_cls = first_context
             default_context_payload = context_cls.default_payload()

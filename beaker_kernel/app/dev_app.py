@@ -10,7 +10,7 @@ from watchdog.observers import Observer
 from watchdog import events as watchdog_events
 
 import beaker_kernel
-from beaker_kernel.service.notebook import BeakerNotebookApp
+from beaker_kernel.app.notebook_app import BeakerNotebookApp
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.config import config
 

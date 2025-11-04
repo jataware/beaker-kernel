@@ -14,10 +14,10 @@ from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernel import BeakerSubkernel
 from beaker_kernel.lib.agent_tasks import summarize
 from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, recursiveOptionalUpdate, reset_config
-from beaker_kernel.service import admin_utils
+from beaker_kernel.lib import admin
 
 if TYPE_CHECKING:
-    from beaker_kernel.service.base import BaseBeakerApp
+    from beaker_kernel.app.base import BaseBeakerApp
 
 logger = logging.getLogger(__name__)
 
@@ -59,12 +59,17 @@ def find_api_handlers(base=None) -> Generator[tuple[str, Any, str], None, None]:
 
     for f in os.listdir(base_dir):
         if f.endswith('.py') and f != '__init__.py' and f != 'handlers.py':
-            s = f'beaker_kernel.service.api.{f[:-3]}'
-            mod = importlib.import_module(s)
-            if "handlers" in dir(mod):
-                logger.warning(f"Found handlers in {s}")
-                for handlers in getattr(mod, "handlers"):
-                    yield handlers
+            s = f'beaker_kernel.app.api.{f[:-3]}'
+            try:
+                mod = importlib.import_module(s)
+                if "handlers" in dir(mod):
+                    logger.warning(f"Found handlers in {s}")
+                    for handlers in getattr(mod, "handlers"):
+                        yield handlers
+            except ImportError as e:
+                logger.warning(f"Failed to import API handler module '{s}': {e}")
+                logger.warning(f"Skipping API handler module '{s}' due to import error")
+                continue
 
 
 def add_handler_prefix(prefix: str, handler_tuple: tuple[str]):

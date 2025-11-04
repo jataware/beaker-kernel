@@ -248,7 +248,7 @@ def list_subkernels(all):
     subkernels = {
         name: cls
         for name, cls in autodiscover_subkernels().items()
-        if all or getattr(cls, 'KERNEL_NAME', 'undetermined') in kernel_specs
+        if cls is not None and (all or getattr(cls, 'KERNEL_NAME', 'undetermined') in kernel_specs)
     }
     if subkernels:
         click.echo("Currently installed subkernels:\n")

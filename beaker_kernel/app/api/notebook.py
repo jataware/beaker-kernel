@@ -14,7 +14,7 @@ from beaker_kernel.lib.utils import ensure_async
 import tornado
 
 if typing.TYPE_CHECKING:
-    from beaker_kernel.service.storage.notebook import BaseNotebookManager, NotebookInfo, NotebookContent
+    from beaker_kernel.services.storage.notebook import BaseNotebookManager, NotebookInfo, NotebookContent
 
 logger = logging.getLogger(__name__)
 

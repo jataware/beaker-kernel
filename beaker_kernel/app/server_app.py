@@ -1,4 +1,4 @@
-from beaker_kernel.service.base import BaseBeakerApp
+from beaker_kernel.app.base import BaseBeakerApp
 
 
 class BeakerServerApp(BaseBeakerApp):

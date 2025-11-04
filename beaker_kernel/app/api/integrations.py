@@ -16,7 +16,7 @@ from beaker_kernel.lib.config import Choice, Config, Table, config, locate_confi
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernel import BeakerSubkernel
 from beaker_kernel.lib.utils import ensure_async
-from beaker_kernel.service import admin_utils
+from beaker_kernel.lib import admin
 
 import tornado
 

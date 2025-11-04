@@ -1,4 +1,4 @@
-from .server import BeakerServerApp
+from .server_app import BeakerServerApp
 
 class BeakerMultiUserServerApp(BeakerServerApp):
 

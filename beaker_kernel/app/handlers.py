@@ -23,8 +23,8 @@ from beaker_kernel.lib.app import BeakerApp
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.subkernel import BeakerSubkernel
 from beaker_kernel.lib.config import config, locate_config, Config, Table, Choice, recursiveOptionalUpdate, reset_config
-from beaker_kernel.service import admin_utils
-from beaker_kernel.service.auth import BeakerUser
+from beaker_kernel.lib import admin
+from beaker_kernel.services.auth import BeakerUser
 from .api.handlers import register_api_handlers
 
 if TYPE_CHECKING:
@@ -475,14 +475,14 @@ class StatsHandler(JupyterHandler):
             sessions,
             kernels,
         ) = await asyncio.gather(
-            admin_utils.fetch_system_stats(),
+            admin.fetch_system_stats(),
             self.session_manager.list_sessions(),
-            admin_utils.fetch_kernel_info(self.kernel_manager),
+            admin.fetch_kernel_info(self.kernel_manager),
         )
         ps_response, fh_response, lsof_response = system_stats
 
-        proc_info = await admin_utils.build_proc_info(ps_response, fh_response)
-        edges, kernel_by_pid_index = await admin_utils.build_edges_map(lsof_response, kernels)
+        proc_info = await admin.build_proc_info(ps_response, fh_response)
+        edges, kernel_by_pid_index = await admin.build_edges_map(lsof_response, kernels)
 
         # Update each session with collected information
         for session in sessions:

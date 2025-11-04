@@ -100,8 +100,10 @@ class AutodiscoveryItems(Mapping[str, type]):
             item: EntryPoint = self.mapping.get(key, None)
             if item:
                 item = item.load()
-        except ImportError:
-            raise
+        except ImportError as e:
+            logger.warning(f"Failed to load extension '{key}': {e}")
+            logger.warning(f"Skipping extension '{key}' due to import error")
+            return None
 
         return item
     def __iter__(self):

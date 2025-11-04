@@ -9,8 +9,8 @@ from pathlib import Path
 import click
 import psutil
 
-from beaker_kernel import service
-from beaker_kernel.service.base import BaseBeakerApp
+from beaker_kernel import app
+from beaker_kernel.app.base import BaseBeakerApp
 
 
 TEMP_DIR = Path(tempfile.gettempdir())
@@ -32,7 +32,7 @@ def list_types():
     service_types = []
 
     # Find all modules in beaker_kernel.service package
-    for finder, name, ispkg in pkgutil.iter_modules(service.__path__, service.__name__ + "."):
+    for finder, name, ispkg in pkgutil.iter_modules(app.__path__, app.__name__ + "."):
         if not ispkg:  # Only include modules, not subpackages
             module_name = name.split('.')[-1]  # Get just the module name
             # Skip internal modules
@@ -72,7 +72,7 @@ def start(ctx, server_type, force, port, daemon):
             pidfile.unlink(missing_ok=True)
 
     # Build command
-    cmd = [sys.executable, "-m", f"beaker_kernel.service.{server_type}", "--port", str(port)]
+    cmd = [sys.executable, "-m", f"beaker_kernel.app.{server_type}_app", "--port", str(port)]
 
     # Add any extra arguments from ctx.args
     if ctx.args:
@@ -191,7 +191,7 @@ def generate_config(server_type=None, config_file=None):
     """
     app_class: type[BaseBeakerApp]
     if server_type:
-        app_mod_str: str = f"beaker_kernel.service.{server_type}"
+        app_mod_str: str = f"beaker_kernel.app.{server_type}_app"
         app_module = importlib.import_module(app_mod_str)
         app_classes = inspect.getmembers(app_module, lambda obj: isinstance(obj, type) and issubclass(obj, BaseBeakerApp) and obj != BaseBeakerApp)
         if app_classes:
