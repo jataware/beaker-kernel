@@ -38,6 +38,35 @@ version = "1.0.0"
 
 class BeakerSessionManager(SessionManager):
 
+    async def prune_sessions(self, all=False) -> int:
+        """
+        Removes sessions from the session store.
+
+        Parameters
+        ----------
+        all : bool
+            If true, all sessions are removed.
+            If false, only sessions without active kernels are removed.
+
+        Returns
+        -------
+        int
+            Number of sessions pruned.
+        """
+        count = 0
+        all_sessions = await self.list_sessions(include_missing=True)
+        for session in all_sessions:
+            kernel_model = session.get("kernel", None)
+            kernel_id = kernel_model and kernel_model.get("id")
+            if all or await self.kernel_culled(kernel_id):
+                await self.delete_session(session_id=session["id"])
+                count += 1
+        return count
+
+    async def list_sessions(self, include_missing=False) -> list[dict]:
+        return await super().list_sessions()
+
+
     def get_kernel_env(self, path, name = None):
         """Get environment variables for Beaker kernel sessions.
 
@@ -100,7 +129,7 @@ class BeakerSessionManager(SessionManager):
         """
         user: BeakerUser = current_user.get()
         if user:
-            virtual_home_root = self.kernel_manager.root_dir
+            virtual_home_root = self.parent.virtual_home_root
             virtual_home_dir = os.path.join(virtual_home_root, user.home_dir)
 
             subkernel_user = self.parent.subkernel_user
@@ -465,8 +494,9 @@ class BaseBeakerApp(ServerApp):
         config=True
     )
     contents_manager_class = traitlets.Type(
-        f"{__package__}.storage.base.BeakerLocalContentsManager",
-        config=True
+        klass=f"{__package__}.storage.base.BaseBeakerContentsManager",
+        default_value=f"{__package__}.storage.base.BeakerLocalContentsManager",
+        config=True,
     )
     kernel_spec_manager_class = traitlets.Type(
         f"{__package__}.base.BeakerKernelSpecManager",
@@ -476,6 +506,10 @@ class BaseBeakerApp(ServerApp):
         f"{__package__}.storage.notebook.BaseNotebookManager",
         # default_value=f"{__package__}.storage.notebook.FileNotebookManager",
         config=True
+    )
+    virtual_home_root = traitlets.Unicode(
+        help="Path pointing to where user directories should be stored. Defaults to 'root_dir' if not set.",
+        config=True,
     )
 
     kernel_spec_include_local = traitlets.Bool(True, help="Include local kernel specs", config=True)
@@ -663,6 +697,10 @@ class BaseBeakerApp(ServerApp):
             if spec_manager:
                 result[extension_slug] = spec_manager(parent=self)
         return result
+
+    @traitlets.default("virtual_home_root")
+    def _default_virtual_home_root(self):
+        return self.root_dir
 
     @property
     def _default_root_dir(self):

@@ -6,6 +6,7 @@ from typing import Any, Optional, TypeAlias, Literal
 import traitlets
 from traitlets.config import Configurable
 
+from jupyter_core.utils import ensure_async
 from jupyter_server.services.contents.manager import ContentsManager
 from jupyter_server.services.contents.filemanager import AsyncFileContentsManager
 from beaker_kernel.service.auth import BeakerUser
@@ -17,7 +18,7 @@ def with_hidden_files(func):
         orig_allow_hidden = self.contents_manager.allow_hidden
         self.contents_manager.allow_hidden = True
         try:
-            result = await func(self, *args, **kwargs)
+            result = await ensure_async(func(self, *args, **kwargs))
         finally:
             self.contents_manager.allow_hidden = orig_allow_hidden
         return result
@@ -58,10 +59,19 @@ class BaseNotebookManager(Configurable):
 
 class FileNotebookManager(BaseNotebookManager):
 
+    contents_manager_class = traitlets.Type(
+        default_value=None,
+        klass=ContentsManager,
+        allow_none=True,
+        config=True,
+    )
+    contents_manager_params = traitlets.Dict(
+        default_value={},
+        config=True,
+    )
     contents_manager = traitlets.Instance(
-        ContentsManager,
+        klass=ContentsManager,
         help="Contents manager used by the NotebookManager",
-        allow_none=False,
         config=True,
     )
     notebook_path = traitlets.Unicode(
@@ -72,6 +82,8 @@ class FileNotebookManager(BaseNotebookManager):
 
     @traitlets.default("contents_manager")
     def _default_contents_manager(self):
+        if self.contents_manager_class not in (traitlets.Undefined, None, ""):
+            return self.contents_manager_class(parent=self, **self.contents_manager_params)
         if getattr(self.parent, "contents_manager", None):
             return self.parent.contents_manager
         else:
@@ -92,7 +104,7 @@ class FileNotebookManager(BaseNotebookManager):
             The file path of the notebook.
         """
         path = os.path.join(self.notebook_path, notebook_id)
-        if not await self.contents_manager.file_exists(path):
+        if not await ensure_async(self.contents_manager.file_exists(path)):
             raise FileNotFoundError(f"Notebook with session ID {notebook_id} not found")
         return path
 
@@ -110,11 +122,11 @@ class FileNotebookManager(BaseNotebookManager):
             Metadata about the notebook.
         """
 
-        path = await self._find_notebook(notebook_id)
-        notebook = await self.contents_manager.get(
+        path = await ensure_async(self._find_notebook(notebook_id))
+        notebook = await ensure_async(self.contents_manager.get(
             path,
             content=False
-        )
+        ))
         return NotebookInfo(
             id=notebook['name'],
             name=notebook['name'],
@@ -138,8 +150,8 @@ class FileNotebookManager(BaseNotebookManager):
             path = self.notebook_path.format(notebook_id="")
         except KeyError:
             path = self.notebook_path
-        if await self.contents_manager.dir_exists(path):
-            files = await self.contents_manager.get(path, content=True)
+        if await ensure_async(self.contents_manager.dir_exists(path)):
+            files = await ensure_async(self.contents_manager.get(path, content=True))
         else:
             files = {
                 "content": []
@@ -184,10 +196,10 @@ class FileNotebookManager(BaseNotebookManager):
                 raise ValueError("Either notebook_id or session_id must be provided")
             case str(), _:
                 try:
-                    path = await self._find_notebook(notebook_id)
+                    path = await ensure_async(self._find_notebook(notebook_id))
                 except KeyError:
                     path = self.notebook_path
-                file = await self.contents_manager.get(path, content=True)
+                file = await ensure_async(self.contents_manager.get(path, content=True))
                 notebook = NotebookInfo(
                     id=file['name'],
                     name=file['name'],
@@ -200,15 +212,15 @@ class FileNotebookManager(BaseNotebookManager):
                 return notebook
             case _, str():
                 # Search for notebook with matching session ID
-                notebooks = await self.list_notebooks()
+                notebooks = await ensure_async(self.list_notebooks())
                 notebook_meta = next(
                     (nb for nb in notebooks if nb.session_id == session_id),
                     None,
                 )
                 if notebook_meta is None:
                     raise FileNotFoundError(f"No notebook found for session ID {session_id}")
-                path = await self._find_notebook(notebook_meta.id)
-                file = await self.contents_manager.get(path, content=True)
+                path = await ensure_async(self._find_notebook(notebook_meta.id))
+                file = await ensure_async(self.contents_manager.get(path, content=True))
                 notebook = NotebookInfo(
                     id=file['name'],
                     name=file['name'],
@@ -258,8 +270,19 @@ class FileNotebookManager(BaseNotebookManager):
             "type": "notebook",
             "content": content,
             "format": "json",
+            "session_id": session,
         }
-        return await self.contents_manager.save(model=model, path=path)
+        if not await ensure_async(self.contents_manager.dir_exists(self.notebook_path)):
+            await ensure_async(self.contents_manager.new(
+                model={
+                    "type": "directory",
+                },
+                path=self.notebook_path
+            ))
+        if await ensure_async(self.contents_manager.file_exists(path)):
+            return await ensure_async(self.contents_manager.save(model=model, path=path))
+        else:
+            return await ensure_async(self.contents_manager.new(model=model, path=path))
 
 
 
@@ -273,9 +296,9 @@ class FileNotebookManager(BaseNotebookManager):
         notebook_id : str
             The ID of the notebook to delete.
         """
-        return await self.contents_manager.delete(
+        return await ensure_async(self.contents_manager.delete(
             os.path.join(self.notebook_path, notebook_id)
-        )
+        ))
 
 
 class BrowserLocalDataNotebookManager(BaseNotebookManager):

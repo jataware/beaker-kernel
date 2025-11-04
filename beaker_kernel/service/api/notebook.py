@@ -49,14 +49,17 @@ class NotebookHandler(JupyterHandler):
     async def get(self, notebook_id=None):
         notebook_id = notebook_id or None
         session_id = self.get_query_argument("session", None)
-        notebook = await self.notebook_manager.get_notebook(notebook_id, session_id)
+        try:
+            notebook = await self.notebook_manager.get_notebook(notebook_id, session_id)
+        except FileNotFoundError:
+            notebook = None
         if notebook is None:
             raise tornado.web.HTTPError(404, "Notebook not found")
-        self.finish(notebook)
+        self.write(notebook)
         # if notebook_id:
         #     try:
         #         notebook = await self.notebook_manager.get_notebook(notebook_id)
-        #         self.finish(notebook)
+        #         self.write(notebook)
         #         return
         #     except FileNotFoundError:
         #         raise tornado.web.HTTPError(404, f"Notebook {notebook_id} not found")
@@ -66,18 +69,19 @@ class NotebookHandler(JupyterHandler):
         # If only a single notebook with ID "*", return it directly to allow browser to use alternative storage
         # if len(notebooks) == 1 and notebooks[0].id == "*":
         #     notebooks[0].session_id = session_id
-            # return self.finish(notebooks[0])
+            # return self.write(notebooks[0])
 
         # if session_id is not None:
         #     for nb in notebooks:
         #         if nb.session_id == session_id:
         #             notebook = await self.notebook_manager.get_notebook(nb.id)
-        #             self.finish(notebook)
+        #             self.write(notebook)
         #     raise tornado.web.HTTPError(404, f"No notebook found for session {session_id}")
         # else:
-        #     self.finish(notebooks)
+        #     self.write(notebooks)
 
     async def post(self, notebook_id=None):
+        user = self.get_current_user()
         notebook_id = notebook_id or None
         session = self.get_query_argument("session", None)
         name = self.get_query_argument("name", None)
@@ -107,7 +111,7 @@ class NotebookHandler(JupyterHandler):
             raise tornado.web.HTTPError(400, "No notebook ID provided for deletion")
         await self.notebook_manager.delete_notebook(notebook_id)
         self.set_status(204)
-        self.finish()
+        # self.finish()
 
 
 handlers = [

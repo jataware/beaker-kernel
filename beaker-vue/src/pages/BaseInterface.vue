@@ -124,6 +124,7 @@ const notebookInfo = ref<{
     session_id?: string;
     content?: any;
     checksum?: string;
+    metadata?: {[key: string]: any};
 }>(null);
 
 // TODO -- WARNING: showToast is only defined locally, but provided/used everywhere. Move to session?
@@ -359,7 +360,14 @@ const saveSnapshot = async (ignoreSession: boolean = false) => {
                 },
                 body: JSON.stringify(notebookData),
             });
-            notebookInfo.value = saveRequest.ok ? await saveRequest.json() : notebookInfo.value;
+            if (saveRequest.ok) {
+                const response = await saveRequest.json();
+                notebookInfo.value = {
+                    ...notebookInfo.value,
+                    metadata: response,
+                    checksum: notebookChecksum
+                }
+            }
         }
     }
 };
@@ -372,7 +380,20 @@ const loadSnapshot = async () => {
     try {
         const notebookInfoResponse = await fetch(`/beaker/notebook/?session=${session.sessionId}`);
         if (notebookInfoResponse.ok) {
-            notebookInfo.value = await notebookInfoResponse.json();
+                const response = await notebookInfoResponse.json();
+                const content = response.content;
+                const metadata = {
+                    ...response,
+                    content: undefined,
+                };
+                const checksum = hashSum(content)
+                notebookInfo.value = {
+                    ...notebookInfo.value,
+                    content,
+                    metadata,
+                    checksum,
+                };
+
         }
     }
     catch (e) {
@@ -387,10 +408,8 @@ const loadSnapshot = async () => {
         };
     }
 
-    const notebookData = {
+    const notebookData: {[key: string]: any} = {
         ...(notebookInfo.value || {}),
-        content: undefined,
-        selectedCell: undefined,
     };
 
     if (notebookInfo.value?.type === "browserStorage") {
@@ -426,7 +445,6 @@ const loadSnapshot = async () => {
                 window.localStorage.setItem("notebookData", JSON.stringify(fullData));
             }).then(async () => {
                 await loadSnapshot();
-                console.log("Migration of notebook data complete.");
             });
             return;
         }
@@ -446,17 +464,17 @@ const loadSnapshot = async () => {
 
     if (notebookData && notebookData.content) {
         emit('open-file', notebookData.content, notebookData.name, {selectedCell: notebookData.selectedCell});
-        if (notebookData.selectedCell !== undefined) {
-            nextTick(() => {
-                beakerSession.value.notebookComponent?.selectCell(notebookData.selectedCell);
-            });
-        }
+    }
+
+    if (notebookData.selectedCell !== undefined) {
+        nextTick(() => {
+            beakerSession.value.notebookComponent?.selectCell(notebookData.selectedCell);
+        });
     }
     return notebookData;
 };
 
 const providerConfig = () => {
-    // console.log();
 }
 
 defineExpose({

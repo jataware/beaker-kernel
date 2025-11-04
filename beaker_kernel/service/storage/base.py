@@ -5,6 +5,7 @@ from typing import Any
 
 import traitlets
 
+from jupyter_server.base.handlers import AuthenticatedFileHandler
 from jupyter_server.services.contents.manager import ContentsManager
 from jupyter_server.services.contents.largefilemanager import AsyncLargeFileManager
 from beaker_kernel.service.auth import current_user, BeakerUser, BeakerAuthorizer, BeakerIdentityProvider
@@ -26,7 +27,25 @@ def with_hidden_files(func):
 class BaseBeakerContentsManager(ContentsManager):
     pass
 
+
+class BeakerLocalContentsHandler(AuthenticatedFileHandler):
+    @classmethod
+    def get_content(cls, abspath, start = None, end = None):
+        return super().get_content(abspath, start, end)
+
+    @classmethod
+    def get_absolute_path(cls, root, path):
+        return super().get_absolute_path(root, path)
+
+    def parse_url_path(self, url_path):
+        os_path = super().parse_url_path(url_path)
+        return os.path.join(self.current_user.home_dir, os_path)
+
+
 class BeakerLocalContentsManager(AsyncLargeFileManager, BaseBeakerContentsManager):
+
+    files_handler_class = BeakerLocalContentsHandler
+
     def _get_os_path(self, path):
         """Override path resolution to use user-specific home directory.
 
@@ -42,7 +61,7 @@ class BeakerLocalContentsManager(AsyncLargeFileManager, BaseBeakerContentsManage
         """
         user: BeakerUser = current_user.get()
         if user:
-            path = os.path.join(user.home_dir, path)
+            path = os.path.join(self.parent.virtual_home_root, user.home_dir, path)
         return super()._get_os_path(path)
 
     async def _notebook_model(self, path, content=True, require_hash=False):
