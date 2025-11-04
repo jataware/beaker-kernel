@@ -440,6 +440,11 @@ class BeakerKernelMappingManager(AsyncMappingKernelManager):
         if hasattr(self.kernel_spec_manager, "get_default_kernel_name"):
             self.default_kernel_name = self.kernel_spec_manager.get_default_kernel_name()
 
+    def _check_kernel_id(self, kernel_id: str) -> None:
+        """check that a kernel id is valid"""
+        if kernel_id not in self:
+            raise KeyError("Kernel with id not found: %s" % kernel_id)
+
     @property
     def beaker_config(self):
         return getattr(self.parent, 'beaker_config', None)
