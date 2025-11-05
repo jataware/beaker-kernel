@@ -300,7 +300,7 @@ class BeakerKernel(KernelProxyManager):
             output = OutboundChatHistory(
                 records=[{
                     "message": {
-                        "text": record.message.text(),
+                        "text": record.message.text,
                         "raw_content": record.message.content,
                         **record.message.model_dump(),
                     },
@@ -309,7 +309,7 @@ class BeakerKernel(KernelProxyManager):
                     "metadata": record.metadata,
                     "react_loop_id": record.react_loop_id,
                 } for record in records],
-                system_message=chat_history.system_message.message.text(),
+                system_message=chat_history.system_message.message.text,
                 tool_token_usage_estimate=chat_history.tool_token_estimate,
                 model=OutboundModel(
                     provider=model.__class__.__name__,
