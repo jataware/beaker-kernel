@@ -1,6 +1,6 @@
 {
   "name": "beaker-vue",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "declaration": true,
   "scripts": {
     "dev": "vite --config vite.config.app.ts",
@@ -49,7 +49,7 @@
     "@primevue/icons": "^4.3.4",
     "@primevue/themes": "^4.3.4",
     "ansi-html-community": "^0.0.8",
-    "beaker-kernel": "^1.13.0",
+    "beaker-kernel": "^1.14.0",
     "buffer": "^6.0.3",
     "codemirror": "^6.0.1",
     "codemirror-lang-r": "^0.1.1",
@@ -78,7 +78,7 @@
     "xlsx": "file:vendor/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
-    "@playwright/test": "^1.51.1",
+    "@playwright/test": "^1.56.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@tsconfig/node22": "^22.0.1",
     "@types/content-disposition": "^0.5.8",

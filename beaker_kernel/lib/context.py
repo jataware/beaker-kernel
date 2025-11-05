@@ -188,6 +188,10 @@ class BeakerContext:
         if callable(getattr(self.agent, 'setup', None)):
             await self.agent.setup(self.config["context_info"], parent_header=parent_header)
 
+        preamble = await self.default_preamble()
+        if preamble:
+            self.agent.chat_history.set_user_preamble_text(preamble)
+
     def cleanup(self):
         self.subkernel.cleanup()
         for msg_type, intercept_func, stream in self.intercepts:
@@ -199,6 +203,9 @@ class BeakerContext:
             msg_type, stream = getattr(method, "_intercept")
             self.intercepts.append((msg_type, method, stream))
             self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
+
+    async def default_preamble(self) -> Optional[str]:
+        return None
 
     async def auto_context(self):
         parts = []
@@ -523,15 +530,95 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
         """
         Returns all of the history for the LLM agent.
         """
-        kernel_state_future = self.get_subkernel_state()
-        notebook_state_future = self.beaker_kernel.request_notebook_state(parent_message=message)
-        kernel_state, notebook_state = await asyncio.gather(kernel_state_future, notebook_state_future)
-        with self.prepare_state(kernel_state, notebook_state):
-            agent_messages = await self.agent.all_messages()
-            json_messages = [msg.model_dump_json() for msg in agent_messages]
-            return json_messages
+        ## Handling de/serialization of langchain messages should live in Archytas instead.
+        from langchain_core.load import dumps
+
+        # kernel_state_future = self.get_subkernel_state()
+        # notebook_state_future = self.beaker_kernel.request_notebook_state(parent_message=message)
+        # kernel_state, notebook_state = await asyncio.gather(kernel_state_future, notebook_state_future)
+        # with self.prepare_state(kernel_state, notebook_state):
+
+        # auto_context will be set by the agent - only rehydrate system + user/AI messages
+        # otherwise `await self.agent.all_messages()` would be easy here
+        messages = []
+        if self.agent.chat_history.system_message:
+            messages.append(dumps(self.agent.chat_history.system_message.message))
+
+        for record in self.agent.chat_history.raw_records:
+            history_message = record.message
+            messages.append(dumps(history_message))
+
+        return messages
     get_agent_history._default_payload = '{}'
 
+    @action()
+    async def set_agent_history(self, message):
+        """
+        Sets the message history of the agent to the contents of the message,
+        updating chat history as well.
+        """
+        from langchain_core.load import loads
+        from archytas.chat_history import ChatHistory
+
+        system = message.content.pop(0)
+        history_messages = [loads(history_message)
+                            for history_message in message.content]
+        self.agent.chat_history = ChatHistory(history_messages)
+        self.agent.chat_history.set_system_message(loads(system))
+
+        if getattr(self, "auto_context", None) is not None:
+            self.agent.set_auto_context("Default context", self.auto_context)
+            self.agent.chat_history.auto_context_message._model = self.agent.model
+            # ensure hashes don't align and content updates
+            self.agent.chat_history.auto_context_message.content = ""
+            await self.agent.chat_history.auto_context_message.update_content()
+        await self.agent.chat_history.token_estimate(model=self.agent.model)
+        await self.beaker_kernel.send_chat_history(parent_header=message.header)
+
+    get_agent_history._default_payload = '{}'
+
+    @action()
+    async def set_user_preamble(self, message):
+        content = message.content
+        new_message_text: str = content.get("message_text", "")
+
+        if not self.agent or not self.agent.chat_history:
+            self.send_response(
+                stream="iopub",
+                msg_or_type="stream",
+                content={
+                    "name": "stderr",
+                    "text": "Error: No active context or chat history available"
+                },
+                parent_header=message.header,
+            )
+            return {"success": False, "error": "No active context"}
+
+        # Create a HumanMessage and add it to chat history
+        preamble_text = new_message_text.strip()
+        self.agent.chat_history.set_user_preamble_text(preamble_text)
+
+        # Send success response
+        self.send_response(
+            stream="iopub",
+            msg_or_type="stream",
+            content={
+                "name": "stdout",
+                "text": f"Message added to chat history: {new_message_text.strip()}"
+            },
+            parent_header=message.header,
+        )
+
+        # Send updated chat history
+        await self.beaker_kernel.send_chat_history(message.header)
+
+        return {"success": True, "message": "Message added to chat history"}
+
+    set_user_preamble._default_payload = """\
+{
+    "message_text": ""
+}
+"""
 
     @action(default_payload='{}')
     async def get_preview(self, message):
