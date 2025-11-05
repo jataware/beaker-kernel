@@ -22,8 +22,8 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "archytas>=1.5.0",
-  "adhoc-api",
+  "archytas>=1.6.4",
+  "adhoc-api>=2.6.0",
   "jupyterlab~=4.0",
   "jupyterlab-server>=2.22.1,<3",
   "requests>=2.24,<3",
