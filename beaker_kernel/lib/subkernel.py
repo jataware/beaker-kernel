@@ -44,7 +44,7 @@ async def run_code_summarizer(message: "ToolMessage", chat_history: "ChatHistory
     size_threshold = 800
     excision_text_template = "...skipping {} characters..."
     split_percentage = 0.7
-    text = message.text()
+    text = message.text
     message_len = len(text)
     calling_record, tool_call = chat_history.get_tool_caller(message.tool_call_id)
     calling_message: AIMessage = calling_record.message
