@@ -188,6 +188,10 @@ class BeakerContext:
         if callable(getattr(self.agent, 'setup', None)):
             await self.agent.setup(self.config["context_info"], parent_header=parent_header)
 
+        preamble = await self.default_preamble()
+        if preamble:
+            self.agent.chat_history.set_user_preamble_text(preamble)
+
     def cleanup(self):
         self.subkernel.cleanup()
         for msg_type, intercept_func, stream in self.intercepts:
@@ -199,6 +203,9 @@ class BeakerContext:
             msg_type, stream = getattr(method, "_intercept")
             self.intercepts.append((msg_type, method, stream))
             self.beaker_kernel.add_intercept(msg_type=msg_type, func=method, stream=stream)
+
+    async def default_preamble(self) -> Optional[str]:
+        return None
 
     async def auto_context(self):
         parts = []
@@ -536,6 +543,48 @@ loop was running and chronologically fit "inside" the query cell, as opposed to 
 
     get_agent_history._default_payload = '{}'
 
+    @action()
+    async def set_user_preamble(self, message):
+        content = message.content
+        new_message_text: str = content.get("message_text", "")
+
+        if not self.agent or not self.agent.chat_history:
+            self.send_response(
+                stream="iopub",
+                msg_or_type="stream",
+                content={
+                    "name": "stderr",
+                    "text": "Error: No active context or chat history available"
+                },
+                parent_header=message.header,
+            )
+            return {"success": False, "error": "No active context"}
+
+        # Create a HumanMessage and add it to chat history
+        preamble_text = new_message_text.strip()
+        self.agent.chat_history.set_user_preamble_text(preamble_text)
+
+        # Send success response
+        self.send_response(
+            stream="iopub",
+            msg_or_type="stream",
+            content={
+                "name": "stdout",
+                "text": f"Message added to chat history: {new_message_text.strip()}"
+            },
+            parent_header=message.header,
+        )
+
+        # Send updated chat history
+        await self.beaker_kernel.send_chat_history(message.header)
+
+        return {"success": True, "message": "Message added to chat history"}
+
+    set_user_preamble._default_payload = """\
+{
+    "message_text": ""
+}
+"""
 
     @action(default_payload='{}')
     async def get_preview(self, message):
