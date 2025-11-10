@@ -3,8 +3,8 @@ from .server_app import BeakerServerApp
 class BeakerMultiUserServerApp(BeakerServerApp):
 
     _default_app_traits = {
-        "authorizer_class": "beaker_kernel.service.auth.dummy.DummyAuthorizer",
-        "identity_provider_class": "beaker_kernel.service.auth.dummy.DummyIdentityProvider",
+        "authorizer_class": "beaker_kernel.services.auth.dummy.DummyAuthorizer",
+        "identity_provider_class": "beaker_kernel.services.auth.dummy.DummyIdentityProvider",
     }
 
 

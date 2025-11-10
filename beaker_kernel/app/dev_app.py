@@ -14,16 +14,9 @@ from beaker_kernel.app.notebook_app import BeakerNotebookApp
 from beaker_kernel.lib.autodiscovery import autodiscover
 from beaker_kernel.lib.config import config
 
-
-# Global notebook storage for notebook that lives for lifetime of service
-notebook_content = None
 logger = logging.getLogger(__file__)
 
 app_subprocess = None
-
-
-def _jupyter_server_extension_points():
-    return [{"module": "beaker_kernel.service.dev", "app": DevBeakerJupyterApp}]
 
 
 class DevBeakerJupyterApp(BeakerNotebookApp):
