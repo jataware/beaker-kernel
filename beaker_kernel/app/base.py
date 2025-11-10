@@ -28,7 +28,6 @@ from beaker_kernel.app.handlers import register_handlers, request_log_handler
 
 
 logger = logging.getLogger("beaker_server")
-HERE = os.path.dirname(__file__)
 
 version = "1.0.0"
 
