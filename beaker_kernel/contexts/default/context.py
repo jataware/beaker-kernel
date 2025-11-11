@@ -4,6 +4,7 @@ logger = logging.getLogger(__name__)
 
 from beaker_kernel.lib.context import BeakerContext
 from beaker_kernel.lib.autodiscovery import autodiscover
+from beaker_kernel.lib.hypothesis import HypothesisGenerationMixin
 
 from .agent import DefaultAgent
 
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     from beaker_kernel.lib.agent import BeakerAgent
     from beaker_kernel.lib.subkernel import BeakerSubkernel
 
-class DefaultContext(BeakerContext):
+class DefaultContext(HypothesisGenerationMixin, BeakerContext):
     """
     Default Beaker context
 

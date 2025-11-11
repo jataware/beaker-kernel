@@ -137,6 +137,14 @@
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
                 <SideMenuPanel
+                    id="hypothesis-generation"
+                    label="Hypothesis Generation"
+                    icon="pi pi-lightbulb"
+                    no-overflow
+                >
+                    <HypothesisPanel />
+                </SideMenuPanel>
+                <SideMenuPanel
                     id="file-contents"
                     label="File Contents"
                     icon="pi pi-file beaker-zoom"
@@ -197,6 +205,7 @@ import BeakerQueryCell from '../components/cell/BeakerQueryCell.vue';
 import BeakerRawCell from '../components/cell/BeakerRawCell.vue';
 import type { IBeakerTheme } from '../plugins/theme';
 import MediaPanel from '../components/panels/MediaPanel.vue';
+import HypothesisPanel from '../components/panels/HypothesisPanel.vue';
 import KernelStatePanel from '../components/panels/KernelStatePanel.vue';
 
 import DebugPanel from '../components/panels/DebugPanel.vue'

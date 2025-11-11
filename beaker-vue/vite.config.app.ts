@@ -5,6 +5,12 @@ import vueDevTools from 'vite-plugin-vue-devtools';
 import { baseConfig } from './vite.config';
 
 const ProxyHost = `${process.env.PROXY || 'http://localhost:8888'}`;
+const proxyConfig = {
+  target: `${ProxyHost}/`,
+  xfwd: true,
+  changeOrigin: false,
+}
+
 
 // https://vite.dev/config/
 export const appConfig: UserConfig = {
@@ -14,18 +20,16 @@ export const appConfig: UserConfig = {
     port: 8080,
     proxy: {
       '/api': {
-        target: `${ProxyHost}/`,
+        ...proxyConfig,
         ws: true,
-        xfwd: true,
-        rewriteWsOrigin: true,
+        rewriteWsOrigin: false,
       },
-      '/beaker': `${ProxyHost}/`,
-      '/appconfig.js': `${ProxyHost}/`,
-      '/files': `${ProxyHost}/`,
-      '/config': `${ProxyHost}/`,
-      '/contexts': `${ProxyHost}/`,
-      '/assets': `${ProxyHost}/`,
-      '/export': `${ProxyHost}/`,
+      '/beaker': proxyConfig,
+      '/appconfig.js': proxyConfig,
+      '/files': proxyConfig,
+      '/config': proxyConfig,
+      '/contexts': proxyConfig,
+      '/assets': proxyConfig,
     },
     fs: {
       allow: [".."]

@@ -364,6 +364,14 @@ export function useNotebookInterface(): UseNotebookInterfaceReturn {
                 const cell = beakerSession.value.findNotebookCellById(result.cell_id);
                 cell.lintAnnotations.push(result);
             })
+        } else if (msg.header.msg_type === "hypothesis_progress" ||
+                   msg.header.msg_type === "hypothesis_complete" ||
+                   msg.header.msg_type === "hypothesis_error" ||
+                   msg.header.msg_type === "hypothesis_cancelled") {
+            // Emit a custom event that HypothesisPanel can listen to
+            window.dispatchEvent(new CustomEvent('hypothesis-message', {
+                detail: { type: msg.header.msg_type, content: msg.content }
+            }));
         }
     };
 

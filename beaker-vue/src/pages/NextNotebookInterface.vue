@@ -159,6 +159,14 @@
                     <PreviewPanel :previewData="contextPreviewData"/>
                 </SideMenuPanel>
                 <SideMenuPanel
+                    id="hypothesis-generation"
+                    label="Hypothesis Generation"
+                    icon="pi pi-lightbulb"
+                    no-overflow
+                >
+                    <HypothesisPanel />
+                </SideMenuPanel>
+                <SideMenuPanel
                     id="file-contents"
                     label="File Contents"
                     icon="pi pi-file beaker-zoom"
@@ -198,6 +206,7 @@ import FileContentsPanel from '../components/panels/FileContentsPanel.vue';
 import { ChatHistoryPanel, type IChatHistory } from '../components/panels/ChatHistoryPanel';
 import IntegrationPanel from '../components/panels/IntegrationPanel.vue';
 import PreviewPanel from '../components/panels/PreviewPanel.vue';
+import HypothesisPanel from '../components/panels/HypothesisPanel.vue';
 import BeakerNotebook from '../components/notebook/BeakerNotebook.vue';
 import BeakerNotebookToolbar from '../components/notebook/BeakerNotebookToolbar.vue';
 import BeakerNotebookPanel from '../components/notebook/BeakerNotebookPanel.vue';
@@ -257,6 +266,8 @@ const {
     restartSession,
     chatHistory,
 } = useNotebookInterface();
+
+provide("beakerSession", beakerSession);
 
 beakerApp.setPage("notebook");
 

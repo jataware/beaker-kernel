@@ -4,6 +4,8 @@ export { default as DebugPanel } from './DebugPanel.vue';
 export { default as ExamplesPanel } from './ExamplesPanel.vue';
 export { default as FileContentsPanel } from './FileContentsPanel.vue';
 export { default as FilePanel } from './FilePanel.vue';
+export { default as HypothesisCard } from './HypothesisCard.vue';
+export { default as HypothesisPanel } from './HypothesisPanel.vue';
 export { default as InfoPanel } from './InfoPanel.vue';
 export { default as IntegrationPanel } from './IntegrationPanel.vue';
 export { default as KernelStatePanel } from './KernelStatePanel.vue';
