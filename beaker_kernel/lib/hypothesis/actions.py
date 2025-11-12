@@ -10,7 +10,13 @@ import logging
 from typing import Optional
 
 from beaker_kernel.lib.utils import action
-from beaker_kernel.lib.hypothesis.generator import HypothesisGenerator
+from beaker_kernel.lib.hypothesis.generator import (
+    HypothesisGenerator,
+    DEFAULT_MODEL_NAME,
+    DEFAULT_MAX_ITERATIONS,
+    DEFAULT_HYPOTHESES_PER_GENERATION,
+    DEFAULT_EVOLUTION_TOP_K,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +38,13 @@ class HypothesisGenerationMixin:
         self._hypothesis_task_id: Optional[str] = None
 
     def _get_hypothesis_generator(self) -> HypothesisGenerator:
-        """Lazy load the hypothesis generator."""
+        """Lazy load the hypothesis generator with defaults from generator.py."""
         if self._hypothesis_generator is None:
-            # TODO: Get these from config
             self._hypothesis_generator = HypothesisGenerator(
-                model_name="gpt-4o-mini",
-                max_iterations=3,
-                hypotheses_per_generation=10,
-                evolution_top_k=3,
-                tournament_size=8,
+                model_name=DEFAULT_MODEL_NAME,
+                max_iterations=DEFAULT_MAX_ITERATIONS,
+                hypotheses_per_generation=DEFAULT_HYPOTHESES_PER_GENERATION,
+                evolution_top_k=DEFAULT_EVOLUTION_TOP_K,
                 verbose=True,
             )
         return self._hypothesis_generator
@@ -60,7 +64,6 @@ class HypothesisGenerationMixin:
                 - max_iterations (int): Refinement iterations
                 - hypotheses_per_generation (int): Initial count
                 - evolution_top_k (int): Top K to evolve
-                - tournament_size (int): Tournament rounds
 
         Returns:
             Status dict with task_id

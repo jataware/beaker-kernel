@@ -17,6 +17,86 @@ from queue import Queue
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# Default Configuration for Hypothesis Generation
+# ============================================================================
+# These are the single source of truth - modify here to change defaults
+# All parameters can be overridden when creating a HypothesisGenerator instance
+
+# Model Configuration
+# -------------------
+DEFAULT_MODEL_NAME = "gemini/gemini-2.5-flash"
+# The LLM model to use for all agents (generation, review, evolution, etc.)
+# Examples: "gpt-4o-mini", "gpt-4o", "claude-3-5-sonnet-20241022", "gemini/gemini-2.5-flash"
+# Uses litellm format, so any litellm-supported model works
+# Trade-off: Faster models (like gemini-flash) = lower cost/latency, slower models = higher quality
+
+# Initial Generation
+# ------------------
+DEFAULT_HYPOTHESES_PER_GENERATION = 5
+# Number of initial hypotheses to generate at the start of the workflow
+# More hypotheses = more diverse starting pool, but slower and more expensive
+# Recommended range: 3-10
+# Note: With evolution_top_k < hypotheses_per_generation, lower-ranked hypotheses get discarded
+# Example: If you generate 10 but only evolve top 3, the other 7 are dropped after initial ranking
+
+# Refinement Iterations
+# ---------------------
+DEFAULT_MAX_ITERATIONS = 12
+# Number of refinement cycles to run (meta-review → evolution → re-ranking → tournament → deduplication)
+# Each iteration refines hypotheses based on feedback from previous reviews
+# More iterations = higher quality final hypotheses, but much slower
+# Recommended range: 1-3
+# Cost scaling: Each iteration runs review/ranking/tournament on all evolved hypotheses
+# Example: 1 iteration is good for quick exploration, 3 iterations for publication-quality hypotheses
+
+# Evolution Selection
+# -------------------
+DEFAULT_EVOLUTION_TOP_K = 3
+# Number of top-ranked hypotheses to evolve in each iteration
+# Only the highest-ranked hypotheses are worth refining; lower ones are discarded
+# Must be ≤ hypotheses_per_generation
+# Recommended range: 1-3
+# Trade-off: Higher values = more diverse final results but higher risk of duplicates
+# WARNING: If evolution_top_k > 1, hypotheses may converge to duplicates because they
+#          receive the same meta-review guidance. Consider setting to 2-3 only if
+#          diversity is more important than avoiding duplicates.
+# Example: evolution_top_k=1 gives you 1 highly-refined hypothesis
+#          evolution_top_k=3 gives you 3 refined hypotheses (may have duplicates)
+
+# ============================================================================
+# Usage Examples
+# ============================================================================
+#
+# Quick exploration (fast, low cost):
+#   HypothesisGenerator(
+#       hypotheses_per_generation=3,
+#       max_iterations=1,
+#       evolution_top_k=1
+#   )
+#   → Generates 3 hypotheses, evolves only #1, returns 1 refined hypothesis
+#
+# Balanced (moderate speed/cost):
+#   HypothesisGenerator(
+#       hypotheses_per_generation=5,
+#       max_iterations=2,
+#       evolution_top_k=2
+#   )
+#   → Generates 5 hypotheses, evolves top 2, runs 2 refinement cycles
+#   → Risk of duplicates with evolution_top_k=2
+#
+# High quality (slow, expensive):
+#   HypothesisGenerator(
+#       hypotheses_per_generation=10,
+#       max_iterations=3,
+#       evolution_top_k=3,
+#       model_name="gpt-4o"
+#   )
+#   → Generates 10 hypotheses, evolves top 3, runs 3 refinement cycles
+#   → Best quality but highest risk of duplicates
+# ============================================================================
+
+
 class HypothesisGenerator:
     """
     Async wrapper for AI-CoScientist that provides streaming progress updates.
@@ -24,11 +104,10 @@ class HypothesisGenerator:
 
     def __init__(
         self,
-        model_name: str = "gpt-4o-mini",
-        max_iterations: int = 3,
-        hypotheses_per_generation: int = 10,
-        evolution_top_k: int = 3,
-        tournament_size: int = 8,
+        model_name: str = DEFAULT_MODEL_NAME,
+        max_iterations: int = DEFAULT_MAX_ITERATIONS,
+        hypotheses_per_generation: int = DEFAULT_HYPOTHESES_PER_GENERATION,
+        evolution_top_k: int = DEFAULT_EVOLUTION_TOP_K,
         base_path: Optional[str] = None,
         verbose: bool = False,
     ):
@@ -36,19 +115,33 @@ class HypothesisGenerator:
         Initialize the hypothesis generator.
 
         Args:
-            model_name: LLM model to use (e.g., "gpt-4o-mini", "claude-3-sonnet-20240229")
-            max_iterations: Number of refinement iterations
-            hypotheses_per_generation: Initial hypothesis count
-            evolution_top_k: Number of top hypotheses to evolve
-            tournament_size: Tournament rounds
-            base_path: Path to save agent states
-            verbose: Enable detailed logging
+            model_name: LLM model to use for all agents (generation, review, evolution, etc.)
+                       Examples: "gpt-4o-mini", "claude-3-5-sonnet-20241022", "gemini/gemini-2.5-flash"
+                       Uses litellm format. Faster models = lower cost, slower models = higher quality.
+
+            max_iterations: Number of refinement cycles to run. Each iteration includes:
+                           meta-review → evolution → re-review → re-ranking → tournament → deduplication
+                           Range: 1-3. More iterations = higher quality but much slower.
+
+            hypotheses_per_generation: Number of initial hypotheses to generate.
+                                      Range: 3-10. More = diverse pool but slower/more expensive.
+                                      Note: Hypotheses not in top evolution_top_k are discarded.
+
+            evolution_top_k: Number of top-ranked hypotheses to evolve each iteration.
+                            Range: 1-3. Must be ≤ hypotheses_per_generation.
+                            WARNING: Values > 1 may create duplicates (all receive same meta-review).
+                            evolution_top_k=1 → 1 highly-refined hypothesis
+                            evolution_top_k=3 → 3 refined hypotheses (potential duplicates)
+
+            base_path: Directory path to save agent states and workflow logs.
+                      Defaults to "./ai_coscientist_states"
+
+            verbose: Enable detailed logging for debugging. Logs all agent interactions.
         """
         self.model_name = model_name
         self.max_iterations = max_iterations
         self.hypotheses_per_generation = hypotheses_per_generation
         self.evolution_top_k = evolution_top_k
-        self.tournament_size = tournament_size
         self.base_path = base_path or "./ai_coscientist_states"
         self.verbose = verbose
         self._framework = None
@@ -63,7 +156,6 @@ class HypothesisGenerator:
                     max_iterations=self.max_iterations,
                     hypotheses_per_generation=self.hypotheses_per_generation,
                     evolution_top_k=self.evolution_top_k,
-                    tournament_size=self.tournament_size,
                     base_path=self.base_path,
                     verbose=self.verbose,
                 )
@@ -179,6 +271,7 @@ class HypothesisGenerator:
                 elif agent_name == "MetaReviewer":
                     # MetaReviewer signals start of an iteration
                     phase_state["iteration"] += 1
+                    phase_state["agent_counts"] = {}  # Reset agent counters for new iteration
                     phase_state["current_phase"] = f"iteration_{phase_state['iteration']}"
                     iter_num = phase_state["iteration"]
                     # Emit phase transition marker
@@ -232,7 +325,7 @@ class HypothesisGenerator:
                         "agent_name": agent_name,
                         "agent_output": agent_output,
                         "progress": progress,
-                        "iteration": phase_state["iteration"] if phase_state["current_phase"].startswith("iteration") else None,
+                        "iteration": phase_state["iteration"],  # Always send iteration number
                         "phase": phase_state["current_phase"]
                     }),
                     loop
