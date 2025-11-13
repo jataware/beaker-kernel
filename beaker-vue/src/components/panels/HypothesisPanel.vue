@@ -223,6 +223,14 @@ const generateHypotheses = async () => {
                     };
                     agentOutputs.value.push(outputEntry);
                 }
+            } else if (type === "hypothesis_update") {
+                // Handle streaming state updates from each node
+                const { node_name, state } = content;
+
+                // Don't update hypotheses display during streaming - only show final results
+                // Just log node completion for debugging
+                console.log(`Node completed: ${node_name}, hypotheses count: ${state?.hypotheses?.length || 0}`);
+
             } else if (type === "hypothesis_complete") {
                 const { result } = content;
                 hypotheses.value = result.hypotheses || [];

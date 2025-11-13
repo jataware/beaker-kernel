@@ -190,7 +190,7 @@ const groupAgentsByType = (agents: AgentOutput[]): (AgentOutput | AgentGroup)[] 
                     .map(a => a.parsed?.overall_score)
                     .filter(s => s !== undefined);
                 const avgScore = scores.length > 0
-                    ? (scores.reduce((a, b) => a + b, 0) / scores.length * 100).toFixed(0)
+                    ? (scores.reduce((a, b) => a + b, 0) / scores.length * 10).toFixed(1)
                     : 'N/A';
                 summary = `${groupedAgents.length} peer reviews (avg: ${avgScore}%)`;
             } else if (name === 'TournamentJudge') {

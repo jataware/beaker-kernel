@@ -1,5 +1,5 @@
 """
-Async wrapper around AI-CoScientist for hypothesis generation with streaming support.
+Async wrapper around CoScientist-LG for hypothesis generation with streaming support.
 """
 
 import asyncio
@@ -42,7 +42,7 @@ DEFAULT_HYPOTHESES_PER_GENERATION = 5
 
 # Refinement Iterations
 # ---------------------
-DEFAULT_MAX_ITERATIONS = 12
+DEFAULT_MAX_ITERATIONS = 2
 # Number of refinement cycles to run (meta-review → evolution → re-ranking → tournament → deduplication)
 # Each iteration refines hypotheses based on feedback from previous reviews
 # More iterations = higher quality final hypotheses, but much slower
@@ -99,7 +99,7 @@ DEFAULT_EVOLUTION_TOP_K = 3
 
 class HypothesisGenerator:
     """
-    Async wrapper for AI-CoScientist that provides streaming progress updates.
+    Async wrapper for CoScientist-LG that provides streaming progress updates.
     """
 
     def __init__(
@@ -147,11 +147,11 @@ class HypothesisGenerator:
         self._framework = None
 
     def _get_framework(self):
-        """Lazy load the AI-CoScientist framework."""
+        """Lazy load the CoScientist-LG framework."""
         if self._framework is None:
             try:
-                from ai_coscientist import AIScientistFramework
-                self._framework = AIScientistFramework(
+                from coscientist_lg import HypothesisGenerator
+                self._framework = HypothesisGenerator(
                     model_name=self.model_name,
                     max_iterations=self.max_iterations,
                     hypotheses_per_generation=self.hypotheses_per_generation,
@@ -160,10 +160,10 @@ class HypothesisGenerator:
                     verbose=self.verbose,
                 )
             except ImportError as e:
-                logger.error("AI-CoScientist not installed. Install with: pip install ai-coscientist")
+                logger.error("CoScientist-LG not installed. Install with: pip install coscientist-lg")
                 raise ImportError(
-                    "AI-CoScientist is required for hypothesis generation. "
-                    "Install with: pip install ai-coscientist"
+                    "CoScientist-LG is required for hypothesis generation. "
+                    "Install with: pip install coscientist-lg"
                 ) from e
         return self._framework
 
@@ -199,15 +199,11 @@ class HypothesisGenerator:
             logger.info("Starting hypothesis generation")
             framework = self._get_framework()
 
-            # Phase 1: Initial Generation
-            logger.info("Emitting generation_start progress")
-            await emit_progress("generation_start", {
-                "message": f"Generating {self.hypotheses_per_generation} initial hypotheses...",
-                "progress": 0
-            })
-            logger.info("generation_start progress emitted")
+            # CoScientist-LG will emit all progress events through the callback
+            # No need to emit manually here - just pass the callback through
 
-            # Use AI-CoScientist's callback system to stream agent outputs
+            # NOTE: Lines below (210-332) define OLD AI-CoScientist agent callback system
+            # This is no longer used with CoScientist-LG which uses phase-based callbacks
             loop = asyncio.get_event_loop()
 
             # Track agent completions for progress and phase detection
@@ -332,11 +328,11 @@ class HypothesisGenerator:
                 )
 
             # Run generation with callback
-            result = await loop.run_in_executor(
-                None,
-                framework.run_research_workflow,
+            # Note: CoScientist-LG uses phase-based callbacks (not agent-based)
+            # Pass the progress_callback directly - CoScientist-LG emits proper phase events
+            result = await framework.generate_hypotheses(
                 research_goal,
-                sync_callback
+                progress_callback=progress_callback
             )
 
             await emit_progress("complete", {
@@ -386,7 +382,6 @@ class HypothesisGenerator:
 
         try:
             framework = self._get_framework()
-            loop = asyncio.get_event_loop()
 
             # Phase 1: Generation
             await emit_progress("generation_start", {
@@ -394,12 +389,10 @@ class HypothesisGenerator:
                 "progress": 5
             })
 
-            # Run the full workflow in executor
-            # TODO: Future enhancement - break into individual phase calls
-            result = await loop.run_in_executor(
-                None,
-                framework.run_research_workflow,
-                research_goal
+            # Run the full workflow - native async in CoScientist-LG
+            result = await framework.generate_hypotheses(
+                research_goal,
+                progress_callback=progress_callback
             )
 
             await emit_progress("complete", {
@@ -418,21 +411,63 @@ class HypothesisGenerator:
             })
             raise
 
-    def _format_result(self, result: dict) -> dict:
+    async def generate_hypotheses_streaming(
+        self,
+        research_goal: str,
+        progress_callback: Optional[Callable[[str, dict], None]] = None,
+    ):
         """
-        Format AI-CoScientist result for frontend consumption.
+        Generate hypotheses with streaming state updates after each node.
+
+        This method yields intermediate state after each node completes,
+        allowing real-time display of results as the workflow progresses.
 
         Args:
-            result: Raw result from AI-CoScientist
+            research_goal: The research question or goal
+            progress_callback: Async callback for progress updates
+
+        Yields:
+            Tuple of (node_name, formatted_state_dict) after each node completes
+        """
+        try:
+            logger.info("Starting streaming hypothesis generation")
+            framework = self._get_framework()
+
+            # Stream results from CoScientist-LG
+            async for node_name, state in framework.generate_hypotheses_streaming(
+                research_goal=research_goal,
+                progress_callback=progress_callback
+            ):
+                # Format the state for frontend consumption
+                formatted_state = self._format_result(state)
+                yield node_name, formatted_state
+
+        except Exception as e:
+            logger.error(f"Error during streaming hypothesis generation: {e}", exc_info=True)
+            raise
+
+    def _format_result(self, result: dict) -> dict:
+        """
+        Format result for frontend consumption.
+        Handles both old AI-CoScientist format and new CoScientist-LG format.
+
+        Args:
+            result: Raw result from framework
 
         Returns:
             Formatted result dictionary
         """
         try:
+            # Detect format: old uses "top_ranked_hypotheses", new uses "hypotheses"
+            raw_hypotheses = result.get("hypotheses") or result.get("top_ranked_hypotheses", [])
+
             hypotheses = []
-            for hyp_dict in result.get("top_ranked_hypotheses", []):
-                # Handle both dict and Hypothesis object
-                if hasattr(hyp_dict, '__dict__'):
+            for hyp_dict in raw_hypotheses:
+                # CoScientist-LG already returns dicts from to_dict()
+                # But handle Hypothesis objects for backwards compatibility
+                if hasattr(hyp_dict, '__dict__') and hasattr(hyp_dict, 'to_dict'):
+                    hyp_dict = hyp_dict.to_dict()
+                elif hasattr(hyp_dict, '__dict__'):
                     hyp_dict = asdict(hyp_dict)
 
                 hypotheses.append({
@@ -444,19 +479,49 @@ class HypothesisGenerator:
                     "evolution_history": hyp_dict.get("evolution_history", []),
                     "win_count": hyp_dict.get("win_count", 0),
                     "loss_count": hyp_dict.get("loss_count", 0),
+                    "total_matches": hyp_dict.get("total_matches", 0),
+                    "win_rate": hyp_dict.get("win_rate", 0.0),
                 })
+
+            # Handle different meta_review key names
+            meta_review = result.get("meta_review") or result.get("meta_review_insights", {})
+
+            # NEW: Handle research plan from supervisor
+            research_plan = result.get("research_plan") or result.get("supervisor_guidance", {})
+
+            # NEW: Handle tournament matchups
+            tournament_matchups = result.get("tournament_matchups", [])
+
+            # NEW: Handle evolution details
+            evolution_details = result.get("evolution_details", [])
+
+            # Handle different execution_time key names
+            execution_time = result.get("execution_time") or result.get("total_workflow_time", 0)
+
+            # Handle metrics (both formats have similar structure)
+            metrics = result.get("metrics") or result.get("execution_metrics", {})
 
             return {
                 "hypotheses": hypotheses,
-                "meta_review": result.get("meta_review_insights", {}),
-                "execution_time": result.get("total_workflow_time", 0),
-                "metrics": result.get("execution_metrics", {}),
+                "meta_review": meta_review,
+                "research_plan": research_plan,
+                "tournament_matchups": tournament_matchups,
+                "evolution_details": evolution_details,
+                "similarity_clusters": result.get("similarity_clusters", []),
+                "current_iteration": result.get("current_iteration", 0),
+                "execution_time": execution_time,
+                "metrics": metrics,
             }
         except Exception as e:
             logger.error(f"Error formatting result: {e}")
             return {
                 "hypotheses": [],
                 "meta_review": {},
+                "research_plan": {},
+                "tournament_matchups": [],
+                "evolution_details": [],
+                "similarity_clusters": [],
+                "current_iteration": 0,
                 "execution_time": 0,
                 "metrics": {},
                 "error": str(e)

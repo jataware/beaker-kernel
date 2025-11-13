@@ -365,6 +365,7 @@ export function useNotebookInterface(): UseNotebookInterfaceReturn {
                 cell.lintAnnotations.push(result);
             })
         } else if (msg.header.msg_type === "hypothesis_progress" ||
+                   msg.header.msg_type === "hypothesis_update" ||
                    msg.header.msg_type === "hypothesis_complete" ||
                    msg.header.msg_type === "hypothesis_error" ||
                    msg.header.msg_type === "hypothesis_cancelled") {

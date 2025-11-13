@@ -8,7 +8,7 @@
                 class="ranked-item"
             >
                 <span class="rank-badge">{{ i + 1 }}</span>
-                <span class="rank-text">{{ truncateText(ranked.text, 80) }}</span>
+                <span class="rank-text">{{ ranked.text }}</span>
                 <span v-if="ranked.overall_score !== undefined" class="rank-score">
                     {{ (ranked.overall_score * 100).toFixed(0) }}%
                 </span>

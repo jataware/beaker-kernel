@@ -4,7 +4,7 @@
         <div class="compact-row">
             <div v-if="output.parsed?.overall_score !== undefined" class="overall-score-compact">
                 <span class="label">Score</span>
-                <span class="value">{{ (output.parsed.overall_score * 100).toFixed(0) }}%</span>
+                <span class="value">{{ (output.parsed.overall_score * 10).toFixed(1) }}%</span>
             </div>
 
             <div class="expand-toggle" @click="expanded = !expanded">
@@ -30,7 +30,7 @@
                 <div class="score-items">
                     <div v-for="(value, key) in output.parsed.scores" :key="String(key)" class="score-item">
                         <span class="score-name">{{ formatScoreName(String(key)) }}</span>
-                        <span class="score-value">{{ value }}/5</span>
+                        <span class="score-value">{{ value }}/10</span>
                     </div>
                 </div>
             </div>
