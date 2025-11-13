@@ -1,4 +1,5 @@
 import getpass
+import json
 import logging
 import os
 import pwd
@@ -10,7 +11,9 @@ from jupyter_client.ioloop.manager import AsyncIOLoopKernelManager
 from jupyter_server.services.kernels.kernelmanager import AsyncMappingKernelManager
 from jupyter_server.services.sessions.sessionmanager import SessionManager
 from jupyter_server.serverapp import ServerApp
+from jupyter_server.base.handlers import APIHandler
 from jupyterlab_server import LabServerApp
+from tornado import web
 
 from beaker_kernel.lib.app import BeakerApp
 from beaker_kernel.lib.config import config
@@ -23,9 +26,66 @@ HERE = os.path.dirname(__file__)
 version = "1.0.0"
 
 
+class CreateSessionWithContextHandler(APIHandler):
+    """
+    Custom handler for creating sessions with context parameters.
+
+    Handles POST /api/sessions/create-with-context endpoint.
+    Accepts context, context_info, and language parameters and creates a session
+    with those parameters pre-configured.
+    """
+
+    @web.authenticated
+    async def post(self):
+        """POST /api/sessions/create-with-context - Create a new session with context"""
+        model = self.get_json_body()
+
+        if model is None:
+            raise web.HTTPError(400, "No JSON body provided")
+
+        # extract context parameters
+        context = model.get('context')
+        context_info = model.get('context_info')
+        language = model.get('language', 'python3')
+
+        # prepare context dict for kernel manager
+        if context or context_info or language:
+            context_dict = {
+                'default_context': context,
+                'default_context_payload': context_info or {},
+                'language': language,
+            }
+            # Store in kernel manager's pending context
+            if hasattr(self.kernel_manager, '_pending_kernel_context'):
+                self.kernel_manager._pending_kernel_context['next'] = context_dict
+
+        # extract standard session parameters
+        session_kwargs = {
+            'path': model.get('path', ''),
+            'name': model.get('name', ''),
+            'type': model.get('type', ''),
+            'kernel_name': model.get('kernel', {}).get('name'),
+            'kernel_id': model.get('kernel', {}).get('id'),
+        }
+
+        try:
+            session = await self.session_manager.create_session(**session_kwargs)
+
+            # Build the location header manually
+            location = f"/api/sessions/{session['id']}"
+            self.set_header('Location', location)
+            self.set_header('Content-Type', 'application/json')
+            self.set_status(201)
+            self.finish(json.dumps(session, default=str))
+
+        except Exception as e:
+            logger.error(f"Error creating session with context: {e}", exc_info=True)
+            raise web.HTTPError(500, str(e)) from e
+
+
 class BeakerKernelManager(AsyncIOLoopKernelManager):
 
-    # Longer wait_time for shutdown before killing processed due to potentially needing to shutdown both the subkernel
+    # longer wait_time for shutdown before killing processed due to potentially needing to shutdown both the subkernel
     # and the beaker kernel.
     shutdown_wait_time = 10.0
 
@@ -38,31 +98,42 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
         return self.parent.parent
 
     def write_connection_file(self, **kwargs: object) -> None:
-        beaker_app: BeakerApp = self.beaker_config.get("app", None)
-        default_context = beaker_app and beaker_app._default_context
-        if default_context:
-            app_context_dict = default_context.asdict()
-            kwargs['context'] = {
-                "default_context": default_context.slug,
-                "default_context_payload": default_context.payload,
-            }
-            if app_context_dict:
-                kwargs["context"].update(**app_context_dict)
+        # check if there's a pending context stored in the mapping manager
+        session_context = None
+        if hasattr(self.parent, '_current_context'):
+            session_context = self.parent._current_context
+
+        # if no session-specific context, fall back to BeakerApp's default context
+        if not session_context:
+            beaker_app: BeakerApp = self.beaker_config.get("app", None)
+            default_context = beaker_app and beaker_app._default_context
+            if default_context:
+                app_context_dict = default_context.asdict()
+                session_context = {
+                    "default_context": default_context.slug,
+                    "default_context_payload": default_context.payload,
+                }
+                if app_context_dict:
+                    session_context.update(**app_context_dict)
+
+        # add context to kwargs for connection file
+        if session_context:
+            kwargs['context'] = session_context
+
         super().write_connection_file(
             server=self.app.public_url,
             **kwargs
         )
-        # Set file to be owned by and modifiable by the beaker user so the beaker user can modify the file.
+        # set file to be owned by and modifiable by the beaker user so the beaker user can modify the file.
         os.chmod(self.connection_file, 0o0775)
         shutil.chown(self.connection_file, user=self.app.agent_user)
 
     async def _async_pre_start_kernel(self, **kw):
-        # Fetch values from super()
         cmd, kw = await super()._async_pre_start_kernel(**kw)
 
         env = kw.pop("env", {})
 
-        # Update user, env variables, and home directory based on type of kernel being started.
+        # update user, env variables, and home directory based on type of kernel being started.
         if self.kernel_name == "beaker_kernel":
             user = self.app.agent_user
         else:
@@ -81,7 +152,6 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
             kw["extra_groups"] = group_list[1:]
         kw["cwd"] = self.app.working_dir
 
-        # Update keyword args that are passed to Popen()
         kw["env"] = env
 
         return cmd, kw
@@ -109,10 +179,55 @@ class BeakerKernelMappingManager(AsyncMappingKernelManager):
         else:
             os.chmod(self.connection_dir, 0o0755)
         super().__init__(**kwargs)
+        # Storage for pending kernel context during session creation
+        self._pending_kernel_context = {}
+        # Storage for kernel contexts by kernel_id (persists for kernel lifetime)
+        self._kernel_contexts = {}
 
     @property
     def beaker_config(self):
         return getattr(self.parent, 'beaker_config', None)
+
+    async def remove_kernel(self, kernel_id):
+        """Override to clean up stored context when kernel is removed"""
+        if kernel_id in self._kernel_contexts:
+            del self._kernel_contexts[kernel_id]
+        return await super().remove_kernel(kernel_id)
+
+    async def start_kernel(self, kernel_id=None, path=None, **kwargs):
+        """
+        Override start_kernel to inject context info into kernel_kwargs.
+        """
+        # Check if there's pending context for this kernel
+        context_dict = None
+        if kernel_id and kernel_id in self._pending_kernel_context:
+            context_dict = self._pending_kernel_context.pop(kernel_id)
+        elif kernel_id and kernel_id in self._kernel_contexts:
+            # Kernel already exists, use its stored context
+            context_dict = self._kernel_contexts[kernel_id]
+        elif 'next' in self._pending_kernel_context:
+            # Use 'next' as a fallback when kernel_id is not yet assigned
+            context_dict = self._pending_kernel_context.pop('next')
+
+        # Store context in a temporary attribute so BeakerKernelManager can access it
+        # We don't pass it through kwargs because those get passed to Popen which doesn't understand 'context'
+        if context_dict:
+            self._current_context = context_dict
+        else:
+            self._current_context = None
+
+        try:
+            # Call parent's start_kernel (without context in kwargs to avoid Popen error)
+            result = await super().start_kernel(kernel_id=kernel_id, path=path, **kwargs)
+
+            # Store context for this kernel so subsequent starts/restarts use the same context
+            if context_dict and result:
+                self._kernel_contexts[result] = context_dict
+
+            return result
+        finally:
+            # Clean up the temporary context
+            self._current_context = None
 
 
 class BeakerServerApp(ServerApp):
@@ -196,16 +311,26 @@ class BaseBeakerServerApp(LabServerApp):
     def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
         # Set Jupyter token from config
         os.environ.setdefault("JUPYTER_TOKEN", config.jupyter_token)
+
         kwargs.update(cls.app_traits)
+
         app = super().initialize_server(argv=argv, load_other_extensions=load_other_extensions, **kwargs)
+
         # Log requests to console if configured
         if cls.log_requests:
             app.web_app.settings["log_function"] = request_log_handler
+
         return app
 
     def initialize_handlers(self):
-        """Bypass initializing the default handler since we don't need to use the webserver, just the websockets."""
+        """
+        Initialize handlers including custom routes.
+        """
         self.handlers.append((r"/summary", SummaryHandler))
+
+        # add custom session creation handler
+        self.handlers.append((r"/api/sessions/create-with-context", CreateSessionWithContextHandler))
+
         register_handlers(self)
         super().initialize_handlers()
 
