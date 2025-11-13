@@ -94,18 +94,11 @@ class CognitoHeadersIdentityProvider(IdentityProvider):
         return response.json()
 
     def _get_cognito_region(self) -> str:
-        """Get Cognito region from config or extract from user_pool_id"""
+        """Get Cognito region from config or default to us-east-1"""
         if self.cognito_region:
             return self.cognito_region
         
-        # Try to extract region from user_pool_id format: us-east-1_XXXXXXXXX
-        if self.user_pool_id and '_' in self.user_pool_id:
-            # user_pool_id format is typically: {region}_{pool_id}
-            # But actually it's just the pool ID, region is separate
-            # We'll need region to be set explicitly or via env var
-            pass
-        
-        # Default to us-east-1 if we can't determine
+        # Default to us-east-1 if not set
         return "us-east-1"
 
     @lru_cache
