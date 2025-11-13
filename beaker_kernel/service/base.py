@@ -48,6 +48,8 @@ class CreateSessionWithContextHandler(APIHandler):
         context_info = model.get('context_info')
         language = model.get('language', 'python3')
 
+        logger.info(f"[SAAS-LABS DEBUG] creating session with context: {context}, language: {language}")
+
         # prepare context dict for kernel manager
         if context or context_info or language:
             context_dict = {
@@ -68,8 +70,12 @@ class CreateSessionWithContextHandler(APIHandler):
             'kernel_id': model.get('kernel', {}).get('id'),
         }
 
+        logger.info(f"[SAAS-LABS DEBUG] creating session with path: {session_kwargs['path']}, name: {session_kwargs['name']}")
+
         try:
             session = await self.session_manager.create_session(**session_kwargs)
+
+            logger.info(f"[SAAS-LABS DEBUG] session created successfully - id: {session.get('id')}, path: {session.get('path')}, kernel_id: {session.get('kernel', {}).get('id')}, kernel execution_state: {session.get('kernel', {}).get('execution_state')}")
 
             # Build the location header manually
             location = f"/api/sessions/{session['id']}"

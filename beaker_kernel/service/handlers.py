@@ -330,7 +330,7 @@ class ContextHandler(ExtensionHandlerMixin, JupyterHandler):
 
 def get_context_description(context_cls: type[BeakerContext]) -> str:
     """
-    Get context description from pyproject.toml or fallback to class docstring.
+    Get context description from package metadata, pyproject.toml, or class docstring.
 
     Args:
         context_cls: The context class to get description for
@@ -338,7 +338,18 @@ def get_context_description(context_cls: type[BeakerContext]) -> str:
     Returns:
         Description string, or empty string if not found
     """
-    # description from pyproject.toml first
+    # try package metadata first (works for installed packages from pypi/wheels)
+    try:
+        from importlib.metadata import metadata
+        pkg_name = context_cls.__module__.split('.')[0]
+        pkg_metadata = metadata(pkg_name)
+        description = pkg_metadata.get('Summary') or pkg_metadata.get('Description', '')
+        if description and description.strip():
+            return description.strip()
+    except Exception as e:
+        logger.debug(f"Failed to read package metadata for {context_cls.__name__}: {e}")
+
+    # fallback to pyproject.toml (works for editable installs or source)
     try:
         context_file = inspect.getfile(context_cls)
         pyproject_path = find_pyproject_file(context_file)
@@ -350,7 +361,7 @@ def get_context_description(context_cls: type[BeakerContext]) -> str:
     except Exception as e:
         logger.debug(f"Failed to read pyproject.toml for {context_cls.__name__}: {e}")
 
-    # fallback to class docstring
+    # final fallback to class docstring
     docstring = context_cls.__doc__
     if docstring:
         return docstring.strip()
@@ -445,6 +456,15 @@ def discover_context_integrations(context_cls: type[BeakerContext]) -> list[dict
             specs_dir = Path(resource_dir) / "specifications"
             if specs_dir.exists() and specs_dir not in possible_integration_dirs:
                 possible_integration_dirs.append(specs_dir)
+
+        # 5. beaker resource dirs for data/{context_slug}/specifications
+        # (build hook creates this structure)
+        context_slug = context_cls.SLUG if hasattr(context_cls, 'SLUG') else None
+        if context_slug:
+            for resource_dir in find_resource_dirs("data"):
+                specs_dir = Path(resource_dir) / context_slug / "specifications"
+                if specs_dir.exists() and specs_dir not in possible_integration_dirs:
+                    possible_integration_dirs.append(specs_dir)
 
         # use integrations from all found directories
         seen_integrations = set()
