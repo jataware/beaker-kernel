@@ -89,7 +89,6 @@ class BaseNotebookManager(Configurable):
 class FileNotebookManager(BaseNotebookManager):
 
     contents_manager_class = traitlets.Type(
-        default_value="jupyter_server.services.contents.filemanager.AsyncFileContentsManager",
         klass=ContentsManager,
         allow_none=True,
         config=True,
@@ -104,14 +103,22 @@ class FileNotebookManager(BaseNotebookManager):
         config=True,
     )
 
+    @traitlets.default("contents_manager_class")
+    def _default_contents_manager_class(self):
+        metadata = self.traits()["contents_manager_class"].metadata
+        metadata["is_default_val"] = True
+        return AsyncFileContentsManager
+
     @traitlets.default("contents_manager")
     def _default_contents_manager(self):
-        if self.contents_manager_class not in (traitlets.Undefined, None, ""):
-            return self.contents_manager_class(parent=self, **self.contents_manager_params)
-        if getattr(self.parent, "contents_manager", None):
+        # If the conents_manager_class trait has not been set by a user or configuration,
+        # default to using the parent classes' content manager instance.
+        getattr(self, "contents_manager_class")
+        metadata = self.traits()["contents_manager_class"].metadata
+        if metadata.get("is_default_val", False) and getattr(self.parent, "contents_manager", None):
             return self.parent.contents_manager
         else:
-            return AsyncFileContentsManager(parent=self.parent)
+            return self.contents_manager_class(parent=self.parent)
 
     async def get_notebook_info(self, notebook_id: str) -> NotebookInfo:
         """Retrieve notebook metadata for a given session ID.

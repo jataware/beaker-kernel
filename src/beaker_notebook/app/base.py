@@ -125,8 +125,7 @@ class BaseBeakerApp(ServerApp):
     @traitlets.default("secrets_manager")
     def _default_secrets_manager(self):
         from beaker_notebook.services.secrets.manager import BeakerSecretsManager
-        from beaker_notebook.services.secrets.types import UserEnvironmentSecret, SystemEnvironmentSecret
-        secrets_manager = BeakerSecretsManager()
+        secrets_manager = BeakerSecretsManager(parent=self)
         return secrets_manager
 
     @traitlets.default("config_file_name")

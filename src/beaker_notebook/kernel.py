@@ -1,5 +1,4 @@
 import asyncio
-import contextvars
 import copy
 import inspect
 import json
@@ -18,6 +17,7 @@ from tornado import ioloop
 
 from beaker_notebook.lib.config import reset_config, config
 from beaker_notebook.lib.context import BeakerContext, autodiscover_contexts
+from beaker_notebook.lib.secrets.secret_types import BaseSecret, BeakerConfigProviderSecret, SkillSecret, UserEnvironmentSecret
 from beaker_notebook.lib.subkernel import BeakerSubkernel
 from beaker_notebook.lib.jupyter_kernel_proxy import InterceptionFilter, JupyterMessage, KernelProxyManager
 from beaker_notebook.lib.utils import (message_handler, LogMessageEncoder, magic,
@@ -63,6 +63,7 @@ class BeakerKernel(KernelProxyManager):
     magic_commands: dict[str, callable]
     ready: asyncio.Future
     running_actions: dict[str, Awaitable]
+    secrets: list[BaseSecret]
 
     def __init__(self, session_config, kernel_id=None, connection_file=None):
         self.session_config = session_config
@@ -76,6 +77,7 @@ class BeakerKernel(KernelProxyManager):
         self.internal_executions = set()
         self.subkernel_execution_tracking = {}
         self.running_actions = {}
+        self.secrets = []
         context_args = session_config.get("context", {})
         super().__init__(session_config, session_id=(self.beaker_session or self.kernel_id))
         self.register_magic_commands()
@@ -145,6 +147,10 @@ class BeakerKernel(KernelProxyManager):
         if not default_context:
             default_context = "default"
             default_context_payload = {}
+
+        # Delay fetching secrets until context is established
+        self.secrets = self.get_session_secrets()
+
         await self.set_context(default_context, default_context_payload, **optional_args)
 
     def add_base_intercepts(self):
@@ -172,6 +178,7 @@ class BeakerKernel(KernelProxyManager):
         self.server.intercept_message("control", "shutdown_request", self.shutdown)
         self.server.intercept_message("shell", "notebook_state_response", self.notebook_state_response)
         self.server.intercept_message("shell", "beaker_session_info_request", self.beaker_session_info)
+        self.server.intercept_message(None, None, self.redact_secrets)
 
     def register_magic_commands(self):
         for _, method in inspect.getmembers(self, lambda member: inspect.ismethod(member) and hasattr(member, "_magic_prefix")):
@@ -223,6 +230,29 @@ class BeakerKernel(KernelProxyManager):
         for item in attachments:
             item["current"] = item.get("id") in current_ids
         return attachments
+
+    def get_session_secrets(self, *args, **kwargs) -> list:
+        """Fetch session secrets to scrub"""
+        session_id = self.beaker_session or self.session_id
+        url = url_path_join(
+            self.jupyter_server,
+            "/beaker/secrets/",
+            urllib.parse.quote(str(session_id), safe=""),
+        )
+        response = requests.get(
+            url,
+            headers={"X-AUTH-BEAKER": self.api_auth()},
+            timeout=10,
+        )
+        if response.status_code >= 400:
+            raise ValueError(
+                f"Unable to load session secrets (status {response.status_code}): {response.text}"
+            )
+        secrets_json = response.json()
+        # Reify secrets, skipping ones for which the sent value is None
+        secrets = [BaseSecret.from_dict(secret_dict) for secret_dict in secrets_json if secret_dict.get("_value", None) is not None]
+        return secrets
+
 
     def clear_session_attachments(self) -> None:
         """Delete every temporary attachment owned by the current notebook session."""
@@ -901,6 +931,25 @@ class BeakerKernel(KernelProxyManager):
             setattr(self.notebook_state_response.__func__, 'result', ctx.message.content)
             return None
     setattr(notebook_state_response, 'result', None)
+
+    async def redact_secrets(self, server, target_stream, data):
+        destination = server.get_destination(target_stream)
+        policy_attr = {
+            "client": "ui_message_policy",
+            "subkernel": "subkernel_message_policy",
+        }.get(destination)
+        if policy_attr is None:
+            return data
+        message = JupyterMessage.parse(data)
+        # Scrub the decoded payload fields. Routing headers (header/parent_header)
+        # and binary buffers are left intact so a false-positive substring match
+        # can't corrupt correlation ids or buffer bytes.
+        for secret in self.secrets:
+            policy = getattr(secret, policy_attr)
+            for field_name in ("metadata", "content"):
+                sanitized = await policy.sanitize(secret=secret, content=getattr(message, field_name))
+                message = message._replace(**{field_name: sanitized})
+        return message.parts
 
     async def request_notebook_state(self, parent_message=None):
         msg_id = str(uuid.uuid4())

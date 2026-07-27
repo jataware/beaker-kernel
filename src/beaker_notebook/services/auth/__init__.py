@@ -16,7 +16,7 @@ from tornado import web
 from jupyter_server.services.config.manager import ConfigManager
 
 if TYPE_CHECKING:
-    from beaker_notebook.services.secrets.types import BaseSecret
+    from beaker_notebook.services.secrets.app_secrets import BaseSecret
 
 current_user = contextvars.ContextVar("current_user", default=None)
 current_request = contextvars.ContextVar("current_request", default=None)

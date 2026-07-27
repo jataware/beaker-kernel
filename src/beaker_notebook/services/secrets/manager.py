@@ -1,19 +1,21 @@
 import copy
 import inspect
 import os
+from itertools import chain
 from dataclasses import dataclass, is_dataclass, asdict
-from typing import TYPE_CHECKING, Any, Collection, Literal, TypeAlias
+from typing import TYPE_CHECKING, Any, Collection, Literal, TypeAlias, Optional
 
 import traitlets
 from traitlets import Type, default, HasTraits
 from traitlets.config.configurable import Configurable, LoggingConfigurable
 from traitlets.utils.importstring import import_item
 
-from beaker_notebook.services.secrets.policies import PolicyTypes, BasePolicy, Allow, Redact, Remove
-from beaker_notebook.services.secrets.types import (
-    BaseSecret,  UserEnvironmentSecret, SystemEnvironmentSecret, AppTraitSecret,
+from beaker_notebook.lib.secrets.policies import PolicyTypes, BasePolicy, Allow, Redact, Remove
+from beaker_notebook.lib.secrets.secret_types import (
+    BaseSecret,  UserEnvironmentSecret, SystemEnvironmentSecret, BeakerConfigProviderSecret,
     is_env_secret, is_system_env_secret, is_user_env_secret
 )
+from beaker_notebook.services.secrets.app_secrets import AppTraitSecret
 
 
 if TYPE_CHECKING:
@@ -46,7 +48,6 @@ def index_configurables(root):
 class BeakerSecretsManager(LoggingConfigurable):
     parent: "BaseBeakerApp"
     _secrets: list[BaseSecret]
-    _index: dict[str, Configurable]
 
     app_trait_secrets: list[str] = traitlets.List(
         trait=traitlets.Unicode,
@@ -54,7 +55,6 @@ class BeakerSecretsManager(LoggingConfigurable):
         default_value=[
             "Application.cookie_secret",
             "IdentityProvider.token",
-            "NotebookNotary.secret",
             "GatewayClient.auth_token",
         ]
     )
@@ -113,6 +113,9 @@ class BeakerSecretsManager(LoggingConfigurable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._secrets = []
+        from .handlers import SecretsApi
+        # TODO: Defining handlers here is clunky, There should be a more elegant way.
+        self.parent.handlers.extend(SecretsApi.handlers)
 
     def add_secret(self, secret: BaseSecret):
         if secret in self._secrets:
@@ -155,7 +158,7 @@ class BeakerSecretsManager(LoggingConfigurable):
                     result[secret.name] = await policy.sanitize(secret, result[secret.name])
             if is_user_env_secret(secret) and secret.name not in result:
                 # Add the user secret to the environment if it doesn't exist TODO: Determine if this is the right thing
-                result[secret.name] = secret.get_value()
+                result[secret.name] = secret.value
         return result
 
 
@@ -176,25 +179,37 @@ class BeakerSecretsManager(LoggingConfigurable):
 
 
     async def collect_system_secrets(self, app: "BaseBeakerApp") -> list[BaseSecret]:
-        system_secrets = []
+        from beaker_notebook.lib.config import config as beaker_config
 
         # Environment secrets from configuration
         discovered_system_env_secrets = [SystemEnvironmentSecret(name=env_name) for env_name in self._secret_env_vars()]
         extra_system_envs = [SystemEnvironmentSecret(name=env_name) for env_name in self.extra_system_env_vars]
         extra_user_envs = [UserEnvironmentSecret(name=env_name) for env_name in self.extra_user_env_vars]
 
-        configurable_index = index_configurables(app)
-        app_trait_secrets = []
-        for config_string in self.app_trait_secrets + self.extra_app_trait_secrets:
-            configurable_name, trait_name = config_string.split(".", maxsplit=1)
-            configurable = configurable_index[configurable_name]
-            app_trait_secrets.append(AppTraitSecret(configurable=configurable, trait_name=trait_name))
+        # Secrets from server app traits/configuration
+        app_trait_secrets = [AppTraitSecret(config_str=config_st) for config_st in self.app_trait_secrets + self.extra_app_trait_secrets]
 
-        # TODO: Extract secrets from beaker config
+        # LLM secrets from Beaker Config
+        beaker_config_secrets = [
+            BeakerConfigProviderSecret(provider_name=provider_name)
+            for provider_name, provider_config in beaker_config.providers.items()
+            if provider_config["api_key"]
+        ]
+        if beaker_config.llm_service_token:
+            beaker_config_secrets.append(BeakerConfigProviderSecret(provider_name=BeakerConfigProviderSecret.OVERRIDE_KEY))
 
-        # TODO: Clean this up
-        system_secrets.extend(discovered_system_env_secrets)
-        system_secrets.extend(extra_system_envs)
-        system_secrets.extend(extra_user_envs)
-        system_secrets.extend(app_trait_secrets)
+        system_secrets = list(chain(
+            discovered_system_env_secrets,
+            extra_system_envs,
+            extra_user_envs,
+            app_trait_secrets,
+            beaker_config_secrets,
+        ))
+
         return system_secrets
+
+
+    async def get_kernel_secrets_for_user(self, user: "Optional[BeakerUser]"):
+        # TODO: filter secrets and add in user's secrets if any
+        # set to push = { secrets owned by this session's scope } ∩ { secrets with any non-Allow message policy }.
+        return self.secrets
