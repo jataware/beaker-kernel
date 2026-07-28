@@ -118,6 +118,16 @@ execution, so `{{`, `{%` and `{#` are template syntax. Ordinary f-strings are fi
 resolves against the discovered set, which means a procedure in the wrong directory raises the same
 error as one that does not exist.
 
+Session startup order is context setup first, then subkernel setup (`BeakerKernel` runs
+`context.setup()` and only afterwards calls `subkernel.setup()`). For python3 that matters because
+`PythonSubkernel.setup()` ends its init code with `del importlib, os, site, sys`, so `os` and
+`sys` imported at the top level of a context's setup procedure are deleted again before the first
+agent cell runs. The failure is deferred and misleading: a helper function defined by the procedure
+raises `NameError: name 'sys' is not defined` the first time it runs, long after setup appeared to
+succeed. Functions a setup procedure defines should import `os`/`sys`/`subprocess` in their bodies,
+and a context that wants those names available in user cells should bind them from code that runs
+after subkernel setup, such as a `generate_preview` procedure.
+
 ## Skills
 
 A context's skills come from a `skills.json` file or a `skills/` directory sitting next to
