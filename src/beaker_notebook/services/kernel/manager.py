@@ -1,3 +1,4 @@
+import datetime
 import os
 import pwd
 import shutil
@@ -16,6 +17,10 @@ if TYPE_CHECKING:
 
 class BeakerKernelManager(AsyncIOLoopKernelManager):
     beaker_session = Unicode(allow_none=True, help="Beaker session identifier", config=True)
+
+    last_activity: Optional[datetime.datetime]
+    execution_state: str
+    reason: str
 
     # Longer wait_time for shutdown before killing processed due to potentially needing to shutdown both the subkernel
     # and the beaker kernel.
@@ -49,6 +54,12 @@ class BeakerKernelManager(AsyncIOLoopKernelManager):
 
     def setup_instance(self, *args, **kwargs):
         super().setup_instance(*args, **kwargs)
+
+        # Required due to fragile monkey-patch in jupyter_server/services/kernels/kernelmanager.py:265:267
+        self.last_activity = datetime.datetime.now(datetime.timezone.utc)
+        self.execution_state = "starting"
+        self.reason = ""
+
         self.user = kwargs.get("user", None)
 
     async def _async_start_kernel(self, **kw):

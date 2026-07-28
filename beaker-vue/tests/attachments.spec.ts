@@ -1,5 +1,21 @@
 import {expect, test, type Page} from '@playwright/test';
 
+import {deleteSessionByName, e2eSessionName, resolveBaseUrl} from './helpers/session';
+
+/**
+ * This spec names its own session rather than going through the `sessionPage`
+ * fixture in example.spec.ts, because it asserts on session-scoped attachment
+ * state and needs the id up front. Cleanup is the same idea either way.
+ * `afterEach` also runs when the test fails, which is when a leaked kernel is
+ * most likely.
+ */
+let createdSession: string | null = null;
+
+test.afterEach(async () => {
+  if (!createdSession) return;
+  await deleteSessionByName(createdSession);
+  createdSession = null;
+});
 
 type BrowserFile = {
   name: string;
@@ -22,8 +38,9 @@ async function dropFiles(page: Page, files: BrowserFile[]) {
 }
 
 test('notebook chat attachments upload, remove, extract ZIPs, and send without text', async ({page}) => {
-  const baseUrl = process.env.BEAKER_E2E_URL ?? 'http://localhost:8888';
-  const sessionId = `attachment-e2e-${Date.now()}`;
+  const baseUrl = resolveBaseUrl();
+  const sessionId = e2eSessionName(`attachments-${Date.now()}`);
+  createdSession = sessionId;
   await page.goto(`${baseUrl}/?session=${sessionId}`);
   await expect(page.locator('span.status-label')).toHaveText('Ready', {timeout: 30_000});
 
