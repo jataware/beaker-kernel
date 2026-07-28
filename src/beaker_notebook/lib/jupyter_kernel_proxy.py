@@ -15,6 +15,7 @@ import os
 import uuid
 from collections import OrderedDict, namedtuple
 from operator import attrgetter
+from typing import Callable, Awaitable, TypeAlias, Literal
 
 import six
 import zmq
@@ -209,19 +210,22 @@ class ProxyKernelClient(AbstractProxyKernel):
     def __init__(self, config, role="client", zmq_context=zmq.Context.instance(), session_id=None):
         super(ProxyKernelClient, self).__init__(config, role, zmq_context, session_id=session_id)
 
+FilterType: TypeAlias = "tuple[str|None, str|None, Callable[[ProxyKernelServer, zmqstream.ZMQStream, list], Awaitable[list[JupyterMessage]|None]]]"
 
-InterceptionFilter = namedtuple(
+InterceptionFilter: FilterType = namedtuple(
     "InterceptionFilter", ("stream_type", "msg_type", "callback")
 )
-
 
 class ProxyKernelServer(AbstractProxyKernel):
     def __init__(self, config, role="server", zmq_context=zmq.Context.instance(), session_id=None):
         self.manager = None
         super(ProxyKernelServer, self).__init__(config, role, zmq_context, session_id=session_id)
-        self.filters = []
+        self.filters: list[FilterType] = []
         self.session_id = session_id
         self.proxy_target = None
+
+    def get_destination(self, stream: zmqstream.ZMQStream) -> Literal["client", "subkernel"]:
+        return "client" if stream in self.streams else "subkernel"
 
     def _proxy_to(
         self, other_stream, socktype=None, validate_using=None, resign_using=None
@@ -246,10 +250,9 @@ class ProxyKernelServer(AbstractProxyKernel):
                         msg.identities = []
                     if self.session_id and self.session_id not in msg.identities:
                         msg.identities.append(msg.parent_header.get("session"))
+                # None on stream_type or msg_type matches any value of either
                 for stream_type, msg_type, callback in self.filters:
-                    if stream_type == socktype and msg_type == msg.header.get(
-                        "msg_type"
-                    ):
+                    if ((stream_type is None or stream_type == socktype) and (msg_type is None or msg_type == msg.header.get("msg_type"))):
                         new_data = await callback(self, other_stream, data)
                         if new_data is None:
                             return
@@ -280,9 +283,9 @@ class ProxyKernelServer(AbstractProxyKernel):
     def intercept_message(self, stream_type=None, msg_type=None, callback=None):
         if stream_type in KERNEL_SOCKETS_NAMES:
             stream_type = KERNEL_SOCKETS[KERNEL_SOCKETS_NAMES.index(stream_type)]
-        if stream_type not in KERNEL_SOCKETS:
+        if stream_type not in KERNEL_SOCKETS and stream_type is not None:
             raise ValueError(
-                "stream_type should be one of " + ", ".join(KERNEL_SOCKETS_NAMES)
+                f'stream_type should be one of {", ".join(KERNEL_SOCKETS_NAMES)} or None (to match all)'
             )
         if not callable(callback):
             raise ValueError("callback must be callable")
