@@ -37,7 +37,7 @@ dependencies = [
   "python-dotenv~=1.0",
   "hatch",
   "platformdirs",
-  "mcp",
+  "mcp<2.0.0",
   "toml",
   "pyyaml",
   "dill",
