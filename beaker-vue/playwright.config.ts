@@ -18,8 +18,12 @@ export default defineConfig({
   // be cleanly separated from vitest unit tests (`src/**/__tests__/`) to avoid
   // the two runners collecting each other's specs.
   testDir: './tests',
+  /* Record pre-existing kernels, then reap anything the run leaked. See
+   * tests/global-setup.ts and tests/global-teardown.ts. */
+  globalSetup: './tests/global-setup.ts',
+  globalTeardown: './tests/global-teardown.ts',
   /* Maximum time one test can run for. */
-  timeout: 60 * 1000,
+  timeout: 120 * 1000,
   expect: {
     /**
      * Maximum time expect() should wait for the condition to be met.
@@ -31,10 +35,17 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  /* Each test spins up its own kernel (beaker kernel + subkernel), so concurrency
+   * is bounded by machine resources rather than by CPU count. Left unbounded,
+   * every added test widens the startup pile-up and pushes the per-assertion
+   * timeouts below. */
+  workers: 3,
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters
+   * `list` gives live progress; the HTML report is still written, but never
+   * auto-opened -- the html reporter's default (`open: 'on-failure'`) starts a
+   * report server that blocks the terminal after a failed run. View it on
+   * demand with `npx playwright show-report`. */
+  reporter: [['list'], ['html', {open: 'never'}]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */

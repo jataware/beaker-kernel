@@ -85,8 +85,29 @@ class BeakerKernel(KernelProxyManager):
         # Initialize context (Using the event loop to simulate `await`ing the async func in non-async setup)
         event_loop = asyncio.get_event_loop()
         logger.debug(f"About to start default context: {context_args}")
+
         context_task = event_loop.create_task(self.start_default_context(**context_args))
-        context_task.add_done_callback(lambda task: None)
+        context_task.add_done_callback(self.startup_error_callback)
+
+    def startup_error_callback(self, task: asyncio.Task):
+        try:
+            exception = task.exception()
+        except (asyncio.CancelledError, asyncio.InvalidStateError) as err:
+            exception = err
+        if exception:
+            logger.exception("An error occurred while starting the default context.", exc_info=exception)
+            if self.context:
+                def log_error(log_task: asyncio.Task):
+                    try:
+                        log_exception = log_task.exception()
+                        if log_exception:
+                            logger.exception("An error occurred during default context cleanup", exc_info=log_exception)
+                    except (asyncio.CancelledError, asyncio.InvalidStateError):
+                        # Intentional swallow
+                        pass
+                event_loop = asyncio.get_running_loop()
+                cleanup_task = event_loop.create_task(self.context.cleanup())
+                cleanup_task.add_done_callback(log_error)
 
     async def start_default_context(self, default_context=None, default_context_payload=None, **options):
         logger.debug("starting default context!")
@@ -936,7 +957,7 @@ def start(connection_file):
         # Perform shutdown cleanup here
         try:
             cleanup_task = partial(cleanup, kernel)
-            ioloop.IOLoop.current().run_sync(cleanup_task)
+            loop.run_sync(cleanup_task)
         except Exception as err:
             logger.exception(f"Error while shutting down kernel.")
         finally:
