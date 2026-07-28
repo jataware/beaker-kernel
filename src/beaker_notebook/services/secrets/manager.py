@@ -133,7 +133,7 @@ class BeakerSecretsManager(LoggingConfigurable):
     async def sanitize_kernel_environment_vars(self, env: dict) -> dict[str, str]:
         result = copy.copy(env)
         for secret in self._secrets:
-            policy = secret.subkernel_environment_policy
+            policy = secret.beaker_kernel_environment_policy
             if is_env_secret(secret) and secret.name in result:
                 if isinstance(policy, Allow):
                     continue
