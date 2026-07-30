@@ -62,20 +62,25 @@ class BaseBeakerApp(ServerApp):
     )
     notebook_manager_class = traitlets.Type(
         f"beaker_notebook.services.storage.notebook.BaseNotebookManager",
-        # default_value=f"beaker_notebook.services.storage.notebook.FileNotebookManager",
         config=True
     )
     context_manager_class = traitlets.Type(
         f"beaker_notebook.services.context.manager.BeakerContextManager",
         config=True,
     )
-    virtual_home_root = traitlets.Unicode(
-        help="Path pointing to where user directories should be stored. Defaults to 'root_dir' if not set.",
+    secrets_manager_class: "BeakerSecretsManager" = traitlets.Type(
+        klass="beaker_notebook.services.secrets.manager.BeakerSecretsManager",
+        default_value="beaker_notebook.services.secrets.manager.BeakerSecretsManager",
+        help="Beaker Secrets Manager class",
         config=True,
     )
     secrets_manager: "BeakerSecretsManager" = traitlets.Instance(
-        f"beaker_notebook.services.secrets.manager.BeakerSecretsManager",
+        "beaker_notebook.services.secrets.manager.BeakerSecretsManager",
         help="Beaker Secrets Manager singleton instance",
+        config=True,
+    )
+    virtual_home_root = traitlets.Unicode(
+        help="Path pointing to where user directories should be stored. Defaults to 'root_dir' if not set.",
         config=True,
     )
 
@@ -124,8 +129,7 @@ class BaseBeakerApp(ServerApp):
 
     @traitlets.default("secrets_manager")
     def _default_secrets_manager(self):
-        from beaker_notebook.services.secrets.manager import BeakerSecretsManager
-        secrets_manager = BeakerSecretsManager(parent=self)
+        secrets_manager = self.secrets_manager_class(parent=self)
         return secrets_manager
 
     @traitlets.default("config_file_name")
