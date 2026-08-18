@@ -58,6 +58,7 @@
     "@plutojl/lang-julia": "^0.12.1",
     "@primevue/icons": "^4.3.4",
     "@primevue/themes": "^4.3.4",
+    "@swc/core": "~1.15.47",
     "ansi-html-community": "^0.0.8",
     "buffer": "^6.0.3",
     "codemirror": "^6.0.1",
