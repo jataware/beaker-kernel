@@ -130,7 +130,7 @@
                             @update:model-value="(v) => { instructions = v ?? ''; markDirty(); }"
                         />
                     </div>
-                    <div v-else class="skill-description" v-html="renderedInstructions"></div>
+                    <div v-else class="skill-description" v-html="renderedInstructions" @click="onInstructionsLinkClick"></div>
                 </Fieldset>
 
                 <Fieldset legend="Available Resources" v-if="fileResources.length > 0">
@@ -212,6 +212,8 @@ import {
     type SkillFileResource,
     type SkillExampleResource,
     isContextProvidedIntegration,
+    isRelativeHref,
+    resolveResourceFromHref,
     filterByResourceType,
     previewRemoteSkill,
 } from '../../util/integration';
@@ -362,6 +364,20 @@ const renderedInstructions = computed<string>(() =>
 // Instructions default to a rendered preview; Edit toggles the raw editor.
 // New/empty skills start in the editor since there is nothing to preview.
 const showInstructionsRendered = ref<boolean>(true);
+
+// SKILL.md links to sibling resource files (references/, examples/, ...)
+// would 404 against the app's URL; open them in the resource panel instead.
+const onInstructionsLinkClick = (event: MouseEvent) => {
+    const anchor = (event.target as HTMLElement).closest?.('a');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href') ?? '';
+    if (!isRelativeHref(href)) return;
+    event.preventDefault();
+    const resource = resolveResourceFromHref(selectedIntegration.value, href);
+    if (resource) {
+        emit('open-resource', resource.resource_id);
+    }
+};
 
 const fileResources = computed<SkillFileResource[]>(() =>
     Object.values(filterByResourceType<SkillFileResource>(

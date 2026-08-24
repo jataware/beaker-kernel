@@ -205,6 +205,35 @@ export const isContextProvidedIntegration = (integration: Integration): boolean 
 
 export const getIntegrationProviderSlug = (integration: Integration) => integration.provider.split(":")[1]
 
+// True for hrefs that are relative paths within a skill (as opposed to
+// external URLs, mailto:, in-page anchors, or protocol-relative links).
+export const isRelativeHref = (href: string): boolean =>
+    !!href && !/^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(href);
+
+// Resolve a relative href authored inside a skill's markdown to another
+// resource of the same integration. `basePath` is the directory of the file
+// containing the link ("" for SKILL.md at the skill root), so sibling links
+// like `CROSS-REPOSITORY.md` inside references/FILTERS.md resolve correctly.
+// Returns undefined when the link doesn't point at a known resource.
+export const resolveResourceFromHref = (
+    integration: Integration | undefined,
+    href: string,
+    basePath: string = "",
+): IntegrationResource | undefined => {
+    const cleaned = href.split(/[?#]/)[0];
+    if (!cleaned) return undefined;
+    const resolved: string[] = [];
+    for (const segment of [...basePath.split('/'), ...cleaned.split('/')]) {
+        if (segment === '' || segment === '.') continue;
+        if (segment === '..') resolved.pop();
+        else resolved.push(segment);
+    }
+    const path = resolved.join('/');
+    return Object.values(integration?.resources ?? {}).find((r) =>
+        (r.resource_type === 'skill_file' && (r as SkillFileResource).relative_path === path)
+        || (r.resource_type === 'skill_example' && `examples/${(r as SkillExampleResource).filename}` === path));
+};
+
 // Per-datatype display metadata. Single source of truth for how each
 // integration datatype is presented in the UI; extend this interface as more
 // per-type presentation data is needed.

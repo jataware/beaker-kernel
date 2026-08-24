@@ -39,7 +39,7 @@
             </Fieldset>
 
             <Fieldset legend="Instructions (SKILL.md)" v-if="renderedInstructions">
-                <div class="skill-description" v-html="renderedInstructions"></div>
+                <div class="skill-description" v-html="renderedInstructions" @click="onInstructionsLinkClick"></div>
             </Fieldset>
 
             <Fieldset legend="Available Resources" v-if="fileResources.length > 0">
@@ -97,6 +97,8 @@ import {
     type SkillFileResource,
     type SkillExampleResource,
     filterByResourceType,
+    isRelativeHref,
+    resolveResourceFromHref,
 } from '../../util/integration';
 
 import Fieldset from 'primevue/fieldset';
@@ -125,6 +127,20 @@ const renderedInstructions = computed<string>(() => {
         selectedIntegration.value?.resources, "skill_instructions"))[0];
     return instructions?.content ? marked.parse(instructions.content) as string : "";
 });
+
+// SKILL.md links to sibling resource files (references/, examples/, ...)
+// would 404 against the app's URL; open them in the resource panel instead.
+const onInstructionsLinkClick = (event: MouseEvent) => {
+    const anchor = (event.target as HTMLElement).closest?.('a');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href') ?? '';
+    if (!isRelativeHref(href)) return;
+    event.preventDefault();
+    const resource = resolveResourceFromHref(selectedIntegration.value, href);
+    if (resource) {
+        emit('open-resource', resource.resource_id);
+    }
+};
 
 const metadata = computed<SkillMetadataResource | undefined>(() => {
     const resources = filterByResourceType<SkillMetadataResource>(
@@ -175,6 +191,26 @@ const exampleResources = computed<SkillExampleResource[]>(() => {
     h3 { font-size: 1.15rem; margin-bottom: 0.8rem; }
     p, ul, li { margin-bottom: 0.8rem; margin-top: 0rem; }
     > *:first-child { margin-top: 0rem; }
+
+    // Wide content (code blocks, tables) must scroll inside its own box
+    // rather than stretching the pane sideways. min-width: 0 lets this block
+    // shrink below its content's intrinsic width inside flex column parents.
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: break-word;
+
+    pre {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    img {
+        max-width: 100%;
+    }
 }
 
 .skill-metadata-grid {

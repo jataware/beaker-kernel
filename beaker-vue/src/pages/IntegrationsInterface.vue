@@ -803,6 +803,11 @@ const restartSession = async () => {
         }
 
         max-width: 100%;
+        // Flex items floor at their content's intrinsic width (min-width:
+        // auto), so a long unbreakable line in rendered markdown (e.g. a code
+        // block) would stretch the whole fieldset past the pane. Allow the
+        // fieldset to shrink so wide content scrolls inside its own box.
+        min-width: 0;
         .p-fieldset-legend {
             max-width: 100%;
             background: none;

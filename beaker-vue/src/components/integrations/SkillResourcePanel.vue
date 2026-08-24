@@ -113,6 +113,7 @@
                     v-else-if="showRenderedView"
                     class="skill-description skill-resource-rendered"
                     v-html="renderedContent"
+                    @click="onRenderedLinkClick"
                 ></div>
                 <CodeEditor
                     v-else
@@ -148,6 +149,8 @@ import {
     type SkillFileResource,
     type SkillExampleResource,
     isContextProvidedIntegration,
+    isRelativeHref,
+    resolveResourceFromHref,
     getResource,
 } from '../../util/integration';
 
@@ -331,6 +334,23 @@ const removeResource = async (resource: IntegrationResource) => {
     delete selectedIntegration.value.resources[resource.resource_id];
 };
 
+// Relative links between a skill's markdown files (e.g. `CROSS-REPOSITORY.md`
+// inside references/FILTERS.md) would 404 against the app's URL; open the
+// linked resource in this panel instead. External links behave normally.
+const onRenderedLinkClick = (event: MouseEvent) => {
+    const anchor = (event.target as HTMLElement).closest?.('a');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href') ?? '';
+    if (!isRelativeHref(href)) return;
+    event.preventDefault();
+    const label = focusedLabel.value;
+    const basePath = label.includes('/') ? label.slice(0, label.lastIndexOf('/')) : '';
+    const resource = resolveResourceFromHref(selectedIntegration.value, href, basePath);
+    if (resource) {
+        openResource(resource);
+    }
+};
+
 // Focus a resource from outside the panel (e.g. clicking a resource in the
 // center skill viewer).
 const focusResource = (resourceId: string) => {
@@ -483,8 +503,11 @@ defineExpose({ focusResource });
 .skill-resource-rendered {
     padding: 0.25rem 0.5rem;
     overflow-wrap: break-word;
+    min-width: 0;
+    max-width: 100%;
 
     pre {
+        max-width: 100%;
         overflow-x: auto;
     }
 }
