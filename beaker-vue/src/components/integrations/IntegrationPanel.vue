@@ -165,7 +165,7 @@ import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputText from "primevue/inputtext";
 import Card from "primevue/card";
-import { marked } from "marked";
+import { renderMarkdown } from "../../util/markdown";
 import { type BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import { type IntegrationMap, type Integration, type IntegrationProviders, listIntegrations, getIntegrationProviderType, getIntegrationIcon, getIntegrationTypeLabel, isContextProvidedIntegration } from "@/util/integration";
 import { useRoute, RouterLink } from "vue-router";
@@ -240,7 +240,7 @@ const filterIntegrations = (integrations: Integration[]) =>
 
 const renderIntegrations = (integrations: Integration[]) =>
     integrations.map(integration =>
-        ({...integration, description: marked.parse(integration?.description ?? "") as string}))
+        ({...integration, description: renderMarkdown(integration?.description)}))
 
 const processIntegrations = (integrations: Integration[]) =>
     renderIntegrations(filterIntegrations(sortIntegrations(integrations)))

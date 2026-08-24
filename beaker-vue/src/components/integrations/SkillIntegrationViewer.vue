@@ -105,7 +105,7 @@ import Fieldset from 'primevue/fieldset';
 import InputText from 'primevue/inputtext';
 import ClampedMarkdown from '../misc/ClampedMarkdown.vue';
 
-import { marked } from 'marked';
+import { renderMarkdown } from '../../util/markdown';
 
 const props = defineProps<{
     fetchResources: () => Promise<void>,
@@ -121,12 +121,12 @@ const selectedIntegration = computed<Integration>(() =>
     model.value.integrations[model.value.selected]);
 
 const renderedDescription = computed<string>(() =>
-    marked.parse(selectedIntegration.value?.description ?? "") as string);
+    renderMarkdown(selectedIntegration.value?.description));
 
 const renderedInstructions = computed<string>(() => {
     const instructions = Object.values(filterByResourceType<SkillInstructionsResource>(
         selectedIntegration.value?.resources, "skill_instructions"))[0];
-    return instructions?.content ? marked.parse(instructions.content) as string : "";
+    return renderMarkdown(instructions?.content);
 });
 
 // SKILL.md links to sibling resource files (references/, examples/, ...)

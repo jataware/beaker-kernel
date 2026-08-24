@@ -323,7 +323,7 @@ import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
 import ProgressSpinner from 'primevue/progressspinner';
 
-import { marked } from 'marked';
+import { renderMarkdown } from '../../util/markdown';
 
 import CodeEditor from '../misc/CodeEditor.vue';
 
@@ -434,7 +434,7 @@ watch(() => selectedIntegration.value?.description, (current) => {
 // read-only here (see the Instructions fieldset). Not persisted to config.
 const renderedInstructions = computed<string>(() => {
     const instructions = selectedIntegration.value?.instructions;
-    return instructions ? marked.parse(instructions) as string : "";
+    return renderMarkdown(instructions);
 });
 
 const hasServerInfo = computed<boolean>(() =>

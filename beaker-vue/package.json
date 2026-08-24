@@ -66,6 +66,7 @@
     "content-disposition": "^0.5.4",
     "cookie": "^1.0.2",
     "cytoscape": "^3.31.2",
+    "dompurify": "^3.4.14",
     "escape-html": "^1.0.3",
     "fflate": "^0.8.3",
     "filesize": "^10.1.6",

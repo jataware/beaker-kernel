@@ -142,7 +142,7 @@ import Select from "primevue/select";
 import InputText from "primevue/inputtext";
 import ProgressSpinner from 'primevue/progressspinner';
 import CodeEditor from '../misc/CodeEditor.vue';
-import { marked } from 'marked';
+import { renderMarkdown } from '../../util/markdown';
 import {
     type IntegrationInterfaceState,
     type IntegrationResource,
@@ -248,7 +248,7 @@ const focusedLanguage = computed<string>(() => {
 });
 
 const renderedContent = computed<string>(() =>
-    draftContent.value ? marked.parse(draftContent.value) as string : "");
+    renderMarkdown(draftContent.value));
 
 // Markdown resources open in a rendered view by default; editable ones can be
 // toggled into the raw editor. Non-markdown resources always use the editor.

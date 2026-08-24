@@ -1,5 +1,6 @@
 import { marked, type TokenizerAndRendererExtension, type Tokens } from 'marked';
 import katex from 'katex';
+import DOMPurify from 'dompurify';
 import 'katex/dist/katex.min.css';
 
 // KaTeX support for `marked`.
@@ -130,5 +131,18 @@ export const registerMarkdownExtensions = (): void => {
 };
 
 registerMarkdownExtensions();
+
+/**
+ * Render untrusted markdown to sanitized HTML safe for `v-html`. Integration
+ * content (skill instructions, resource files, MCP descriptions) can arrive
+ * from remote URLs or uploaded archives, so it must never reach the DOM as
+ * raw HTML.
+ */
+export const renderMarkdown = (markdown: string | null | undefined): string => {
+    if (!markdown) {
+        return "";
+    }
+    return DOMPurify.sanitize(marked.parse(markdown) as string);
+};
 
 export { marked };

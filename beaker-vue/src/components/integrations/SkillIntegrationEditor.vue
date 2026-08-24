@@ -224,7 +224,7 @@ import InputChips from 'primevue/inputchips';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
 
-import { marked } from 'marked';
+import { renderMarkdown } from '../../util/markdown';
 
 import CodeEditor from '../misc/CodeEditor.vue';
 import ClampedMarkdown from '../misc/ClampedMarkdown.vue';
@@ -314,7 +314,7 @@ const syncFromIntegration = () => {
     allowedToolsList.value = (metadata?.allowed_tools ?? '')
         .split(',').map((tool) => tool.trim()).filter((tool) => tool !== '');
     metadataRows.value = Object.entries(metadata?.skill_metadata ?? {})
-        .map(([key, value]) => ({ key, value: String(value) }));
+        .map(([key, value]) => ({ key, value: value == null ? '' : String(value) }));
 };
 
 const markDirty = () => {
@@ -360,7 +360,7 @@ const fetchFromUrl = async () => {
 };
 
 const renderedInstructions = computed<string>(() =>
-    instructions.value ? marked.parse(instructions.value) as string : "");
+    renderMarkdown(instructions.value));
 
 // Instructions default to a rendered preview; Edit toggles the raw editor.
 // New/empty skills start in the editor since there is nothing to preview.
