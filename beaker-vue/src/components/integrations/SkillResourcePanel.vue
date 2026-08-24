@@ -81,6 +81,16 @@
             <div class="skill-resource-focused-header">
                 <Button severity="secondary" icon="pi pi-arrow-left" label="Back" size="small" @click="backToList" style="width: fit-content;" />
                 <span class="skill-resource-focused-title">{{ focusedLabel }}</span>
+                <Button
+                    v-if="editable && viewState.view === 'focused' && focusedLanguage === 'markdown'"
+                    :icon="showRendered ? 'pi pi-pencil' : 'pi pi-eye'"
+                    :label="showRendered ? 'Edit' : 'Preview'"
+                    severity="secondary"
+                    text
+                    size="small"
+                    style="margin-left: auto;"
+                    @click="showRendered = !showRendered"
+                />
             </div>
 
             <div class="skill-resource-focused-form" v-if="viewState.view === 'new'">
@@ -99,6 +109,11 @@
                     <ProgressSpinner style="width: 2rem; height: 2rem;" />
                     Loading resource...
                 </div>
+                <div
+                    v-else-if="showRenderedView"
+                    class="skill-description skill-resource-rendered"
+                    v-html="renderedContent"
+                ></div>
                 <CodeEditor
                     v-else
                     :language="focusedLanguage"
@@ -126,6 +141,7 @@ import Select from "primevue/select";
 import InputText from "primevue/inputtext";
 import ProgressSpinner from 'primevue/progressspinner';
 import CodeEditor from '../misc/CodeEditor.vue';
+import { marked } from 'marked';
 import {
     type IntegrationInterfaceState,
     type IntegrationResource,
@@ -228,6 +244,18 @@ const focusedLanguage = computed<string>(() => {
     return focusedResource.value ? languageForPath(resourceLabel(focusedResource.value)) : 'markdown';
 });
 
+const renderedContent = computed<string>(() =>
+    draftContent.value ? marked.parse(draftContent.value) as string : "");
+
+// Markdown resources open in a rendered view by default; editable ones can be
+// toggled into the raw editor. Non-markdown resources always use the editor.
+const showRendered = ref<boolean>(true);
+
+const showRenderedView = computed<boolean>(() =>
+    viewState.value.view === 'focused'
+    && focusedLanguage.value === 'markdown'
+    && (!editable.value || showRendered.value));
+
 const canSave = computed<boolean>(() => {
     if (viewState.value.view === 'new') {
         return draftFilename.value.trim() !== "";
@@ -251,6 +279,7 @@ const startNew = (resourceType: "skill_file" | "skill_example") => {
 
 const openResource = async (resource: IntegrationResource) => {
     viewState.value = { view: 'focused', resourceId: resource.resource_id };
+    showRendered.value = true;
     const cached = (resource as SkillFileResource | SkillExampleResource).content;
     if (cached !== undefined && cached !== null) {
         draftContent.value = cached;
@@ -301,6 +330,17 @@ const removeResource = async (resource: IntegrationResource) => {
     await props.deleteResource(resource.resource_id);
     delete selectedIntegration.value.resources[resource.resource_id];
 };
+
+// Focus a resource from outside the panel (e.g. clicking a resource in the
+// center skill viewer).
+const focusResource = (resourceId: string) => {
+    const resource = selectedIntegration.value?.resources?.[resourceId];
+    if (resource) {
+        openResource(resource);
+    }
+};
+
+defineExpose({ focusResource });
 
 </script>
 
@@ -438,6 +478,15 @@ const removeResource = async (resource: IntegrationResource) => {
 .skill-resource-focused-actions {
     display: flex;
     justify-content: flex-end;
+}
+
+.skill-resource-rendered {
+    padding: 0.25rem 0.5rem;
+    overflow-wrap: break-word;
+
+    pre {
+        overflow-x: auto;
+    }
 }
 
 .skill-resource-loading {

@@ -67,6 +67,7 @@
                             :modifyIntegration="modifySelectedIntegration"
                             :deleteIntegration="deleteIntegrationById"
                             :fetchResources="fetchResourcesForSelectedIntegration"
+                            @open-resource="openResourceInRightPanel"
                         />
                     </div>
                 </div>
@@ -144,6 +145,7 @@
                 >
                     <component
                         v-if="integrations.selected"
+                        ref="rightPanelRef"
                         :is="rightPanelComponent"
                         v-model="integrations"
                         :disabled="!integrations.selected || integrations.selected === 'new'"
@@ -221,6 +223,14 @@ const filePanelRef = ref();
 const configPanelRef = ref();
 const sideMenuRef = ref();
 const rightSideMenuRef = ref();
+const rightPanelRef = ref();
+
+// Open a resource (clicked in the center viewer) in the right-side resource
+// panel, focused on its rendered content.
+const openResourceInRightPanel = (resourceId: string) => {
+    rightSideMenuRef.value?.selectPanel('examples');
+    nextTick(() => rightPanelRef.value?.focusResource?.(resourceId));
+};
 
 const previewVisible = ref<boolean>(false);
 

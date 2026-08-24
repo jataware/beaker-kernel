@@ -38,18 +38,24 @@
                 </div>
             </Fieldset>
 
+            <Fieldset legend="Instructions (SKILL.md)" v-if="renderedInstructions">
+                <div class="skill-description" v-html="renderedInstructions"></div>
+            </Fieldset>
+
             <Fieldset legend="Available Resources" v-if="fileResources.length > 0">
                 <p>
                     These resources are available to the agent and will be loaded on demand when the skill is active.
                 </p>
                 <div class="skill-resource-list">
                     <div
-                        class="skill-resource-item"
+                        class="skill-resource-item clickable"
                         v-for="resource in fileResources"
                         :key="resource.resource_id"
+                        @click="emit('open-resource', resource.resource_id)"
                     >
                         <i class="pi pi-file"></i>
                         <span class="skill-resource-path">{{ resource.relative_path }}</span>
+                        <i class="pi pi-chevron-right skill-resource-open-arrow"></i>
                     </div>
                 </div>
             </Fieldset>
@@ -60,15 +66,17 @@
                 </p>
                 <div class="skill-resource-list">
                     <div
-                        class="skill-resource-item"
+                        class="skill-resource-item clickable"
                         v-for="example in exampleResources"
                         :key="example.resource_id"
+                        @click="emit('open-resource', example.resource_id)"
                     >
                         <i class="pi pi-code"></i>
                         <div class="skill-example-info">
                             <span class="skill-resource-path">{{ example.filename }}</span>
                             <span class="skill-example-title">{{ example.title }}</span>
                         </div>
+                        <i class="pi pi-chevron-right skill-resource-open-arrow"></i>
                     </div>
                 </div>
             </Fieldset>
@@ -85,6 +93,7 @@ import {
     type IntegrationInterfaceState,
     type IntegrationResource,
     type SkillMetadataResource,
+    type SkillInstructionsResource,
     type SkillFileResource,
     type SkillExampleResource,
     filterByResourceType,
@@ -99,6 +108,10 @@ const props = defineProps<{
     fetchResources: () => Promise<void>,
 }>();
 
+const emit = defineEmits<{
+    (e: 'open-resource', resourceId: string): void,
+}>();
+
 const model = defineModel<IntegrationInterfaceState>();
 
 const selectedIntegration = computed<Integration>(() =>
@@ -106,6 +119,12 @@ const selectedIntegration = computed<Integration>(() =>
 
 const renderedDescription = computed<string>(() =>
     marked.parse(selectedIntegration.value?.description ?? "") as string);
+
+const renderedInstructions = computed<string>(() => {
+    const instructions = Object.values(filterByResourceType<SkillInstructionsResource>(
+        selectedIntegration.value?.resources, "skill_instructions"))[0];
+    return instructions?.content ? marked.parse(instructions.content) as string : "";
+});
 
 const metadata = computed<SkillMetadataResource | undefined>(() => {
     const resources = filterByResourceType<SkillMetadataResource>(
@@ -201,6 +220,20 @@ const exampleResources = computed<SkillExampleResource[]>(() => {
 
     &:hover {
         background-color: var(--p-surface-100);
+    }
+
+    &.clickable {
+        cursor: pointer;
+
+        .skill-resource-open-arrow {
+            margin-left: auto;
+            opacity: 0;
+            transition: opacity 150ms linear;
+        }
+
+        &:hover .skill-resource-open-arrow {
+            opacity: 1;
+        }
     }
 }
 
