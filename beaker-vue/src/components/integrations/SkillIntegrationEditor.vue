@@ -110,8 +110,19 @@
                 </Fieldset>
 
                 <Fieldset legend="Instructions (SKILL.md)">
-                    <p>The skill's full instructions, disclosed to the agent when it loads the skill.</p>
-                    <div class="skill-editor-height" v-if="editable">
+                    <div class="skill-instructions-header">
+                        <p>The skill's full instructions, disclosed to the agent when it loads the skill.</p>
+                        <Button
+                            v-if="editable"
+                            :icon="showInstructionsRendered ? 'pi pi-pencil' : 'pi pi-eye'"
+                            :label="showInstructionsRendered ? 'Edit' : 'Preview'"
+                            severity="secondary"
+                            text
+                            size="small"
+                            @click="showInstructionsRendered = !showInstructionsRendered"
+                        />
+                    </div>
+                    <div class="skill-editor-height" v-if="editable && !showInstructionsRendered">
                         <CodeEditor
                             language="markdown"
                             :autocomplete-enabled="false"
@@ -120,6 +131,45 @@
                         />
                     </div>
                     <div v-else class="skill-description" v-html="renderedInstructions"></div>
+                </Fieldset>
+
+                <Fieldset legend="Available Resources" v-if="fileResources.length > 0">
+                    <p>
+                        These resources are available to the agent and will be loaded on demand when the skill is active.
+                    </p>
+                    <div class="skill-resource-list">
+                        <div
+                            class="skill-resource-item clickable"
+                            v-for="resource in fileResources"
+                            :key="resource.resource_id"
+                            @click="emit('open-resource', resource.resource_id)"
+                        >
+                            <i class="pi pi-file"></i>
+                            <span class="skill-resource-path">{{ resource.relative_path }}</span>
+                            <i class="pi pi-chevron-right skill-resource-open-arrow"></i>
+                        </div>
+                    </div>
+                </Fieldset>
+
+                <Fieldset legend="Code Examples" v-if="exampleResources.length > 0">
+                    <p>
+                        Code examples demonstrating usage patterns for this skill.
+                    </p>
+                    <div class="skill-resource-list">
+                        <div
+                            class="skill-resource-item clickable"
+                            v-for="example in exampleResources"
+                            :key="example.resource_id"
+                            @click="emit('open-resource', example.resource_id)"
+                        >
+                            <i class="pi pi-code"></i>
+                            <div class="skill-example-info">
+                                <span class="skill-resource-path">{{ example.filename }}</span>
+                                <span class="skill-example-title">{{ example.title }}</span>
+                            </div>
+                            <i class="pi pi-chevron-right skill-resource-open-arrow"></i>
+                        </div>
+                    </div>
                 </Fieldset>
             </template>
 
@@ -159,6 +209,8 @@ import {
     type SkillIntegration,
     type SkillMetadataResource,
     type SkillInstructionsResource,
+    type SkillFileResource,
+    type SkillExampleResource,
     isContextProvidedIntegration,
     filterByResourceType,
     previewRemoteSkill,
@@ -186,6 +238,10 @@ const props = defineProps<{
 }>();
 
 const model = defineModel<IntegrationInterfaceState>();
+
+const emit = defineEmits<{
+    (e: 'open-resource', resourceId: string): void,
+}>();
 
 const selectedIntegration = computed<SkillIntegration>(() =>
     model.value.integrations[model.value.selected] as SkillIntegration);
@@ -303,9 +359,22 @@ const fetchFromUrl = async () => {
 const renderedInstructions = computed<string>(() =>
     instructions.value ? marked.parse(instructions.value) as string : "");
 
+// Instructions default to a rendered preview; Edit toggles the raw editor.
+// New/empty skills start in the editor since there is nothing to preview.
+const showInstructionsRendered = ref<boolean>(true);
+
+const fileResources = computed<SkillFileResource[]>(() =>
+    Object.values(filterByResourceType<SkillFileResource>(
+        selectedIntegration.value?.resources, "skill_file")));
+
+const exampleResources = computed<SkillExampleResource[]>(() =>
+    Object.values(filterByResourceType<SkillExampleResource>(
+        selectedIntegration.value?.resources, "skill_example")));
+
 watch(() => model.value.selected, () => {
     remotePreviewed.value = false;
     syncFromIntegration();
+    showInstructionsRendered.value = instructions.value !== '';
     // A freshly created skill arrives pre-dirtied so its Save button shows
     // immediately; only clear the flag when landing on an existing one.
     if (!isNew.value) {
@@ -318,6 +387,7 @@ watch(() => model.value.selected, () => {
 watch(() => selectedIntegration.value?.resources, () => {
     if (!model.value.unsavedChanges) {
         syncFromIntegration();
+        showInstructionsRendered.value = instructions.value !== '';
     }
 });
 
@@ -500,6 +570,16 @@ const remove = async () => {
     height: 20rem;
     display: flex;
     flex-direction: column;
+}
+
+.skill-instructions-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    p { margin: 0 0 0.8rem 0; }
+    button { flex-shrink: 0; }
 }
 
 .skill-description {
