@@ -130,7 +130,7 @@
                             @update:model-value="(v) => { instructions = v ?? ''; markDirty(); }"
                         />
                     </div>
-                    <div v-else class="skill-description" v-html="renderedInstructions" @click="onInstructionsLinkClick"></div>
+                    <ClampedMarkdown v-else :html="renderedInstructions" @link-click="onInstructionsLinkClick" />
                 </Fieldset>
 
                 <Fieldset legend="Available Resources" v-if="fileResources.length > 0">
@@ -227,6 +227,7 @@ import Button from 'primevue/button';
 import { marked } from 'marked';
 
 import CodeEditor from '../misc/CodeEditor.vue';
+import ClampedMarkdown from '../misc/ClampedMarkdown.vue';
 
 const showToast = inject<any>('show_toast');
 

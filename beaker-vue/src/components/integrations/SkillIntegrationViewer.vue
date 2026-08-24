@@ -39,7 +39,7 @@
             </Fieldset>
 
             <Fieldset legend="Instructions (SKILL.md)" v-if="renderedInstructions">
-                <div class="skill-description" v-html="renderedInstructions" @click="onInstructionsLinkClick"></div>
+                <ClampedMarkdown :html="renderedInstructions" @link-click="onInstructionsLinkClick" />
             </Fieldset>
 
             <Fieldset legend="Available Resources" v-if="fileResources.length > 0">
@@ -103,6 +103,7 @@ import {
 
 import Fieldset from 'primevue/fieldset';
 import InputText from 'primevue/inputtext';
+import ClampedMarkdown from '../misc/ClampedMarkdown.vue';
 
 import { marked } from 'marked';
 
