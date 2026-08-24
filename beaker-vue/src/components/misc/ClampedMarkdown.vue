@@ -6,6 +6,7 @@
             :class="{ clamped: !expanded, faded: !expanded && overflowing }"
             v-html="html"
             @click="(event) => emit('link-click', event)"
+            @load.capture="measure"
         ></div>
         <Button
             v-if="overflowing"
@@ -25,7 +26,7 @@
 // Rendered markdown clamped to a preview height, with a Show more/Show less
 // toggle that only appears when the content actually overflows the clamp.
 
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import Button from 'primevue/button';
 
 const props = defineProps<{ html: string }>();
@@ -38,12 +39,35 @@ const contentEl = ref<HTMLElement>();
 const expanded = ref<boolean>(false);
 const overflowing = ref<boolean>(false);
 
+// Content height changes after the initial render — pane resizes re-wrap the
+// text, images and webfonts load late — so re-measure on element resize and
+// on captured load events, not just on content change. While expanded,
+// scrollHeight equals clientHeight, so measuring would wrongly clear the
+// flag (hiding "Show less"); skip until collapsed again.
+const measure = () => {
+    if (expanded.value) return;
+    const el = contentEl.value;
+    overflowing.value = !!el && el.scrollHeight > el.clientHeight + 1;
+};
+
 watch(() => props.html, async () => {
     expanded.value = false;
     await nextTick();
-    const el = contentEl.value;
-    overflowing.value = !!el && el.scrollHeight > el.clientHeight + 1;
+    measure();
 }, { immediate: true });
+
+let resizeObserver: ResizeObserver | undefined;
+
+onMounted(() => {
+    resizeObserver = new ResizeObserver(measure);
+    if (contentEl.value) {
+        resizeObserver.observe(contentEl.value);
+    }
+});
+
+onBeforeUnmount(() => {
+    resizeObserver?.disconnect();
+});
 
 </script>
 

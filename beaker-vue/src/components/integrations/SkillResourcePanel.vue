@@ -79,12 +79,12 @@
         <!-- Focused / new view -->
         <template v-else>
             <div class="skill-resource-focused-header">
-                <Button severity="secondary" icon="pi pi-arrow-left" label="Back" size="small" @click="backToList" style="width: fit-content;" />
+                <Button severity="secondary" icon="pi pi-arrow-left" label="Back" size="small" @click="onBackClick" style="width: fit-content;" />
                 <span class="skill-resource-focused-title">{{ focusedLabel }}</span>
                 <Button
-                    v-if="editable && viewState.view === 'focused' && focusedLanguage === 'markdown'"
-                    :icon="showRendered ? 'pi pi-pencil' : 'pi pi-eye'"
-                    :label="showRendered ? 'Edit' : 'Preview'"
+                    v-if="focusedIsMarkdown"
+                    :icon="showRendered ? (editable ? 'pi pi-pencil' : 'pi pi-code') : 'pi pi-eye'"
+                    :label="showRendered ? (editable ? 'Edit' : 'Raw') : 'Preview'"
                     severity="secondary"
                     text
                     size="small"
@@ -108,6 +108,10 @@
                 <div v-if="loadingContent" class="skill-resource-loading">
                     <ProgressSpinner style="width: 2rem; height: 2rem;" />
                     Loading resource...
+                </div>
+                <div v-else-if="loadFailed" class="skill-resource-error">
+                    <i class="pi pi-exclamation-triangle"></i>
+                    <i>Failed to load resource content.</i>
                 </div>
                 <div
                     v-else-if="showRenderedView"
@@ -149,8 +153,7 @@ import {
     type SkillFileResource,
     type SkillExampleResource,
     isContextProvidedIntegration,
-    isRelativeHref,
-    resolveResourceFromHref,
+    resourceFromLinkClick,
     getResource,
 } from '../../util/integration';
 
@@ -250,27 +253,60 @@ const focusedLanguage = computed<string>(() => {
 const renderedContent = computed<string>(() =>
     renderMarkdown(draftContent.value));
 
-// Markdown resources open in a rendered view by default; editable ones can be
-// toggled into the raw editor. Non-markdown resources always use the editor.
+// Markdown resources open in a rendered view by default, with a toggle back
+// to the raw source (an editor for editable skills, read-only otherwise).
+// Non-markdown resources always use the code editor.
 const showRendered = ref<boolean>(true);
 
-const showRenderedView = computed<boolean>(() =>
+const isMarkdownPath = (path: string): boolean => /\.(md|markdown)$/i.test(path);
+
+const focusedIsMarkdown = computed<boolean>(() =>
     viewState.value.view === 'focused'
-    && focusedLanguage.value === 'markdown'
-    && (!editable.value || showRendered.value));
+    && focusedResource.value !== undefined
+    && isMarkdownPath(resourceLabel(focusedResource.value)));
+
+const showRenderedView = computed<boolean>(() =>
+    focusedIsMarkdown.value && showRendered.value);
+
+// A failed or still-running load means draftContent does not reflect the
+// resource; saving then would overwrite the real content with an empty string.
+const loadFailed = ref<boolean>(false);
 
 const canSave = computed<boolean>(() => {
     if (viewState.value.view === 'new') {
         return draftFilename.value.trim() !== "";
     }
-    return true;
+    return !loadingContent.value && !loadFailed.value;
 });
+
+// Unsaved work in the focused editor or the new-resource form; guard against
+// silently discarding it when a row click, rendered link, or the center
+// viewer opens another resource.
+const draftDirty = computed<boolean>(() => {
+    if (viewState.value.view === 'new') {
+        return draftFilename.value.trim() !== '' || draftContent.value !== '';
+    }
+    if (viewState.value.view === 'focused' && editable.value && !loadingContent.value && !loadFailed.value) {
+        const original = (focusedResource.value as SkillFileResource | SkillExampleResource | undefined)?.content ?? '';
+        return draftContent.value !== original;
+    }
+    return false;
+});
+
+const confirmDiscardDraft = (): boolean =>
+    !draftDirty.value || confirm('Discard unsaved changes?');
 
 const backToList = () => {
     viewState.value = { view: 'list' };
     draftFilename.value = "";
     draftContent.value = "";
     draftDir.value = "references";
+};
+
+const onBackClick = () => {
+    if (confirmDiscardDraft()) {
+        backToList();
+    }
 };
 
 const startNew = (resourceType: "skill_file" | "skill_example") => {
@@ -281,8 +317,11 @@ const startNew = (resourceType: "skill_file" | "skill_example") => {
 };
 
 const openResource = async (resource: IntegrationResource) => {
+    if (!confirmDiscardDraft()) return;
     viewState.value = { view: 'focused', resourceId: resource.resource_id };
     showRendered.value = true;
+    loadFailed.value = false;
+    loadingContent.value = false;
     const cached = (resource as SkillFileResource | SkillExampleResource).content;
     if (cached !== undefined && cached !== null) {
         draftContent.value = cached;
@@ -290,15 +329,27 @@ const openResource = async (resource: IntegrationResource) => {
     }
     draftContent.value = "";
     loadingContent.value = true;
+    // Only the fetch for the currently focused resource may touch shared
+    // state: the user can focus another resource while this one is loading,
+    // and a late response must not leak into it (or be saved over it).
+    const isCurrent = () =>
+        viewState.value.view === 'focused' && viewState.value.resourceId === resource.resource_id;
     try {
         const fetched = await getResource(props.sessionId, model.value.selected, resource.resource_type, resource.resource_id);
         const content = (fetched as any).content ?? "";
         (resource as any).content = content;
-        draftContent.value = content;
+        if (isCurrent()) {
+            draftContent.value = content;
+        }
     } catch (e) {
         console.error('Failed to load resource content:', e);
+        if (isCurrent()) {
+            loadFailed.value = true;
+        }
     } finally {
-        loadingContent.value = false;
+        if (isCurrent()) {
+            loadingContent.value = false;
+        }
     }
 };
 
@@ -338,14 +389,9 @@ const removeResource = async (resource: IntegrationResource) => {
 // inside references/FILTERS.md) would 404 against the app's URL; open the
 // linked resource in this panel instead. External links behave normally.
 const onRenderedLinkClick = (event: MouseEvent) => {
-    const anchor = (event.target as HTMLElement).closest?.('a');
-    if (!anchor) return;
-    const href = anchor.getAttribute('href') ?? '';
-    if (!isRelativeHref(href)) return;
-    event.preventDefault();
     const label = focusedLabel.value;
     const basePath = label.includes('/') ? label.slice(0, label.lastIndexOf('/')) : '';
-    const resource = resolveResourceFromHref(selectedIntegration.value, href, basePath);
+    const resource = resourceFromLinkClick(event, selectedIntegration.value, basePath);
     if (resource) {
         openResource(resource);
     }
@@ -510,6 +556,14 @@ defineExpose({ focusResource });
         max-width: 100%;
         overflow-x: auto;
     }
+}
+
+.skill-resource-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0.25rem;
+    color: var(--p-text-muted-color);
 }
 
 .skill-resource-loading {

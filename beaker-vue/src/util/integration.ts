@@ -210,28 +210,62 @@ export const getIntegrationProviderSlug = (integration: Integration) => integrat
 export const isRelativeHref = (href: string): boolean =>
     !!href && !/^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(href);
 
+const joinSkillPath = (basePath: string, href: string): string => {
+    const resolved: string[] = [];
+    for (const segment of [...basePath.split('/'), ...href.split('/')]) {
+        if (segment === '' || segment === '.') continue;
+        if (segment === '..') resolved.pop();
+        else resolved.push(segment);
+    }
+    return resolved.join('/');
+};
+
 // Resolve a relative href authored inside a skill's markdown to another
 // resource of the same integration. `basePath` is the directory of the file
 // containing the link ("" for SKILL.md at the skill root), so sibling links
-// like `CROSS-REPOSITORY.md` inside references/FILTERS.md resolve correctly.
+// like `CROSS-REPOSITORY.md` inside references/FILTERS.md resolve correctly;
+// links that don't resolve against the base fall back to the skill root,
+// since files commonly use root-relative paths like `references/X.md`.
 // Returns undefined when the link doesn't point at a known resource.
 export const resolveResourceFromHref = (
     integration: Integration | undefined,
     href: string,
     basePath: string = "",
 ): IntegrationResource | undefined => {
-    const cleaned = href.split(/[?#]/)[0];
+    let cleaned = href.split(/[?#]/)[0];
     if (!cleaned) return undefined;
-    const resolved: string[] = [];
-    for (const segment of [...basePath.split('/'), ...cleaned.split('/')]) {
-        if (segment === '' || segment === '.') continue;
-        if (segment === '..') resolved.pop();
-        else resolved.push(segment);
+    try {
+        // Markdown links percent-encode spaces and non-ASCII characters.
+        cleaned = decodeURIComponent(cleaned);
+    } catch {
+        // Malformed escape sequence; match against the raw path.
     }
-    const path = resolved.join('/');
-    return Object.values(integration?.resources ?? {}).find((r) =>
-        (r.resource_type === 'skill_file' && (r as SkillFileResource).relative_path === path)
-        || (r.resource_type === 'skill_example' && `examples/${(r as SkillExampleResource).filename}` === path));
+    const findByPath = (path: string): IntegrationResource | undefined =>
+        Object.values(integration?.resources ?? {}).find((r) =>
+            (r.resource_type === 'skill_file' && (r as SkillFileResource).relative_path === path)
+            || (r.resource_type === 'skill_example' && `examples/${(r as SkillExampleResource).filename}` === path));
+    const resource = findByPath(joinSkillPath(basePath, cleaned));
+    if (resource || !basePath) {
+        return resource;
+    }
+    return findByPath(joinSkillPath("", cleaned));
+};
+
+// Handle a click inside rendered skill markdown. A click on a relative link
+// (which would otherwise 404 against the app's URL) is prevented and resolved
+// to the resource it points at, if any; clicks elsewhere, and on external/
+// mailto/in-page links, are left alone and return undefined.
+export const resourceFromLinkClick = (
+    event: MouseEvent,
+    integration: Integration | undefined,
+    basePath: string = "",
+): IntegrationResource | undefined => {
+    const anchor = (event.target as HTMLElement).closest?.('a');
+    if (!anchor) return undefined;
+    const href = anchor.getAttribute('href') ?? '';
+    if (!isRelativeHref(href)) return undefined;
+    event.preventDefault();
+    return resolveResourceFromHref(integration, href, basePath);
 };
 
 // Per-datatype display metadata. Single source of truth for how each

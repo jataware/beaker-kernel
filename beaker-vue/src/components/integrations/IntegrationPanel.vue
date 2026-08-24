@@ -80,7 +80,7 @@
             >
                 <div
                     class="integration-card"
-                    v-for="integration in processIntegrations(Object.values(integrations))"
+                    v-for="integration in displayIntegrations"
                     :key="integration?.name"
                     @mouseleave="hoveredIntegration = undefined"
                     @mouseenter="hoveredIntegration = integration.uuid"
@@ -242,8 +242,15 @@ const renderIntegrations = (integrations: Integration[]) =>
     integrations.map(integration =>
         ({...integration, description: renderMarkdown(integration?.description)}))
 
-const processIntegrations = (integrations: Integration[]) =>
-    renderIntegrations(filterIntegrations(sortIntegrations(integrations)))
+// Markdown parsing + sanitization is the expensive step, so cache it keyed on
+// the integration data; the cheap search filter recomputes per keystroke on
+// top of the cached result instead of re-rendering every description (which
+// an inline template call would also do on every hover-state change).
+const renderedIntegrations = computed<Integration[]>(() =>
+    renderIntegrations(sortIntegrations(Object.values(integrations.value ?? {}))));
+
+const displayIntegrations = computed<Integration[]>(() =>
+    filterIntegrations(renderedIntegrations.value));
 
 // const relevantProviders = (providers: IntegrationProviders): IntegrationProviders =>
 //     Object.keys(providers)

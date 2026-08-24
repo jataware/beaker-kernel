@@ -11,6 +11,7 @@ const integration = {
         'r1': { resource_id: 'r1', resource_type: 'skill_file', relative_path: 'references/FILTERS.md' },
         'r2': { resource_id: 'r2', resource_type: 'skill_file', relative_path: 'references/CROSS-REPOSITORY.md' },
         'r3': { resource_id: 'r3', resource_type: 'skill_file', relative_path: 'assets/service_openapi.yaml' },
+        'r4': { resource_id: 'r4', resource_type: 'skill_file', relative_path: 'references/my notes.md' },
         'e1': { resource_id: 'e1', resource_type: 'skill_example', filename: 'find_cohort.md' },
         'i1': { resource_id: 'i1', resource_type: 'skill_instructions', content: '# hi' },
     },
@@ -48,6 +49,15 @@ describe('resolveResourceFromHref', () => {
 
     it('resolves ../ traversal', () => {
         expect(resolveResourceFromHref(integration, '../assets/service_openapi.yaml', 'references')?.resource_id).toBe('r3');
+    });
+
+    it('falls back to the skill root when a base-relative link does not resolve', () => {
+        // Example files commonly use root-relative paths like SKILL.md does.
+        expect(resolveResourceFromHref(integration, 'references/FILTERS.md', 'examples')?.resource_id).toBe('r1');
+    });
+
+    it('percent-decodes encoded hrefs', () => {
+        expect(resolveResourceFromHref(integration, 'references/my%20notes.md')?.resource_id).toBe('r4');
     });
 
     it('ignores ./ segments, query strings, and fragments', () => {

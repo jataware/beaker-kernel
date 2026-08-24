@@ -133,44 +133,11 @@
                     <ClampedMarkdown v-else :html="renderedInstructions" @link-click="onInstructionsLinkClick" />
                 </Fieldset>
 
-                <Fieldset legend="Available Resources" v-if="fileResources.length > 0">
-                    <p>
-                        These resources are available to the agent and will be loaded on demand when the skill is active.
-                    </p>
-                    <div class="skill-resource-list">
-                        <div
-                            class="skill-resource-item clickable"
-                            v-for="resource in fileResources"
-                            :key="resource.resource_id"
-                            @click="emit('open-resource', resource.resource_id)"
-                        >
-                            <i class="pi pi-file"></i>
-                            <span class="skill-resource-path">{{ resource.relative_path }}</span>
-                            <i class="pi pi-chevron-right skill-resource-open-arrow"></i>
-                        </div>
-                    </div>
-                </Fieldset>
-
-                <Fieldset legend="Code Examples" v-if="exampleResources.length > 0">
-                    <p>
-                        Code examples demonstrating usage patterns for this skill.
-                    </p>
-                    <div class="skill-resource-list">
-                        <div
-                            class="skill-resource-item clickable"
-                            v-for="example in exampleResources"
-                            :key="example.resource_id"
-                            @click="emit('open-resource', example.resource_id)"
-                        >
-                            <i class="pi pi-code"></i>
-                            <div class="skill-example-info">
-                                <span class="skill-resource-path">{{ example.filename }}</span>
-                                <span class="skill-example-title">{{ example.title }}</span>
-                            </div>
-                            <i class="pi pi-chevron-right skill-resource-open-arrow"></i>
-                        </div>
-                    </div>
-                </Fieldset>
+                <SkillResourceLinks
+                    :file-resources="fileResources"
+                    :example-resources="exampleResources"
+                    @open-resource="(resourceId) => emit('open-resource', resourceId)"
+                />
             </template>
 
             <p v-if="!editable && sourceType === 'remote' && !isNew" class="skill-readonly-note">
@@ -212,8 +179,7 @@ import {
     type SkillFileResource,
     type SkillExampleResource,
     isContextProvidedIntegration,
-    isRelativeHref,
-    resolveResourceFromHref,
+    resourceFromLinkClick,
     filterByResourceType,
     previewRemoteSkill,
 } from '../../util/integration';
@@ -228,6 +194,7 @@ import { renderMarkdown } from '../../util/markdown';
 
 import CodeEditor from '../misc/CodeEditor.vue';
 import ClampedMarkdown from '../misc/ClampedMarkdown.vue';
+import SkillResourceLinks from './SkillResourceLinks.vue';
 
 const showToast = inject<any>('show_toast');
 
@@ -366,15 +333,8 @@ const renderedInstructions = computed<string>(() =>
 // New/empty skills start in the editor since there is nothing to preview.
 const showInstructionsRendered = ref<boolean>(true);
 
-// SKILL.md links to sibling resource files (references/, examples/, ...)
-// would 404 against the app's URL; open them in the resource panel instead.
 const onInstructionsLinkClick = (event: MouseEvent) => {
-    const anchor = (event.target as HTMLElement).closest?.('a');
-    if (!anchor) return;
-    const href = anchor.getAttribute('href') ?? '';
-    if (!isRelativeHref(href)) return;
-    event.preventDefault();
-    const resource = resolveResourceFromHref(selectedIntegration.value, href);
+    const resource = resourceFromLinkClick(event, selectedIntegration.value);
     if (resource) {
         emit('open-resource', resource.resource_id);
     }
@@ -403,8 +363,14 @@ watch(() => model.value.selected, () => {
 // save re-fetches the authoritative copy), unless the user has edits pending.
 watch(() => selectedIntegration.value?.resources, () => {
     if (!model.value.unsavedChanges) {
+        // Flip to the rendered preview only when instructions first arrive
+        // into an empty editor (the initial fetch resolving after selection);
+        // never yank the user out of an editor they are already using.
+        const wasEmpty = instructions.value === '';
         syncFromIntegration();
-        showInstructionsRendered.value = instructions.value !== '';
+        if (wasEmpty && instructions.value !== '') {
+            showInstructionsRendered.value = true;
+        }
     }
 });
 
@@ -597,14 +563,6 @@ const remove = async () => {
 
     p { margin: 0 0 0.8rem 0; }
     button { flex-shrink: 0; }
-}
-
-.skill-description {
-    h1 { font-size: 1.25rem; margin-bottom: 1rem; }
-    h2 { font-size: 1.2rem; margin-bottom: 0.8rem; }
-    h3 { font-size: 1.15rem; margin-bottom: 0.8rem; }
-    p, ul, li { margin-bottom: 0.8rem; margin-top: 0rem; }
-    > *:first-child { margin-top: 0rem; }
 }
 
 .skill-readonly-note {
