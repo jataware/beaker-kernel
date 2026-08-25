@@ -38,40 +38,15 @@
                 </div>
             </Fieldset>
 
-            <Fieldset legend="Available Resources" v-if="fileResources.length > 0">
-                <p>
-                    These resources are available to the agent and will be loaded on demand when the skill is active.
-                </p>
-                <div class="skill-resource-list">
-                    <div
-                        class="skill-resource-item"
-                        v-for="resource in fileResources"
-                        :key="resource.resource_id"
-                    >
-                        <i class="pi pi-file"></i>
-                        <span class="skill-resource-path">{{ resource.relative_path }}</span>
-                    </div>
-                </div>
+            <Fieldset legend="Instructions (SKILL.md)" v-if="renderedInstructions">
+                <ClampedMarkdown :html="renderedInstructions" @link-click="onInstructionsLinkClick" />
             </Fieldset>
 
-            <Fieldset legend="Code Examples" v-if="exampleResources.length > 0">
-                <p>
-                    Code examples demonstrating usage patterns for this skill.
-                </p>
-                <div class="skill-resource-list">
-                    <div
-                        class="skill-resource-item"
-                        v-for="example in exampleResources"
-                        :key="example.resource_id"
-                    >
-                        <i class="pi pi-code"></i>
-                        <div class="skill-example-info">
-                            <span class="skill-resource-path">{{ example.filename }}</span>
-                            <span class="skill-example-title">{{ example.title }}</span>
-                        </div>
-                    </div>
-                </div>
-            </Fieldset>
+            <SkillResourceLinks
+                :file-resources="fileResources"
+                :example-resources="exampleResources"
+                @open-resource="(resourceId) => emit('open-resource', resourceId)"
+            />
         </div>
     </div>
 </template>
@@ -83,20 +58,27 @@ import { computed } from 'vue';
 import {
     type Integration,
     type IntegrationInterfaceState,
-    type IntegrationResource,
     type SkillMetadataResource,
+    type SkillInstructionsResource,
     type SkillFileResource,
     type SkillExampleResource,
     filterByResourceType,
+    resourceFromLinkClick,
 } from '../../util/integration';
 
 import Fieldset from 'primevue/fieldset';
 import InputText from 'primevue/inputtext';
+import ClampedMarkdown from '../misc/ClampedMarkdown.vue';
+import SkillResourceLinks from './SkillResourceLinks.vue';
 
-import { marked } from 'marked';
+import { renderMarkdown } from '../../util/markdown';
 
 const props = defineProps<{
     fetchResources: () => Promise<void>,
+}>();
+
+const emit = defineEmits<{
+    (e: 'open-resource', resourceId: string): void,
 }>();
 
 const model = defineModel<IntegrationInterfaceState>();
@@ -105,7 +87,20 @@ const selectedIntegration = computed<Integration>(() =>
     model.value.integrations[model.value.selected]);
 
 const renderedDescription = computed<string>(() =>
-    marked.parse(selectedIntegration.value?.description ?? "") as string);
+    renderMarkdown(selectedIntegration.value?.description));
+
+const renderedInstructions = computed<string>(() => {
+    const instructions = Object.values(filterByResourceType<SkillInstructionsResource>(
+        selectedIntegration.value?.resources, "skill_instructions"))[0];
+    return renderMarkdown(instructions?.content);
+});
+
+const onInstructionsLinkClick = (event: MouseEvent) => {
+    const resource = resourceFromLinkClick(event, selectedIntegration.value);
+    if (resource) {
+        emit('open-resource', resource.resource_id);
+    }
+};
 
 const metadata = computed<SkillMetadataResource | undefined>(() => {
     const resources = filterByResourceType<SkillMetadataResource>(
@@ -150,14 +145,6 @@ const exampleResources = computed<SkillExampleResource[]>(() => {
     }
 }
 
-.skill-description {
-    h1 { font-size: 1.25rem; margin-bottom: 1rem; }
-    h2 { font-size: 1.2rem; margin-bottom: 0.8rem; }
-    h3 { font-size: 1.15rem; margin-bottom: 0.8rem; }
-    p, ul, li { margin-bottom: 0.8rem; margin-top: 0rem; }
-    > *:first-child { margin-top: 0rem; }
-}
-
 .skill-metadata-grid {
     display: flex;
     flex-direction: column;
@@ -182,40 +169,6 @@ const exampleResources = computed<SkillExampleResource[]>(() => {
 }
 
 .skill-no-metadata {
-    color: var(--p-text-muted-color);
-}
-
-.skill-resource-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.skill-resource-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.9rem;
-
-    &:hover {
-        background-color: var(--p-surface-100);
-    }
-}
-
-.skill-resource-path {
-    font-family: monospace;
-}
-
-.skill-example-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.skill-example-title {
-    font-size: 0.85rem;
     color: var(--p-text-muted-color);
 }
 </style>

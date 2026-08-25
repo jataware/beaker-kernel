@@ -74,7 +74,7 @@ beaker-vue/dist:$(call npm_build_deps,beaker-vue)
 	touch beaker-vue/dist
 
 beaker-vue/html:$(call npm_build_deps,beaker-vue)
-	(cd beaker-vue && npm run build-ui) && \
+	(cd beaker-vue && npm run build-ui && npm run routes) && \
 	touch beaker-vue/html
 
 src/beaker_notebook/app/ui/index.html:beaker-vue/node_modules beaker-vue/html

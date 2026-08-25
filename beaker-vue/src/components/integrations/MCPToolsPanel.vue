@@ -124,7 +124,7 @@ import Tag from 'primevue/tag';
 import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputText from "primevue/inputtext";
-import { marked } from 'marked';
+import { renderMarkdown } from '../../util/markdown';
 import {
     type IntegrationInterfaceState,
     type MCPToolResource,
@@ -209,7 +209,7 @@ const focusedArgs = computed<ToolArgument[]>(() =>
 const renderedDescription = computed<string>(() => {
     if (viewState.value.view !== 'focused') return "";
     const description = viewState.value.tool.description;
-    return description ? marked.parse(description) as string : "";
+    return renderMarkdown(description);
 });
 
 const viewTool = (tool: MCPToolResource) => {

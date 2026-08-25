@@ -10,3 +10,33 @@ body {
   margin: 0;
   padding: 0;
 }
+
+// Shared typography for rendered (sanitized) markdown prose — skill
+// descriptions/instructions, resource files, MCP descriptions. Wide content
+// (code blocks, tables) scrolls inside its own box rather than stretching the
+// pane sideways; min-width: 0 lets the block shrink below its content's
+// intrinsic width inside flex column parents.
+.skill-description {
+  h1 { font-size: 1.25rem; margin-bottom: 1rem; }
+  h2 { font-size: 1.2rem; margin-bottom: 0.8rem; }
+  h3 { font-size: 1.15rem; margin-bottom: 0.8rem; }
+  p, ul, li { margin-bottom: 0.8rem; margin-top: 0rem; }
+  > *:first-child { margin-top: 0rem; }
+
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+
+  pre {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  img {
+    max-width: 100%;
+  }
+}

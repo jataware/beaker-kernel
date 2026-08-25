@@ -110,8 +110,19 @@
                 </Fieldset>
 
                 <Fieldset legend="Instructions (SKILL.md)">
-                    <p>The skill's full instructions, disclosed to the agent when it loads the skill.</p>
-                    <div class="skill-editor-height" v-if="editable">
+                    <div class="skill-instructions-header">
+                        <p>The skill's full instructions, disclosed to the agent when it loads the skill.</p>
+                        <Button
+                            v-if="editable"
+                            :icon="showInstructionsRendered ? 'pi pi-pencil' : 'pi pi-eye'"
+                            :label="showInstructionsRendered ? 'Edit' : 'Preview'"
+                            severity="secondary"
+                            text
+                            size="small"
+                            @click="showInstructionsRendered = !showInstructionsRendered"
+                        />
+                    </div>
+                    <div class="skill-editor-height" v-if="editable && !showInstructionsRendered">
                         <CodeEditor
                             language="markdown"
                             :autocomplete-enabled="false"
@@ -119,8 +130,14 @@
                             @update:model-value="(v) => { instructions = v ?? ''; markDirty(); }"
                         />
                     </div>
-                    <div v-else class="skill-description" v-html="renderedInstructions"></div>
+                    <ClampedMarkdown v-else :html="renderedInstructions" @link-click="onInstructionsLinkClick" />
                 </Fieldset>
+
+                <SkillResourceLinks
+                    :file-resources="fileResources"
+                    :example-resources="exampleResources"
+                    @open-resource="(resourceId) => emit('open-resource', resourceId)"
+                />
             </template>
 
             <p v-if="!editable && sourceType === 'remote' && !isNew" class="skill-readonly-note">
@@ -159,7 +176,10 @@ import {
     type SkillIntegration,
     type SkillMetadataResource,
     type SkillInstructionsResource,
+    type SkillFileResource,
+    type SkillExampleResource,
     isContextProvidedIntegration,
+    resourceFromLinkClick,
     filterByResourceType,
     previewRemoteSkill,
 } from '../../util/integration';
@@ -170,9 +190,11 @@ import InputChips from 'primevue/inputchips';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
 
-import { marked } from 'marked';
+import { renderMarkdown } from '../../util/markdown';
 
 import CodeEditor from '../misc/CodeEditor.vue';
+import ClampedMarkdown from '../misc/ClampedMarkdown.vue';
+import SkillResourceLinks from './SkillResourceLinks.vue';
 
 const showToast = inject<any>('show_toast');
 
@@ -186,6 +208,10 @@ const props = defineProps<{
 }>();
 
 const model = defineModel<IntegrationInterfaceState>();
+
+const emit = defineEmits<{
+    (e: 'open-resource', resourceId: string): void,
+}>();
 
 const selectedIntegration = computed<SkillIntegration>(() =>
     model.value.integrations[model.value.selected] as SkillIntegration);
@@ -255,7 +281,7 @@ const syncFromIntegration = () => {
     allowedToolsList.value = (metadata?.allowed_tools ?? '')
         .split(',').map((tool) => tool.trim()).filter((tool) => tool !== '');
     metadataRows.value = Object.entries(metadata?.skill_metadata ?? {})
-        .map(([key, value]) => ({ key, value: String(value) }));
+        .map(([key, value]) => ({ key, value: value == null ? '' : String(value) }));
 };
 
 const markDirty = () => {
@@ -301,11 +327,31 @@ const fetchFromUrl = async () => {
 };
 
 const renderedInstructions = computed<string>(() =>
-    instructions.value ? marked.parse(instructions.value) as string : "");
+    renderMarkdown(instructions.value));
+
+// Instructions default to a rendered preview; Edit toggles the raw editor.
+// New/empty skills start in the editor since there is nothing to preview.
+const showInstructionsRendered = ref<boolean>(true);
+
+const onInstructionsLinkClick = (event: MouseEvent) => {
+    const resource = resourceFromLinkClick(event, selectedIntegration.value);
+    if (resource) {
+        emit('open-resource', resource.resource_id);
+    }
+};
+
+const fileResources = computed<SkillFileResource[]>(() =>
+    Object.values(filterByResourceType<SkillFileResource>(
+        selectedIntegration.value?.resources, "skill_file")));
+
+const exampleResources = computed<SkillExampleResource[]>(() =>
+    Object.values(filterByResourceType<SkillExampleResource>(
+        selectedIntegration.value?.resources, "skill_example")));
 
 watch(() => model.value.selected, () => {
     remotePreviewed.value = false;
     syncFromIntegration();
+    showInstructionsRendered.value = instructions.value !== '';
     // A freshly created skill arrives pre-dirtied so its Save button shows
     // immediately; only clear the flag when landing on an existing one.
     if (!isNew.value) {
@@ -317,7 +363,14 @@ watch(() => model.value.selected, () => {
 // save re-fetches the authoritative copy), unless the user has edits pending.
 watch(() => selectedIntegration.value?.resources, () => {
     if (!model.value.unsavedChanges) {
+        // Flip to the rendered preview only when instructions first arrive
+        // into an empty editor (the initial fetch resolving after selection);
+        // never yank the user out of an editor they are already using.
+        const wasEmpty = instructions.value === '';
         syncFromIntegration();
+        if (wasEmpty && instructions.value !== '') {
+            showInstructionsRendered.value = true;
+        }
     }
 });
 
@@ -502,12 +555,14 @@ const remove = async () => {
     flex-direction: column;
 }
 
-.skill-description {
-    h1 { font-size: 1.25rem; margin-bottom: 1rem; }
-    h2 { font-size: 1.2rem; margin-bottom: 0.8rem; }
-    h3 { font-size: 1.15rem; margin-bottom: 0.8rem; }
-    p, ul, li { margin-bottom: 0.8rem; margin-top: 0rem; }
-    > *:first-child { margin-top: 0rem; }
+.skill-instructions-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    p { margin: 0 0 0.8rem 0; }
+    button { flex-shrink: 0; }
 }
 
 .skill-readonly-note {

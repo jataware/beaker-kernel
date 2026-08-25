@@ -160,7 +160,7 @@ import Fieldset from 'primevue/fieldset';
 import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
 
-import { marked } from 'marked';
+import { renderMarkdown } from '../../util/markdown';
 
 const props = defineProps<{
     fetchResources: () => Promise<void>,
@@ -199,11 +199,11 @@ const serverConfig = computed<MCPServerConfig | undefined>(() =>
     selectedIntegration.value?.server_config);
 
 const renderedDescription = computed<string>(() =>
-    marked.parse(selectedIntegration.value?.description ?? "") as string);
+    renderMarkdown(selectedIntegration.value?.description));
 
 const renderedInstructions = computed<string>(() => {
     const instructions = selectedIntegration.value?.instructions;
-    return instructions ? marked.parse(instructions) as string : "";
+    return renderMarkdown(instructions);
 });
 
 const hasServerInfo = computed<boolean>(() =>

@@ -80,7 +80,7 @@
             >
                 <div
                     class="integration-card"
-                    v-for="integration in processIntegrations(Object.values(integrations))"
+                    v-for="integration in displayIntegrations"
                     :key="integration?.name"
                     @mouseleave="hoveredIntegration = undefined"
                     @mouseenter="hoveredIntegration = integration.uuid"
@@ -165,7 +165,7 @@ import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputText from "primevue/inputtext";
 import Card from "primevue/card";
-import { marked } from "marked";
+import { renderMarkdown } from "../../util/markdown";
 import { type BeakerSessionComponentType } from "../session/BeakerSession.vue";
 import { type IntegrationMap, type Integration, type IntegrationProviders, listIntegrations, getIntegrationProviderType, getIntegrationIcon, getIntegrationTypeLabel, isContextProvidedIntegration } from "@/util/integration";
 import { useRoute, RouterLink } from "vue-router";
@@ -240,10 +240,17 @@ const filterIntegrations = (integrations: Integration[]) =>
 
 const renderIntegrations = (integrations: Integration[]) =>
     integrations.map(integration =>
-        ({...integration, description: marked.parse(integration?.description ?? "") as string}))
+        ({...integration, description: renderMarkdown(integration?.description)}))
 
-const processIntegrations = (integrations: Integration[]) =>
-    renderIntegrations(filterIntegrations(sortIntegrations(integrations)))
+// Markdown parsing + sanitization is the expensive step, so cache it keyed on
+// the integration data; the cheap search filter recomputes per keystroke on
+// top of the cached result instead of re-rendering every description (which
+// an inline template call would also do on every hover-state change).
+const renderedIntegrations = computed<Integration[]>(() =>
+    renderIntegrations(sortIntegrations(Object.values(integrations.value ?? {}))));
+
+const displayIntegrations = computed<Integration[]>(() =>
+    filterIntegrations(renderedIntegrations.value));
 
 // const relevantProviders = (providers: IntegrationProviders): IntegrationProviders =>
 //     Object.keys(providers)
