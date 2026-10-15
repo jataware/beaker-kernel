@@ -66,7 +66,7 @@ beaker-ts/dist:$(call npm_build_deps,beaker-ts)
 	touch beaker-ts/dist
 
 beaker-vue/node_modules:beaker-vue/package*.json beaker-ts/dist
-	(cd beaker-vue && npm install --include=dev) && \
+	(cd beaker-vue && npm link ../beaker-ts && npm install --include=dev) && \
 	touch beaker-vue/node_modules
 
 beaker-vue/dist:$(call npm_build_deps,beaker-vue)

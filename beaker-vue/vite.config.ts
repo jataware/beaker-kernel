@@ -4,7 +4,6 @@ import path from 'path';
 import { defineConfig, UserConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import vueJsx from '@vitejs/plugin-vue-jsx';
-import topLevelAwait from 'vite-plugin-top-level-await';
 import { globSync } from 'glob';
 
 export const entryPoints: {[key: string]: string} = Object.fromEntries(
@@ -42,7 +41,6 @@ export const baseConfig: UserConfig = {
   plugins: [
     vue(),
     vueJsx(),
-    topLevelAwait(),
     {
       name: "sanitize-eval",
       transform(src, id) {

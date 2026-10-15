@@ -23,6 +23,7 @@ import { DefaultTheme } from './themes';
 import 'primeicons/primeicons.css';
 import './index.scss';
 
+async function bootstrap() {
 const defaultSiteConfig = {
   "pathPrefix": "/",
   "username": null,
@@ -79,3 +80,6 @@ const xsrfCookie = cookies._xsrf;
 client.setDefaultHeaders(baseHost, {"X-XSRFToken": xsrfCookie})
 
 app.mount('#app');
+}
+
+void bootstrap();
