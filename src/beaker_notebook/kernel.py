@@ -488,7 +488,10 @@ class BeakerKernel(KernelProxyManager):
         subkernel_ref = subkernel
         context_cls: type[BeakerContext]|None = AVAILABLE_CONTEXTS.get(context_name, None)
         if not context_cls:
-            raise RuntimeError(f"Context '{context_name}' is available. The available contexts are: ['{"', '".join(AVAILABLE_CONTEXTS.keys())}]")
+            raise RuntimeError(
+                f"Context '{context_name}' is not available. "
+                f"The available contexts are: {list(AVAILABLE_CONTEXTS.keys())}"
+            )
 
         # Cleanup the old context, then create and setup the new context
         if self.context:
