@@ -129,25 +129,47 @@ jobs:
                   PRERELEASE_TAG=$(echo "${{ github.ref }}" | grep -oE 'v.*[^a-zA-Z][ab][0-9][0-9.-]*$' >/dev/null 2>/dev/null && echo " --tag next" || echo "" )
                   echo prerelease_tag=$PRERELEASE_TAG >> $GITHUB_OUTPUT
 
-            - name: npm build beaker-ts
+            - name: npm build and publish beaker-ts
               working-directory: beaker-ts
               shell: bash
               run: |
-                npm i
-                npm run build
                 package_name=$(node -p "require('./package.json').name")
                 package_version=$(node -p "require('./package.json').version")
                 if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
                   echo "${package_name}@${package_version} is already published; skipping."
-                else
-                  npm publish --provenance --access public ${{ steps.prerelease_tag.outputs.prerelease_tag }}
+                  exit 0
                 fi
-                sleep 30
+                npm i
+                npm run build
+                npm publish --provenance --access public ${{ steps.prerelease_tag.outputs.prerelease_tag }}
 
-            - name: npm build beaker-vue
+            - name: Wait for beaker-ts package validation
+              working-directory: beaker-ts
+              shell: bash
+              run: |
+                package_name=$(node -p "require('./package.json').name")
+                package_version=$(node -p "require('./package.json').version")
+                for attempt in {1..30}; do
+                  if published_version=$(npm view "${package_name}@${package_version}" version 2>/dev/null) && [ "$published_version" = "$package_version" ]; then
+                    echo "${package_name}@${package_version} validation passed."
+                    exit 0
+                  fi
+                  echo "Waiting for ${package_name}@${package_version} validation (attempt ${attempt}/30)."
+                  sleep 10
+                done
+                echo "${package_name}@${package_version} did not pass validation within five minutes." >&2
+                exit 1
+
+            - name: npm build and publish beaker-vue
               working-directory: beaker-vue
               shell: bash
               run: |
+                package_name=$(node -p "require('./package.json').name")
+                package_version=$(node -p "require('./package.json').version")
+                if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
+                  echo "${package_name}@${package_version} is already published; skipping."
+                  exit 0
+                fi
                 for attempt in 1 2 3; do
                   if npm i; then
                     break
@@ -158,10 +180,21 @@ jobs:
                   sleep 30
                 done
                 npm run build
+                npm publish --provenance --access public ${{ steps.prerelease_tag.outputs.prerelease_tag }}
+
+            - name: Wait for beaker-vue package validation
+              working-directory: beaker-vue
+              shell: bash
+              run: |
                 package_name=$(node -p "require('./package.json').name")
                 package_version=$(node -p "require('./package.json').version")
-                if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
-                  echo "${package_name}@${package_version} is already published; skipping."
-                else
-                  npm publish --provenance --access public ${{ steps.prerelease_tag.outputs.prerelease_tag }}
-                fi
+                for attempt in {1..30}; do
+                  if published_version=$(npm view "${package_name}@${package_version}" version 2>/dev/null) && [ "$published_version" = "$package_version" ]; then
+                    echo "${package_name}@${package_version} validation passed."
+                    exit 0
+                  fi
+                  echo "Waiting for ${package_name}@${package_version} validation (attempt ${attempt}/30)."
+                  sleep 10
+                done
+                echo "${package_name}@${package_version} did not pass validation within five minutes." >&2
+                exit 1
